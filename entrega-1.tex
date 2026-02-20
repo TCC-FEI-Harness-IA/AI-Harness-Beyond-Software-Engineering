@@ -1,0 +1,59 @@
+\documentclass[11pt,a4,oneside]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{bibentry}
+\usepackage[skip=10pt plus1pt, indent=40pt]{parskip}
+\usepackage[portuguese]{babel}
+
+\geometry{
+ a4paper,
+left=3cm,
+top=3cm,
+right=2cm,
+bottom=2cm
+ }
+\usepackage{fancyhdr}
+\usepackage{biblatex} %Imports biblatex package
+\addbibresource{references.bib} %Import the bibliography file
+\linespread{1.2}
+
+\title{\textit{Checklist} para verificação de aderência do tema de Trabalho de Conclusão de Curso I ao curso de Ciência da Computação.}
+\date{Agosto 2023}
+
+\begin{document}
+\pagestyle{fancy}
+%\fancyhead[C]{In the centre of the header on all pages}
+\pagestyle{fancy}
+\fancyhead{}
+\fancyhead[RO,LE]{\textbf{Checklist  - TCC I}}
+
+\maketitle
+\begin{itemize}
+\item \textbf{Modalidade:} Acadêmico
+\item \textbf{Tema:} Utilização de técnicas e ferramentas para aprimorar outputs de Inteligência Artificial
+\item \textbf{Alunos:}
+\begin{itemize}
+    \item Hugo Emílio Nomura (RA: 22.123.051-9)
+    \item Pedro Henrique Correia de Oliveira (RA: 22.222.009-7)
+    \item Pedro Henrique Satoru Lima Takahashi (RA:22.123.019-6)
+    \item Vitor Monteiro Vianna (RA:22.223.085-6)
+\end{itemize}
+\item \textbf{Orientador:} Prof. Dr. Charles Henrique Porto Ferreira
+\item \textbf{Resumo:} O presente trabalho nasce da observação da rápida evolução das Inteligências Arficiais, que deixaram de operar como modelos de linguagem isolados para se tornarem plataformas complexas e ecossistemas de soluções. A motivação central deste TCC é investigar como camadas adicionais de processamento — que envolvem desde o enriquecimento de prompts até fluxos de reasoning e validação multiagente — impactam diretamente a qualidade e a assertividade dos outputs gerados. Através de uma abordagem experimental, o projeto propõe comparar o desempenho de modelos em diferentes níveis de sofisticação, analisando como arquiteturas que utilizam planos de execução e ciclos de feedback conseguem superar as limitações de modelos "crus". 
+\textit{burnout}. O objetivo final é reproduzir e documentar os mecanismos técnicos que permitem a transição de um sistema preditivo simples para uma solução robusta, alinhada aos rigorosos requisitos de aplicações reais.
+\end{itemize}
+\section*{Lista de disciplinas aderentes}
+\begin{itemize}
+    \item \textbf{CS1711 Comunicação e Expressão:} Fundamental para a redação técnica da documentação do TCC e, principalmente, para o desenvolvimento de técnicas de \textit{Prompt Engineering}, que exigem clareza semântica e estrutural para melhorar a assertividade dos modelos.
+    \item \textbf{CC1612 Fundamentos de Algoritmos:} Utilizaremos conceitos de lógica de programação como estruturas condicionais e definições de funções.
+    \item \textbf{CC3642 Orientação a Objetos:} Essencial para a construção da plataforma, permitindo modularizar o código com objetos independentes que interagem entre si dentro do ecossistema da solução.
+    \item \textbf{CC5232 Banco de Dados:} Será necessária para o armazenamento dos logs de interações, permitindo salvar os pares de prompt/resposta de cada cenário para análise comparativa dos resultados.
+    \item \textbf{CC5511 Engenharia de Software:} Auxiliará na definição dos requisitos do sistema e na modelagem do fluxo de dados, garantindo que a transição do modelo isolado para a arquitetura de plataforma siga boas práticas de desenvolvimento.
+    \item \textbf{CC7711 Inteligência Artificial e Robótica:} Fornece a base teórica sobre o funcionamento das redes neurais e modelos de linguagem, permitindo entender as limitações intrínsecas que as técnicas de enriquecimento e \textit{reasoning} buscam mitigar.
+\end{itemize}
+\end{document}
