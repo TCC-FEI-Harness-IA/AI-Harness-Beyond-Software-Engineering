@@ -1,8 +1,3 @@
-from fastapi import APIRouter
+from src.infra.routes.v1.router import router
 
-router = APIRouter(prefix="/v1")
-
-
-@router.get("/health", status_code=200)
-async def health_check():
-    return {"status": "ok"}
+__all__ = ["router"]

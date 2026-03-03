@@ -1,8 +1,4 @@
-from collections.abc import AsyncGenerator
-import asyncio
+from src.application.usecases.chain_of_thought_usecase import ChainOfThoughtUseCase
 
-class ChainOfThoughtUseCase:
-    def __init__(self, ia_adaper: IIaAdapter):
-        self.ia_adaper = ia_adaper
-    async def execute(self) -> AsyncGenerator[str, None]:
+__all__ = ["ChainOfThoughtUseCase"]
 

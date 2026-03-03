@@ -1,6 +1,3 @@
-from dataclasses import dataclass
+from src.application.usecases.dtos.chat_usecase_dto import ChatUseCaseDTO
 
-
-@dataclass
-class ChatUseCaseDTO:
-    message: str
+__all__ = ["ChatUseCaseDTO"]

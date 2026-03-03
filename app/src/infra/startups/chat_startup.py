@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator
 
-from src.usecases.chain_of_thought_usecase import ChainOfThoughtUseCase
+from src.application.usecases.chain_of_thought_usecase import ChainOfThoughtUseCase
 
 
 class ChatStartup:
