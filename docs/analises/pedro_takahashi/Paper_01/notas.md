@@ -59,4 +59,5 @@ Foram testados três problemas que exigem planejamento e que o GPT-4 não conseg
 
 ## Referência (ABNT)
 
-YAO, Shunyu et al. Tree of thoughts: Deliberate problem solving with large language models. In: 37th Conference on Neural Information Processing Systems (NeurIPS), 2023. Disponível em:[ arXiv preprint arXiv:2305.10601.](https://arxiv.org/pdf/2305.10601)
+
+YAO, Shunyu et al. Tree of thoughts: Deliberate problem solving with large language models. In: 37th Conference on Neural Information Processing Systems (NeurIPS), 2023. Disponível em:[ arXiv preprint arXiv:2305.10601.](https://arxiv.org/pdf/2305.10601) Acesso em: 03 mar. 2026.
