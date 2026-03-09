@@ -1,0 +1,96 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.0 Chrome/140.0.7339.249 Electron/38.7.2 Safari/537.36" version="29.3.0">
+  <diagram name="Página-1" id="IkklD3WDFDzvQOGGMoWV">
+    <mxGraphModel dx="3539" dy="1344" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-1" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=30;" value="/message" vertex="1">
+          <mxGeometry height="570" width="970" x="90" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-12" parent="OYmA5nrQjNaHvpSYjLtt-1" style="swimlane;whiteSpace=wrap;html=1;" value="/reasoning" vertex="1">
+          <mxGeometry height="490" width="520" x="30" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-13" parent="OYmA5nrQjNaHvpSYjLtt-12" style="text;whiteSpace=wrap;html=1;" value="&lt;pre style=&quot;margin-top: 0px; background-color: rgba(10, 10, 10, 0.4); border-color: rgb(248, 248, 242); border-style: none; border-width: 0px; border-image: none 100% / 1 / 0 stretch; padding: 16px; border-radius: 3px; overflow: auto; white-space: pre-wrap; color: rgb(248, 248, 242); font-size: 14px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;&lt;code data-line=&quot;59&quot; class=&quot;code-line language-json&quot; dir=&quot;auto&quot; style=&quot;font-family: Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; color: rgb(248, 248, 242); background: none; padding: 0px; border-radius: 4px; font-size: 1em; line-height: 1.357em; display: inline-block; tab-size: 4; position: relative;&quot;&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;{&lt;/span&gt;&#xa;  &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;message&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-punctuation&quot;&gt;{&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;user_input&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-string&quot; style=&quot;color: rgb(214, 157, 133);&quot;&gt;&quot;string&quot;&lt;/span&gt;&#xa;  &lt;span class=&quot;hljs-punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;,&lt;/span&gt;&#xa;  &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;model_config&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-punctuation&quot;&gt;{&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;provider&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-string&quot; style=&quot;color: rgb(214, 157, 133);&quot;&gt;&quot;local | open_router&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;,&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;provider_config&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-punctuation&quot;&gt;{&lt;/span&gt;&#xa;      &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;model_name&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-string&quot; style=&quot;color: rgb(214, 157, 133);&quot;&gt;&quot;string&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;,&lt;/span&gt;&#xa;      &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;endpoint&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-string&quot; style=&quot;color: rgb(214, 157, 133);&quot;&gt;&quot;string&quot;&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;,&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;max_tokens&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-number&quot; style=&quot;color: rgb(184, 215, 163);&quot;&gt;1000&lt;/span&gt;&#xa;  &lt;span class=&quot;hljs-punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;,&lt;/span&gt;&#xa;  &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;reasoning_config&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-punctuation&quot;&gt;{&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;phase_breaking_strategy&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-string&quot; style=&quot;color: rgb(214, 157, 133);&quot;&gt;&quot;autonomous | predefined&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;,&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;strategies&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-punctuation&quot;&gt;{&lt;/span&gt;&#xa;      &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;predefined&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-punctuation&quot;&gt;{&lt;/span&gt;&#xa;        &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;number_of_phases&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-number&quot; style=&quot;color: rgb(184, 215, 163);&quot;&gt;5&lt;/span&gt;&#xa;      &lt;span class=&quot;hljs-punctuation&quot;&gt;}&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;,&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;next_phase_strategy&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-string&quot; style=&quot;color: rgb(214, 157, 133);&quot;&gt;&quot;ai_based | algorithmic&quot;&lt;/span&gt;&#xa;  &lt;span class=&quot;hljs-punctuation&quot;&gt;}&lt;/span&gt;&#xa;&lt;span class=&quot;hljs-punctuation&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;" vertex="1">
+          <mxGeometry height="460" width="520" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-14" parent="OYmA5nrQjNaHvpSYjLtt-1" style="swimlane;whiteSpace=wrap;html=1;" value="/default" vertex="1">
+          <mxGeometry height="320" width="360" x="580" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-16" parent="OYmA5nrQjNaHvpSYjLtt-14" style="text;whiteSpace=wrap;html=1;" value="&lt;pre style=&quot;margin-top: 0px; background-color: rgba(10, 10, 10, 0.4); border-color: rgb(248, 248, 242); border-style: none; border-width: 0px; border-image: none 100% / 1 / 0 stretch; padding: 16px; border-radius: 3px; overflow: auto; white-space: pre-wrap; color: rgb(248, 248, 242); font-size: 14px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;&lt;code data-line=&quot;240&quot; class=&quot;code-line language-json&quot; dir=&quot;auto&quot; style=&quot;font-family: Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; color: rgb(248, 248, 242); background: none; padding: 0px; border-radius: 4px; font-size: 1em; line-height: 1.357em; display: inline-block; tab-size: 4; position: relative;&quot;&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;{&lt;/span&gt;&#xa;  &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;message&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-punctuation&quot;&gt;{&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;user_input&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-string&quot; style=&quot;color: rgb(214, 157, 133);&quot;&gt;&quot;string&quot;&lt;/span&gt;&#xa;  &lt;span class=&quot;hljs-punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;,&lt;/span&gt;&#xa;  &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;model_config&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-punctuation&quot;&gt;{&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;provider&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-string&quot; style=&quot;color: rgb(214, 157, 133);&quot;&gt;&quot;local | open_router&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;,&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;provider_config&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-punctuation&quot;&gt;{&lt;/span&gt;&#xa;      &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;model_name&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-string&quot; style=&quot;color: rgb(214, 157, 133);&quot;&gt;&quot;string&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;,&lt;/span&gt;&#xa;      &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;endpoint&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-string&quot; style=&quot;color: rgb(214, 157, 133);&quot;&gt;&quot;string&quot;&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;,&lt;/span&gt;&#xa;    &lt;span class=&quot;hljs-attr&quot; style=&quot;color: rgb(156, 220, 254);&quot;&gt;&quot;max_tokens&quot;&lt;/span&gt;&lt;span class=&quot;hljs-punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;hljs-number&quot; style=&quot;color: rgb(184, 215, 163);&quot;&gt;1000&lt;/span&gt;&#xa;  &lt;span class=&quot;hljs-punctuation&quot;&gt;}&lt;/span&gt;&#xa;&lt;span class=&quot;hljs-punctuation&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;" vertex="1">
+          <mxGeometry height="290" width="360" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-17" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=30;" value="send_reasoning_message_usecase" vertex="1">
+          <mxGeometry height="570" width="1300" x="90" y="640" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-31" edge="1" parent="OYmA5nrQjNaHvpSYjLtt-17" source="OYmA5nrQjNaHvpSYjLtt-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="OYmA5nrQjNaHvpSYjLtt-29">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-32" edge="1" parent="OYmA5nrQjNaHvpSYjLtt-17" source="OYmA5nrQjNaHvpSYjLtt-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="OYmA5nrQjNaHvpSYjLtt-30">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-26" parent="OYmA5nrQjNaHvpSYjLtt-17" style="rounded=0;whiteSpace=wrap;html=1;" value="Strategy Patter para definir o PhaseBreaking" vertex="1">
+          <mxGeometry height="60" width="120" x="170" y="215" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-29" parent="OYmA5nrQjNaHvpSYjLtt-17" style="rounded=0;whiteSpace=wrap;html=1;" value="AutonomousPhaseBreakin" vertex="1">
+          <mxGeometry height="60" width="175" x="30" y="415" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-30" parent="OYmA5nrQjNaHvpSYjLtt-17" style="rounded=0;whiteSpace=wrap;html=1;" value="PredefinedPhaseBreakin" vertex="1">
+          <mxGeometry height="60" width="175" x="250" y="415" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-38" edge="1" parent="OYmA5nrQjNaHvpSYjLtt-17" source="OYmA5nrQjNaHvpSYjLtt-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="OYmA5nrQjNaHvpSYjLtt-26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-48" edge="1" parent="OYmA5nrQjNaHvpSYjLtt-17" source="OYmA5nrQjNaHvpSYjLtt-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="OYmA5nrQjNaHvpSYjLtt-40">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-34" parent="OYmA5nrQjNaHvpSYjLtt-17" style="rounded=0;whiteSpace=wrap;html=1;" value="Definir a estratégia de criação de plano" vertex="1">
+          <mxGeometry height="60" width="120" x="170" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-46" edge="1" parent="OYmA5nrQjNaHvpSYjLtt-17" source="OYmA5nrQjNaHvpSYjLtt-40" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="OYmA5nrQjNaHvpSYjLtt-41">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-52" edge="1" parent="OYmA5nrQjNaHvpSYjLtt-17" source="OYmA5nrQjNaHvpSYjLtt-40" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="OYmA5nrQjNaHvpSYjLtt-49">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-40" parent="OYmA5nrQjNaHvpSYjLtt-17" style="rounded=0;whiteSpace=wrap;html=1;" value="Definir a estratégia de prox fase" vertex="1">
+          <mxGeometry height="60" width="120" x="647.5" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-44" edge="1" parent="OYmA5nrQjNaHvpSYjLtt-17" source="OYmA5nrQjNaHvpSYjLtt-41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="OYmA5nrQjNaHvpSYjLtt-42">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-45" edge="1" parent="OYmA5nrQjNaHvpSYjLtt-17" source="OYmA5nrQjNaHvpSYjLtt-41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="OYmA5nrQjNaHvpSYjLtt-43">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-41" parent="OYmA5nrQjNaHvpSYjLtt-17" style="rounded=0;whiteSpace=wrap;html=1;" value="Strategy Patter para definir o NextPhaseDecider" vertex="1">
+          <mxGeometry height="60" width="120" x="647.5" y="215" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-42" parent="OYmA5nrQjNaHvpSYjLtt-17" style="rounded=0;whiteSpace=wrap;html=1;" value="LlmNextPhaseDecider" vertex="1">
+          <mxGeometry height="60" width="175" x="497.5" y="415" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-43" parent="OYmA5nrQjNaHvpSYjLtt-17" style="rounded=0;whiteSpace=wrap;html=1;" value="AlgorithmicPhaseDecider" vertex="1">
+          <mxGeometry height="60" width="175" x="747.5" y="415" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-47" edge="1" parent="OYmA5nrQjNaHvpSYjLtt-17" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="OYmA5nrQjNaHvpSYjLtt-34" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="40" y="125" as="sourcePoint" />
+            <mxPoint x="-30" y="295" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-50" edge="1" parent="OYmA5nrQjNaHvpSYjLtt-17" source="OYmA5nrQjNaHvpSYjLtt-49" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1180" y="225" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-49" parent="OYmA5nrQjNaHvpSYjLtt-17" style="rounded=0;whiteSpace=wrap;html=1;" value="Inicia o Chain Of Thoughts" vertex="1">
+          <mxGeometry height="60" width="120" x="1120" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-51" parent="OYmA5nrQjNaHvpSYjLtt-17" style="rounded=0;whiteSpace=wrap;html=1;" value="Chain of thougths pode ser um &quot;Engine&quot; que ficsa em application" vertex="1">
+          <mxGeometry height="60" width="120" x="1120" y="235" as="geometry" />
+        </mxCell>
+        <mxCell id="OYmA5nrQjNaHvpSYjLtt-22" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=30;" value="send_default_message_usecase" vertex="1">
+          <mxGeometry height="570" width="970" x="80" y="1270" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
