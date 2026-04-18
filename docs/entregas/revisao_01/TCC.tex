@@ -22,6 +22,7 @@
 \usepackage{hyperref}
 \usepackage{csquotes}
 \usepackage{newtxtext,newtxmath}
+\usepackage{booktabs}
 
 % Diagramas
 \usepackage{tikz}
@@ -165,6 +166,15 @@
     minimum height=0.85cm,
     fill=white
   },
+  wideblock/.style={
+    rectangle,
+    draw=black,
+    rounded corners,
+    align=center,
+    minimum width=4.2cm,
+    minimum height=0.95cm,
+    fill=white
+  },
   arrow/.style={
     -{Latex[length=3mm]},
     thick
@@ -189,8 +199,7 @@
 
 \email{unifhnomura@fei.edu.br, unifpoliveira@fei.edu.br, unifptakahashi@fei.edu.br, unievvianna@fei.edu.br}
 
-\orientador{Orientador: Charles Henrique Porto Ferreira
-}
+\orientador{Orientador: Charles Henrique Porto Ferreira}
 
 \filiacao{Departamento de Ciência da Computação, Centro Universitário FEI}
 
@@ -203,18 +212,21 @@
 \end{@twocolumnfalse}
 ]
 
+% =================================================
 \section{Introdução}
+% =================================================
 
 Nos últimos anos, os modelos de linguagem de grande porte (\textit{Large Language Models} -- LLMs) deixaram de ser vistos apenas como mecanismos isolados de geração de texto e passaram a compor sistemas mais amplos de interação, refinamento e coordenação. A própria literatura mostra que o desempenho desses modelos melhora quando a inferência deixa de ocorrer em uma única chamada e passa a incorporar etapas adicionais de estruturação da tarefa, como instruções exemplificadas, autoformulação de instruções e aprendizagem com dados gerados pelo próprio modelo \cite{brown2020language,wang2023selfinstruct,huang2023selfimprove}. Nesse sentido, o valor prático de uma solução de IA não depende somente do modelo base, mas também do conjunto de procedimentos que organiza o caminho entre o prompt e a resposta final.
 
-Esse deslocamento fica mais claro quando se observam técnicas recentes de raciocínio e orquestração. O \textit{Chain-of-Thought} mostrou que explicitar passos intermediários pode elevar o desempenho em tarefas que exigem inferência \cite{wei2022chain}; o \textit{Tree of Thoughts} estendeu essa ideia ao tratar a solução como busca por estados de pensamento, com geração de alternativas, avaliação heurística e retrocesso \cite{yao2023tree}. Em paralelo, estudos sobre orquestração dinâmica de prompts e coordenação multiagente destacam que preservação de contexto, consistência lógica e roteamento adaptativo são elementos centrais para tarefas mais complexas \cite{reasoningaware_orchestration}. Em conjunto, esses resultados sugerem que o ganho observado em muitas ferramentas atuais decorre menos de um modelo "mágico" e mais de um pipeline deliberadamente construído.
+Esse deslocamento fica mais claro quando se observam técnicas recentes de raciocínio e orquestração. O \textit{Chain-of-Thought} mostrou que explicitar passos intermediários pode elevar o desempenho em tarefas que exigem inferência \cite{wei2022chain}; o \textit{Tree of Thoughts} estendeu essa ideia ao tratar a solução como busca por estados de pensamento, com geração de alternativas, avaliação heurística e retrocesso \cite{yao2023tree}. Em paralelo, estudos sobre orquestração dinâmica de prompts e coordenação multiagente destacam que preservação de contexto, consistência lógica e roteamento adaptativo são elementos centrais para tarefas mais complexas \cite{reasoningaware_orchestration}. Em conjunto, esses resultados sugerem que o ganho observado em muitas ferramentas atuais decorre menos de um modelo ``mágico'' e mais de um pipeline deliberadamente construído.
 
 A literatura sobre autoaperfeiçoamento e otimização de prompts reforça essa interpretação. Propostas recentes indicam que modelos podem revisar instruções, ajustar formato e melhorar respostas a partir de critérios de utilidade e consistência \cite{wang2023selfinstruct,huang2023selfimprove,zhang2024enhancing,liu2025beyond}. Isso ajuda a explicar por que soluções comerciais como ChatGPT, Claude e Gemini se comportam, na prática, como plataformas compostas por múltiplas camadas de processamento, e não apenas como um único LLM executando uma pergunta e uma resposta de forma direta. Assim, investigar essas camadas adicionais é relevante para compreender o que realmente determina a qualidade final das saídas geradas.
 
 Neste trabalho, parte-se da hipótese de que a qualidade de uma mesma tarefa varia conforme a arquitetura de uso do LLM, e não apenas conforme o modelo escolhido. Para testar essa hipótese, serão comparados cenários que vão desde o uso direto de um modelo base até arranjos com enriquecimento autônomo de prompt, uso de um segundo modelo para refinamento, etapas de verificação da resposta e processos de planejamento com validação posterior. A avaliação será conduzida com benchmarks de múltipla escolha consolidados na literatura, como MMLU e GPQA, nos quais a comparação objetiva entre resposta produzida e gabarito permite medir o impacto real de cada estratégia \cite{hendrycks2021measuring,rein2023gpqa}. Com isso, busca-se demonstrar que os ganhos recentes em IA decorrem da combinação entre modelo, ferramentas e orquestração, e não do modelo isolado.
 
-% -------------------------------------------------
+% =================================================
 \section{Representação do processo}
+% =================================================
 
 As Figuras \ref{fig:fluxo-direto} e \ref{fig:quebra-instrucao} apresentam, respectivamente, o uso direto de um LLM e a arquitetura planejada para este trabalho. O objetivo agora é explicitar que a instrução do usuário não será tratada como uma unidade única e final, mas como um conjunto de subinstruções menores, avaliáveis e combináveis ao longo do processo.
 
@@ -234,13 +246,16 @@ As Figuras \ref{fig:fluxo-direto} e \ref{fig:quebra-instrucao} apresentam, respe
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[node distance=0.85cm and 0.95cm]
-\node[smallblock] (q2) {Instrução\\ principal};
-\node[smallblock, below=of q2] (o1) {Análise\\ da instrução};
-\node[smallblock, below left=of o1] (o2) {Subinstrução 1\\ Entender o pedido};
-\node[smallblock, below=of o1] (o3) {Subinstrução 2\\ Planejar a saída};
-\node[smallblock, below right=of o1] (o4) {Subinstrução 3\\ Validar requisitos};
-\node[smallblock, below=1.05cm of o3] (o5) {Integração\\ das respostas};
+\resizebox{0.92\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.65cm and 0.60cm, transform shape]
+\node[smallblock] (q2) {Instrução principal};
+\node[smallblock, below=of q2] (o1) {Análise da instrução};
+
+\node[smallblock, below left=of o1] (o2) {Subinstrução 1\\Entender o pedido};
+\node[smallblock, below=of o1] (o3) {Subinstrução 2\\Planejar a saída};
+\node[smallblock, below right=of o1] (o4) {Subinstrução 3\\Validar requisitos};
+
+\node[smallblock, below=1.0cm of o3] (o5) {Integração das respostas};
 \node[smallblock, below=of o5] (o6) {Resposta final};
 
 \draw[arrow] (q2) -- (o1);
@@ -251,13 +266,77 @@ As Figuras \ref{fig:fluxo-direto} e \ref{fig:quebra-instrucao} apresentam, respe
 \draw[arrow] (o3) -- (o5);
 \draw[arrow] (o4) -- (o5);
 \draw[arrow] (o5) -- (o6);
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{Fluxo planejado com quebra da instrução em subinstruções menores, consolidação das etapas e geração da resposta final.}
 \label{fig:quebra-instrucao}
 \end{figure}
 
 % -------------------------------------------------
+% SEÇÕES E SUBSEÇÕES
+% -------------------------------------------------
+\titleformat{\section}
+{\color{azulFEI}\normalfont\fontfamily{phv}\selectfont\bfseries\fontsize{11}{13}\selectfont}
+{\thesection.}{0.2em}{}
+\renewcommand{\thesection}{\Roman{section}}
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+
+\titleformat{\subsection}
+{\color{grayFEI}\normalfont\fontfamily{phv}\selectfont\itshape\fontsize{10}{12}\selectfont}
+{\thesubsection.}{0.2em}{}
+\renewcommand{\thesubsection}{\Alph{subsection}}
+\titlespacing*{\subsection}{0pt}{6pt}{3pt}
+
+% =================================================
+\section{Avaliação dos resultados}
+% =================================================
+
+A verificação da hipótese central deste trabalho -- de que a qualidade da saída de um LLM depende da arquitetura de inferência adotada, e não apenas do modelo base -- exige um protocolo de avaliação que seja objetivo, reprodutível e comparável com resultados já estabelecidos na literatura \cite{hendrycks2021measuring,rein2023gpqa}. A escolha de benchmarks de múltipla escolha com gabarito fixo atende a esse requisito porque permite mensurar o desempenho com base em respostas objetivas, reduzindo ambiguidades na interpretação dos resultados e favorecendo a comparação entre diferentes configurações de inferência \cite{zhang2024enhancing,liu2025beyond}. Além disso, esse tipo de benchmark é amplamente utilizado em estudos recentes sobre modelos de linguagem, o que facilita o diálogo com a literatura e a replicabilidade do experimento \cite{hendrycks2021measuring,rein2023gpqa}.
+
+\subsection{Benchmarks adotados}
+
+O benchmark MMLU (\textit{Massive Multitask Language Understanding}) reúne 57 tarefas distribuídas entre humanidades, ciências sociais, STEM e medicina, cobrindo um conjunto amplo de conhecimentos e exigindo, em muitos casos, não apenas lembrança factual, mas também raciocínio contextualizado \cite{hendrycks2021measuring}. Sua abrangência temática torna esse conjunto particularmente útil para observar se as técnicas de inferência aplicadas ao modelo produzem efeitos consistentes em áreas diferentes ou se seus ganhos aparecem de forma desigual conforme o domínio avaliado. Por ser um benchmark já consolidado na literatura, o MMLU também fornece um ponto de comparação confiável para situar os resultados deste trabalho em relação a estudos anteriores \cite{hendrycks2021measuring}.
+
+O GPQA (\textit{Graduate-Level Google-Proof Q\&A}) complementa essa análise ao reunir questões de nível de pós-graduação em biologia, química e física, elaboradas e validadas por especialistas \cite{rein2023gpqa}. A principal característica desse conjunto é o seu grau elevado de dificuldade, o que o torna especialmente interessante para avaliar se determinadas estratégias de orquestração e refinamento conseguem beneficiar o desempenho do modelo em cenários mais exigentes. Em contraste com benchmarks mais amplos, o GPQA permite observar o comportamento do sistema em tarefas nas quais soluções superficiais tendem a ser menos eficazes, reforçando a relevância de métodos que organizem melhor o processo de inferência \cite{rein2023gpqa,yao2023tree}.
+
+A combinação dos dois benchmarks busca equilibrar amplitude e profundidade na avaliação. Enquanto o MMLU explora a diversidade de domínios e a robustez geral do sistema, o GPQA investiga o comportamento do modelo em problemas especializados e mais desafiadores \cite{hendrycks2021measuring,rein2023gpqa}. Dessa forma, a análise não se limita a uma única dimensão de desempenho, mas procura fornecer uma visão mais ampla sobre como diferentes estratégias de uso do LLM podem influenciar a qualidade final das respostas.
+
+\subsection{Procedimento de avaliação}
+
+Cada questão será submetida individualmente às configurações experimentais planejadas, conforme representado na Figura~\ref{fig:pipeline-avaliacao}. A configuração base corresponde ao uso direto do modelo, sem etapas adicionais de refinamento, funcionando como referência para comparação. As demais configurações incorporam progressivamente mecanismos de organização da entrada, de decomposição da tarefa e de revisão da resposta, de modo que seja possível observar o impacto de cada camada adicionada ao pipeline \cite{wang2023selfinstruct,huang2023selfimprove,liu2025beyond}.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.95\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.8cm]
+\node[wideblock] (a) {Questão do benchmark\\ (MMLU ou GPQA)};
+\node[wideblock, below=of a] (b) {Configuração aplicada\\ (base ou aprimorada)};
+\node[wideblock, below=of b] (c) {Chamada ao LLM\\ via OpenRouter};
+\node[wideblock, below=of c] (d) {Extração da alternativa\\ selecionada};
+\node[wideblock, below=of d] (e) {Comparação com gabarito};
+\node[wideblock, below=of e] (f) {Registro da acurácia\\ por configuração};
+\draw[arrow] (a) -- (b);
+\draw[arrow] (b) -- (c);
+\draw[arrow] (c) -- (d);
+\draw[arrow] (d) -- (e);
+\draw[arrow] (e) -- (f);
+\end{tikzpicture}%
+}
+\caption{Pipeline de avaliação experimental aplicado a cada questão dos benchmarks.}
+\label{fig:pipeline-avaliacao}
+\end{figure}
+
+O modelo utilizado será o mesmo em todas as condições, de forma que as diferenças observadas possam ser atribuídas ao desenho da inferência, e não a mudanças na arquitetura ou no provedor de acesso. A resposta final produzida em cada questão será comparada com o gabarito correspondente, permitindo o cálculo da acurácia por configuração e por benchmark. Esse procedimento preserva a objetividade da análise e cria uma base comparável para verificar se os acréscimos metodológicos trazem ganhos reais de desempenho \cite{zhang2024enhancing,chen2025tumix}.
+
+\subsection{Critérios de análise}
+
+A análise dos resultados será organizada de forma mais aberta, com critérios definidos a partir dos padrões que emergirem dos próprios experimentos. Em vez de fixar previamente uma única divisão analítica, a interpretação poderá considerar aspectos como estabilidade das respostas, consistência entre configurações e variação de desempenho conforme o tipo de questão ou o conjunto avaliado, caso esses recortes se mostrem relevantes ao longo da investigação.
+
+Essa abordagem permite que a leitura dos dados acompanhe melhor os achados empíricos, sem restringir a análise a categorias fechadas antes da observação dos resultados. Assim, a seção de resultados poderá ser ajustada para destacar os elementos que realmente contribuírem para compreender o comportamento do sistema, mantendo o rigor metodológico e a flexibilidade necessária a uma pesquisa em desenvolvimento.
+
+% =================================================
 \section{Referências}
+% =================================================
 
 \printbibliography[heading=none]
 
