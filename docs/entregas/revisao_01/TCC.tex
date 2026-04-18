@@ -216,42 +216,44 @@ Neste trabalho, parte-se da hipótese de que a qualidade de uma mesma tarefa var
 % -------------------------------------------------
 \section{Representação do processo}
 
-As Figuras \ref{fig:fluxo-direto} e \ref{fig:fluxo-orquestrado} apresentam, respectivamente, o contraste entre o uso direto de um LLM e uma abordagem com etapas intermediárias de orquestração. Esses diagramas ajudam a explicitar o problema central do trabalho e podem ser mantidos já nesta versão do artigo como apoio visual à introdução.
+As Figuras \ref{fig:fluxo-direto} e \ref{fig:quebra-instrucao} apresentam, respectivamente, o uso direto de um LLM e a arquitetura planejada para este trabalho. O objetivo agora é explicitar que a instrução do usuário não será tratada como uma unidade única e final, mas como um conjunto de subinstruções menores, avaliáveis e combináveis ao longo do processo.
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[node distance=0.9cm]
-\node[block] (q1) {Questão de\\ múltipla escolha};
-\node[block, below=of q1] (p1) {Prompt direto};
-\node[block, below=of p1] (m1) {LLM};
+\begin{tikzpicture}[node distance=1.1cm]
+\node[block] (q1) {Instrução\\ do usuário};
+\node[block, below=of q1] (m1) {LLM};
 \node[block, below=of m1] (r1) {Resposta final};
 
-\draw[arrow] (q1) -- (p1);
-\draw[arrow] (p1) -- (m1);
+\draw[arrow] (q1) -- (m1);
 \draw[arrow] (m1) -- (r1);
 \end{tikzpicture}
-\caption{Fluxo direto de inferência com modelo de linguagem.}
+\caption{Fluxo direto de inferência com uma única instrução e uma única resposta.}
 \label{fig:fluxo-direto}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[node distance=0.75cm]
-\node[smallblock] (q2) {Questão};
-\node[smallblock, below=of q2] (o1) {Orquestração do prompt};
-\node[smallblock, below=of o1] (o2) {Planejamento /\\ decomposição};
-\node[smallblock, below=of o2] (o3) {Raciocínio\\ intermediário};
-\node[smallblock, below=of o3] (o4) {Avaliação /\\ refinamento};
-\node[smallblock, below=of o4] (o5) {Resposta final};
+\begin{tikzpicture}[node distance=0.85cm and 0.95cm]
+\node[smallblock] (q2) {Instrução\\ principal};
+\node[smallblock, below=of q2] (o1) {Análise\\ da instrução};
+\node[smallblock, below left=of o1] (o2) {Subinstrução 1\\ Entender o pedido};
+\node[smallblock, below=of o1] (o3) {Subinstrução 2\\ Planejar a saída};
+\node[smallblock, below right=of o1] (o4) {Subinstrução 3\\ Validar requisitos};
+\node[smallblock, below=1.05cm of o3] (o5) {Integração\\ das respostas};
+\node[smallblock, below=of o5] (o6) {Resposta final};
 
 \draw[arrow] (q2) -- (o1);
 \draw[arrow] (o1) -- (o2);
-\draw[arrow] (o2) -- (o3);
-\draw[arrow] (o3) -- (o4);
+\draw[arrow] (o1) -- (o3);
+\draw[arrow] (o1) -- (o4);
+\draw[arrow] (o2) -- (o5);
+\draw[arrow] (o3) -- (o5);
 \draw[arrow] (o4) -- (o5);
+\draw[arrow] (o5) -- (o6);
 \end{tikzpicture}
-\caption{Fluxo orquestrado com etapas intermediárias de inferência.}
-\label{fig:fluxo-orquestrado}
+\caption{Fluxo planejado com quebra da instrução em subinstruções menores, consolidação das etapas e geração da resposta final.}
+\label{fig:quebra-instrucao}
 \end{figure}
 
 % -------------------------------------------------
