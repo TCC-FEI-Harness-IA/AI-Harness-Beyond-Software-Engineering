@@ -48,38 +48,39 @@
 % LEGENDAS
 % -------------------------------------------------
 \captionsetup[figure]{
-  labelfont={color=azulFEI,bf,small,sf},
-  textfont={small,sf},
-  font=footnotesize,
-  labelsep=period,
-  name=Figura,
-  justification=raggedright,
-  singlelinecheck=false
+labelfont={color=azulFEI,bf,small,sf},
+textfont={small,sf},
+font=footnotesize,
+labelsep=period,
+name=Figura,
+justification=raggedright,
+singlelinecheck=false
 }
 
 \captionsetup[table]{
-  labelfont={color=azulFEI,bf,small,sf},
-  textfont={small,sf},
-  font=footnotesize,
-  labelsep=period,
-  name=Tabela,
-  justification=raggedright,
-  singlelinecheck=false
+labelfont={color=azulFEI,bf,small,sf},
+textfont={small,sf},
+font=footnotesize,
+labelsep=period,
+name=Tabela,
+justification=raggedright,
+singlelinecheck=false
 }
 
 % -------------------------------------------------
 % SEÇÕES E SUBSEÇÕES
 % -------------------------------------------------
 \titleformat{\section}
-  {\color{azulFEI}\normalfont\fontfamily{phv}\selectfont\bfseries\fontsize{11}{13}\selectfont}
-  {\thesection.}{0.2em}{}
+{\color{azulFEI}\normalfont\fontfamily{phv}\selectfont\bfseries\fontsize{11}{13}\selectfont}
+{\thesection.}{0.2em}{}
 \renewcommand{\thesection}{\Roman{section}}
 \titlespacing*{\section}{0pt}{10pt}{4pt}
 
 \titleformat{\subsection}
-  {\color{grayFEI}\normalfont\fontfamily{phv}\selectfont\itshape\fontsize{10}{12}\selectfont}
-  {\thesubsection.}{0.2em}{}
+{\color{grayFEI}\normalfont\fontfamily{phv}\selectfont\itshape\fontsize{10}{12}\selectfont}
+{\thesubsection.}{0.2em}{}
 \renewcommand{\thesubsection}{\Alph{subsection}}
+\titlespacing*{\subsection}{0pt}{6pt}{3pt}
 
 % -------------------------------------------------
 % COMANDOS DO TEMPLATE
@@ -87,37 +88,37 @@
 \newcommand{\helvetfont}[1]{{\fontfamily{phv}\selectfont #1}}
 
 \newcommand{\inovatitle}[1]{%
-  \noindent{\fontsize{18}{20}\selectfont\helvetfont{\textbf{\textcolor{azulFEI}{#1}}}}\par\vspace{25pt}
+\noindent{\fontsize{18}{20}\selectfont\helvetfont{\textbf{\textcolor{azulFEI}{#1}}}}\par\vspace{25pt}
 }
 
 \newcommand{\autores}[1]{%
-  \helvetfont{\fontsize{11}{20}\selectfont\textbf{\textit{#1}}}\par
+\helvetfont{\fontsize{11}{20}\selectfont\textbf{\textit{#1}}}\par
 }
 
 \newcommand{\orientador}[1]{%
-  \helvetfont{\fontsize{11}{20}\selectfont\textbf{\textit{#1}}}\par
+\helvetfont{\fontsize{11}{20}\selectfont\textbf{\textit{#1}}}\par
 }
 
 \newcommand{\filiacao}[1]{%
-  \helvetfont{\fontsize{10}{20}\selectfont\textit{#1}}\par
+\helvetfont{\fontsize{10}{20}\selectfont\textit{#1}}\par
 }
 
 \newcommand{\email}[1]{%
-  \helvetfont{\fontsize{10}{20}\selectfont\textit{#1}}\par
+\helvetfont{\fontsize{10}{20}\selectfont\textit{#1}}\par
 }
 
 \newcommand{\resumo}[1]{%
-  \vspace{15pt}
-  \noindent
-  {\helvetfont{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Resumo:}}}}\quad
-  \justifying #1\par
-  \vspace{6pt}
+\vspace{15pt}
+\noindent
+{\helvetfont{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Resumo:}}}}\quad
+\justifying #1\par
+\vspace{6pt}
 }
 
 \newcommand{\keyword}[1]{%
-  \noindent
-  \helvetfont{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Palavras-chaves:}}} #1
-  \vspace{25pt}\par
+\noindent
+\helvetfont{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Palavras-chaves:}}} #1
+\vspace{25pt}\par
 }
 
 \renewcommand{\thetable}{\Roman{table}}
@@ -132,53 +133,54 @@
 \setlength{\headheight}{1.2cm}
 
 \IfFileExists{logoinova.png}
-  {\lhead{\includegraphics[width=4.97cm,height=1cm]{logoinova.png}}}
-  {\lhead{\helvetfont{INOVA FEI}}}
+{\lhead{\includegraphics[width=4.97cm,height=1cm]{logoinova.png}}}
+{\lhead{\helvetfont{INOVA FEI}}}
 
 \rhead{\helvetfont{1º semestre/2026}}
 
 \lfoot{%
-  \fontfamily{phv}\fontsize{8}{10}\selectfont
-  Anais dos Trabalhos de Conclusão de Curso do Centro Universitário FEI, São Bernardo do Campo -- SP\\
-  \vspace{-4pt}\rule{\textwidth}{0.4pt}
+\fontfamily{phv}\fontsize{8}{10}\selectfont
+Anais dos Trabalhos de Conclusão de Curso do Centro Universitário FEI, São Bernardo do Campo -- SP\\
+\vspace{-4pt}\rule{\textwidth}{0.4pt}
 }
+
 \rfoot{\fontfamily{phv}\fontsize{8}{10}\selectfont \thepage}
 
 % -------------------------------------------------
 % ESTILOS TIKZ
 % -------------------------------------------------
 \tikzset{
-  block/.style={
-    rectangle,
-    draw=black,
-    rounded corners,
-    align=center,
-    minimum width=3.3cm,
-    minimum height=0.95cm,
-    fill=white
-  },
-  smallblock/.style={
-    rectangle,
-    draw=black,
-    rounded corners,
-    align=center,
-    minimum width=2.7cm,
-    minimum height=0.85cm,
-    fill=white
-  },
-  wideblock/.style={
-    rectangle,
-    draw=black,
-    rounded corners,
-    align=center,
-    minimum width=4.2cm,
-    minimum height=0.95cm,
-    fill=white
-  },
-  arrow/.style={
-    -{Latex[length=3mm]},
-    thick
-  }
+block/.style={
+rectangle,
+draw=black,
+rounded corners,
+align=center,
+minimum width=3.3cm,
+minimum height=0.95cm,
+fill=white
+},
+smallblock/.style={
+rectangle,
+draw=black,
+rounded corners,
+align=center,
+minimum width=2.7cm,
+minimum height=0.85cm,
+fill=white
+},
+wideblock/.style={
+rectangle,
+draw=black,
+rounded corners,
+align=center,
+minimum width=4.2cm,
+minimum height=0.95cm,
+fill=white
+},
+arrow/.style={
+-{Latex[length=3mm]},
+thick
+}
 }
 
 % -------------------------------------------------
@@ -205,9 +207,9 @@
 
 \email{cferreira@fei.edu.br}
 
-\resumo{Modelos de linguagem generativa frequentemente são utilizados como sistemas diretos de pergunta e resposta. No entanto, resultados recentes indicam que seu desempenho pode ser ampliado quando o modelo base é combinado com técnicas complementares, como reescrita de prompt, cadeia de raciocínio e autoavaliação da resposta. Este trabalho investiga a hipótese de que a qualidade das saídas produzidas por inteligência artificial depende não apenas do modelo utilizado, mas também das estratégias e ferramentas aplicadas ao processo de inferência. Para isso, será realizado um estudo experimental comparando o modelo em sua configuração direta, acessado via OpenRouter, com versões aprimoradas por diferentes técnicas de prompting e refinamento iterativo. A avaliação será conduzida com benchmarks consolidados na literatura, compostos por questões de múltipla escolha em nível de graduação e pós-graduação, abrangendo domínios como física, biologia, química e matemática. Como se trata de um cenário com respostas objetivas, o desempenho será medido principalmente pela acurácia, com base na comparação entre a alternativa selecionada pelo modelo e o gabarito de cada questão. Espera-se demonstrar que a aplicação estruturada dessas técnicas produz desempenho superior ao uso isolado do modelo base, reforçando a compreensão de sistemas de inteligência artificial como composições de ferramentas e etapas de processamento, e não apenas como mecanismos simples de respostas diretas.}
+\resumo{Modelos de linguagem generativa frequentemente são utilizados como sistemas diretos de pergunta e resposta. No entanto, resultados recentes indicam que seu desempenho pode ser ampliado quando o modelo base é combinado com técnicas complementares de organização da inferência, decomposição de tarefas e avaliação intermediária da resposta. Este trabalho investiga a hipótese de que a qualidade das saídas produzidas por inteligência artificial depende não apenas do modelo utilizado, mas também da arquitetura que organiza o processo de geração. Para isso, será realizado um estudo experimental comparando o modelo em sua configuração direta, acessado via OpenRouter, com o mesmo modelo operando dentro de um pipeline baseado no \textit{Ralph Loop}, complementado por mecanismos de validação e uso de ferramentas externas quando necessário. A avaliação será conduzida com benchmarks consolidados na literatura, compostos por questões de múltipla escolha distribuídas entre diferentes níveis de dificuldade e áreas do conhecimento. Como se trata de um cenário com respostas objetivas, o desempenho será medido principalmente pela acurácia, com base na comparação entre a alternativa selecionada pelo modelo e o gabarito de cada questão. Espera-se, com isso, contribuir para a compreensão de sistemas de IA como composições de ferramentas, etapas de processamento e estratégias de orquestração, e não apenas como mecanismos simples de resposta direta.}
 
-\keyword{inteligência artificial, modelos de linguagem, prompt engineering, cadeia de raciocínio, avaliação experimental}
+\keyword{inteligência artificial, modelos de linguagem, prompt engineering, orquestração, avaliação experimental}
 
 \end{@twocolumnfalse}
 ]
@@ -216,105 +218,106 @@
 \section{Introdução}
 % =================================================
 
-Nos últimos anos, os modelos de linguagem de grande porte (\textit{Large Language Models} -- LLMs) deixaram de ser vistos apenas como mecanismos isolados de geração de texto e passaram a compor sistemas mais amplos de interação, refinamento e coordenação. A própria literatura mostra que o desempenho desses modelos melhora quando a inferência deixa de ocorrer em uma única chamada e passa a incorporar etapas adicionais de estruturação da tarefa, como instruções exemplificadas, autoformulação de instruções e aprendizagem com dados gerados pelo próprio modelo \cite{brown2020language,wang2023selfinstruct,huang2023selfimprove}. Nesse sentido, o valor prático de uma solução de IA não depende somente do modelo base, mas também do conjunto de procedimentos que organiza o caminho entre o prompt e a resposta final.
+Os modelos de linguagem de grande porte (\textit{Large Language Models} -- LLMs) deixaram de ser vistos apenas como mecanismos isolados de geração de texto e passaram a compor sistemas mais amplos de interação, refinamento e coordenação. A literatura mostra que o desempenho desses modelos pode melhorar quando a inferência deixa de ocorrer em uma única chamada e passa a incorporar etapas adicionais de estruturação da tarefa, como instruções exemplificadas, autoformulação de instruções e aprendizagem com dados gerados pelo próprio modelo \cite{brown2020language,wang2023selfinstruct,huang2023selfimprove}. Esse padrão sugere que o valor prático de uma solução de IA não depende somente do modelo base, mas também do conjunto de procedimentos que organiza o caminho entre o prompt e a resposta final.
 
-Esse deslocamento fica mais claro quando se observam técnicas recentes de raciocínio e orquestração. O \textit{Chain-of-Thought} mostrou que explicitar passos intermediários pode elevar o desempenho em tarefas que exigem inferência \cite{wei2022chain}; o \textit{Tree of Thoughts} estendeu essa ideia ao tratar a solução como busca por estados de pensamento, com geração de alternativas, avaliação heurística e retrocesso \cite{yao2023tree}. Em paralelo, estudos sobre orquestração dinâmica de prompts e coordenação multiagente destacam que preservação de contexto, consistência lógica e roteamento adaptativo são elementos centrais para tarefas mais complexas \cite{reasoningaware_orchestration}. Em conjunto, esses resultados sugerem que o ganho observado em muitas ferramentas atuais decorre menos de um modelo ``mágico'' e mais de um pipeline deliberadamente construído.
+Esse deslocamento se torna mais evidente quando se observam técnicas recentes de raciocínio e orquestração. O \textit{Chain-of-Thought} mostrou que a explicitação de passos intermediários pode elevar o desempenho em tarefas que exigem inferência \cite{wei2022chain}, enquanto o \textit{Tree of Thoughts} ampliou essa ideia ao tratar a solução como uma busca por estados de pensamento, com geração de alternativas, avaliação heurística e retrocesso \cite{yao2023tree}. Em paralelo, estudos sobre orquestração dinâmica de prompts e coordenação multiagente indicam que preservação de contexto, consistência lógica e roteamento adaptativo são elementos centrais para tarefas mais complexas \cite{reasoningaware_orchestration}.
 
-A literatura sobre autoaperfeiçoamento e otimização de prompts reforça essa interpretação. Propostas recentes indicam que modelos podem revisar instruções, ajustar formato e melhorar respostas a partir de critérios de utilidade e consistência \cite{wang2023selfinstruct,huang2023selfimprove,zhang2024enhancing,liu2025beyond}. Isso ajuda a explicar por que soluções comerciais como ChatGPT, Claude e Gemini se comportam, na prática, como plataformas compostas por múltiplas camadas de processamento, e não apenas como um único LLM executando uma pergunta e uma resposta de forma direta. Assim, investigar essas camadas adicionais é relevante para compreender o que realmente determina a qualidade final das saídas geradas.
+A literatura sobre autoaperfeiçoamento e otimização de prompts reforça essa interpretação. Trabalhos recentes indicam que modelos podem revisar instruções, ajustar formato e melhorar respostas a partir de critérios de utilidade e consistência \cite{wang2023selfinstruct,huang2023selfimprove,zhang2024enhancing,liu2025beyond}. Isso ajuda a explicar por que soluções como ChatGPT, Claude e Gemini se comportam, na prática, como plataformas compostas por múltiplas camadas de processamento, e não apenas como um único LLM executando uma pergunta e uma resposta de forma direta. Investigar essas camadas adicionais é, portanto, relevante para compreender o que efetivamente determina a qualidade final das saídas geradas.
 
-Neste trabalho, parte-se da hipótese de que a qualidade de uma mesma tarefa varia conforme a arquitetura de uso do LLM, e não apenas conforme o modelo escolhido. Para testar essa hipótese, serão comparados cenários que vão desde o uso direto de um modelo base até arranjos com enriquecimento autônomo de prompt, uso de um segundo modelo para refinamento, etapas de verificação da resposta e processos de planejamento com validação posterior. A avaliação será conduzida com benchmarks de múltipla escolha consolidados na literatura, como MMLU e GPQA, nos quais a comparação objetiva entre resposta produzida e gabarito permite medir o impacto real de cada estratégia \cite{hendrycks2021measuring,rein2023gpqa}. Com isso, busca-se demonstrar que os ganhos recentes em IA decorrem da combinação entre modelo, ferramentas e orquestração, e não do modelo isolado.
+Neste trabalho, parte-se da hipótese de que a qualidade de uma mesma tarefa varia conforme a arquitetura de uso do LLM, e não apenas conforme o modelo escolhido. Para testar essa hipótese, será comparado o desempenho do modelo base em sua configuração direta com o desempenho do mesmo modelo operando dentro de um pipeline de orquestração estruturado, baseado no \textit{Ralph Loop}. Embora o método tenha ganhado visibilidade recente na comunidade de desenvolvimento, ainda há pouca literatura acadêmica formal dedicada à sua avaliação sistemática, o que torna sua investigação particularmente relevante no contexto deste estudo. A avaliação será conduzida com benchmarks de múltipla escolha consolidados na literatura, como MMLU e GPQA, nos quais a comparação objetiva entre resposta produzida e gabarito permite medir o impacto real da arquitetura proposta \cite{hendrycks2021measuring,rein2023gpqa}. Com isso, busca-se analisar em que medida os ganhos observados em sistemas de IA decorrem da combinação entre modelo, ferramentas e orquestração, e não do modelo isolado.
 
 % =================================================
 \section{Representação do processo}
 % =================================================
 
-As Figuras \ref{fig:fluxo-direto} e \ref{fig:quebra-instrucao} apresentam, respectivamente, o uso direto de um LLM e a arquitetura planejada para este trabalho. O objetivo agora é explicitar que a instrução do usuário não será tratada como uma unidade única e final, mas como um conjunto de subinstruções menores, avaliáveis e combináveis ao longo do processo.
+A comparação entre o uso direto de um modelo de linguagem e o uso do
+mesmo modelo dentro de uma arquitetura orquestrada constitui o núcleo
+conceitual deste trabalho. Por essa razão, a representação do processo
+não deve funcionar apenas como elemento ilustrativo, mas como uma forma
+de explicitar, desde o início, a hipótese central do estudo: a qualidade
+da saída produzida por um LLM pode variar não apenas em função do modelo
+utilizado, mas também em função da organização da inferência, das etapas
+intermediárias adotadas e dos mecanismos de controle inseridos entre a
+entrada e a resposta final.
+
+Na configuração direta, a tarefa é enviada ao modelo como uma única
+instrução, e a resposta final é produzida em uma única geração. Essa
+forma de uso tende a concentrar, em um único passo, operações distintas
+como interpretação do enunciado, definição da estratégia de resolução,
+checagem de restrições e escolha da resposta. Já na configuração
+orquestrada, essas operações são explicitadas e distribuídas em etapas
+intermediárias, permitindo maior controle sobre o processo e melhor
+visibilidade sobre como a saída é construída.
+
+A Figura~\ref{fig:comparacao-geral} sintetiza essa distinção em nível
+macro. Em vez de tratar a resposta como consequência imediata de uma
+única chamada ao modelo, a arquitetura proposta a representa como
+resultado de uma sequência organizada de análise, decomposição,
+processamento, integração e validação. Esse contraste é importante
+porque estabelece, visualmente, a diferença entre o baseline do
+experimento e a condição principal que será avaliada ao longo do
+trabalho.
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[node distance=1.1cm]
-\node[block] (q1) {Instrução\\ do usuário};
-\node[block, below=of q1] (m1) {LLM};
-\node[block, below=of m1] (r1) {Resposta final};
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.5cm and 0.8cm, transform shape]
 
-\draw[arrow] (q1) -- (m1);
+% Coluna esquerda
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm] (u1) {\scriptsize Questão do benchmark};
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below=of u1] (m1) {\scriptsize Modelo base};
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below=of m1] (r1) {\scriptsize Resposta final};
+
+\draw[arrow] (u1) -- (m1);
 \draw[arrow] (m1) -- (r1);
-\end{tikzpicture}
-\caption{Fluxo direto de inferência com uma única instrução e uma única resposta.}
-\label{fig:fluxo-direto}
-\end{figure}
 
-\begin{figure}[H]
-\centering
-\resizebox{0.92\columnwidth}{!}{%
-\begin{tikzpicture}[node distance=0.65cm and 0.60cm, transform shape]
-\node[smallblock] (q2) {Instrução principal};
-\node[smallblock, below=of q2] (o1) {Análise da instrução};
+\node[above=0.15cm of u1] {\scriptsize \textbf{Uso direto}};
 
-\node[smallblock, below left=of o1] (o2) {Subinstrução 1\\Entender o pedido};
-\node[smallblock, below=of o1] (o3) {Subinstrução 2\\Planejar a saída};
-\node[smallblock, below right=of o1] (o4) {Subinstrução 3\\Validar requisitos};
+% Coluna direita
+\node[wideblock, minimum width=3.6cm, minimum height=0.7cm, right=1.2cm of u1] (u2) {\scriptsize Questão do benchmark};
+\node[wideblock, minimum width=3.6cm, minimum height=0.7cm, below=of u2] (a2) {\scriptsize Análise inicial};
+\node[wideblock, minimum width=3.6cm, minimum height=0.7cm, below=of a2] (d2) {\scriptsize Decomposição};
+\node[wideblock, minimum width=3.6cm, minimum height=0.7cm, below=of d2] (p2) {\scriptsize Processamento};
+\node[wideblock, minimum width=3.6cm, minimum height=0.7cm, below=of p2] (i2) {\scriptsize Integração e validação};
+\node[wideblock, minimum width=3.6cm, minimum height=0.7cm, below=of i2] (r2) {\scriptsize Resposta final};
 
-\node[smallblock, below=1.0cm of o3] (o5) {Integração das respostas};
-\node[smallblock, below=of o5] (o6) {Resposta final};
+\draw[arrow] (u2) -- (a2);
+\draw[arrow] (a2) -- (d2);
+\draw[arrow] (d2) -- (p2);
+\draw[arrow] (p2) -- (i2);
+\draw[arrow] (i2) -- (r2);
 
-\draw[arrow] (q2) -- (o1);
-\draw[arrow] (o1) -- (o2);
-\draw[arrow] (o1) -- (o3);
-\draw[arrow] (o1) -- (o4);
-\draw[arrow] (o2) -- (o5);
-\draw[arrow] (o3) -- (o5);
-\draw[arrow] (o4) -- (o5);
-\draw[arrow] (o5) -- (o6);
+\node[above=0.15cm of u2] {\scriptsize \textbf{Com orquestração}};
+
 \end{tikzpicture}%
 }
-\caption{Fluxo planejado com quebra da instrução em subinstruções menores, consolidação das etapas e geração da resposta final.}
-\label{fig:quebra-instrucao}
+\caption{Comparação entre o fluxo direto de inferência e o fluxo orquestrado adotado como arquitetura experimental.}
+\label{fig:comparacao-geral}
 \end{figure}
 
-% -------------------------------------------------
-% SEÇÕES E SUBSEÇÕES
-% -------------------------------------------------
-\titleformat{\section}
-{\color{azulFEI}\normalfont\fontfamily{phv}\selectfont\bfseries\fontsize{11}{13}\selectfont}
-{\thesection.}{0.2em}{}
-\renewcommand{\thesection}{\Roman{section}}
-\titlespacing*{\section}{0pt}{10pt}{4pt}
-
-\titleformat{\subsection}
-{\color{grayFEI}\normalfont\fontfamily{phv}\selectfont\itshape\fontsize{10}{12}\selectfont}
-{\thesubsection.}{0.2em}{}
-\renewcommand{\thesubsection}{\Alph{subsection}}
-\titlespacing*{\subsection}{0pt}{6pt}{3pt}
-
-% =================================================
-\section{Avaliação dos resultados}
-% =================================================
-
-A verificação da hipótese central deste trabalho -- de que a qualidade da saída de um LLM depende da arquitetura de inferência adotada, e não apenas do modelo base -- exige um protocolo de avaliação que seja objetivo, reprodutível e comparável com resultados já estabelecidos na literatura \cite{hendrycks2021measuring,rein2023gpqa}. A escolha de benchmarks de múltipla escolha com gabarito fixo atende a esse requisito porque permite mensurar o desempenho com base em respostas objetivas, reduzindo ambiguidades na interpretação dos resultados e favorecendo a comparação entre diferentes configurações de inferência \cite{zhang2024enhancing,liu2025beyond}. Além disso, esse tipo de benchmark é amplamente utilizado em estudos recentes sobre modelos de linguagem, o que facilita o diálogo com a literatura e a replicabilidade do experimento \cite{hendrycks2021measuring,rein2023gpqa}.
-
-\subsection{Benchmarks adotados}
-
-O benchmark MMLU (\textit{Massive Multitask Language Understanding}) reúne 57 tarefas distribuídas entre humanidades, ciências sociais, STEM e medicina, cobrindo um conjunto amplo de conhecimentos e exigindo, em muitos casos, não apenas lembrança factual, mas também raciocínio contextualizado \cite{hendrycks2021measuring}. Sua abrangência temática torna esse conjunto particularmente útil para observar se as técnicas de inferência aplicadas ao modelo produzem efeitos consistentes em áreas diferentes ou se seus ganhos aparecem de forma desigual conforme o domínio avaliado. Por ser um benchmark já consolidado na literatura, o MMLU também fornece um ponto de comparação confiável para situar os resultados deste trabalho em relação a estudos anteriores \cite{hendrycks2021measuring}.
-
-O GPQA (\textit{Graduate-Level Google-Proof Q\&A}) complementa essa análise ao reunir questões de nível de pós-graduação em biologia, química e física, elaboradas e validadas por especialistas \cite{rein2023gpqa}. A principal característica desse conjunto é o seu grau elevado de dificuldade, o que o torna especialmente interessante para avaliar se determinadas estratégias de orquestração e refinamento conseguem beneficiar o desempenho do modelo em cenários mais exigentes. Em contraste com benchmarks mais amplos, o GPQA permite observar o comportamento do sistema em tarefas nas quais soluções superficiais tendem a ser menos eficazes, reforçando a relevância de métodos que organizem melhor o processo de inferência \cite{rein2023gpqa,yao2023tree}.
-
-A combinação dos dois benchmarks busca equilibrar amplitude e profundidade na avaliação. Enquanto o MMLU explora a diversidade de domínios e a robustez geral do sistema, o GPQA investiga o comportamento do modelo em problemas especializados e mais desafiadores \cite{hendrycks2021measuring,rein2023gpqa}. Dessa forma, a análise não se limita a uma única dimensão de desempenho, mas procura fornecer uma visão mais ampla sobre como diferentes estratégias de uso do LLM podem influenciar a qualidade final das respostas.
-
-\subsection{Procedimento de avaliação}
-
-Cada questão será submetida individualmente às configurações experimentais planejadas, conforme representado na Figura~\ref{fig:pipeline-avaliacao}. A configuração base corresponde ao uso direto do modelo, sem etapas adicionais de refinamento, funcionando como referência para comparação. As demais configurações incorporam progressivamente mecanismos de organização da entrada, de decomposição da tarefa e de revisão da resposta, de modo que seja possível observar o impacto de cada camada adicionada ao pipeline \cite{wang2023selfinstruct,huang2023selfimprove,liu2025beyond}.
+Embora a comparação geral seja suficiente para diferenciar as duas
+condições experimentais, ela ainda não mostra como a arquitetura
+proposta reorganiza internamente a resolução de uma tarefa. Por isso, a
+Figura~\ref{fig:estrutura-processo} detalha a lógica de transformação da
+questão em resposta, destacando que o processo intermediário não é um
+acréscimo meramente estético, mas uma estratégia de estruturação da
+inferência. Nessa perspectiva, a tarefa deixa de ser tratada como um
+bloco indivisível e passa a ser abordada como uma sequência coordenada
+de operações menores, cada uma com função específica dentro do pipeline.
 
 \begin{figure}[H]
 \centering
-\resizebox{0.95\columnwidth}{!}{%
-\begin{tikzpicture}[node distance=0.8cm]
-\node[wideblock] (a) {Questão do benchmark\\ (MMLU ou GPQA)};
-\node[wideblock, below=of a] (b) {Configuração aplicada\\ (base ou aprimorada)};
-\node[wideblock, below=of b] (c) {Chamada ao LLM\\ via OpenRouter};
-\node[wideblock, below=of c] (d) {Extração da alternativa\\ selecionada};
-\node[wideblock, below=of d] (e) {Comparação com gabarito};
-\node[wideblock, below=of e] (f) {Registro da acurácia\\ por configuração};
+\resizebox{0.65\columnwidth}{!}{
+\begin{tikzpicture}[node distance=0.45cm, transform shape]
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm] (q) {\scriptsize Questão recebida};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of q] (a) {\scriptsize Identificação do problema};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of a] (b) {\scriptsize Separação em etapas};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of b] (c) {\scriptsize Execução das subtarefas};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of c] (d) {\scriptsize Consolidação das saídas};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of d] (e) {\scriptsize Verificação antes da resposta};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of e] (f) {\scriptsize Resposta final};
+
+\draw[arrow] (q) -- (a);
 \draw[arrow] (a) -- (b);
 \draw[arrow] (b) -- (c);
 \draw[arrow] (c) -- (d);
@@ -322,17 +325,280 @@ Cada questão será submetida individualmente às configurações experimentais 
 \draw[arrow] (e) -- (f);
 \end{tikzpicture}%
 }
+\caption{Representação sequencial das etapas que estruturam a passagem da questão à resposta final.}
+\label{fig:estrutura-processo}
+\end{figure}
+
+Essa reformulação torna a seção mais útil ao artigo porque ela deixa de
+ser apenas uma abertura visual e passa a introduzir, de maneira
+argumentativa, o objeto metodológico que será aprofundado a seguir.
+Assim, a representação do processo contribui para reduzir ambiguidades
+sobre o que exatamente será comparado no experimento e ajuda a preparar
+a leitura da metodologia de forma mais coerente.
+
+% =================================================
+\section{Metodologia}
+% =================================================
+
+A metodologia deste trabalho foi construída para isolar o efeito da
+arquitetura de inferência sobre a qualidade das respostas produzidas por
+um modelo de linguagem. Em vez de comparar modelos distintos entre si, a
+estratégia central consiste em manter o modelo base constante e alterar a
+forma como a tarefa é organizada ao longo da execução. Esse desenho
+experimental é relevante porque permite analisar se diferenças de
+desempenho decorrem da capacidade intrínseca do modelo ou da estrutura
+adotada para conduzir o raciocínio e a produção da saída final.
+
+De modo geral, o experimento compara duas condições principais. A
+primeira corresponde ao uso direto do modelo, no qual a questão é
+submetida ao LLM em uma única chamada. A segunda corresponde ao uso do
+mesmo modelo dentro de um pipeline estruturado, inspirado no
+\textit{Ralph Loop}, em que a resolução da tarefa é distribuída em
+etapas menores e potencialmente complementada por verificação
+intermediária e integração de ferramentas auxiliares. Essa organização
+foi escolhida porque dialoga com a literatura recente que mostra ganhos
+de desempenho quando a inferência deixa de ser tratada como geração
+monolítica e passa a incorporar planejamento, decomposição, revisão e
+controle parcial das saídas.
+
+\subsection{Desenho experimental}
+
+O desenho experimental parte de uma lógica comparativa simples, mas
+metodologicamente importante: a mesma questão será submetida às
+diferentes condições de execução, preservando-se, sempre que possível, o
+mesmo modelo subjacente. Isso permite que a variável principal do estudo
+seja a arquitetura de processamento, e não a troca do modelo. Em outras
+palavras, o trabalho busca observar o quanto a organização da inferência
+interfere no resultado obtido quando o núcleo gerador permanece
+constante.
+
+A Figura~\ref{fig:desenho-experimental} resume esse princípio. A partir
+de uma mesma entrada, duas rotas são construídas: uma rota de referência,
+mais simples, e uma rota principal, mais estruturada. Ao final, ambas
+produzem uma resposta comparável com o gabarito da questão, o que
+permite levar a comparação adiante na etapa de avaliação dos resultados.
+
+\begin{figure}[H]
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tikzpicture}[node distance=0.6cm and 0.6cm, transform shape]
+
+\node[wideblock, minimum width=3.6cm, minimum height=0.7cm] (q0) {\scriptsize Questão selecionada};
+
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below left=0.6cm and 0.4cm of q0] (b1) {\scriptsize Uso direto};
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below=of b1] (b2) {\scriptsize Resposta base};
+
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below right=0.6cm and 0.4cm of q0] (p1) {\scriptsize Pipeline orquestrado};
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below=of p1] (p2) {\scriptsize Resposta processada};
+
+\node[wideblock, minimum width=3.6cm, minimum height=0.7cm, below=2.4cm of q0] (g0) {\scriptsize Comparação com gabarito};
+
+\draw[arrow] (q0) -- (b1);
+\draw[arrow] (b1) -- (b2);
+\draw[arrow] (q0) -- (p1);
+\draw[arrow] (p1) -- (p2);
+\draw[arrow] (b2) -- (g0);
+\draw[arrow] (p2) -- (g0);
+
+\end{tikzpicture}%
+}
+\caption{Desenho experimental comparando uso direto e pipeline orquestrado com a mesma base de questões.}
+\label{fig:desenho-experimental}
+\end{figure}
+
+Essa forma de organização favorece a interpretação dos resultados porque
+reduz um problema comum em comparações com LLMs: atribuir ganhos ou
+perdas ao modelo quando, na realidade, parte do efeito pode estar na
+maneira como a tarefa foi estruturada. Ao delimitar explicitamente a
+arquitetura como variável de interesse, o estudo procura oferecer uma
+análise mais precisa do papel da orquestração na qualidade da saída.
+
+\subsection{Arquitetura proposta}
+
+A arquitetura central deste trabalho baseia-se no \textit{Ralph Loop},
+adotado aqui como uma estratégia de execução em ciclos e etapas mais
+isoladas, o que reduz a dependência do acúmulo de contexto ao longo do
+processo. Conceitualmente, essa escolha aproxima o experimento de
+métodos de raciocínio estruturado e de orquestração deliberada. Nesses
+casos, resolver um problema exige organizar o caminho da inferência
+passo a passo, em vez de apenas gerar uma resposta direta após o prompt
+inicial.
+
+Na prática, o pipeline proposto recebe a questão e faz uma análise prévia
+para identificar o tipo de problema, a área abordada e as regras da
+tarefa. Depois, a resolução é dividida em ações menores: interpretar o
+texto, planejar a resposta, checar a lógica e escolher a alternativa. As
+saídas geradas nessas etapas parciais são unidas em uma resposta final,
+que ainda pode passar por um filtro extra de verificação antes de ser
+registrada.
+
+A Figura~\ref{fig:fluxo-detalhado} ilustra essa dinâmica. O objetivo do
+diagrama não é impor uma regra rígida de execução, mas expor a lógica
+geral da arquitetura: uma série organizada de ações menores, desenhadas
+para diminuir a incerteza da inferência e garantir mais controle sobre a
+saída gerada.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.65\columnwidth}{!}{
+\begin{tikzpicture}[node distance=0.45cm, transform shape]
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm] (a) {\scriptsize Questão do benchmark};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of a] (b) {\scriptsize Análise do enunciado};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of b] (c) {\scriptsize Decomposição da tarefa};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of c] (d) {\scriptsize Execução das subtarefas};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of d] (e) {\scriptsize Integração das saídas};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of e] (f) {\scriptsize Verificação intermediária};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of f] (g) {\scriptsize Seleção da resposta final};
+
+\draw[arrow] (a) -- (b);
+\draw[arrow] (b) -- (c);
+\draw[arrow] (c) -- (d);
+\draw[arrow] (d) -- (e);
+\draw[arrow] (e) -- (f);
+\draw[arrow] (f) -- (g);
+\end{tikzpicture}%
+}
+\caption{Fluxo detalhado da arquitetura proposta, desde a entrada da questão até a consolidação da resposta final.}
+\label{fig:fluxo-detalhado}
+\end{figure}
+
+Essa decomposição tem relevância metodológica porque evita concentrar,
+em uma única geração, decisões heterogêneas que exigem competências
+distintas. Em uma questão de física, por exemplo, a identificação das
+grandezas relevantes não é exatamente a mesma operação da escolha final
+da alternativa correta; em uma questão de filosofia, reconhecer a tese
+central do texto também não equivale automaticamente à comparação entre
+alternativas. Ao explicitar essas diferenças em etapas menores, o
+pipeline procura alinhar a execução do modelo a uma lógica de resolução
+mais estruturada.
+
+\subsection{Componentes auxiliares}
+
+Embora a arquitetura principal já seja suficiente para estabelecer a
+comparação central do artigo, o pipeline poderá incorporar componentes
+auxiliares voltados ao fortalecimento da resposta final. Entre esses
+componentes, destacam-se mecanismos de verificação intermediária, nos
+quais uma saída parcial ou final pode ser inspecionada antes de ser
+aceita como resposta consolidada, e ferramentas externas usadas para
+apoiar etapas específicas do processo. Esses elementos não constituem o
+objeto principal da hipótese experimental, mas ampliam a capacidade de
+controle do sistema orquestrado.
+
+A Figura~\ref{fig:componentes-arquitetura} apresenta uma visão mais
+estrutural do pipeline, destacando a relação entre o núcleo de execução,
+o módulo de verificação e os recursos auxiliares. Essa representação é
+útil porque evidencia que a arquitetura proposta não é apenas uma cadeia
+linear de passos, mas um arranjo em que diferentes componentes podem
+apoiar a produção e a validação da resposta.
+
+\begin{figure}[H]
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tikzpicture}[node distance=0.6cm and 0.4cm, transform shape]
+
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm] (q) {\scriptsize Questão de entrada};
+\node[wideblock, minimum width=3.8cm, minimum height=0.7cm, below=0.6cm of q] (core) {\scriptsize Núcleo do pipeline};
+
+\node[wideblock, minimum width=2.8cm, minimum height=0.7cm, left=0.6cm of core] (llm) {\scriptsize Modelo base};
+\node[wideblock, minimum width=2.8cm, minimum height=0.7cm, right=0.6cm of core] (judge) {\scriptsize Verificação};
+
+\node[wideblock, minimum width=3.0cm, minimum height=0.7cm, below left=0.7cm and 0.2cm of core] (tools) {\scriptsize Ferramentas};
+\node[wideblock, minimum width=3.0cm, minimum height=0.7cm, below right=0.7cm and 0.2cm of core] (out) {\scriptsize Resposta final};
+
+\draw[arrow] (q) -- (core);
+\draw[arrow] (llm) -- (core);
+\draw[arrow] (core) -- (judge);
+\draw[arrow] (tools) -- (core);
+\draw[arrow] (core) -- (out);
+\draw[arrow] (judge) -- (out);
+
+\end{tikzpicture}%
+}
+\caption{Visão estrutural da arquitetura proposta, incluindo modelo base, núcleo, verificação e ferramentas auxiliares.}
+\label{fig:componentes-arquitetura}
+\end{figure}
+
+A inserção desses módulos auxiliares também ajuda a explicar por que a
+arquitetura proposta deve ser compreendida como uma composição de etapas
+e não apenas como um prompt maior ou mais detalhado. O ganho esperado,
+caso ele exista, não decorre exclusivamente da redação da instrução
+inicial, mas da possibilidade de distribuir funções diferentes entre
+partes distintas do sistema, permitindo revisão, controle e apoio
+externo durante a execução.
+
+\subsection{Controle da execução}
+
+Para que a comparação entre as condições experimentais seja válida, a
+execução deverá seguir um protocolo uniforme. Cada questão selecionada
+será submetida individualmente às condições definidas no estudo, com
+registro da alternativa produzida, do contexto de execução e da condição
+aplicada. Esse cuidado é importante porque a utilidade do experimento não
+depende apenas da existência de um pipeline mais elaborado, mas da
+possibilidade de comparar as saídas obtidas sob critérios consistentes.
+
+Além disso, o protocolo metodológico prevê que a arquitetura proposta
+seja analisada não somente em termos de acerto final, mas também em
+termos de comportamento por etapa. Ainda que a métrica principal seja a
+acurácia, a própria organização do pipeline permite observar em que ponto
+a estrutura pode contribuir mais para a robustez da resposta, seja na
+interpretação inicial, na decomposição da tarefa, na integração das
+saídas ou na validação da alternativa escolhida. Com isso, a metodologia
+não se limita a descrever um sistema, mas prepara o terreno para uma
+avaliação mais informativa na seção seguinte.
+
+% =================================================
+\section{Avaliação dos resultados}
+% =================================================
+
+A avaliação dos resultados exige um protocolo que seja objetivo, reprodutível e comparável com referências já consolidadas na literatura. A escolha de benchmarks de múltipla escolha com gabarito fixo atende a esse requisito porque permite mensurar o desempenho por meio de respostas objetivas, reduzindo ambiguidades de interpretação e facilitando a comparação entre diferentes condições experimentais \cite{hendrycks2021measuring,rein2023gpqa}. Esse tipo de estrutura também favorece a replicabilidade do experimento, já que a resposta correta de cada questão é previamente conhecida e o critério principal de avaliação pode ser expresso diretamente em termos de acurácia \cite{zhang2024enhancing,liu2025beyond}.
+
+\subsection{Benchmarks adotados}
+
+Os benchmarks utilizados na avaliação serão selecionados a partir de conjuntos já consolidados na literatura, com destaque para MMLU e GPQA \cite{hendrycks2021measuring,rein2023gpqa}. O MMLU oferece ampla diversidade temática, cobrindo áreas como humanidades, ciências sociais, STEM e medicina \cite{hendrycks2021measuring}, enquanto o GPQA introduz questões mais difíceis e especializadas em biologia, química e física \cite{rein2023gpqa}. A combinação entre esses benchmarks permite equilibrar amplitude e profundidade na análise, evitando que a avaliação dependa de apenas um tipo de tarefa ou de uma única faixa de dificuldade.
+
+Além da variedade de domínios, a seleção buscará contemplar diferentes níveis de complexidade, incluindo questões compatíveis com ensino médio, graduação, pós-graduação e doutorado, conforme a natureza de cada benchmark e de cada tópico escolhido. Essa diversidade é relevante porque permite observar se a arquitetura proposta mantém comportamento consistente ao longo de diferentes graus de exigência cognitiva. Assim, a avaliação deixa de medir apenas desempenho médio e passa a considerar também a robustez do sistema diante de tarefas com perfis distintos \cite{hendrycks2021measuring,rein2023gpqa}.
+
+\subsection{Amostragem das questões}
+
+Em vez de utilizar integralmente todos os itens disponíveis em cada benchmark, o experimento trabalhará com uma seleção reduzida e controlada de questões por tópico. Para cada área temática considerada, serão utilizadas entre 10 e 20 questões, buscando equilíbrio entre viabilidade computacional e diversidade amostral. Os tópicos avaliados deverão contemplar domínios como matemática, física, biologia, linguagens, filosofia e outros conjuntos equivalentes que se mostrem adequados ao recorte do experimento.
+
+Essa estratégia de amostragem busca preservar representatividade sem tornar a execução excessivamente extensa ou custosa. Ao organizar a avaliação por tópicos e por níveis de dificuldade, torna-se possível examinar se o impacto da arquitetura proposta varia conforme o tipo de conhecimento exigido ou conforme a complexidade da questão. Dessa forma, a análise poderá identificar padrões mais específicos do que aqueles oferecidos por uma única taxa global de acerto.
+
+\subsection{Procedimento de avaliação}
+
+Cada questão selecionada será submetida individualmente às condições experimentais definidas neste trabalho. A condição de referência corresponde ao uso direto do modelo base, sem modificações adicionais. A condição principal corresponde ao uso do mesmo modelo dentro do pipeline baseado no \textit{Ralph Loop}, juntamente com as adaptações e componentes auxiliares que forem efetivamente empregados na implementação final, como mecanismos de verificação intermediária ou ferramentas externas de apoio \cite{ghuntley2025ralph,zheng2024judging,li2024llms_judges,mcp_multiagent2025,sarkar2025mcp}. De forma complementar, um modelo mais avançado poderá ser avaliado em sua configuração direta, funcionando como referência adicional para situar os resultados obtidos.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.65\columnwidth}{!}{
+\begin{tikzpicture}[node distance=0.45cm, transform shape]
+\node[wideblock, minimum width=3.6cm, minimum height=0.65cm] (a) {\scriptsize Questão (MMLU ou GPQA)};
+\node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of a] (b) {\scriptsize Condição aplicada};
+\node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of b] (c) {\scriptsize Chamada via OpenRouter};
+\node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of c] (d) {\scriptsize Avaliação intermediária};
+\node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of d] (e) {\scriptsize Extração da alternativa};
+\node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of e] (f) {\scriptsize Comparação com gabarito};
+\node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of f] (g) {\scriptsize Registro da acurácia};
+
+\draw[arrow] (a) -- (b);
+\draw[arrow] (b) -- (c);
+\draw[arrow] (c) -- (d);
+\draw[arrow] (d) -- (e);
+\draw[arrow] (e) -- (f);
+\draw[arrow] (f) -- (g);
+\end{tikzpicture}%
+}
 \caption{Pipeline de avaliação experimental aplicado a cada questão dos benchmarks.}
 \label{fig:pipeline-avaliacao}
 \end{figure}
 
-O modelo utilizado será o mesmo em todas as condições, de forma que as diferenças observadas possam ser atribuídas ao desenho da inferência, e não a mudanças na arquitetura ou no provedor de acesso. A resposta final produzida em cada questão será comparada com o gabarito correspondente, permitindo o cálculo da acurácia por configuração e por benchmark. Esse procedimento preserva a objetividade da análise e cria uma base comparável para verificar se os acréscimos metodológicos trazem ganhos reais de desempenho \cite{zhang2024enhancing,chen2025tumix}.
+A resposta final produzida em cada execução será comparada com o gabarito correspondente, permitindo o cálculo da acurácia por condição experimental. Além da taxa de acerto global, os resultados poderão ser organizados por benchmark, por área temática e por nível de dificuldade, o que torna a análise mais detalhada e mais compatível com o objetivo de verificar em quais contextos a arquitetura proposta apresenta maior impacto. Esse procedimento mantém o mesmo critério de decisão para todas as condições avaliadas e, por isso, preserva a objetividade da comparação \cite{zhang2024enhancing,chen2025tumix}.
 
 \subsection{Critérios de análise}
 
-A análise dos resultados será organizada de forma mais aberta, com critérios definidos a partir dos padrões que emergirem dos próprios experimentos. Em vez de fixar previamente uma única divisão analítica, a interpretação poderá considerar aspectos como estabilidade das respostas, consistência entre configurações e variação de desempenho conforme o tipo de questão ou o conjunto avaliado, caso esses recortes se mostrem relevantes ao longo da investigação.
+A análise dos resultados será centrada na comparação entre o desempenho do modelo base e o desempenho do pipeline proposto, tomando a acurácia como métrica principal. A interpretação poderá considerar recortes como variação entre benchmarks, comportamento por área temática, diferenças entre níveis de dificuldade e distância entre os resultados obtidos pelo modelo base, pelo pipeline orquestrado e pelo modelo adicional de referência, caso este seja incluído na etapa experimental.
 
-Essa abordagem permite que a leitura dos dados acompanhe melhor os achados empíricos, sem restringir a análise a categorias fechadas antes da observação dos resultados. Assim, a seção de resultados poderá ser ajustada para destacar os elementos que realmente contribuírem para compreender o comportamento do sistema, mantendo o rigor metodológico e a flexibilidade necessária a uma pesquisa em desenvolvimento.
+Essa organização permite que a discussão vá além de uma simples média agregada de acertos. Caso o pipeline apresente ganhos mais pronunciados em determinadas áreas ou em níveis específicos de complexidade, esses padrões poderão ser descritos com maior precisão. Da mesma forma, se os efeitos observados forem modestos ou heterogêneos, a estrutura adotada também permitirá identificar com clareza em quais contextos a arquitetura proposta se mostra mais ou menos eficaz.
 
 % =================================================
 \section{Referências}
