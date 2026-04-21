@@ -329,7 +329,7 @@ Essa forma de organização favorece a interpretação dos resultados porque red
 
 A arquitetura central deste trabalho baseia-se no \textit{Ralph Loop} \cite{ghuntley2025ralph}, adotado aqui como uma estratégia de execução em ciclos e etapas mais isoladas, o que reduz a dependência do acúmulo de contexto ao longo do processo. Conceitualmente, essa escolha aproxima o experimento de métodos de raciocínio estruturado e de orquestração deliberada, nos quais resolver um problema exige organizar o fluxo de processamento passo a passo \cite{yao2023tree,shinn2023reflexion}, em vez de apenas gerar uma resposta direta após o prompt inicial \cite{kojima2022large}.
 
-Na prática, o pipeline proposto recebe a questão e faz uma análise prévia para identificar o tipo de problema, a área abordada e as restrições da tarefa \cite{shen2023hugginggpt}. Depois, a resolução é dividida em ações menores: interpretar o enunciado, planejar a resposta, checar a lógica e escolher a alternativa. Essa divisão está alinhada à ideia de auto-refinamento iterativo, em que resultados parciais são revisados antes de compor a saída final \cite{madaan2023selfrefine,wang2023selfconsistency}. As respostas geradas nessas etapas parciais são unidas, podendo ainda passar por um filtro extra de verificação antes de serem registradas \cite{zheng2024judging,li2024llms_judges}.
+Na prática, o pipeline proposto recebe a questão e faz uma análise prévia para identificar o tipo de problema, a área abordada e as restrições da tarefa \cite{shen2023hugginggpt}. Como o enunciado já foi interpretado nessa fase inicial, a resolução passa a ser dividida em ações menores e mais focadas, como: estruturar um plano de raciocínio, levantar as informações necessárias, checar a consistência lógica e validar a alternativa correta. Essa divisão está alinhada à ideia de auto-refinamento iterativo, em que resultados parciais são revisados antes de compor a saída final \cite{madaan2023selfrefine,wang2023selfconsistency}. As respostas geradas nessas etapas parciais são unidas, podendo ainda passar por um filtro extra de verificação antes de serem registradas \cite{zheng2024judging,li2024llms_judges}.
 
 A Figura~\ref{fig:fluxo-detalhado} ilustra essa dinâmica. O objetivo do diagrama não é impor uma regra rígida de execução, mas expor a lógica geral da arquitetura: uma série organizada de ações menores, desenhadas para diminuir a incerteza da inferência e garantir mais controle sobre a resposta gerada \cite{ghuntley2025ralph,shinn2023reflexion}.
 
@@ -351,7 +351,7 @@ A Figura~\ref{fig:fluxo-detalhado} ilustra essa dinâmica. O objetivo do diagram
 \draw[arrow] (f) -- (g);
 \end{tikzpicture}%
 }
-}{Fluxo detalhado da arquitetura proposta, desde a entrada da questão até a consolidação da resposta final.}{fig:fluxo-detalhado}
+}{Fluxo da arquitetura proposta, desde a entrada da questão até a consolidação da resposta final.}{fig:fluxo-detalhado}
 
 Essa decomposição tem relevância metodológica porque evita concentrar, em uma única geração, decisões heterogêneas que exigem competências distintas \cite{wei2022chain,yao2023tree}. Em uma questão de física, por exemplo, a identificação das grandezas relevantes não é a mesma operação da escolha final da alternativa correta; em uma questão de filosofia, reconhecer a tese central também não equivale à comparação entre alternativas. Ao explicitar essas diferenças em etapas menores, o pipeline procura alinhar a execução do modelo a uma lógica de resolução mais estruturada \cite{madaan2023selfrefine,huttula2025advanced}.
 
