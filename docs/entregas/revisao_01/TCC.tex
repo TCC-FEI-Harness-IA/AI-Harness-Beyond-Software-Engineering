@@ -200,9 +200,9 @@
 
 \email{cferreira@fei.edu.br}
 
-\resumo{Modelos de linguagem generativa frequentemente são utilizados como sistemas diretos de pergunta e resposta. No entanto, resultados recentes indicam que seu desempenho pode ser ampliado quando o modelo base é combinado com técnicas complementares de organização da inferência, decomposição de tarefas e avaliação intermediária da resposta. Este trabalho investiga a hipótese de que a qualidade das saídas produzidas por inteligência artificial depende não apenas do modelo utilizado, mas também da arquitetura que organiza o processo de geração. Para isso, será realizado um estudo experimental comparando o modelo em sua configuração direta, acessado via OpenRouter, com o mesmo modelo operando dentro de um pipeline baseado no \textit{Ralph Loop}, complementado por mecanismos de validação e uso de ferramentas externas quando necessário. A avaliação será conduzida com benchmarks consolidados na literatura, compostos por questões de múltipla escolha distribuídas entre diferentes níveis de dificuldade e áreas do conhecimento. Como se trata de um cenário com respostas objetivas, o desempenho será medido principalmente pela acurácia, com base na comparação entre a alternativa selecionada pelo modelo e o gabarito de cada questão. Espera-se, com isso, contribuir para a compreensão de sistemas de IA como composições de ferramentas, etapas de processamento e estratégias de orquestração, e não apenas como mecanismos simples de resposta direta.}
+\resumo{Modelos de linguagem generativa frequentemente são utilizados como sistemas diretos de pergunta e resposta. No entanto, resultados recentes indicam que seu desempenho pode ser ampliado quando o modelo base é combinado com técnicas complementares de organização da inferência, decomposição de tarefas e avaliação intermediária da resposta. Este trabalho investiga a hipótese de que a qualidade das saídas produzidas por inteligência artificial depende não apenas do modelo utilizado, mas também da arquitetura que organiza o processo de geração. Para isso, será realizado um estudo experimental comparando o modelo em sua configuração direta com o mesmo modelo operando dentro de um pipeline baseado no \textit{Ralph Loop}, complementado por mecanismos de validação e uso de ferramentas externas quando necessário. A avaliação será conduzida com benchmarks consolidados na literatura, compostos por questões de múltipla escolha distribuídas entre diferentes níveis de dificuldade e áreas do conhecimento. Como se trata de um cenário com respostas objetivas, o desempenho será medido principalmente pela acurácia, com base na comparação entre a alternativa selecionada pelo modelo e o gabarito de cada questão. Dessa forma, espera-se contribuir para a compreensão dos sistemas de IA como composições estruturadas de ferramentas, etapas de processamento e estratégias de orquestração, indo além de mecanismos simples de resposta direta.}
 
-\keyword{inteligência artificial, modelos de linguagem, prompt engineering, orquestração, avaliação experimental}
+\keyword{inteligência artificial, modelos de linguagem, prompt engineering, orquestração, avaliação experimental, Ralph Loop}
 
 \end{@twocolumnfalse}
 ]
@@ -416,7 +416,7 @@ Cada questão selecionada será submetida individualmente às condições experi
 \begin{tikzpicture}[node distance=0.45cm, transform shape]
 \node[wideblock, minimum width=3.6cm, minimum height=0.65cm] (a) {\scriptsize Questão (MMLU ou GPQA)};
 \node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of a] (b) {\scriptsize Condição aplicada};
-\node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of b] (c) {\scriptsize Chamada via OpenRouter};
+\node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of b] (c) {\scriptsize Chamada do modelo};
 \node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of c] (d) {\scriptsize Avaliação intermediária};
 \node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of d] (e) {\scriptsize Extração da alternativa};
 \node[wideblock, minimum width=3.6cm, minimum height=0.65cm, below=of e] (f) {\scriptsize Comparação com gabarito};
