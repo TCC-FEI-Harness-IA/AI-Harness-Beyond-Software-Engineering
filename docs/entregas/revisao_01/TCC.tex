@@ -363,22 +363,22 @@ A Figura~\ref{fig:componentes-arquitetura} apresenta uma visão mais estrutural 
 
 \figlocal{
 \resizebox{\columnwidth}{!}{%
-\begin{tikzpicture}[node distance=0.6cm and 0.4cm, transform shape]
+\begin{tikzpicture}[node distance=0.8cm and 0.6cm, transform shape]
 \node[wideblock, minimum width=3.4cm, minimum height=0.7cm] (q) {\scriptsize Questão de entrada};
-\node[wideblock, minimum width=3.8cm, minimum height=0.7cm, below=0.6cm of q] (core) {\scriptsize Núcleo do pipeline};
-\node[wideblock, minimum width=2.8cm, minimum height=0.7cm, left=0.6cm of core] (llm) {\scriptsize Modelo base};
-\node[wideblock, minimum width=2.8cm, minimum height=0.7cm, right=0.6cm of core] (judge) {\scriptsize Verificação};
-\node[wideblock, minimum width=3.0cm, minimum height=0.7cm, below left=0.7cm and 0.2cm of core] (tools) {\scriptsize Ferramentas};
-\node[wideblock, minimum width=3.0cm, minimum height=0.7cm, below right=0.7cm and 0.2cm of core] (out) {\scriptsize Resposta final};
+\node[wideblock, minimum width=3.8cm, minimum height=0.7cm, below=0.7cm of q] (core) {\scriptsize Núcleo de orquestração};
+\node[wideblock, minimum width=3.0cm, minimum height=0.7cm, left=0.6cm of core] (tools) {\scriptsize Ferramentas externas};
+\node[wideblock, minimum width=3.0cm, minimum height=0.7cm, right=0.6cm of core] (judge) {\scriptsize Módulo de verificação};
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below=0.7cm of core] (out) {\scriptsize Resposta final};
+
 \draw[arrow] (q) -- (core);
-\draw[arrow] (llm) -- (core);
-\draw[arrow] (core) -- (judge);
-\draw[arrow] (tools) -- (core);
+\draw[arrow] (core.170) -- (tools.10);
+\draw[arrow] (tools.350) -- (core.190);
+\draw[arrow] (core.10) -- (judge.170);
+\draw[arrow] (judge.190) -- (core.350);
 \draw[arrow] (core) -- (out);
-\draw[arrow] (judge) -- (out);
 \end{tikzpicture}%
 }
-}{Visão estrutural da arquitetura proposta, incluindo modelo base, núcleo, verificação e ferramentas auxiliares.}{fig:componentes-arquitetura}
+}{Visão estrutural da arquitetura proposta, com o núcleo de orquestração interagindo com módulos de ferramentas e verificação.}{fig:componentes-arquitetura}
 
 A inserção desses módulos auxiliares ajuda a explicar por que a arquitetura proposta deve ser compreendida como uma composição de etapas e não apenas como um prompt maior ou mais detalhado. O ganho esperado, caso ele exista, não decorre exclusivamente da redação da instrução inicial, mas da possibilidade de distribuir funções diferentes entre partes distintas do sistema, permitindo revisão, controle e apoio externo durante a execução \cite{madaan2023selfrefine,mcp_multiagent2025,sarkar2025mcp}.
 
