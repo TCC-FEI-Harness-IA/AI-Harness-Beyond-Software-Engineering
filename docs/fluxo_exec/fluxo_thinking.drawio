@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
   <diagram name="Página-1" id="4X9uMalcLt6JlwlXwuiN">
-    <mxGraphModel dx="6475" dy="3860" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="3189" dy="2280" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -216,6 +216,9 @@
         </mxCell>
         <mxCell id="-rG12Z00urDiXUqCdvOa-12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Cria um novo plano para captar as informações faltantes" vertex="1">
           <mxGeometry height="70" width="140" x="2970" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="Q4z8skLOGUwo0BNwu8ij-2" parent="1" style="whiteSpace=wrap;html=1;fillColor=#a20025;fontColor=#ffffff;strokeColor=#6F0000;" value="&lt;font style=&quot;font-size: 22px;&quot;&gt;TODO: Desenhar um mecanismo de &quot;panico&quot;. Existe o risco dessa arquitetura cair em um DEADLOCK. Precisa definir um regra, como quantidade maxima de tokens, tempo maximo rodando ou quantidade maxima de &quot;rodadas/fases&quot; que passaram, e caso passe de uma certa quantidade, force a resposta final&lt;/font&gt;" vertex="1">
+          <mxGeometry height="250" width="420" x="1980" y="470" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
