@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
   <diagram name="Página-1" id="4X9uMalcLt6JlwlXwuiN">
-    <mxGraphModel dx="1762" dy="1744" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="6475" dy="3860" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -130,10 +130,10 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="RH54ltWP00XVPSGEybgH-49" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Por exemplo fazer busca na internet ou usar um MCP" vertex="1">
-          <mxGeometry height="40" width="130" x="1800" y="605" as="geometry" />
+          <mxGeometry height="40" width="130" x="1760" y="605" as="geometry" />
         </mxCell>
         <mxCell id="RH54ltWP00XVPSGEybgH-50" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Vamos implementar o uso de tools para o TCC ?" vertex="1">
-          <mxGeometry height="40" width="130" x="1940" y="680" as="geometry" />
+          <mxGeometry height="40" width="130" x="1760" y="690" as="geometry" />
         </mxCell>
         <mxCell id="RH54ltWP00XVPSGEybgH-69" edge="1" parent="1" source="RH54ltWP00XVPSGEybgH-54" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="RH54ltWP00XVPSGEybgH-56">
           <mxGeometry relative="1" as="geometry" />
@@ -153,8 +153,11 @@
         <mxCell id="RH54ltWP00XVPSGEybgH-57" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="seta &quot;pass_phase&quot;: True" vertex="1">
           <mxGeometry height="70" width="140" x="1576" y="1040" as="geometry" />
         </mxCell>
-        <mxCell id="RH54ltWP00XVPSGEybgH-74" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Existe alguma task com &quot;pass_phase&quot;: False ?" vertex="1">
-          <mxGeometry height="70" width="140" x="1920" y="300" as="geometry" />
+        <mxCell id="-rG12Z00urDiXUqCdvOa-3" edge="1" parent="1" source="RH54ltWP00XVPSGEybgH-74" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="-rG12Z00urDiXUqCdvOa-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RH54ltWP00XVPSGEybgH-74" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Compila as informações de resultado entre as fazes" vertex="1">
+          <mxGeometry height="70" width="140" x="1970" y="300" as="geometry" />
         </mxCell>
         <mxCell id="RH54ltWP00XVPSGEybgH-80" edge="1" parent="1" source="RH54ltWP00XVPSGEybgH-77" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="RH54ltWP00XVPSGEybgH-79">
           <mxGeometry relative="1" as="geometry" />
@@ -162,8 +165,57 @@
         <mxCell id="RH54ltWP00XVPSGEybgH-77" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Precisa Atualizar algo das demais fases ? (Descrição, titulo, etc)" vertex="1">
           <mxGeometry height="70" width="140" x="1576" y="1190" as="geometry" />
         </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-1" edge="1" parent="1" source="RH54ltWP00XVPSGEybgH-79" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" target="RH54ltWP00XVPSGEybgH-32">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1910" y="1375" />
+              <mxPoint x="1910" y="353" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="RH54ltWP00XVPSGEybgH-79" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Atualizar a lista de Tasks" vertex="1">
           <mxGeometry height="70" width="140" x="1576" y="1340" as="geometry" />
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-5" edge="1" parent="1" source="-rG12Z00urDiXUqCdvOa-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="-rG12Z00urDiXUqCdvOa-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Compara o compilado com os criterios de aceitação&amp;nbsp;" vertex="1">
+          <mxGeometry height="70" width="140" x="2220" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-8" edge="1" parent="1" source="-rG12Z00urDiXUqCdvOa-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="-rG12Z00urDiXUqCdvOa-6" value="Sim">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-11" edge="1" parent="1" source="-rG12Z00urDiXUqCdvOa-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="-rG12Z00urDiXUqCdvOa-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Criterios atendidos?" vertex="1">
+          <mxGeometry height="70" width="140" x="2470" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-9" edge="1" parent="1" source="-rG12Z00urDiXUqCdvOa-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="-rG12Z00urDiXUqCdvOa-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Cria a resposta final" vertex="1">
+          <mxGeometry height="70" width="140" x="2470" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-7" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="" vertex="1">
+          <mxGeometry height="50" width="50" x="2515" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-13" edge="1" parent="1" source="-rG12Z00urDiXUqCdvOa-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="-rG12Z00urDiXUqCdvOa-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Identifica criterio não atendido" vertex="1">
+          <mxGeometry height="70" width="140" x="2720" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-14" edge="1" parent="1" source="-rG12Z00urDiXUqCdvOa-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="RH54ltWP00XVPSGEybgH-32">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3040" y="220" />
+              <mxPoint x="1646" y="220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="-rG12Z00urDiXUqCdvOa-12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Cria um novo plano para captar as informações faltantes" vertex="1">
+          <mxGeometry height="70" width="140" x="2970" y="300" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
