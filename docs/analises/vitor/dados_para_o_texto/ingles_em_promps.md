@@ -1,0 +1,14 @@
+# Uso do ingles para melhora do resultado de um prompt
+
+
+**1. Beyond English: The Impact of Prompt Translation Strategies across Languages and Tasks in Multilingual LLMs**
+*   **Link de acesso:** [https://aclanthology.org/2025.naacl-long.485.pdf](https://aclanthology.org/2025.naacl-long.485.pdf) [1]
+*   **Trechos e Dados de Melhora:** O estudo revela que traduzir instruções para o inglês (uma técnica frequentemente chamada de "translate-test") melhora de forma drástica o desempenho de modelos em testes de raciocínio lógico e matemático. Os autores documentam que no benchmark de matemática MGSM, a taxa de acerto do ChatGPT saltou de 44,4% (utilizando o prompt nativo direto) para 74,7% quando a requisição foi primeiramente traduzida para o inglês em idiomas de alto recurso.[1] Para idiomas de baixo recurso, a diferença de performance foi ainda mais extrema: a precisão subiu de apenas 19,4% (nativo) para 72,7% utilizando a tradução para o inglês.[1]
+
+**2. Language Models are Multilingual Chain-of-Thought Reasoners**
+*   **Link de acesso:** [https://openreview.net/pdf?id=fR3wGCk-IXp](https://openreview.net/pdf?id=fR3wGCk-IXp) [2]
+*   **Trechos e Dados de Melhora:** Esta pesquisa foca em como a capacidade de raciocínio passo a passo ("Chain-of-Thought") é profundamente anglocêntrica. O artigo demonstra categoricamente que "traduzir questões de teste para o inglês melhora o desempenho em tarefas de raciocínio multilíngue".[1] Ao submeter o modelo PaLM-540B à estratégia de traduzir a pergunta via API e forçar as etapas intermediárias em inglês, os pesquisadores notaram que a precisão se manteve surpreendentemente alta até mesmo para línguas severamente sub-representadas — como Suaíli e Bengali, que compõem menos de 0,01% dos dados de pré-treinamento da máquina —, superando com facilidade o desempenho de se tentar induzir o raciocínio puramente no idioma de origem.[2]
+
+**3. Cross-lingual Prompting: Improving Zero-shot Chain-of-Thought Reasoning across Languages**
+*   **Link de acesso:** [https://aclanthology.org/2023.emnlp-main.163.pdf](https://aclanthology.org/2023.emnlp-main.163.pdf) [3]
+*   **Trechos e Dados de Melhora:** Este estudo introduz métodos para alinhar as representações de diferentes idiomas atrelando-as ao raciocínio em inglês. Os dados tabulados na pesquisa mostram as falhas da abordagem direta: ao interagir em Bengali (uma língua periférica) de forma nativa e direta com o GPT-3.5, a taxa de acerto na resolução de problemas era de patéticos 7,6%.[3] Quando a estratégia "Translate-En" (Traduzir para o Inglês) foi aplicada para processar a inferência, a precisão escalou quase dez vezes, alcançando 58,0%.[3] Os autores concluem baseados nessas medições que a dependência estrutural do modelo de ser instigado no espaço semântico em inglês (através do Cross-lingual Prompting) supera as abordagens nativas em diversos benchmarks globais, alcançando o estado-da-arte em performance de dedução.[4]
