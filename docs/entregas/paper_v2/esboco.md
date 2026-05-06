@@ -26,7 +26,11 @@ Os *Large Language Models* (*LLMs*)[1] têm, há algum tempo, deixado de ser ape
                         - Decomposed Prompting (Khot et al., 2022)
                         - Plan-and-Solve Prompting (Wang et al., 2023)
 
+        - Por fim, citar os benckmarks que vão ser usados:
+            - GPQA
+            - MMLU
 
+**IMPORTANTE**: Lembrar que aqui não é para explicar oque cada uma dessas tecnicas fazem, mas sim, como vamos usar isso/ como se conecta com nossa situação
 
 
 ## Glossario de termos
