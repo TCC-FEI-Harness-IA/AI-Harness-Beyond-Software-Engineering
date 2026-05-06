@@ -10,19 +10,23 @@ Os *Large Language Models* (*LLMs*)[1] têm, há algum tempo, deixado de ser ape
 
 ## Introdução
 
+- Aqui quero colocar:
+    - 2 problemas:
+        - Aquele sentimento de Nos modelos antigos do GPT parecia que ele dava a resposta errada, ai eu falava "Tem certeza?", e ai ele me respondia corretamente.
+            - Hoje em dia o pensamento força isso automaticamente
+
+        - Como são implementados os fluxos de pensamento hoje em dia:
+            - Citar estudos que ja resolvem esse problema:
+                - Estudos de quebra de tarefa e "THINKING": ReAct, buscar outros
+                - Estudos de uso do ingles em prompts: (tem 3, ja esta ok)
+            - Citar o "esgotamento de contexto", "podridão de contexto" (context rot) ou "compactação":
+                - Como resolvemos isso: Ralph Wiggum Loop
+                - Qual o historico do Ralph Wiggum Loop:
+                    - Deve vir antes, junto com o os estudos que ja resolvem o problema?
+                        - Decomposed Prompting (Khot et al., 2022)
+                        - Plan-and-Solve Prompting (Wang et al., 2023)
 
 
---
-
-TODO:
-
-Mais pra frente citar aquele sentimento de:
-    - Nos modelos antigos do GPT parecia que ele dava a resposta errada, ai eu falava "Tem certeza?", e ai ele me respondia corretamente
-    - Implementar isso automaticamente
-
-
-
-## Introdução
 
 
 ## Glossario de termos
