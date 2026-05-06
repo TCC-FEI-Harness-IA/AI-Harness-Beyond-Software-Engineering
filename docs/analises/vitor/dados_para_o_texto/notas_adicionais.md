@@ -21,3 +21,11 @@ https://arxiv.org/abs/2210.03629
 
 - Quando o contexto é compactado ou sobrecarregado, o LLM perde a capacidade de rastrear as instruções fundamentais, resultando em alucinações severas e na degradação irreversível da qualidade da saída. 3
 https://openreview.net/pdf?id=vAElhFcKW6
+
+
+## Chain-of-Thought Prompting Elicits Reasoning in Large Language Models
+https://arxiv.org/pdf/2201.11903
+
+
+## Tree of Thoughts: Deliberate Problem Solving with Large Language Models
+https://arxiv.org/abs/2305.10601
