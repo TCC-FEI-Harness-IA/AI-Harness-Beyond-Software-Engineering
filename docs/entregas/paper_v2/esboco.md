@@ -12,7 +12,7 @@ Os *Large Language Models* (*LLMs*)[1] têm, há algum tempo, deixado de ser ape
 - Esperar ate o fim do desenvolvimento do glossario, e deposi colocar aqui
 
 ## Introdução
-
+<!--
 - Aqui quero colocar:
     - 2 problemas:
         - Aquele sentimento de Nos modelos antigos do GPT parecia que ele dava a resposta errada, ai eu falava "Tem certeza?", e ai ele me respondia corretamente.
@@ -35,7 +35,7 @@ Os *Large Language Models* (*LLMs*)[1] têm, há algum tempo, deixado de ser ape
             - GPQA
             - MMLU
 
-**IMPORTANTE**: Lembrar que aqui não é para explicar oque cada uma dessas tecnicas fazem, mas sim, como vamos usar isso/ como se conecta com nossa situação
+**IMPORTANTE**: Lembrar que aqui não é para explicar oque cada uma dessas tecnicas fazem, mas sim, como vamos usar isso/ como se conecta com nossa situação -->
 
 
 ## Glossario de termos
@@ -46,6 +46,8 @@ Os *Large Language Models* (*LLMs*)[1] têm, há algum tempo, deixado de ser ape
 Link: https://en.wikipedia.org/wiki/Large_language_model
 
 Ralph Wiggum Loop -
+
+“Harness” -
 
 ### Ferramentas citadas
 
