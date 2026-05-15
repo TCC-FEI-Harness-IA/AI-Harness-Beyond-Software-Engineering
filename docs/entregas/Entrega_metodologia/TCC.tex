@@ -1,0 +1,429 @@
+\documentclass[a4paper,10pt,twocolumn]{article}
+
+% -------------------------------------------------
+% PACOTES BÁSICOS
+% -------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage[a4paper,top=2cm,bottom=3cm,left=2cm,right=2cm,footskip=0.8cm]{geometry}
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{helvet}
+\usepackage{titlesec}
+\usepackage{paracol}
+\usepackage{indentfirst}
+\usepackage{ragged2e}
+\usepackage{hyperref}
+\usepackage{csquotes}
+\usepackage{newtxtext,newtxmath}
+\usepackage{booktabs}
+\usepackage{microtype}
+
+% Diagramas
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning}
+
+% Bibliografia no padrão numérico
+\usepackage[backend=biber,style=ieee,sorting=none,language=portuguese]{biblatex}
+\addbibresource{referencias.bib}
+
+% -------------------------------------------------
+% CORES
+% -------------------------------------------------
+\definecolor{grayFEI}{HTML}{7F7F7F}
+\definecolor{azulFEI}{HTML}{0070C0}
+
+% -------------------------------------------------
+% ESTILO DE PARÁGRAFOS
+% -------------------------------------------------
+\setlength{\parindent}{2em}
+\setlength{\columnsep}{20pt}
+
+% -------------------------------------------------
+% LEGENDAS
+% -------------------------------------------------
+\captionsetup[figure]{
+  labelfont={color=azulFEI,bf,small,sf},
+  textfont={small,sf},
+  font=footnotesize,
+  labelsep=period,
+  name=Figura,
+  justification=raggedright,
+  singlelinecheck=false
+}
+
+\captionsetup[table]{
+  labelfont={color=azulFEI,bf,small,sf},
+  textfont={small,sf},
+  font=footnotesize,
+  labelsep=period,
+  name=Tabela,
+  justification=raggedright,
+  singlelinecheck=false
+}
+
+% -------------------------------------------------
+% SEÇÕES E SUBSEÇÕES
+% -------------------------------------------------
+\titleformat{\section}
+  {\color{azulFEI}\normalfont\fontfamily{phv}\selectfont\bfseries\fontsize{11}{13}\selectfont}
+  {\thesection.}{0.2em}{}
+\renewcommand{\thesection}{\Roman{section}}
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+
+\titleformat{\subsection}
+  {\color{grayFEI}\normalfont\fontfamily{phv}\selectfont\itshape\fontsize{10}{12}\selectfont}
+  {\thesubsection.}{0.2em}{}
+\renewcommand{\thesubsection}{\Alph{subsection}}
+\titlespacing*{\subsection}{0pt}{6pt}{3pt}
+
+% -------------------------------------------------
+% COMANDOS DO TEMPLATE
+% -------------------------------------------------
+\newcommand{\helvetfont}[1]{{\fontfamily{phv}\selectfont #1}}
+
+\newcommand{\inovatitle}[1]{%
+  \noindent{\fontsize{18}{20}\selectfont\helvetfont{\textbf{\textcolor{azulFEI}{#1}}}}\par\vspace{25pt}
+}
+
+\newcommand{\autores}[1]{%
+  \helvetfont{\fontsize{11}{20}\selectfont\textbf{\textit{#1}}}\par
+}
+
+\newcommand{\orientador}[1]{%
+  \helvetfont{\fontsize{11}{20}\selectfont\textbf{\textit{#1}}}\par
+}
+
+\newcommand{\filiacao}[1]{%
+  \helvetfont{\fontsize{10}{20}\selectfont\textit{#1}}\par
+}
+
+\newcommand{\email}[1]{%
+  \helvetfont{\fontsize{10}{20}\selectfont\textit{#1}}\par
+}
+
+\newcommand{\resumo}[1]{%
+  \vspace{15pt}
+  \noindent
+  {\helvetfont{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Resumo:}}}}\quad
+  \justifying #1\par
+  \vspace{6pt}
+}
+
+\newcommand{\keyword}[1]{%
+  \noindent
+  \helvetfont{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Palavras-chaves:}}} #1
+  \vspace{25pt}\par
+}
+
+\renewcommand{\thetable}{\Roman{table}}
+
+% -------------------------------------------------
+% CABEÇALHO E RODAPÉ
+% -------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.3pt}
+\setlength{\headsep}{1cm}
+\setlength{\headheight}{1.2cm}
+
+\IfFileExists{logoinova.png}
+  {\lhead{\includegraphics[width=4.97cm,height=1cm]{logoinova.png}}}
+  {\lhead{\helvetfont{INOVA FEI}}}
+
+\rhead{\helvetfont{1\textsuperscript{o} semestre/2026}}
+
+\lfoot{%
+  \fontfamily{phv}\fontsize{8}{10}\selectfont
+  Anais dos Trabalhos de Conclusão de Curso do Centro Universitário FEI, São Bernardo do Campo \\
+  \vspace{-4pt}\rule{\textwidth}{0.4pt}
+}
+
+\rfoot{\fontfamily{phv}\fontsize{8}{10}\selectfont \thepage}
+
+% -------------------------------------------------
+% ESTILOS TIKZ
+% -------------------------------------------------
+\tikzset{
+  block/.style={
+    rectangle, draw=black, rounded corners, align=center,
+    minimum width=3.3cm, minimum height=0.95cm, fill=white
+  },
+  smallblock/.style={
+    rectangle, draw=black, rounded corners, align=center,
+    minimum width=2.7cm, minimum height=0.85cm, fill=white
+  },
+  wideblock/.style={
+    rectangle, draw=black, rounded corners, align=center,
+    minimum width=4.2cm, minimum height=0.95cm, fill=white
+  },
+  arrow/.style={-{Latex[length=3mm]}, thick}
+}
+
+\newcommand{\figlocal}[3]{%
+  \par\medskip
+  \noindent\begin{minipage}{\columnwidth}
+    \centering
+    #1
+    \captionof{figure}{#2}
+    \label{#3}
+  \end{minipage}
+  \par\medskip
+}
+% -------------------------------------------------
+% DOCUMENTO
+% -------------------------------------------------
+\begin{document}
+
+\twocolumn[
+\begin{@twocolumnfalse}
+
+\raggedright
+
+\inovatitle{Utilização de técnicas e ferramentas para aprimorar saídas de IA}
+
+\autores{Hugo Emílio Nomura, Pedro Henrique Correia de Oliveira, Pedro Henrique Satoru Lima Takahashi, Vitor Monteiro Vianna}
+
+\filiacao{Ciência da Computação -- Centro Universitário FEI, campus São Paulo}
+
+\email{unifhnomura@fei.edu.br, unifpoliveira@fei.edu.br, unifptakahashi@fei.edu.br, unievvianna@fei.edu.br}
+
+\orientador{Orientador: Charles Henrique Porto Ferreira}
+
+\filiacao{Departamento de Ciência da Computação, Centro Universitário FEI}
+
+\email{cferreira@fei.edu.br}
+
+\resumo{Modelos de linguagem generativa frequentemente são utilizados como sistemas diretos de pergunta e resposta. No entanto, resultados recentes indicam que seu desempenho pode ser ampliado quando o modelo base é combinado com técnicas complementares de organização da inferência, decomposição de tarefas e avaliação intermediária da resposta. Este trabalho investiga a hipótese de que a qualidade das saídas produzidas por inteligência artificial depende não apenas do modelo utilizado, mas também da arquitetura que organiza o processo de geração. Para isso, será realizado um estudo experimental comparando o modelo em sua configuração direta com o mesmo modelo operando dentro de um pipeline baseado no \textit{Ralph Loop}, complementado por mecanismos de validação e uso de ferramentas externas quando necessário. A avaliação será conduzida com benchmarks consolidados na literatura, compostos por questões de múltipla escolha distribuídas entre diferentes níveis de dificuldade e áreas do conhecimento. Como se trata de um cenário com respostas objetivas, o desempenho será medido principalmente pela acurácia, com base na comparação entre a alternativa selecionada pelo modelo e o gabarito de cada questão. Dessa forma, espera-se contribuir para a compreensão dos sistemas de IA como composições estruturadas de ferramentas, etapas de processamento e estratégias de orquestração, indo além de mecanismos simples de resposta direta.}
+
+\keyword{inteligência artificial, modelos de linguagem, prompt engineering, orquestração, avaliação experimental, Ralph Loop}
+
+\end{@twocolumnfalse}
+]
+
+% =================================================
+\section{Introdução}
+% =================================================
+
+Os modelos de linguagem de grande porte (\textit{Large Language Models} -- LLMs) deixaram de ser vistos apenas como mecanismos isolados de geração de texto e passaram a compor sistemas mais amplos de interação, refinamento e coordenação. A literatura mostra que o desempenho desses modelos pode melhorar quando a inferência deixa de ocorrer em uma única chamada e passa a incorporar etapas adicionais de estruturação da tarefa, como instruções exemplificadas, autoformulação de instruções e aprendizagem com dados gerados pelo próprio modelo \cite{brown2020language,wang2023selfinstruct,huang2023selfimprove}. Esse padrão sugere que o valor prático de uma solução de IA não depende somente do modelo base, mas também do conjunto de procedimentos que organiza o caminho entre o prompt e a resposta final.
+
+Esse deslocamento se torna mais evidente quando se observam técnicas recentes de raciocínio e orquestração. O \textit{Chain-of-Thought} mostrou que a explicitação de passos intermediários pode elevar o desempenho em tarefas que exigem inferência \cite{wei2022chain}, enquanto o \textit{Tree of Thoughts} ampliou essa ideia ao tratar a solução como uma busca por estados de pensamento, com geração de alternativas, avaliação heurística e retrocesso \cite{yao2023tree}. Em paralelo, estudos sobre orquestração dinâmica de prompts e coordenação multiagente indicam que preservação de contexto, consistência lógica e roteamento adaptativo são elementos centrais para tarefas mais complexas \cite{reasoningaware_orchestration}.
+
+A literatura sobre autoaperfeiçoamento e otimização de prompts reforça essa interpretação. Trabalhos recentes indicam que modelos podem revisar instruções, ajustar formato e melhorar respostas a partir de critérios de utilidade e consistência \cite{wang2023selfinstruct,huang2023selfimprove,zhang2024enhancing,liu2025beyond}. Isso ajuda a explicar por que soluções como ChatGPT, Claude e Gemini se comportam, na prática, como plataformas compostas por múltiplas camadas de processamento, e não apenas como um único LLM executando uma pergunta e uma resposta de forma direta. Investigar essas camadas adicionais é, portanto, relevante para compreender o que efetivamente determina a qualidade final das saídas geradas.
+
+Neste trabalho, parte-se da hipótese de que a qualidade de uma mesma tarefa varia conforme a arquitetura de uso do LLM, e não apenas conforme o modelo escolhido. Para testar essa hipótese, será comparado o desempenho do modelo base em sua configuração direta com o desempenho do mesmo modelo operando dentro de um pipeline de orquestração estruturado, baseado no \textit{Ralph Loop}. Embora o método tenha ganhado visibilidade recente na comunidade de desenvolvimento, ainda há pouca literatura acadêmica formal dedicada à sua avaliação sistemática, o que torna sua investigação particularmente relevante no contexto deste estudo. A avaliação será conduzida com benchmarks de múltipla escolha consolidados na literatura, como MMLU e GPQA, nos quais a comparação objetiva entre resposta produzida e gabarito permite medir o impacto real da arquitetura proposta \cite{hendrycks2021measuring,rein2023gpqa}. Com isso, busca-se analisar em que medida os ganhos observados em sistemas de IA decorrem da combinação entre modelo, ferramentas e orquestração, e não do modelo isolado.
+
+\FloatBarrier
+% =================================================
+\section{Representação do processo}
+% =================================================
+
+A comparação entre o uso direto de um modelo de linguagem e o uso do mesmo modelo dentro de uma arquitetura orquestrada constitui o núcleo conceitual deste trabalho. Por essa razão, a representação do processo não deve funcionar apenas como elemento ilustrativo, mas como uma forma de explicitar, desde o início, a hipótese central do estudo: a qualidade da resposta produzida por um LLM pode variar não apenas em função do modelo utilizado, mas também em função da organização da inferência, das etapas intermediárias adotadas e dos mecanismos de controle inseridos entre a entrada e a resposta final \cite{wei2022chain,yao2023tree,madaan2023selfrefine}.
+
+Na configuração direta, a tarefa é enviada ao modelo como uma única instrução, e a resposta é produzida em uma única geração. Essa forma de uso tende a concentrar, em um único passo, operações distintas como interpretação do enunciado, definição da estratégia de resolução, checagem de restrições e escolha da alternativa \cite{kojima2022large,brown2020language}. Embora essa abordagem seja eficiente para tarefas simples, ela oferece pouco controle sobre o processo intermediário de raciocínio \cite{wei2022chain}. Já na configuração orquestrada, essas operações são explicitadas e distribuídas em etapas independentes, permitindo maior visibilidade e controle sobre como a resposta é construída \cite{shinn2023reflexion,wang2023selfconsistency}.
+
+A Figura~\ref{fig:comparacao-geral} sintetiza essa distinção em nível macro. Em vez de tratar a resposta como consequência imediata de uma única chamada ao modelo, a arquitetura proposta a representa como resultado de uma sequência organizada de análise, decomposição, processamento, integração e validação \cite{ghuntley2025ralph,shen2023hugginggpt}. Esse contraste é importante porque estabelece, visualmente, a diferença entre o \textit{baseline} do experimento e a condição principal que será avaliada ao longo do trabalho.
+
+\figlocal{
+\resizebox{0.90\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.32cm and 0.55cm, transform shape]
+
+% Coluna esquerda
+\node[wideblock, minimum width=3.0cm, minimum height=0.58cm] (u1) {\scriptsize Questão do benchmark};
+\node[wideblock, minimum width=3.0cm, minimum height=0.58cm, below=of u1] (m1) {\scriptsize Modelo base};
+\node[wideblock, minimum width=3.0cm, minimum height=0.58cm, below=of m1] (r1) {\scriptsize Resposta final};
+
+\draw[arrow] (u1) -- (m1);
+\draw[arrow] (m1) -- (r1);
+
+\node[above=0.08cm of u1] {\scriptsize \textbf{Uso direto}};
+
+% Coluna direita
+\node[wideblock, minimum width=3.15cm, minimum height=0.58cm, right=0.75cm of u1] (u2) {\scriptsize Questão do benchmark};
+\node[wideblock, minimum width=3.15cm, minimum height=0.58cm, below=of u2] (a2) {\scriptsize Análise inicial};
+\node[wideblock, minimum width=3.15cm, minimum height=0.58cm, below=of a2] (d2) {\scriptsize Decomposição};
+\node[wideblock, minimum width=3.15cm, minimum height=0.58cm, below=of d2] (p2) {\scriptsize Processamento};
+\node[wideblock, minimum width=3.15cm, minimum height=0.58cm, below=of p2] (i2) {\scriptsize Integração e validação};
+\node[wideblock, minimum width=3.15cm, minimum height=0.58cm, below=of i2] (r2) {\scriptsize Resposta final};
+
+\draw[arrow] (u2) -- (a2);
+\draw[arrow] (a2) -- (d2);
+\draw[arrow] (d2) -- (p2);
+\draw[arrow] (p2) -- (i2);
+\draw[arrow] (i2) -- (r2);
+
+\node[above=0.08cm of u2] {\scriptsize \textbf{Com orquestração}};
+
+\end{tikzpicture}%
+}
+}{Comparação entre o fluxo direto de inferência e o fluxo orquestrado adotado como arquitetura experimental.}{fig:comparacao-geral}
+
+Embora a comparação geral seja suficiente para diferenciar as duas condições experimentais, ela ainda não mostra como a arquitetura proposta reorganiza internamente a resolução de uma tarefa. A literatura sobre agentes de linguagem indica que ciclos iterativos de planejamento, execução e reflexão são superiores à geração monolítica em tarefas de múltiplas etapas \cite{shinn2023reflexion,yao2023tree}. Por isso, a Figura~\ref{fig:estrutura-processo} detalha a lógica de transformação da questão em resposta, destacando que o processo intermediário não é um acréscimo meramente estético, mas uma estratégia de estruturação da inferência \cite{madaan2023selfrefine,wang2023selfconsistency}. Nessa perspectiva, a tarefa deixa de ser tratada como um bloco indivisível e passa a ser abordada como uma sequência coordenada de operações menores, cada uma com função específica dentro do pipeline \cite{shen2023hugginggpt}.
+
+\figlocal{
+\resizebox{0.65\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.45cm, transform shape]
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm] (q) {\scriptsize Questão recebida};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of q] (a) {\scriptsize Identificação do problema};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of a] (b) {\scriptsize Separação em etapas};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of b] (c) {\scriptsize Execução das subtarefas};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of c] (d) {\scriptsize Consolidação das saídas};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of d] (e) {\scriptsize Verificação antes da resposta};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of e] (f) {\scriptsize Resposta final};
+\draw[arrow] (q) -- (a);
+\draw[arrow] (a) -- (b);
+\draw[arrow] (b) -- (c);
+\draw[arrow] (c) -- (d);
+\draw[arrow] (d) -- (e);
+\draw[arrow] (e) -- (f);
+\end{tikzpicture}%
+}
+}{Representação sequencial das etapas que estruturam a passagem da questão à resposta final.}{fig:estrutura-processo}
+
+Essa representação torna a seção mais útil ao artigo porque ela deixa de ser apenas uma abertura visual e passa a introduzir, de maneira argumentativa, o objeto metodológico que será aprofundado a seguir. A decomposição em etapas menores está alinhada a resultados experimentais que mostram ganhos de desempenho quando o raciocínio é explicitado antes da escolha da alternativa final \cite{wei2022chain,kojima2022large,wang2023selfconsistency}. Assim, a representação do processo contribui para reduzir ambiguidades sobre o que exatamente será comparado no experimento e prepara a leitura da metodologia de forma mais coerente.
+
+\FloatBarrier
+
+% =================================================
+\section{Metodologia}
+% =================================================
+
+A metodologia deste trabalho foi construída para isolar o efeito da arquitetura de inferência sobre a qualidade das respostas produzidas por um modelo de linguagem. Em vez de comparar modelos distintos entre si, a estratégia central consiste em manter o modelo base constante e alterar a forma como a tarefa é organizada ao longo da execução \cite{zhang2024enhancing,liu2025beyond}. Esse desenho experimental é relevante porque permite analisar se diferenças de desempenho decorrem da capacidade intrínseca do modelo ou da estrutura adotada para conduzir o raciocínio e a produção da resposta final \cite{openai2023gpt4,huttula2025advanced}.
+
+De modo geral, o experimento compara duas condições principais. A primeira corresponde ao uso direto do modelo, no qual a questão é submetida ao LLM em uma única chamada \cite{kojima2022large}. A segunda corresponde ao uso do mesmo modelo dentro de um pipeline estruturado, inspirado no \textit{Ralph Loop} \cite{ghuntley2025ralph}, em que a resolução da tarefa é distribuída em etapas menores e complementada por verificação intermediária e integração de ferramentas auxiliares \cite{mcp_multiagent2025,sarkar2025mcp}. Essa organização foi adotada porque dialoga com a literatura sobre autoaperfeiçoamento iterativo e decomposição de tarefas complexas, que demonstra ganhos quando a inferência incorpora planejamento, revisão e controle parcial \cite{shinn2023reflexion,madaan2023selfrefine,wang2023selfconsistency}.
+
+\subsection{Desenho experimental}
+
+O desenho experimental parte de uma lógica comparativa rigorosa: a mesma questão será submetida às diferentes condições de execução, preservando-se o mesmo modelo subjacente \cite{hendrycks2021measuring,rein2023gpqa}. Isso permite que a variável principal do estudo seja a arquitetura de processamento, e não a troca do modelo \cite{zhang2024enhancing}. Em outras palavras, o trabalho busca observar o quanto a organização da inferência interfere no resultado obtido quando o núcleo gerador permanece constante \cite{huttula2025advanced,liu2025beyond}.
+
+A Figura~\ref{fig:desenho-experimental} resume esse princípio. A partir de uma mesma entrada, duas rotas são construídas: uma rota de referência, mais simples, e uma rota principal, mais estruturada. Ao final, ambas produzem uma resposta comparável com o gabarito da questão, o que permite levar a comparação adiante na etapa de avaliação dos resultados \cite{hendrycks2021measuring,rein2023gpqa}.
+
+\figlocal{
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.6cm and 0.6cm, transform shape]
+\node[wideblock, minimum width=3.6cm, minimum height=0.7cm] (q0) {\scriptsize Questão selecionada};
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below left=0.6cm and 0.4cm of q0] (b1) {\scriptsize Uso direto};
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below=of b1] (b2) {\scriptsize Resposta base};
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below right=0.6cm and 0.4cm of q0] (p1) {\scriptsize Pipeline orquestrado};
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below=of p1] (p2) {\scriptsize Resposta processada};
+\node[wideblock, minimum width=3.6cm, minimum height=0.7cm, below=2.4cm of q0] (g0) {\scriptsize Comparação com gabarito};
+\draw[arrow] (q0) -- (b1);
+\draw[arrow] (b1) -- (b2);
+\draw[arrow] (q0) -- (p1);
+\draw[arrow] (p1) -- (p2);
+\draw[arrow] (b2) -- (g0);
+\draw[arrow] (p2) -- (g0);
+\end{tikzpicture}%
+}
+}{Desenho experimental comparando uso direto e pipeline orquestrado com a mesma base de questões.}{fig:desenho-experimental}
+
+Essa forma de organização favorece a interpretação dos resultados porque reduz um problema comum em comparações com LLMs: atribuir ganhos ou perdas ao modelo quando, na realidade, parte do efeito pode estar na maneira como a tarefa foi estruturada \cite{openai2023gpt4,zhang2024enhancing}. Ao delimitar explicitamente a arquitetura como variável de interesse, o estudo procura oferecer uma análise mais precisa do papel da orquestração na qualidade da resposta \cite{huttula2025advanced}.
+
+\subsection{Arquitetura proposta}
+\emergencystretch 3em
+
+A arquitetura central deste trabalho baseia-se no \textit{Ralph Loop} \cite{ghuntley2025ralph}, adotado aqui como uma estratégia de execução em ciclos e etapas mais isoladas, o que reduz a dependência do acúmulo de contexto ao longo do processo. O \textit{Ralph Loop} funciona como um padrão de orquestração cíclico no qual o modelo de linguagem atua de maneira análoga a um agente autônomo, avançando na tarefa por meio de uma iteração contínua entre leitura, planejamento, execução e verificação do contexto atual. Em vez de deduzir a resposta em uma via de mão única, o loop reavalia iterativamente as soluções parciais produzidas, formula os próximos passos necessários e testa sua própria lógica até acumular confiança suficiente de que a tarefa original foi resolvida e a execução pode ser finalizada (\textit{Halt}). 
+
+Conceitualmente, essa escolha aproxima o experimento de métodos de raciocínio estruturado e de orquestração deliberada, nos quais resolver um problema exige organizar o fluxo de processamento passo a passo \cite{yao2023tree,shinn2023reflexion}, em vez de apenas gerar uma resposta direta após o prompt inicial \cite{kojima2022large}.
+
+Na prática, o pipeline proposto recebe a questão e faz uma análise prévia para identificar o tipo de problema, a área abordada e as restrições da tarefa \cite{shen2023hugginggpt}. Como o enunciado já foi interpretado nessa fase inicial, a resolução passa a ser dividida em ações menores e mais focadas, como: estruturar um plano de raciocínio, levantar as informações necessárias, checar a consistência lógica e validar a alternativa correta. Essa divisão está alinhada à ideia de auto-refinamento iterativo, em que resultados parciais são revisados antes de compor a saída final \cite{madaan2023selfrefine,wang2023selfconsistency}. As respostas geradas nessas etapas parciais são unidas, podendo ainda passar por um filtro extra de verificação antes de serem registradas \cite{zheng2024judging,li2024llms_judges}.
+
+A Figura~\ref{fig:fluxo-detalhado} ilustra essa dinâmica. O objetivo do diagrama não é impor uma regra rígida de execução, mas expor a lógica geral da arquitetura: uma série organizada de ações menores, desenhadas para diminuir a incerteza da inferência e garantir mais controle sobre a resposta gerada \cite{ghuntley2025ralph,shinn2023reflexion}.
+
+\figlocal{
+\resizebox{0.55\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.45cm, transform shape]
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm] (a) {\scriptsize Questão do benchmark};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of a] (b) {\scriptsize Análise do enunciado};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of b] (c) {\scriptsize Decomposição da tarefa};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of c] (d) {\scriptsize Execução das subtarefas};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of d] (e) {\scriptsize Integração das saídas};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of e] (f) {\scriptsize Verificação intermediária};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of f] (g) {\scriptsize Seleção da resposta final};
+\draw[arrow] (a) -- (b);
+\draw[arrow] (b) -- (c);
+\draw[arrow] (c) -- (d);
+\draw[arrow] (d) -- (e);
+\draw[arrow] (e) -- (f);
+\draw[arrow] (f) -- (g);
+\end{tikzpicture}%
+}
+}{Fluxo da arquitetura proposta, desde a entrada da questão até a consolidação da resposta final.}{fig:fluxo-detalhado}
+
+Essa decomposição tem relevância metodológica porque evita concentrar, em uma única geração, decisões heterogêneas que exigem competências distintas \cite{wei2022chain,yao2023tree}. Em uma questão de física, por exemplo, a identificação das grandezas relevantes não é a mesma operação da escolha final da alternativa correta; em uma questão de filosofia, reconhecer a tese central também não equivale à comparação entre alternativas. Ao explicitar essas diferenças em etapas menores, o pipeline procura alinhar a execução do modelo a uma lógica de resolução mais estruturada \cite{madaan2023selfrefine,huttula2025advanced}.
+
+\subsection{Componentes auxiliares}
+
+Embora a arquitetura principal já seja suficiente para estabelecer a comparação central do artigo, o pipeline poderá incorporar componentes auxiliares voltados ao fortalecimento da resposta final. Entre esses componentes, destacam-se mecanismos de verificação intermediária, nos quais uma saída parcial pode ser inspecionada antes de ser aceita como resposta consolidada \cite{zheng2024judging,li2024llms_judges}, e ferramentas externas de apoio integradas via protocolos estruturados \cite{mcp_multiagent2025,sarkar2025mcp}. Esses elementos não constituem o objeto principal da hipótese experimental, mas ampliam a capacidade de controle e fundamentam-se em evidências recentes de que agentes com acesso a ferramentas superam modelos isolados em tarefas que exigem consultas externas \cite{shen2023hugginggpt,chen2025tumix}.
+
+A Figura~\ref{fig:componentes-arquitetura} apresenta uma visão mais estrutural do pipeline, destacando a relação entre o núcleo de execução, o módulo de verificação e os recursos auxiliares. Essa representação evidencia que a arquitetura proposta não é apenas uma cadeia linear de passos, mas um arranjo em que diferentes componentes apoiam a produção e a validação da resposta \cite{ghuntley2025ralph,shinn2023reflexion}.
+
+\figlocal{
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.8cm and 0.6cm, transform shape]
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm] (q) {\scriptsize Questão de entrada};
+\node[wideblock, minimum width=3.8cm, minimum height=0.7cm, below=0.7cm of q] (core) {\scriptsize Núcleo de orquestração};
+\node[wideblock, minimum width=3.0cm, minimum height=0.7cm, left=0.6cm of core] (tools) {\scriptsize Ferramentas externas};
+\node[wideblock, minimum width=3.0cm, minimum height=0.7cm, right=0.6cm of core] (judge) {\scriptsize Módulo de verificação};
+\node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below=0.7cm of core] (out) {\scriptsize Resposta final};
+
+\draw[arrow] (q) -- (core);
+\draw[arrow] (core.170) -- (tools.10);
+\draw[arrow] (tools.350) -- (core.190);
+\draw[arrow] (core.10) -- (judge.170);
+\draw[arrow] (judge.190) -- (core.350);
+\draw[arrow] (core) -- (out);
+\end{tikzpicture}%
+}
+}{Visão estrutural da arquitetura proposta, com o núcleo de orquestração interagindo com módulos de ferramentas e verificação.}{fig:componentes-arquitetura}
+
+A inserção desses módulos auxiliares ajuda a explicar por que a arquitetura proposta deve ser compreendida como uma composição de etapas e não apenas como um prompt maior ou mais detalhado. O ganho esperado, caso ele exista, não decorre exclusivamente da redação da instrução inicial, mas da possibilidade de distribuir funções diferentes entre partes distintas do sistema, permitindo revisão, controle e apoio externo durante a execução \cite{madaan2023selfrefine,mcp_multiagent2025,sarkar2025mcp}.
+\FloatBarrier
+
+% =================================================
+\section{Plano de avaliação}
+% =================================================
+
+O plano de avaliação visa mensurar o impacto do \textit{Ralph Loop} \cite{ghuntley2025ralph} na acurácia de modelos de linguagem em tarefas de raciocínio geral, comparando sistematicamente a inferência direta com a orquestrada. Para essa validação, serão utilizadas as bases de dados GPQA \cite{rein2023gpqa}, MMLU \cite{hendrycks2021measuring} e MMLU-Pro \cite{wang2024mmlu-pro}. O MMLU consolidou-se como um benchmark fundamental para testar o conhecimento enciclopédico e a capacidade de resolução de problemas em 57 tópicos de diversas áreas do conhecimento \cite{hendrycks2021measuring}, enquanto o GPQA introduz um nível superior de dificuldade com questões de nível de pós-graduação desenhadas para serem resistentes a buscas simples na internet \cite{rein2023gpqa}. Complementarmente, o MMLU-Pro oferece uma versão mais robusta e desafiadora, filtrando ruídos e focando em raciocínio crítico \cite{wang2024mmlu-pro}. A amostragem consistirá em 180 questões selecionadas criteriosamente pela equipe para garantir uma cobertura abrangente de temas e níveis de complexidade, servindo como um teste de estresse rigoroso para o sistema.
+
+A execução do experimento seguirá um protocolo de duas etapas. Na primeira fase, todos os modelos selecionados — Llama 3.1 (8B, 70B e 405B), Claude Sonnet 4.6 e GPT 5.4 — serão submetidos a uma rodada de inferência padrão para estabelecer o desempenho de base e o ranking inicial de acurácia. Na segunda fase, apenas a família Llama 3.1 será reavaliada sob a arquitetura do \textit{Ralph Loop}. Durante todo o processo, será mantida a exigência de execução \textit{stateless}, sem memória de sessão entre iterações, garantindo que o ganho observado derive exclusivamente da lógica de ciclos e verificações implementada. O objetivo é verificar se o uso do \textit{harness} altera a posição dos modelos Llama no ranking global, testando se a orquestração pode elevar modelos menores a patamares de desempenho equivalentes ou superiores aos de modelos de estado da arte operando de forma linear.
+
+A Tabela~\ref{tab:dados-esperados} apresenta as projeções de acurácia que fundamentam este plano e o benchmark pretendido para a validação da arquitetura.
+
+\begin{table}[H]
+\centering
+\caption{Projeção de acurácia média esperada por modelo e configuração (dados hipotéticos para fins de planejamento).}
+\label{tab:dados-esperados}
+\helvetfont{
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Modelo} & \textbf{Configuração} & \textbf{Acurácia Esperada} \\
+\midrule
+Llama 3.1 8B & Direto & 52\% \\
+Llama 3.1 70B & Direto & 74\% \\
+Llama 3.1 8B & Ralph Loop & 77\% \\
+Llama 3.1 405B & Direto & 84\% \\
+Llama 3.1 70B & Ralph Loop & 88\% \\
+Claude Sonnet 4.6 & Direto & 91\% \\
+Llama 3.1 405B & Ralph Loop & 94\% \\
+GPT 5.4 & Direto & 97\% \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\FloatBarrier
+% =================================================
+\section{Referências}
+% =================================================
+
+\printbibliography[heading=none]
+
+\end{document}
