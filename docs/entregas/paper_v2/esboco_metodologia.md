@@ -58,7 +58,7 @@ NOTAS GERAIS:
 
 - Agentes:
     - atomic_tasks_planner_agent: vai ser o agente que faz toda a logica de entender a entrada do ususario e montar tarefas que sejam atomicas, no sentido de "menor quebra possivel", para que seja possivel resolve-las usando ralph loop, que consiste em garantir que cada tarefa seja idenpendente a ponto de não usar o contexto de resultados das demais. Ao fim vai atgualizar o "planning.json" no campo tasks. Esse agente vai receber como entrada o prompt do ususario e os "general_infos" do "planning.json"
-    - atomic_tasks_revisor_agent: Revisa as tarefas, para garantir que nenhuma precisa reaprovveitgar contexto de resultado de outra. Ele vai retonrar um json contendo uam booleada que diz se esta tudo certo e uma justificativa. Se as tarefas tiverem problemas, eler deve explciar os problemas na justificativa
+    - atomic_tasks_revisor_agent: Revisa as tarefas, para garantir que nenhuma precisa reaprovveitgar contexto de resultado de outra. Ele vai retonrar um json contendo uam booleada que diz se esta tudo certo e uma justificativa. Se as tarefas tiverem problemas, eler deve explciar os problemas na justificativa. MOstrar prompt com exempl ode retorno
     - atomic_tasks_rewriter_agent: Só é chamado quandfo o atomic_tasks_revisor_agent diz que alguma tarefa não esta correta. Deve verificar oque não esta correto e reescrever o plano, seguindo a correção indicada. Ele tem imbutido toda a logica de regras e formatoções que o "atomic_tasks_planner_agent" possui para poder fazer isso.
 
 - OQUE QUERO EXPLICAR AQUI:
@@ -80,7 +80,7 @@ NOTAS GERAIS:
                     "Generate and run migration",
                     "Typecheck passes"
                 ],
-                "passes": false
+                "pass_phase": false
             }
         ]
     }
@@ -88,18 +88,37 @@ NOTAS GERAIS:
 
 ### Resolução das tarefas - Ralph Loop
 - Agentes:
-    - task_outcome_reviewer_agent:
+    - task_outcome_reviewer_agent: agente responsavel por receber o resultado de uma tarefa e comparar com seus criterios de aceite. Retorna json contendo uam booleana que diz se os criterrios de aceite foram todos cumpridos e uma justificativa. Se a resposta nao cumprir os criterios, oque não foi cumprido vai ser justificado dentro do cxampo "justificativa". MOstrar prompt com exempl ode retorno
+
+- OQUE QUERO EXPLICAR AQUI:
+    - Originalmente o ralph loop, a ideia é que cada tarefa, tenha sua resposta commitada no github, na pratica "All memory lives in files and git — not the model", porem aqui a ideia é iumplementar o ralph loop para outros cenarios, que são diferentes de desenvolvimento de software, por isso demos uma leva adapdata:
+        - Para nos, cada resultado de tarefa fica em um arquivo "tasks_results.json", que na pratica, salva a resposta final gertada por cada fase de e xecução do plano gerado. É importante lembrar aque a ideia é manter cada fase "livre de estado/ stateless" entre outras fases, por isso essas respostas só vão ser recuparadas na parte de "resposta final".
+    - OUtro ponto a ser explicado é o macanismo de "panico" implementado. Como a arquitetura funciona em loop, gerando respostas, e enviado a um agente que verifica os criterios de aceite, para saber se precuisa continuar pensando, ou se pode encerrar, existe risco desse "thinking" ficar em deadlock, e travar o processo. Para mitigar isso, implementamos contadores de quantas iterações com o LLM (chamadas feitas para a LLM) ocorreram, alem de definir um "max_iterations". Se "task_iteractions" ultrapassar "max_iterations", essa fase do plano se encerra automaticamente, e a resposta atual é salva no "tasks_results.json"
+    - De resto é explicar que cada task vai ser feito de manieira individual, e fica em loop até cumprir todos os critertios de aceite, assim como no ralph loop original
+
 
 ### Avaliação de criterios de aceitação
 - Agentes:
-    - avaliador_criterios_aceitação
+    - final_response_acceptance_criteria_reviewer_agent: muito parecidos com todos os "reviewers" até agora. Esse vai alanliser todo o arquivo "tasks_results.json", e va icruzar com o campo "general_infos.acceptance_criteria" do "planning.json". Com isso ele tem insumos parea dizer se todas as informações geradas até agora são o suficiente para contruir uma resposta que contena todos os crtiterios de aceitação corretamente. retorna no mesmo formato, uma booleana que diz se os criterrios de aceite foram todos cumpridos e uma justificativa. Se não cumprir, o campo justificativa fala o porque
 
+- OQUE QUERO EXPLICAR AQUI:
+    - Aqui é bem simples, ja que a maior parte de explicação vai estar no prompt do agente.
+    - So precisa deixar claro que podem ter 2 fluxos:
+        - Resposta final
+        - Criação de plano adicional complementar
 
 ### Criação de plano adicional complementar
 - Agentes:
-    - criacao_pompt_criterios_faltantes
-    - criador_tarefas_atomicas
+    - acceptance_gap_prompt_creator: agente responsavel pro reproduzir um prompt "de ususario", porem agora pedindo para ser feito somente oque falta para completar todfos os criterios de aceite. A ideia aqui é que seja retornado um prompt que vai ser usado para montar um novo plano, no mesmo formatp que a entrada, por isso ele deve ser um prompt no estilo "usuario"
+    - atomic_tasks_planner_agent: aqui é o mesmo agente de "Quebra de Tasks Independentes", basta fazer a referencia.
+
+- OQUE QUERO EXPLICAR AQUI:
+    - Quero que fique claro, que na pratica isso tambem é um loop, vamos mais um vez, forcar a criação de tarefas extarr, que vão seguir op mesmo fluxo que foi feito no incio, porem sempre "afunilando" o conteudo e fazendo com que fique mais perto de chegar em um resultado ideial
+
 
 ### Criação da resposta final
 - Agentes:
-    - final_response_creator
+    - final_response_composert_agent: vai analisar todo o tasks_results.json para ter os insumos para construir as respostas, e dessa vez olha para o campo "general_infos.expected_output_format" do "planning.json", para saber qual o formato correto que deve ser retornado. Alem disso, essa agente recupera o input de entrada do usuario, tambem afim de garantir o formato de resposta correto
+
+- OQUE QUERO EXPLICAR AQUI:
+    - SO mostar que aqui ja assumimos que existem todos os dados necessario para construir uma resposta final, e que é so juntar tudo e montar resposta pro ususario

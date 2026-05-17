@@ -1,167 +1,9 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
   <diagram name="Página-1" id="JqvE3wWPPY2aX9wsRf88">
-    <mxGraphModel dx="1224" dy="982" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="-2276" dy="1064" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="YJjzWlIq-3hENTF15K_v-8" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="User" vertex="1">
-          <mxGeometry height="80" width="40" x="710" y="595" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-19" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-30">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="830" y="635" as="sourcePoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-21" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;" target="YJjzWlIq-3hENTF15K_v-28">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-22" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-26">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-23" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Quebrar tasks" vertex="1">
-          <mxGeometry height="70" width="140" x="1260" y="600" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-24" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-35" value="Sim">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-25" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-49" value="Não">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Existe alguma task com &quot;pass_phase&quot;: False ?" vertex="1">
-          <mxGeometry height="70" width="140" x="1646" y="600" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-27" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-28" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;" target="YJjzWlIq-3hENTF15K_v-32">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-28" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;div&gt;As tasks devem ser quebradas no seguinte formato:&lt;/div&gt;" vertex="1">
-          <mxGeometry height="70" width="140" x="1260" y="740" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-29" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-23">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="1170" y="635" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-30" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Define os criterios de aceitação da task" vertex="1">
-          <mxGeometry height="70" width="140" x="910" y="600" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-31" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.25;entryDx=0;entryDy=0;endArrow=none;endFill=0;" target="YJjzWlIq-3hENTF15K_v-33">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-32" parent="1" style="text;whiteSpace=wrap;html=1;" value="&lt;div style=&quot;color: #f8f8f2;background-color: #282a36;font-family: Menlo, Monaco, &#39;Courier New&#39;, monospace;font-weight: normal;font-size: 12px;line-height: 18px;white-space: pre;&quot;&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;{&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;number&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #ff5555;font-style: italic;text-decoration: underline;&quot;&gt;int&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;title&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #ff5555;font-style: italic;text-decoration: underline;&quot;&gt;str&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;description&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #ff5555;font-style: italic;text-decoration: underline;&quot;&gt;str&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;pass_phase&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #ff5555;font-style: italic;text-decoration: underline;&quot;&gt;bool&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;}&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
-          <mxGeometry height="120" width="170" x="1245" y="880" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-33" parent="1" style="text;whiteSpace=wrap;html=1;" value="&lt;div style=&quot;color: #f8f8f2;background-color: #282a36;font-family: Menlo, Monaco, &#39;Courier New&#39;, monospace;font-weight: normal;font-size: 12px;line-height: 18px;white-space: pre;&quot;&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;{&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;number&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #bd93f9;&quot;&gt;1&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;title&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #e9f284;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #f1fa8c;&quot;&gt;Criar introdução do texto&lt;/span&gt;&lt;span style=&quot;color: #e9f284;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;description&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #e9f284;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #f1fa8c;&quot;&gt;Descrição de como o a introdução do texto deve ser criado &lt;/span&gt;&lt;span style=&quot;color: #e9f284;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;pass_phase&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #bd93f9;&quot;&gt;false&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;},&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;{&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;number&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #bd93f9;&quot;&gt;2&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;title&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #e9f284;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #f1fa8c;&quot;&gt;Montar corpo do texto&lt;/span&gt;&lt;span style=&quot;color: #e9f284;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;description&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #e9f284;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #f1fa8c;&quot;&gt;Descrição de como o corpo do texto deve ser criado&lt;/span&gt;&lt;span style=&quot;color: #e9f284;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #8be9fd;&quot;&gt;pass_phase&lt;/span&gt;&lt;span style=&quot;color: #8be9fe;&quot;&gt;&quot;&lt;/span&gt;&lt;span style=&quot;color: #ff79c6;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #bd93f9;&quot;&gt;false&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: #f8f8f2;&quot;&gt;}&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
-          <mxGeometry height="240" width="580" x="500" y="880" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-34" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-38">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-35" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Iniciar tarefa" vertex="1">
-          <mxGeometry height="70" width="140" x="1646" y="740" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-36" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-38" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-43">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-37" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-38" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=none;endFill=0;dashed=1;dashPattern=1 4;" target="YJjzWlIq-3hENTF15K_v-40">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-38" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Precisa usar uma tool ?&amp;nbsp;" vertex="1">
-          <mxGeometry height="70" width="140" x="1646" y="890" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-39" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-40" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=1 4;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;endArrow=none;endFill=0;" target="YJjzWlIq-3hENTF15K_v-41">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-40" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Por exemplo fazer busca na internet ou usar um MCP" vertex="1">
-          <mxGeometry height="40" width="130" x="1830" y="905" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-41" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Vamos implementar o uso de tools para o TCC ?" vertex="1">
-          <mxGeometry height="40" width="130" x="1830" y="990" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-42" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-43" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-45">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-43" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Resolve a Task" vertex="1">
-          <mxGeometry height="70" width="140" x="1646" y="1040" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-44" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-45" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-47">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-45" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Salva a resposta" vertex="1">
-          <mxGeometry height="70" width="140" x="1646" y="1190" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-46" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-47" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-51">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-47" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="seta &quot;pass_phase&quot;: True" vertex="1">
-          <mxGeometry height="70" width="140" x="1646" y="1340" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-48" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-49" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-55">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-49" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Compila as informações de resultado entre as fazes" vertex="1">
-          <mxGeometry height="70" width="140" x="2040" y="600" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-50" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-51" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-53">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-51" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Precisa Atualizar algo das demais fases ? (Descrição, titulo, etc)" vertex="1">
-          <mxGeometry height="70" width="140" x="1646" y="1490" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-52" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-53" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-26">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1980" y="1675" />
-              <mxPoint x="1980" y="653" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-53" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Atualizar a lista de Tasks" vertex="1">
-          <mxGeometry height="70" width="140" x="1646" y="1640" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-54" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-55" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-58">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-55" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Compara o compilado com os criterios de aceitação&amp;nbsp;" vertex="1">
-          <mxGeometry height="70" width="140" x="2290" y="600" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-56" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-58" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-60" value="Sim">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-57" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-58" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-63">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-58" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Criterios atendidos?" vertex="1">
-          <mxGeometry height="70" width="140" x="2540" y="600" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-59" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-60" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-61">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-60" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Cria a resposta final" vertex="1">
-          <mxGeometry height="70" width="140" x="2540" y="760" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-61" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="" vertex="1">
-          <mxGeometry height="50" width="50" x="2585" y="930" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-62" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-63" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-65">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-63" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Identifica criterio não atendido" vertex="1">
-          <mxGeometry height="70" width="140" x="2790" y="600" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-64" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-65" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-26">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="3110" y="520" />
-              <mxPoint x="1716" y="520" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-65" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Cria um novo plano para captar as informações faltantes" vertex="1">
-          <mxGeometry height="70" width="140" x="3040" y="600" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-66" parent="1" style="whiteSpace=wrap;html=1;fillColor=#a20025;fontColor=#ffffff;strokeColor=#6F0000;" value="&lt;font style=&quot;font-size: 22px;&quot;&gt;TODO: Desenhar um mecanismo de &quot;panico&quot;. Existe o risco dessa arquitetura cair em um DEADLOCK. Precisa definir um regra, como quantidade maxima de tokens, tempo maximo rodando ou quantidade maxima de &quot;rodadas/fases&quot; que passaram, e caso passe de uma certa quantidade, force a resposta final&lt;/font&gt;" vertex="1">
-          <mxGeometry height="250" width="420" x="2050" y="770" as="geometry" />
-        </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-107" connectable="0" parent="1" style="group" value="" vertex="1">
           <mxGeometry height="1450" width="490" x="4300" y="660" as="geometry" />
         </mxCell>
@@ -267,158 +109,8 @@
         <mxCell id="YJjzWlIq-3hENTF15K_v-173" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Define os criterios de aceitação da resposta final" vertex="1">
           <mxGeometry height="70" width="170" x="5087.5" y="1490" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-143" connectable="0" parent="1" style="group" value="" vertex="1">
-          <mxGeometry height="1450" width="840" x="5060" y="2360" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-141" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
-          <mxGeometry height="1450" width="840" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-142" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Resolução das tarefas - Ralph Loop&lt;/font&gt;&lt;/b&gt;" vertex="1">
-          <mxGeometry height="50" width="260" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-195" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-193" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-194" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-193" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="Json com os as fases criadas (planning.json)" vertex="1">
-          <mxGeometry height="70" width="150" x="55" y="110" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-198" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-194" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-196" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-194" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="Existe alguma task com &quot;pass_phase&quot;: False ?" vertex="1">
-          <mxGeometry height="70" width="140" x="60" y="270" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-199" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-196" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-197" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-200" connectable="0" parent="YJjzWlIq-3hENTF15K_v-199" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Sim" vertex="1">
-          <mxGeometry relative="1" x="-0.1486" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-260" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-196" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-279" value="">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="240" y="430" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-261" connectable="0" parent="YJjzWlIq-3hENTF15K_v-260" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Não" vertex="1">
-          <mxGeometry relative="1" x="0.1098" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-196" parent="YJjzWlIq-3hENTF15K_v-143" style="rhombus;whiteSpace=wrap;html=1;" value="" vertex="1">
-          <mxGeometry height="50" width="50" x="105" y="400" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-244" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-197" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-243" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-197" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL contendo somente o conteúdo da fase" vertex="1">
-          <mxGeometry height="70" width="140" x="60" y="520" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-209" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-201" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-204" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-201" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL para agente &quot;revisor_resultado_tarefa&quot;" vertex="1">
-          <mxGeometry height="70" width="140" x="60" y="790" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-236" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-204" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-235" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-237" connectable="0" parent="YJjzWlIq-3hENTF15K_v-236" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Não" vertex="1">
-          <mxGeometry relative="1" x="0.1229" y="1" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-254" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-204" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-249">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="130" y="1195" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-255" connectable="0" parent="YJjzWlIq-3hENTF15K_v-254" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Sim" vertex="1">
-          <mxGeometry relative="1" x="-0.6546" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-204" parent="YJjzWlIq-3hENTF15K_v-143" style="rhombus;whiteSpace=wrap;html=1;" value="&lt;meta charset=&quot;utf-8&quot;&gt;&lt;b style=&quot;forced-color-adjust: none; box-shadow: none !important; color: rgb(255, 255, 255); font-family: Helvetica; font-size: 12px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(27, 29, 30); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;&lt;font style=&quot;forced-color-adjust: none; box-shadow: none !important; font-size: 21px;&quot;&gt;resposta final&lt;/font&gt;&lt;/b&gt;" vertex="1">
-          <mxGeometry height="70" width="140" x="60" y="970" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-247" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-234" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-243">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="378" y="695" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-234" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL contendo:&lt;div&gt;- A ultima iteração (promtp + resposta)&lt;/div&gt;&lt;div&gt;- Justificativa de não aceite&lt;/div&gt;" vertex="1">
-          <mxGeometry height="70" width="170" x="292.5" y="790" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-240" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-235" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-234" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-241" connectable="0" parent="YJjzWlIq-3hENTF15K_v-240" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Não" vertex="1">
-          <mxGeometry relative="1" x="-0.1221" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-253" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-235" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-249">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-256" connectable="0" parent="YJjzWlIq-3hENTF15K_v-253" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Sim" vertex="1">
-          <mxGeometry relative="1" x="0.0286" y="1" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-235" parent="YJjzWlIq-3hENTF15K_v-143" style="rhombus;whiteSpace=wrap;html=1;" value="Atingiu o max_iterations ?" vertex="1">
-          <mxGeometry height="70" width="155" x="300" y="970" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-202" parent="YJjzWlIq-3hENTF15K_v-143" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Esse cara só verifica se a resposta gerada bate com o criterio de aceite. Se nao bater, justifica oq falta" vertex="1">
-          <mxGeometry height="70" width="130" x="-160" y="790" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-206" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-201" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=1 4;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;endArrow=none;endFill=0;" target="YJjzWlIq-3hENTF15K_v-202" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-245" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-243" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-201" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-243" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="task_iteractions ++" vertex="1">
-          <mxGeometry height="70" width="140" x="60" y="660" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-257" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-262" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0.998;exitY=0.448;exitDx=0;exitDy=0;exitPerimeter=0;" target="YJjzWlIq-3hENTF15K_v-194">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="500" y="1331" />
-              <mxPoint x="500" y="305" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-263" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-249" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-262" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-281" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-249" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;dashPattern=1 4;" target="YJjzWlIq-3hENTF15K_v-280">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-249" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="salva a resposta em um arquivo local" vertex="1">
-          <mxGeometry height="70" width="140" x="307.5" y="1160" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-144" parent="YJjzWlIq-3hENTF15K_v-143" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;div&gt;&lt;div&gt;&lt;div&gt;&lt;b&gt;PARTE ESCRITA ESPERADA&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;br style=&quot;text-align: left;&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;- Explicar que o ralph loop consiste em ficar tentando resolver uma terefa até ela dar certo. Por isso o max_iteractions&lt;/div&gt;&lt;div&gt;- prompt do&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;revisor_resultado_tarefa&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;- Formato que salvamos as respostas (ver como o ralph looop padrão faz)&lt;/span&gt;&lt;/div&gt;" vertex="1">
-          <mxGeometry height="190" width="340" x="490" y="70" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-259" parent="YJjzWlIq-3hENTF15K_v-143" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Avaliação de critérios de aceitação)" vertex="1">
-          <mxGeometry height="70" width="80" x="320" y="390" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-262" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="Atualiza a task, &quot;pass_phase&quot;: True" vertex="1">
-          <mxGeometry height="70" width="140" x="307.5" y="1300" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-279" parent="YJjzWlIq-3hENTF15K_v-143" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
-          <mxGeometry height="50" width="50" x="270" y="400" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-280" parent="YJjzWlIq-3hENTF15K_v-143" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Ver com que o Ralph loop padrão salva" vertex="1">
-          <mxGeometry height="70" width="130" x="580" y="1150" as="geometry" />
-        </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-163" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
-          <mxGeometry height="650" width="260" x="5050" y="660" as="geometry" />
+          <mxGeometry height="650" width="270" x="5050" y="660" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-164" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Definição critérios de aceite da resposta final&lt;/font&gt;&lt;/b&gt;" vertex="1">
           <mxGeometry height="50" width="260" x="5050" y="660" as="geometry" />
@@ -488,9 +180,6 @@
         <mxCell id="YJjzWlIq-3hENTF15K_v-186" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;atomic_tasks_rewriter_agent&quot;" vertex="1">
           <mxGeometry height="70" width="170" x="5330" y="1910" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-154" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;div&gt;&lt;div&gt;Como vai ser definido se o criterio de aceitação para montar a resposta final foi aceito.&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Esse fluxo vai ser usado pelo criterio de aceitação de uma TASK e para o compialdo de Tasks&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Adicionar o prompt modelo&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Existe alguma estrategia que algum PAPER use para definir criterio de aceite? Talvez algum tipo de pontuação de 0 a 10, sla&lt;/div&gt;" vertex="1">
-          <mxGeometry height="207.67441860465115" width="340" x="5560" y="3872.322558139535" as="geometry" />
-        </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-272" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
           <mxGeometry height="50" width="50" x="5155" y="1220" as="geometry" />
         </mxCell>
@@ -503,11 +192,8 @@
         <mxCell id="YJjzWlIq-3hENTF15K_v-277" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="(Resolução das tarefas - Ralph Loop)" vertex="1">
           <mxGeometry height="70" width="80" x="5193.75" y="2190" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-292" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Se retornar que nao cumpre, vai fornecer uma justificativa" vertex="1">
-          <mxGeometry height="100" width="130" x="4950" y="3990" as="geometry" />
-        </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-152" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
-          <mxGeometry height="540" width="840" x="5060" y="3870" as="geometry" />
+          <mxGeometry height="540" width="520" x="5060" y="3870" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-153" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Avaliação de criterios de aceitação&lt;/font&gt;&lt;/b&gt;" vertex="1">
           <mxGeometry height="60" width="260" x="5060" y="3870" as="geometry" />
@@ -515,18 +201,15 @@
         <mxCell id="YJjzWlIq-3hENTF15K_v-267" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-264" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-266" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-264" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL para agente &quot;avaliador_criterios_aceitação&quot;" vertex="1">
-          <mxGeometry height="70" width="190" x="5090" y="4010" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-265" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Esse agente deve receber o resultado de todas as fazes e cruza com os critérios de aceite da resposta final" vertex="1">
-          <mxGeometry height="100" width="130" x="5300" y="4000" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-264" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL para agente &quot;final_response_acceptance_criteria_reviewer_agent&quot;" vertex="1">
+          <mxGeometry height="70" width="300" x="5090" y="4010" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-266" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="Cumpre os critérios de aceite da resposta final?" vertex="1">
-          <mxGeometry height="70" width="150" x="5110" y="4150" as="geometry" />
+          <mxGeometry height="70" width="150" x="5165" y="4150" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-284" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-266" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="YJjzWlIq-3hENTF15K_v-282" value="">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="5280" y="4365" as="sourcePoint" />
+            <mxPoint x="5335" y="4365" as="sourcePoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-286" connectable="0" parent="YJjzWlIq-3hENTF15K_v-284" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Não" vertex="1">
@@ -536,7 +219,7 @@
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-289" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-266" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="YJjzWlIq-3hENTF15K_v-287" value="">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="5185" y="4400" as="sourcePoint" />
+            <mxPoint x="5240" y="4400" as="sourcePoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-290" connectable="0" parent="YJjzWlIq-3hENTF15K_v-289" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Sim" vertex="1">
@@ -545,73 +228,61 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-282" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
-          <mxGeometry height="50" width="50" x="5360" y="4160" as="geometry" />
+          <mxGeometry height="50" width="50" x="5415" y="4160" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-283" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="(Criação de plano adicional complementar)" vertex="1">
-          <mxGeometry height="70" width="80" x="5410" y="4150" as="geometry" />
+          <mxGeometry height="70" width="80" x="5465" y="4150" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-287" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
-          <mxGeometry height="50" width="50" x="5160" y="4330" as="geometry" />
+          <mxGeometry height="50" width="50" x="5215" y="4330" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-288" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="(Criação da resposta final)" vertex="1">
-          <mxGeometry height="70" width="80" x="5210" y="4320" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-158" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Aqui ele recebe da ultima fase a resposta do &quot;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;avaliador_criterios_aceitação&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&quot; que contem o porque de nao ser aceito&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Criação de plano adiicional.&lt;/div&gt;&lt;div&gt;- O plano adicional&lt;/div&gt;" vertex="1">
-          <mxGeometry height="100" width="340" x="5900" y="4460" as="geometry" />
+          <mxGeometry height="70" width="80" x="5265" y="4320" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-156" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;container=0;" value="" vertex="1">
-          <mxGeometry height="650" width="840" x="5060" y="4460" as="geometry" />
+          <mxGeometry height="650" width="290" x="5086.25" y="4460" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-157" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="&lt;font style=&quot;font-size: 21px;&quot;&gt;&lt;b&gt;Criação de plano adicional complementar&lt;/b&gt;&lt;/font&gt;" vertex="1">
-          <mxGeometry height="50" width="260" x="5060" y="4460" as="geometry" />
+          <mxGeometry height="50" width="260" x="5086.25" y="4460" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-300" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-293" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-299" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-293" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="LLM_CALL para agente &quot;criador_tarefas_atomicas&quot;" vertex="1">
-          <mxGeometry height="70" width="190" x="5100" y="4700" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-294" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;container=0;" value="Esse vai ser agente responsavel por criar um prompt de entrada, simulando oq o usuario faz no inicio. Para isso, ele pega o retorno do &quot;avaliador_criterios_aceitação&quot; e cria o novo promp solicitando somente oq falta" vertex="1">
-          <mxGeometry height="70" width="420" x="5330" y="4550" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-293" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="LLM_CALL para agente &quot;atomic_tasks_planner_agent&quot;" vertex="1">
+          <mxGeometry height="70" width="190" x="5126.25" y="4700" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-297" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-296" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-293" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-296" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="LLM_CALL para agente &quot;criacao_pompt_criterios_faltantes&quot;" vertex="1">
-          <mxGeometry height="70" width="190" x="5100" y="4550" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-298" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;container=0;" value="Passa o prompt gerado pelo ultimo agenda, como se fosse uma nova entrada de usuario" vertex="1">
-          <mxGeometry height="70" width="420" x="5330" y="4700" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-296" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="LLM_CALL para agente &quot;acceptance_gap_prompt_creator&quot;" vertex="1">
+          <mxGeometry height="70" width="190" x="5126.25" y="4550" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-303" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-299" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-301">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-299" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="Concatena as novas fases criadas ao PRD.json original" vertex="1">
-          <mxGeometry height="70" width="190" x="5100" y="4870" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-299" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="Concatena as novas fases criadas ao &quot;planning.json&quot; original" vertex="1">
+          <mxGeometry height="70" width="190" x="5126.25" y="4870" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-301" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
-          <mxGeometry height="50" width="50" x="5170" y="5030" as="geometry" />
+          <mxGeometry height="50" width="50" x="5196.25" y="5030" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-302" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="(Resolução das tarefas (Ralph Loop))" vertex="1">
-          <mxGeometry height="70" width="80" x="5220" y="5020" as="geometry" />
+          <mxGeometry height="70" width="80" x="5246.25" y="5020" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-160" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
-          <mxGeometry height="400" width="830" x="5060" y="5160" as="geometry" />
+          <mxGeometry height="370" width="260" x="5086.25" y="5160" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-161" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Criação da resposta final&lt;/font&gt;&lt;/b&gt;" vertex="1">
-          <mxGeometry height="50" width="260" x="5060" y="5160" as="geometry" />
+          <mxGeometry height="50" width="260" x="5086.25" y="5160" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-313" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-309" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-312">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-309" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="LLM_CALL para agente &quot;final_response_creator&quot;" vertex="1">
-          <mxGeometry height="70" width="190" x="5095" y="5270" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-310" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;container=0;" value="Esse agente vai receber somente os RESULTADOS de todas as fases e os critérios de aceites da resposta final, para construir&amp;nbsp;&amp;nbsp;" vertex="1">
-          <mxGeometry height="70" width="420" x="5330" y="5270" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-309" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="LLM_CALL para agente &quot;final_response_composert_agent&quot;" vertex="1">
+          <mxGeometry height="70" width="190" x="5121.25" y="5270" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-312" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Return" vertex="1">
-          <mxGeometry height="50" width="50" x="5165" y="5450" as="geometry" />
+          <mxGeometry height="50" width="50" x="5191.25" y="5450" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-317" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-315" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" value="">
           <mxGeometry relative="1" as="geometry">
@@ -626,6 +297,138 @@
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-322" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Cria o &quot;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: transparent; text-align: left;&quot;&gt;planning.json&lt;/span&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: transparent;&quot;&gt;&quot;, contendo os critérios de aceite e formato de saida esperado para a resposta final&lt;/span&gt;" vertex="1">
           <mxGeometry height="70" width="187.5" x="5086.25" y="1090" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-141" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="1420" width="550" x="5060" y="2360" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-142" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Resolução das tarefas - Ralph Loop&lt;/font&gt;&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="260" x="5060" y="2360" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-195" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-193" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-194" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-193" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Json com os as fases criadas (planning.json)" vertex="1">
+          <mxGeometry height="70" width="150" x="5115" y="2470" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-198" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-194" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-196" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-194" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Existe alguma task com &quot;pass_phase&quot;: False ?" vertex="1">
+          <mxGeometry height="70" width="140" x="5120" y="2630" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-199" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-196" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-197" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-200" connectable="0" parent="YJjzWlIq-3hENTF15K_v-199" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Sim" vertex="1">
+          <mxGeometry relative="1" x="-0.1486" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-260" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-196" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-279" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="5300" y="2790" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-261" connectable="0" parent="YJjzWlIq-3hENTF15K_v-260" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Não" vertex="1">
+          <mxGeometry relative="1" x="0.1098" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-196" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="" vertex="1">
+          <mxGeometry height="50" width="50" x="5165" y="2760" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-244" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-197" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-243" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-197" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL contendo somente o conteúdo da fase" vertex="1">
+          <mxGeometry height="70" width="140" x="5120" y="2880" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-209" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-201" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-204" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-201" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL para agente &quot;task_outcome_reviewer_agent&quot;" vertex="1">
+          <mxGeometry height="70" width="170" x="5105" y="3150" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-236" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-204" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-235" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-237" connectable="0" parent="YJjzWlIq-3hENTF15K_v-236" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Não" vertex="1">
+          <mxGeometry relative="1" x="0.1229" y="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-254" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-204" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-249">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5190" y="3555" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-255" connectable="0" parent="YJjzWlIq-3hENTF15K_v-254" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Sim" vertex="1">
+          <mxGeometry relative="1" x="-0.6546" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-204" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="&lt;span style=&quot;forced-color-adjust: none; color: rgb(255, 255, 255); font-family: Helvetica; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(27, 29, 30); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; box-shadow: none !important;&quot;&gt;&lt;font style=&quot;forced-color-adjust: none; box-shadow: none !important;&quot;&gt;cumpre os critérios?&lt;/font&gt;&lt;/span&gt;" vertex="1">
+          <mxGeometry height="70" width="140" x="5120" y="3330" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-247" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-234" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-243">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5438" y="3055" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-234" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL contendo:&lt;div&gt;- A ultima iteração (promtp + resposta)&lt;/div&gt;&lt;div&gt;- Justificativa de não aceite&lt;/div&gt;" vertex="1">
+          <mxGeometry height="70" width="170" x="5352.5" y="3150" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-240" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-235" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-234" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-241" connectable="0" parent="YJjzWlIq-3hENTF15K_v-240" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Não" vertex="1">
+          <mxGeometry relative="1" x="-0.1221" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-253" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-235" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-249">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-256" connectable="0" parent="YJjzWlIq-3hENTF15K_v-253" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Sim" vertex="1">
+          <mxGeometry relative="1" x="0.0286" y="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-235" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="Atingiu o max_iterations ?" vertex="1">
+          <mxGeometry height="70" width="155" x="5360" y="3330" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-245" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-243" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-201" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-243" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="task_iteractions ++" vertex="1">
+          <mxGeometry height="70" width="140" x="5120" y="3020" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-257" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-262" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0.998;exitY=0.448;exitDx=0;exitDy=0;exitPerimeter=0;" target="YJjzWlIq-3hENTF15K_v-194">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5560" y="3691" />
+              <mxPoint x="5560" y="2665" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-263" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-249" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-262" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-249" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="salva a resposta no &quot;tasks_results.json&quot;" vertex="1">
+          <mxGeometry height="70" width="140" x="5367.5" y="3520" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-259" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Avaliação de critérios de aceitação)" vertex="1">
+          <mxGeometry height="70" width="80" x="5380" y="2750" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-262" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Atualiza a task, &quot;pass_phase&quot;: True" vertex="1">
+          <mxGeometry height="70" width="140" x="5367.5" y="3660" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-279" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
+          <mxGeometry height="50" width="50" x="5330" y="2760" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
