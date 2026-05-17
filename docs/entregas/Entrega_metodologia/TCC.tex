@@ -200,7 +200,7 @@
 
 \email{cferreira@fei.edu.br}
 
-\resumo{Os \textit{Large Language Models} (LLMs) têm, há algum tempo, deixado de ser apenas modelos voltados à geração de texto, consolidando-se como softwares e ferramentas completas. Essa evolução amplia significativamente seu escopo de aplicação, viabilizando funcionalidades como “pensamento prolongado”, acesso à internet e até mesmo suporte ao desenvolvimento de software por meio de interfaces especializadas, frequentemente referidas como \textit{harnesses}, como CLIs — a exemplo de \textit{Cloud Code} \cite{cloudcode}, \textit{Codex} \cite{chen2021evaluating} e \textit{OpenCLI} \cite{opencli} — e \textit{Integrated Development Environment} (IDEs), como \textit{Cursor} e \textit{Windsurf}. Em comum, essas soluções utilizam técnicas já consolidadas na literatura, muitas delas conhecidas há anos, como o princípio de “dividir para conquistar”, além de releituras dessas abordagens, com o objetivo de aproximar os resultados gerados do que é esperado, seja na construção de artefatos mais complexos ou na produção de respostas textuais mais precisas e alinhadas ao usuário. Nesse contexto, este estudo propõe a construção e análise desse conjunto de mecanismos e ferramentas que operam “ao redor” dos modelos de LLM, buscando verificar, na prática, se essas estratégias realmente melhoram a qualidade das respostas geradas. Para isso, serão utilizados como benchmark conjuntos de questões de múltipla escolha que abrangem diferentes áreas do conhecimento, como história, matemática, lógica, filosofia e relações públicas, desde níveis básicos de escolaridade até tópicos avançados em nível de doutorado (PhD).}
+\resumo{Os Modelos de Linguagem de Grande Porte (LLMs) evoluíram de geradores de texto para motores centrais de raciocínio em tarefas complexas. Contudo, arquiteturas agentais tradicionais frequentemente processam múltiplas etapas acumulando histórico em uma única janela, o que leva à degradação de desempenho conhecida como \textit{context rot} (esgotamento de contexto). Para contornar essa limitação estrutural, este trabalho propõe e avalia uma arquitetura de orquestração cognitiva estrita (\textit{harness}), inspirada no paradigma \textit{stateless} do \textit{Ralph Wiggum Loop}. Em contraste com as inferências monolíticas e lineares, a abordagem isola a execução em fases discretas de análise, decomposição e validação iterativa, reinicializando o contexto entre os passos para mitigar alucinações e omissões lógicas. Para validar empiricamente a eficácia da abordagem, estabelecemos um plano de avaliação comparativo utilizando modelos de diferentes escalas de parâmetros (como a família Llama 3.1, Claude 3.5 Sonnet e GPT-4o). O estudo utiliza bases de dados acadêmicas rigorosas de propósito geral — notadamente MMLU, GPQA e MMLU-Pro — para investigar a hipótese de que a orquestração estruturada do raciocínio e o isolamento de contexto são capazes de elevar sistematicamente a acurácia, independentemente da escala inerente do modelo.}
 
 \keyword{Esperar ate o fim do desenvolvimento do glossario, e deposi colocar aqui}
 
@@ -217,7 +217,7 @@ Este trabalho parte de dois problemas centrais observados na prática e document
 
 Técnicas consolidadas na literatura, como \textit{Chain-of-Thought} \cite{wei2022chain}, \textit{ReAct} \cite{yao2022react} e abordagens de autorreflexão \cite{shinn2023reflexion}, já demonstraram que processos iterativos superam as inferências de passo único. Contudo, em arquiteturas populares de agentes, o modelo tende a operar acumulando um histórico crescente de raciocínios em uma única janela. Isso frequentemente resulta em alucinações e degradação devido à compactação excessiva do contexto. Para contornar essa limitação, propomos a estruturação do raciocínio baseada em princípios de decomposição e \textit{statelessness} aplicados de forma determinística.
 
-Neste trabalho, adotamos a hipótese de que a qualidade objetiva das saídas em tarefas complexas depende tanto do LLM base quanto do ``\textit{Harness}'' que governa seu uso. Para testar essa premissa, nossa meta é avaliar o impacto da orquestração estruturada --- inspirada no \textit{Ralph Wiggum Loop} \cite{ghuntley2025ralph} --- frente à inferência direta tradicional. A avaliação em andamento baseia-se em benchmarks acadêmicos rigorosos, visando demonstrar se uma arquitetura composta por etapas de decomposição e verificação iterativa é capaz de elevar o desempenho de modelos com menos parâmetros a patamares competitivos, superando abordagens lineares em métricas de acurácia.
+Neste trabalho, adotamos a hipótese de que a qualidade objetiva das saídas em tarefas complexas depende tanto do LLM base quanto do ``\textit{Harness}'' que governa seu uso. Para testar essa premissa, nossa meta é avaliar o impacto da orquestração estruturada --- inspirada no \textit{Ralph Wiggum Loop} \cite{ghuntley2025ralph} --- frente à inferência direta tradicional. A avaliação em andamento baseia-se em bases de dados (\textit{datasets}) acadêmicas rigorosas, visando demonstrar se uma arquitetura composta por etapas de decomposição e verificação iterativa é capaz de elevar o desempenho de modelos com menos parâmetros a patamares competitivos, superando abordagens lineares em métricas de acurácia.
 
 Em suma, as principais contribuições almejadas por este estudo são:
 \begin{itemize}
@@ -245,7 +245,7 @@ Embora as técnicas supracitadas representem a base teórica de agentes autônom
 
 A validação acadêmica rigorosa de uma estrutura semelhante a esta foi recentemente evidenciada por McComb et al. \cite{supervising_ralph_wiggum_2026}, que avaliaram o impacto de agentes baseados no \textit{Ralph Wiggum Loop} para a resolução de problemas complexos de design de pacotes de baterias na engenharia. O estudo comprovou não apenas a eficácia da abordagem \textit{stateless}, mas propôs aprimoramentos através de ciclos metacognitivos de co-regulação (CRDAL), nos quais um agente avaliador atua criticando ativamente o design a fim de mitigar vieses e fixações de paradigma.
 
-Este trabalho apoia-se em fundamentações similares para justificar o uso do paradigma de execução \textit{stateless} em nossa orquestração. Contudo, enquanto McComb et al. \cite{supervising_ralph_wiggum_2026} concentraram a arquitetura na otimização de métricas tangíveis de engenharia e modelagem paramétrica, nossa metodologia isola e adapta os ganhos da orquestração estrita do \textit{Ralph Loop} para elevar a capacidade de resolução de questões de propósito geral em múltiplos domínios do conhecimento (representados pelos benchmarks MMLU e GPQA). 
+Este trabalho apoia-se em fundamentações similares para justificar o uso do paradigma de execução \textit{stateless} em nossa orquestração. Contudo, enquanto McComb et al. \cite{supervising_ralph_wiggum_2026} concentraram a arquitetura na otimização de métricas tangíveis de engenharia e modelagem paramétrica, nossa metodologia isola e adapta os ganhos da orquestração estrita do \textit{Ralph Loop} para elevar a capacidade de resolução de questões de propósito geral em múltiplos domínios do conhecimento (representados pelos \textit{datasets} MMLU e GPQA). 
 
 % \FloatBarrier
 % =================================================
@@ -263,7 +263,7 @@ A Figura~\ref{fig:comparacao-geral} sintetiza essa distinção em nível macro. 
 \begin{tikzpicture}[node distance=0.32cm and 0.55cm, transform shape]
 
 % Coluna esquerda
-\node[wideblock, minimum width=3.0cm, minimum height=0.58cm] (u1) {\scriptsize Questão do benchmark};
+\node[wideblock, minimum width=3.0cm, minimum height=0.58cm] (u1) {\scriptsize Questão da base de dados};
 \node[wideblock, minimum width=3.0cm, minimum height=0.58cm, below=of u1] (m1) {\scriptsize Modelo base};
 \node[wideblock, minimum width=3.0cm, minimum height=0.58cm, below=of m1] (r1) {\scriptsize Resposta final};
 
@@ -273,7 +273,7 @@ A Figura~\ref{fig:comparacao-geral} sintetiza essa distinção em nível macro. 
 \node[above=0.08cm of u1] {\scriptsize \textbf{Uso direto}};
 
 % Coluna direita
-\node[wideblock, minimum width=3.15cm, minimum height=0.58cm, right=0.75cm of u1] (u2) {\scriptsize Questão do benchmark};
+\node[wideblock, minimum width=3.15cm, minimum height=0.58cm, right=0.75cm of u1] (u2) {\scriptsize Questão da base de dados};
 \node[wideblock, minimum width=3.15cm, minimum height=0.58cm, below=of u2] (a2) {\scriptsize Análise inicial};
 \node[wideblock, minimum width=3.15cm, minimum height=0.58cm, below=of a2] (d2) {\scriptsize Decomposição};
 \node[wideblock, minimum width=3.15cm, minimum height=0.58cm, below=of d2] (p2) {\scriptsize Processamento};
@@ -367,7 +367,7 @@ A Figura~\ref{fig:fluxo-detalhado} ilustra essa dinâmica. O objetivo do diagram
 \figlocal{
 \resizebox{0.40\columnwidth}{!}{%
 \begin{tikzpicture}[node distance=0.45cm, transform shape]
-\node[wideblock, minimum width=4.0cm, minimum height=0.65cm] (a) {\scriptsize Questão do benchmark};
+\node[wideblock, minimum width=4.0cm, minimum height=0.65cm] (a) {\scriptsize Questão da base de dados};
 \node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of a] (b) {\scriptsize Análise do enunciado};
 \node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of b] (c) {\scriptsize Decomposição da tarefa};
 \node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of c] (d) {\scriptsize Execução das subtarefas};
