@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
   <diagram name="Página-1" id="JqvE3wWPPY2aX9wsRf88">
-    <mxGraphModel dx="-2276" dy="1064" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="-2574" dy="484" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -136,7 +136,7 @@
         <mxCell id="YJjzWlIq-3hENTF15K_v-181" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-174" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-176" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-174" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;criador_tarefas_atomicas&quot;" vertex="1">
+        <mxCell id="YJjzWlIq-3hENTF15K_v-174" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;atomic_tasks_planner_agent&quot;" vertex="1">
           <mxGeometry height="70" width="165" x="5090" y="1630" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-324" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-175" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-276">

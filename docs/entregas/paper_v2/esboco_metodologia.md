@@ -8,7 +8,7 @@ NOTAS GERAIS:
 
 
 
-## Analise macro do processo
+## Analise macro do processo de "thinking"
 - Aqui vai vir o desenho explicando o fluxo macro
 - OQUE QUERO EXPLICAR AQUI:
     - Trazer somente um texto de apois para o desenho, que possui boa parte da logica
