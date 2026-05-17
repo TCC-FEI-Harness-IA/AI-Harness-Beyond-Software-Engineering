@@ -1,0 +1,476 @@
+\documentclass[a4paper,10pt,twocolumn]{article}
+
+% -------------------------------------------------
+% PACOTES BÁSICOS
+% -------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage[a4paper,top=2cm,bottom=3cm,left=2cm,right=2cm,footskip=0.8cm]{geometry}
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{helvet}
+\usepackage{titlesec}
+\usepackage{paracol}
+\usepackage{indentfirst}
+\usepackage{ragged2e}
+\usepackage{hyperref}
+\usepackage{csquotes}
+\usepackage{newtxtext,newtxmath}
+\usepackage{booktabs}
+\usepackage{microtype}
+
+\usepackage{svg}
+\usepackage{listings}
+\usepackage{courier}
+
+% Evita o esticamento vertical exagerado (Resolve o Underfull \vbox)
+\raggedbottom
+
+% Diagramas
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning}
+
+% Bibliografia no padrão numérico
+\usepackage[backend=biber,style=ieee,sorting=none,language=portuguese]{biblatex}
+\addbibresource{referencias.bib}
+
+% -------------------------------------------------
+% CORES
+% -------------------------------------------------
+\definecolor{grayFEI}{HTML}{7F7F7F}
+\definecolor{azulFEI}{HTML}{0070C0}
+
+% -------------------------------------------------
+% CONFIGURAÇÃO DO PACOTE LISTINGS PARA JSON
+% -------------------------------------------------
+\lstdefinelanguage{json}{
+    basicstyle=\normalfont\ttfamily\footnotesize,
+    showstringspaces=false,
+    breaklines=true,
+    stringstyle=\color{azulFEI},
+    commentstyle=\color{grayFEI},
+    keywordstyle=\bfseries
+}
+
+% -------------------------------------------------
+% ESTILO DE PARÁGRAFOS
+% -------------------------------------------------
+\setlength{\parindent}{2em}
+\setlength{\columnsep}{20pt}
+
+% -------------------------------------------------
+% LEGENDAS
+% -------------------------------------------------
+\captionsetup[figure]{
+  labelfont={color=azulFEI,bf,small,sf},
+  textfont={small,sf},
+  font=footnotesize,
+  labelsep=period,
+  name=Figura,
+  justification=raggedright,
+  singlelinecheck=false
+}
+
+\captionsetup[table]{
+  labelfont={color=azulFEI,bf,small,sf},
+  textfont={small,sf},
+  font=footnotesize,
+  labelsep=period,
+  name=Tabela,
+  justification=raggedright,
+  singlelinecheck=false
+}
+
+% -------------------------------------------------
+% SEÇÕES E SUBSEÇÕES
+% -------------------------------------------------
+\titleformat{\section}
+  {\color{azulFEI}\normalfont\fontfamily{phv}\selectfont\bfseries\fontsize{11}{13}\selectfont}
+  {\thesection.}{0.2em}{}
+\renewcommand{\thesection}{\Roman{section}}
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+
+\titleformat{\subsection}
+  {\color{grayFEI}\normalfont\fontfamily{phv}\selectfont\itshape\fontsize{10}{12}\selectfont}
+  {\thesubsection.}{0.2em}{}
+\renewcommand{\thesubsection}{\Alph{subsection}}
+\titlespacing*{\subsection}{0pt}{6pt}{3pt}
+
+% -------------------------------------------------
+% COMANDOS DO TEMPLATE
+% -------------------------------------------------
+\newcommand{\helvetfont}[1]{{\fontfamily{phv}\selectfont #1}}
+
+\newcommand{\inovatitle}[1]{%
+  \noindent{\fontsize{18}{20}\selectfont\helvetfont{\textbf{\textcolor{azulFEI}{#1}}}}\par\vspace{25pt}
+}
+
+\newcommand{\autores}[1]{%
+  \helvetfont{\fontsize{11}{20}\selectfont\textbf{\textit{#1}}}\par
+}
+
+\newcommand{\orientador}[1]{%
+  \helvetfont{\fontsize{11}{20}\selectfont\textbf{\textit{#1}}}\par
+}
+
+\newcommand{\filiacao}[1]{%
+  \helvetfont{\fontsize{10}{20}\selectfont\textit{#1}}\par
+}
+
+\newcommand{\email}[1]{%
+  \helvetfont{\fontsize{10}{20}\selectfont\textit{#1}}\par
+}
+
+\newcommand{\resumo}[1]{%
+  \vspace{15pt}
+  \noindent
+  {\helvetfont{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Resumo:}}}}\quad
+  \justifying #1\par
+  \vspace{6pt}
+}
+
+\newcommand{\keyword}[1]{%
+  \noindent
+  \helvetfont{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Palavras-chaves:}}} #1
+  \vspace{25pt}\par
+}
+
+\renewcommand{\thetable}{\Roman{table}}
+
+% -------------------------------------------------
+% CABEÇALHO E RODAPÉ
+% -------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.3pt}
+\setlength{\headsep}{1cm}
+\setlength{\headheight}{1.2cm}
+
+\IfFileExists{logoinova.png}
+  {\lhead{\includegraphics[width=4.97cm,height=1cm]{logoinova.png}}}
+  {\lhead{\helvetfont{INOVA FEI}}}
+
+\rhead{\helvetfont{1\textsuperscript{o} semestre/2026}}
+
+\lfoot{%
+  \fontfamily{phv}\fontsize{8}{10}\selectfont
+  Anais dos Trabalhos de Conclusão de Curso do Centro Universitário FEI, São Bernardo do Campo \\
+  \vspace{-4pt}\rule{\textwidth}{0.4pt}
+}
+
+\rfoot{\fontfamily{phv}\fontsize{8}{10}\selectfont \thepage}
+
+% -------------------------------------------------
+% ESTILOS TIKZ
+% -------------------------------------------------
+\tikzset{
+  block/.style={
+    rectangle, draw=black, rounded corners, align=center,
+    minimum width=3.3cm, minimum height=0.95cm, fill=white
+  },
+  smallblock/.style={
+    rectangle, draw=black, rounded corners, align=center,
+    minimum width=2.7cm, minimum height=0.85cm, fill=white
+  },
+  wideblock/.style={
+    rectangle, draw=black, rounded corners, align=center,
+    minimum width=4.2cm, minimum height=0.95cm, fill=white
+  },
+  arrow/.style={-{Latex[length=3mm]}, thick}
+}
+
+\newcommand{\figlocal}[3]{%
+  \par\medskip
+  \noindent\begin{minipage}{\columnwidth}
+    \centering
+    #1
+    \captionof{figure}{#2}
+    \label{#3}
+  \end{minipage}
+  \par\medskip
+}
+% -------------------------------------------------
+% DOCUMENTO
+% -------------------------------------------------
+\begin{document}
+
+\twocolumn[
+\begin{@twocolumnfalse}
+
+\raggedright
+
+\inovatitle{Sistemas Compostos de IA: Otimização de Respostas em Benchmarks Objetivos Através de uma Arquitetura Híbrida de Inferência e Validação com Multi-Agentes, Ferramentas e Orquestração Cognitiva}
+
+\autores{Hugo Emílio Nomura, Pedro Henrique Correia de Oliveira, Pedro Henrique Satoru Lima Takahashi, Vitor Monteiro Vianna}
+
+\filiacao{Ciência da Computação -- Centro Universitário FEI, campus São Paulo}
+
+\email{unifhnomura@fei.edu.br, unifpoliveira@fei.edu.br, unifptakahashi@fei.edu.br, unievvianna@fei.edu.br}
+
+\orientador{Orientador: Charles Henrique Porto Ferreira}
+
+\filiacao{Departamento de Ciência da Computação, Centro Universitário FEI}
+
+\email{cferreira@fei.edu.br}
+
+\resumo{Os Modelos de Linguagem de Grande Porte (LLMs) evoluíram de geradores de texto para motores centrais de raciocínio em tarefas complexas. Contudo, arquiteturas agentais tradicionais frequentemente processam múltiplas etapas acumulando histórico em uma única janela, o que leva à degradação de desempenho conhecida como \textit{context rot} (esgotamento de contexto). Para contornar essa limitação estrutural, este trabalho propõe e avalia uma arquitetura de orquestração cognitiva estrita (\textit{harness}), inspirada no paradigma \textit{stateless} do \textit{Ralph Wiggum Loop}. Em contraste com as inferências monolíticas e lineares, a abordagem isola a execução em fases discretas de análise, decomposição e validação iterativa, reinicializando o contexto entre os passos para mitigar alucinações e omissões lógicas. Para validar empiricamente a eficácia da abordagem, estabelecemos um plano de avaliação comparativo utilizando modelos de diferentes escalas de parâmetros (como a família Llama 3.1, Claude 3.5 Sonnet e GPT-4o). O estudo utiliza bases de dados acadêmicas rigorosas de propósito geral — notadamente MMLU, GPQA e MMLU-Pro — para investigar a hipótese de que a orquestração estruturada do raciocínio e o isolamento de contexto são capazes de elevar sistematicamente a acurácia, independentemente da escala inerente do modelo.}
+
+\keyword{Esperar ate o fim do desenvolvimento do glossario, e deposi colocar aqui}
+
+\end{@twocolumnfalse}
+]
+
+% =================================================
+\section{Introdução}
+% =================================================
+
+Os modelos de linguagem de grande porte (\textit{Large Language Models} --- LLMs) deixaram de ser meramente geradores de texto e hoje funcionam como plataformas compostas por camadas de processamento, coordenação e ferramentas auxiliares. Essa transição viabiliza capacidades como raciocínio em múltiplas etapas, orquestração de subagentes e uso de ferramentas externas, porém também revela limitações estruturais: nem sempre a melhoria observada no comportamento final advém apenas do modelo base, mas das arquiteturas que organizam e abstraem o processo de inferência.
+
+Este trabalho parte de dois problemas centrais observados na prática e documentados na literatura: (1) a aparente discordância entre respostas iniciais e respostas revisadas por um mesmo modelo, e (2) a forma como fluxos de pensamento (prompting encadeado, agentes e pipelines) são atualmente implementados, incluindo suas fragilidades frente ao crescimento do contexto e esgotamento da janela de atenção \cite{liu2023lost}.
+
+Técnicas consolidadas na literatura, como \textit{Chain-of-Thought} \cite{wei2022chain}, \textit{ReAct} \cite{yao2022react} e abordagens de autorreflexão \cite{shinn2023reflexion}, já demonstraram que processos iterativos superam as inferências de passo único. Contudo, em arquiteturas populares de agentes, o modelo tende a operar acumulando um histórico crescente de raciocínios em uma única janela. Isso frequentemente resulta em alucinações e degradação devido à compactação excessiva do contexto. Para contornar essa limitação, propomos a estruturação do raciocínio baseada em princípios de decomposição e \textit{statelessness} aplicados de forma determinística.
+
+Neste trabalho, adotamos a hipótese de que a qualidade objetiva das saídas em tarefas complexas depende tanto do LLM base quanto do ``\textit{Harness}'' que governa seu uso. Para testar essa premissa, nossa meta é avaliar o impacto da orquestração estruturada --- inspirada no \textit{Ralph Wiggum Loop} \cite{ghuntley2025ralph} --- frente à inferência direta tradicional. A avaliação em andamento baseia-se em bases de dados (\textit{datasets}) acadêmicas rigorosas, visando demonstrar se uma arquitetura composta por etapas de decomposição e verificação iterativa é capaz de elevar o desempenho de modelos com menos parâmetros a patamares competitivos, superando abordagens lineares em métricas de acurácia.
+
+Em suma, as principais contribuições almejadas por este estudo são:
+\begin{itemize}
+    \item \textbf{Sistematização do paradigma \textit{stateless}:} Implementação de um pipeline de inferência que isola o contexto entre etapas, mitigando alucinações ligadas ao histórico longo.
+    \item \textbf{Adaptação de Domínio:} Aplicação do \textit{Ralph Wiggum Loop} --- originado na automação de engenharia de software --- para resolução estruturada de problemas de propósito geral e conhecimento enciclopédico.
+    \item \textbf{Análise Quantitativa Estratificada:} Estabelecimento de um *benchmark* cruzado avaliando o impacto da orquestração sobre a inferência linear, utilizando modelos abertos (Llama 3.1) e fechados (GPT-4o, Claude 3.5 Sonnet).
+\end{itemize}
+
+% \FloatBarrier
+% =================================================
+\section{Trabalhos Relacionados}
+% =================================================
+
+O desenvolvimento de arquiteturas e técnicas de \textit{harness} para potencializar o raciocínio de LLMs tem sido um campo ativo de pesquisa, subdividindo-se em estratégias de \textit{prompting} estendido e fluxos de trabalho baseados em agentes.
+
+\subsection{Estratégias de Raciocínio e Agentes}
+
+A literatura demonstra amplamente que a inferência primária de um modelo pode ser significativamente aprimorada quando estruturada em fases. O método \textit{Chain-of-Thought} \cite{wei2022chain} e sua generalização \textit{Tree of Thoughts} \cite{yao2023tree} evidenciaram a importância de induzir o modelo a explicitar passos intermediários. Abordagens como \textit{ReAct} \cite{yao2022react} deram um passo além ao sinergizar o raciocínio interno com a capacidade de invocar ferramentas externas (\textit{Acting}), permitindo contornar alucinações por meio de observações diretas do ambiente.
+
+Paralelamente, pipelines interativos baseados em \textit{feedback} demonstram alta eficácia. \textit{Reflexion} \cite{shinn2023reflexion} implementou ciclos em que o modelo atua como seu próprio crítico, revisando saídas com base em reforço verbal externo, e o \textit{Self-Debugging} \cite{chen2023selfdebug} mostrou que os LLMs podem depurar seus próprios erros quando guiados de forma sistemática. Adicionalmente, métodos focados na redução da sobrecarga cognitiva através da divisão de tarefas complexas --- como \textit{Least-to-Most} \cite{zhou2022least}, \textit{Decomposed Prompting} \cite{khot2022decomposed} e \textit{Plan-and-Solve} \cite{wang2023plan} --- sustentam a premissa de que separar planejamento e execução mitiga falhas lógicas e omissões.
+
+\subsection{Orquestração Estruturada e o Ralph Wiggum Loop}
+
+Embora as técnicas supracitadas representem a base teórica de agentes autônomos, muitas dependem do acúmulo contínuo de estado em uma única janela de contexto, fenômeno que agrava a degradação e o esquecimento descritos em \textit{Lost in the Middle} \cite{liu2023lost}. Frente a esse problema, o \textit{Ralph Wiggum Loop} \cite{ghuntley2025ralph} emergiu na comunidade de engenharia de software como um paradigma pragmático alternativo. A técnica isola a execução em etapas rigidamente separadas e reinicializa o contexto a cada iteração (\textit{Fresh Context}), armazenando estritamente os resultados intermediários essenciais.
+
+A validação acadêmica rigorosa de uma estrutura semelhante a esta foi recentemente evidenciada por McComb et al. \cite{supervising_ralph_wiggum_2026}, que avaliaram o impacto de agentes baseados no \textit{Ralph Wiggum Loop} para a resolução de problemas complexos de design de pacotes de baterias na engenharia. O estudo comprovou não apenas a eficácia da abordagem \textit{stateless}, mas propôs aprimoramentos através de ciclos metacognitivos de co-regulação (CRDAL), nos quais um agente avaliador atua criticando ativamente o design a fim de mitigar vieses e fixações de paradigma.
+
+Este trabalho apoia-se em fundamentações similares para justificar o uso do paradigma de execução \textit{stateless} em nossa orquestração. Contudo, enquanto McComb et al. \cite{supervising_ralph_wiggum_2026} concentraram a arquitetura na otimização de métricas tangíveis de engenharia e modelagem paramétrica, nossa metodologia isola e adapta os ganhos da orquestração estrita do \textit{Ralph Loop} para elevar a capacidade de resolução de questões de propósito geral em múltiplos domínios do conhecimento (representados pelos \textit{datasets} MMLU e GPQA).
+
+% =================================================
+\section{Metodologia}
+% =================================================
+
+\subsection{Análise macro do processo de \textit{thinking}}
+
+O diagrama a seguir apresenta o fluxo macro do pipeline de \textit{thinking} proposto neste trabalho, oferecendo uma visão consolidada de todas as fases que o compõem.
+
+\begin{figure}[H]
+  \centering
+  \includesvg[width=1\columnwidth]{diagrams/fluxo_macro}
+  \caption{Fluxo macro do pipeline de \textit{thinking}.}
+  \label{fig:fluxo_macro}
+\end{figure}
+
+O pipeline é iniciado a partir de um \textit{prompt} de entrada fornecido pelo usuário. A partir desse insumo, o processo percorre as seguintes etapas em sequência: (i) definição dos critérios de aceitação da resposta final e do formato de saída esperado; (ii) decomposição do problema em tarefas atômicas e independentes; (iii) resolução iterativa de cada tarefa por meio de um ciclo de execução e verificação inspirado no \textit{Ralph Wiggum Loop}; (iv) avaliação dos resultados consolidados frente aos critérios de aceitação estabelecidos; e, por fim, (v) composição da resposta final ao usuário. Caso a avaliação dos critérios indique que nem todos foram atendidos, o pipeline não descarta o trabalho realizado — em vez disso, cria um plano adicional complementar voltado exclusivamente para cobrir as lacunas identificadas, retornando à fase de resolução de tarefas. Esse comportamento confere ao sistema um caráter iterativo e convergente.
+
+Um aspecto central da arquitetura é a separação deliberada entre as fases de execução: cada etapa opera de forma \textit{stateless} em relação às demais, no sentido de que não carrega diretamente o histórico de raciocínio das fases anteriores. Em vez disso, o sistema preserva apenas artefatos estruturados — em especial os arquivos \texttt{planning.json} e \texttt{tasks\_results.json} — que funcionam como memória persistente e controlada entre as etapas. Essa decisão de projeto tem dois objetivos complementares: por um lado, mitigar os problemas de degradação discutidos na Introdução, nos quais o crescimento progressivo do contexto leva ao fenômeno frequentemente referido como \textit{context rot} — o acúmulo de informação irrelevante, resumos implícitos e ruído que diluem o conteúdo útil e prejudicam a qualidade das respostas —; por outro, garantir que cada chamada ao LLM opere com o menor contexto possível, reduzindo o risco de que informações e raciocínios de tarefas anteriores contaminem a execução da tarefa corrente, introduzindo inconsistências ou ``lixo de contexto'' nas respostas geradas.
+
+% -------------------------------------------------
+\subsection{Análise micro das fases}
+% -------------------------------------------------
+
+A seguir, cada fase do pipeline é detalhada individualmente. Para cada fase, são descritos: os agentes de LLM envolvidos, os dados de entrada e saída, e o fluxo de controle interno. Essa granularidade tem o objetivo de tornar o processo inteiramente replicável por pesquisadores externos.
+
+% -------------------------------------------------
+\subsubsection{Agentes de LLM}
+% -------------------------------------------------
+
+Neste trabalho, adota-se uma definição restrita de \textit{agente}: trata-se de um componente composto exclusivamente por um \textit{prompt} pré-definido e uma chamada ao modelo de linguagem (\textit{LLM\_CALL}). Diferentemente de arquiteturas que atribuem a agentes acesso a ferramentas externas, chamadas a APIs, servidores MCP ou capacidades de navegação, os agentes aqui descritos operam de forma isolada — recebem um contexto de entrada estruturado, processam via LLM e retornam uma saída textual ou estruturada em JSON. Essa restrição é intencional: ao eliminar dependências externas, torna-se possível avaliar de forma mais direta o impacto da orquestração e do \textit{prompting} sobre a qualidade das respostas, isolando as variáveis de interesse do estudo.
+
+Todos os \textit{prompts} de agentes são redigidos em inglês. Estudos como o de Huang et al.~\cite{huang2024beyond} e Shi et al.~\cite{shi2023multilingualcot} mostram que modelos de linguagem multilíngues tendem a produzir resultados de maior qualidade quando instruídos no idioma em que foram mais amplamente treinados — predominantemente o inglês —, independentemente do idioma da questão de entrada. Qin et al.~\cite{qin2023crosslingual} reforçam esse achado ao demonstrar que a combinação de \textit{prompting} em inglês com raciocínio \textit{zero-shot} em cadeia produz ganhos consistentes mesmo em línguas de menor representação nos dados de treinamento. A adoção do inglês como idioma padrão dos \textit{prompts} de agentes visa, portanto, maximizar a qualidade do raciocínio interno do modelo, sem prejuízo ao idioma da resposta entregue ao usuário — que é determinado separadamente, conforme descrito na seção seguinte.
+
+Adicionalmente, todos os \textit{prompts} são construídos utilizando a sintaxe \textit{Markdown}, com delimitadores explícitos de seção para separar instruções gerais, contexto de entrada e especificações de saída. Estudos como o de He et al.~\cite{he2024promptformatting} e Liu et al.~\cite{liu2025contentformat} mostram que a formatação do \textit{prompt} afeta de forma mensurável o desempenho dos modelos, e que otimizações conjuntas de conteúdo e formato produzem ganhos adicionais sobre a otimização exclusiva do conteúdo textual. A adoção de \textit{Markdown} visa, portanto, tornar delimitadores, hierarquias e restrições mais salientes durante a inferência, contribuindo para respostas mais consistentes com as instruções fornecidas.
+
+% -------------------------------------------------
+\subsubsection{Definição dos critérios de aceite da resposta final}
+% -------------------------------------------------
+
+\begin{figure}[H]
+  \centering
+  \includesvg[width=1\columnwidth]{diagrams/definicao_criterios_de_aceite_da_resposta_final}
+  \caption{Fase de definição dos critérios de aceite da resposta final.}
+  \label{fig:definicao_criterios}
+\end{figure}
+
+Esta fase é responsável por transformar o \textit{prompt} bruto do usuário em dois artefatos que guiarão todo o processo posterior: (i) uma lista de critérios de aceitação que a resposta final deverá satisfazer, e (ii) uma especificação do formato de saída esperado. Para isso, dois agentes são acionados em sequência a partir da mesma entrada.
+
+O \texttt{acceptance\_criteria\_agent} recebe o \textit{prompt} de entrada do usuário e é responsável por identificar e listar, de forma explícita, os critérios objetivos e verificáveis que uma resposta satisfatória deve cumprir. Em seguida, o \texttt{expected\_output\_format\_agent} analisa o mesmo \textit{prompt}, buscando por indicações explícitas de formato de saída — como ``retorne somente a alternativa correta'', ``responda em JSON'' ou ``elabore uma justificativa''. Caso nenhuma indicação seja encontrada, o agente infere o formato mais adequado ao tipo de tarefa: para questões de múltipla escolha, o padrão é ``retornar somente a letra da alternativa correta, sem explicações adicionais''; para questões abertas, ``texto corrido em formato Markdown''. O idioma da resposta final é tratado como parte integrante do formato de saída: se o usuário o especificou explicitamente, essa instrução é acatada; caso contrário, o agente infere o idioma a partir do idioma utilizado na entrada e o registra como especificação. Quando exemplos de saída são fornecidos pelo usuário, estes são incorporados ao campo correspondente.
+
+Os resultados dessas duas chamadas são então consolidados em um arquivo JSON denominado \texttt{planning.json}, que servirá de artefato central de memória estruturada para todas as fases subsequentes. A estrutura do \texttt{planning.json} é inspirada no \texttt{prd.json} do \textit{Ralph Wiggum Loop} original, porém estendida para incorporar as informações de critérios de aceitação e formato de saída.
+
+\begin{lstlisting}[language=json]
+{
+  "general_infos": {
+    "acceptance_criteria": [],
+    "expected_output_format": {
+      "format": "",
+      "response_language": ""
+    }
+  },
+  "tasks": []
+}
+\end{lstlisting}
+
+O campo \texttt{tasks} é inicialmente vazio e será preenchido pela fase seguinte. A separação entre \texttt{general\_infos} e \texttt{tasks} é proposital: as informações gerais são invariantes ao longo de todo o pipeline, enquanto as tarefas podem ser adicionadas iterativamente por planos complementares.
+
+% -------------------------------------------------
+\subsubsection{Quebra de Tasks Independentes}
+% -------------------------------------------------
+
+\begin{figure}[H]
+  \centering
+  \includesvg[width=1\columnwidth]{diagrams/quebra_de_tasks_independentes}
+  \caption{Fase de quebra de tarefas independentes.}
+  \label{fig:quebra_tasks}
+\end{figure}
+
+Esta fase é, em termos de responsabilidade lógica, a mais crítica de todo o pipeline: é aqui que se implementa o princípio central do \textit{Ralph Wiggum Loop} — a decomposição do problema em unidades mínimas e independentes de execução. O agente \texttt{atomic\_tasks\_planner\_agent} recebe como entrada o \textit{prompt} do usuário e o campo \texttt{general\_infos} do \texttt{planning.json} gerado na fase anterior, e a partir disso constrói um plano de tarefas atômicas.
+
+O conceito de atomicidade empregado é preciso: uma tarefa é considerada atômica quando representa a menor unidade de trabalho possível e pode ser executada e avaliada de forma completamente independente das demais tarefas do plano, sem necessidade de acessar ou reutilizar os resultados de outras tarefas durante sua própria execução. Essa propriedade é fundamental para garantir o funcionamento correto do mecanismo de \textit{fresh context} — se tarefas dependessem umas das outras durante a execução, seria necessário carregar contexto acumulado, o que reintroduziria os problemas de degradação que a arquitetura busca mitigar.
+
+Após a geração do plano inicial, o agente \texttt{atomic\_tasks\_revisor\_agent} é acionado para verificar se todas as tarefas propostas satisfazem o critério de independência, retornando um JSON com um campo booleano de aprovação e uma justificativa. Se problemas forem identificados, o agente \texttt{atomic\_tasks\_rewriter\_agent} — que incorpora em seu \textit{prompt} todas as regras e restrições do planejador — é acionado para reescrever o plano com base na justificativa fornecida. Esse ciclo de revisão repete-se até que o revisor valide o plano, garantindo que apenas tarefas verdadeiramente independentes avancem para a fase de execução.
+
+Cada tarefa do plano é representada no \texttt{planning.json} no seguinte formato:
+
+\begin{lstlisting}[language=json]
+{
+  "id": "",
+  "title": "",
+  "description": "",
+  "acceptance_criteria": [],
+  "pass_phase": false
+}
+\end{lstlisting}
+
+O campo \texttt{pass\_phase} é inicializado como \texttt{false} para todas as tarefas e atualizado para \texttt{true} ao final da execução bem-sucedida de cada uma, funcionando como marcador de progresso para o mecanismo iterativo.
+
+% -------------------------------------------------
+\subsubsection{Resolução das tarefas — Ralph Loop}
+% -------------------------------------------------
+
+\begin{figure}[H]
+  \centering
+  \includesvg[width=1\columnwidth]{diagrams/resolucao_das_tarefas_ralph_loop}
+  \caption{Resolução iterativa das tarefas utilizando o Ralph Loop.}
+  \label{fig:ralph_loop}
+\end{figure}
+
+Esta fase implementa o núcleo iterativo do \textit{Ralph Wiggum Loop} adaptado ao contexto deste trabalho. O processo inicia pela verificação do \texttt{planning.json}: enquanto existirem tarefas com \texttt{pass\_phase: false}, o pipeline seleciona a próxima tarefa pendente e inicia um ciclo de tentativa–avaliação–revisão.
+
+Cada iteração do ciclo consiste em: (i) uma chamada ao LLM contendo exclusivamente o conteúdo da tarefa atual — sem histórico acumulado de outras tarefas —, seguida de (ii) uma chamada ao agente \texttt{task\_outcome\_reviewer\_agent}, que compara a resposta gerada com os \texttt{acceptance\_criteria} da tarefa. O revisor retorna um JSON com um campo booleano de aprovação e uma justificativa. Se o revisor aprovar a resposta, ela é salva no arquivo \texttt{tasks\_results.json} e o campo \texttt{pass\_phase} da tarefa é atualizado para \texttt{true}. Se reprovar, a justificativa é incorporada à próxima chamada ao LLM, configurando um ciclo de refinamento guiado, análogo aos mecanismos de \textit{Reflexion}~\cite{shinn2023reflexion} e \textit{Self-Debugging}~\cite{chen2023selfdebug}.
+
+No que diz respeito à persistência dos resultados, adota-se uma adaptação do princípio original do \textit{Ralph Wiggum Loop}, que preconiza que ``All memory lives in files and git — not the model''. Como o presente trabalho aplica o pipeline a cenários distintos do desenvolvimento de software, o mecanismo de \textit{commit} em repositório Git é substituído pelo arquivo \texttt{tasks\_results.json}, que acumula exclusivamente as respostas finais aprovadas de cada tarefa — sem registrar histórico de raciocínio, tentativas anteriores ou qualquer metadado do ciclo iterativo.
+
+Para mitigar o risco de \textit{deadlock}, implementa-se um mecanismo de controle denominado \textit{pânico}. Um contador \texttt{task\_interactions} é incrementado a cada chamada ao LLM dentro do ciclo de uma tarefa. Quando esse contador atinge o valor de \texttt{max\_iterations}, a fase encerra automaticamente e a resposta disponível no momento é salva no \texttt{tasks\_results.json}, mesmo que os critérios não tenham sido plenamente atendidos.
+
+% -------------------------------------------------
+\subsubsection{Avaliação dos critérios de aceitação}
+% -------------------------------------------------
+
+\begin{figure}[H]
+  \centering
+  \includesvg[width=1\columnwidth]{diagrams/avaliacao_de_criterios_de_aceitacao}
+  \caption{Avaliação global dos critérios de aceitação.}
+  \label{fig:avaliacao_criterios}
+\end{figure}
+
+Ao término da resolução de todas as tarefas do plano, o pipeline consolida os resultados armazenados no \texttt{tasks\_results.json} e os submete a uma avaliação global frente aos critérios de aceitação definidos em \texttt{general\_infos.acceptance\_criteria} do \texttt{planning.json}. Essa fase é executada pelo agente \texttt{final\_response\_acceptance\_criteria\_reviewer\_agent}, que recebe ambos os artefatos como entrada.
+
+A lógica é análoga à dos revisores de tarefa individual, porém operando em um nível de abstração superior: em vez de avaliar uma resposta pontual contra critérios locais de uma tarefa, o agente avalia se o conjunto total de resultados gerados fornece insumos suficientes para construir uma resposta final que atenda a todos os critérios globais. Dois fluxos de saída são possíveis a partir dessa avaliação: caso todos os critérios sejam considerados atendidos, o pipeline avança para a criação da resposta final; caso contrário, avança para a criação de um plano adicional complementar.
+
+% -------------------------------------------------
+\subsubsection{Criação de plano complementar}
+% -------------------------------------------------
+
+\begin{figure}[H]
+  \centering
+  \includesvg[width=1\columnwidth]{diagrams/criacao_de_plano_complementar}
+  \caption{Criação de plano complementar para critérios não atendidos.}
+  \label{fig:plano_complementar}
+\end{figure}
+
+Quando a avaliação global indica que os critérios de aceitação não foram plenamente atendidos, o pipeline não retorna ao início — o que implicaria descartar e reprocessar etapas já concluídas. Em vez disso, adota-se uma estratégia de afunilamento progressivo: o agente \texttt{acceptance\_gap\_prompt\_creator} analisa a justificativa retornada pelo revisor global e produz um novo \textit{prompt} no estilo de entrada de usuário, descrevendo exclusivamente o que ainda precisa ser resolvido para cobrir as lacunas identificadas.
+
+Esse \textit{prompt} é então submetido ao \texttt{atomic\_tasks\_planner\_agent}, o mesmo agente da fase de quebra de tarefas independentes, que gera um novo conjunto de tarefas complementares. Essas novas tarefas são concatenadas ao campo \texttt{tasks} do \texttt{planning.json} original, e o pipeline retorna à fase de resolução das tarefas para executá-las.
+
+Esse mecanismo constitui, na prática, um segundo nível de loop que garante a convergência iterativa do pipeline: a cada ciclo, o conteúdo gerado aproxima-se do que é necessário para satisfazer todos os critérios de aceitação, sem desperdiçar o trabalho já realizado nas iterações anteriores.
+
+% -------------------------------------------------
+\subsubsection{Criação da resposta final}
+% -------------------------------------------------
+
+\begin{figure}[H]
+  \centering
+  \includesvg[width=1\columnwidth]{diagrams/criacao_da_resposta_final}
+  \caption{Fase de composição da resposta final.}
+  \label{fig:resposta_final}
+\end{figure}
+
+A fase de criação da resposta final assume que o \texttt{tasks\_results.json} contém todos os insumos necessários para compor uma resposta que satisfaça integralmente os critérios de aceitação globais — premissa garantida pela fase de avaliação anterior. É nesta fase, e somente nesta, que o conteúdo do \texttt{tasks\_results.json} é efetivamente recuperado e utilizado.
+
+O agente \texttt{final\_response\_composer\_agent} recebe como entrada o arquivo completo de resultados, o campo \texttt{general\_infos.expected\_output\_format} do \texttt{planning.json} e o \textit{prompt} original do usuário, utilizando-os em conjunto para compor a resposta final no formato e idioma especificados. O retorno desse agente é a saída direta do pipeline ao usuário, encerrando o processo de \textit{thinking}.
+
+
+% =================================================
+\section{Plano de avaliação}
+% =================================================
+
+O plano de avaliação visa mensurar o impacto da arquitetura de orquestração na acurácia de modelos de linguagem em tarefas de raciocínio geral, comparando sistematicamente a inferência direta com a orquestrada. Para essa validação, a metodologia contempla cinco modelos selecionados para cobrir uma progressão de complexidade: Llama 3.1 (8B, 70B e 405B), Claude Sonnet 4.6 e GPT 5.4.
+
+Para cada modelo, está prevista a comparação de duas configurações: (i) uma inferência "linear", realizada por meio de uma requisição direta ao modelo sem processamento auxiliar, e (ii) a mesma inferência mediada pelo \textit{Harness} proposto, empregando ciclos de verificação e ferramentas externas. O desempenho será medido por meio de 180 questões amostradas das bases GPQA \cite{rein2023gpqa}, MMLU \cite{hendrycks2021measuring} e MMLU-Pro \cite{wang2024mmlu-pro}, escolhidas por seu elevado rigor acadêmico. A métrica primária consistirá na acurácia, obtida pela correspondência estrita entre a alternativa final selecionada pelo sistema e o gabarito.
+
+A execução seguirá um protocolo no qual, inicialmente, os modelos estabelecem seu desempenho de base na inferência padrão. Na sequência, as métricas serão reavaliadas sob a arquitetura orquestrada (inicialmente focada na família Llama), sempre respeitando restrições operacionais \textit{stateless}. O objetivo esperado desta avaliação é verificar se o \textit{harness} altera o posicionamento dos modelos no ranking global, testando a hipótese de que a orquestração estruturada suplanta ganhos atrelados puramente à escala de parâmetros.
+
+A Tabela~\ref{tab:dados-esperados} apresenta as projeções de acurácia que fundamentam este plano e o benchmark pretendido para a validação da arquitetura.
+
+\begin{table}[H]
+\centering
+\caption{Projeção de acurácia média esperada por modelo e configuração (dados hipotéticos para fins de planejamento).}
+\label{tab:dados-esperados}
+\helvetfont{
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Modelo} & \textbf{Configuração} & \textbf{Acurácia Esperada} \\
+\midrule
+Llama 3.1 8B & Direto & 52\% \\
+Llama 3.1 70B & Direto & 74\% \\
+Llama 3.1 8B & Ralph Loop & 77\% \\
+Llama 3.1 405B & Direto & 84\% \\
+Llama 3.1 70B & Ralph Loop & 88\% \\
+Claude Sonnet 4.6 & Direto & 91\% \\
+Llama 3.1 405B & Ralph Loop & 94\% \\
+GPT 5.4 & Direto & 97\% \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+% \FloatBarrier
+% =================================================
+\section{Referências}
+% =================================================
+
+\printbibliography[heading=none]
+
+\end{document}

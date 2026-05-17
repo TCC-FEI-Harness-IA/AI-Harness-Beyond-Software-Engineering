@@ -40,5 +40,20 @@ htmlcov/
 
 *.bkp
 
+# latex
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fls
+*.out
+*.run.xml
+*.synctex.gz
+*.fbc_latexmk
+*.fdb_latexmk
+*.out
+
+svg-inkscape/
+
 
 Template_INOVA__TCC1
