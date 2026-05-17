@@ -213,17 +213,41 @@
 
 Os modelos de linguagem de grande porte (\textit{Large Language Models} --- LLMs) deixaram de ser meramente geradores de texto e hoje funcionam como plataformas compostas por camadas de processamento, coordenação e ferramentas auxiliares. Essa transição viabiliza capacidades como raciocínio em múltiplas etapas, orquestração de subagentes e uso de ferramentas externas, porém também revela limitações estruturais: nem sempre a melhoria observada no comportamento final advém apenas do modelo base, mas das arquiteturas que organizam e abstraem o processo de inferência.
 
-Este trabalho parte de dois problemas centrais observados na prática e documentados na literatura: (1) a aparente discordância entre respostas iniciais e respostas revisadas por um mesmo modelo — uma sensação comum em interações com modelos mais antigos (por exemplo, no período de popularização do GPT-3.5) de que perguntas de confirmação como “Tem certeza?”, “revise sua resposta” ou mesmo o simples apontamento de erro (“você errou”) induziam o modelo a corrigir-se —, e (2) a forma como fluxos de pensamento (prompting encadeado, agentes e pipelines) são atualmente implementados, incluindo suas fragilidades frente ao crescimento do contexto.
+Este trabalho parte de dois problemas centrais observados na prática e documentados na literatura: (1) a aparente discordância entre respostas iniciais e respostas revisadas por um mesmo modelo, e (2) a forma como fluxos de pensamento (prompting encadeado, agentes e pipelines) são atualmente implementados, incluindo suas fragilidades frente ao crescimento do contexto e esgotamento da janela de atenção \cite{liu2023lost}.
 
-O primeiro problema decorre do fato de que, em tarefas não-triviais, a resposta “de primeira” tende a ser apenas uma primeira tentativa, sujeita a erros e omissões, que pode ser significativamente aprimorada quando a inferência é estruturada em fases explícitas e curtas, com feedback intermediário (muitas vezes com quebra ou reinicialização parcial do contexto entre etapas). Trabalhos como \textit{Chain-of-Thought} \cite{wei2022chain} e \textit{Tree of Thoughts} \cite{yao2023tree} mostram ganhos ao induzir o modelo a produzir e avaliar passos intermediários; \textit{ReAct} \cite{yao2022react} evidencia a utilidade de alternar raciocínio e ações/observações; e linhas mais diretamente iterativas, como \textit{Reflexion} \cite{shinn2023reflexion} (reflexão após julgamento externo) e abordagens de \textit{Self-Debugging} \cite{chen2023selfdebug} (correção guiada por testes), demonstram que ciclos de tentativa--avaliação--revisão podem elevar a taxa de acerto ao transformar “repetir a pergunta” em um mecanismo sistemático de melhoria. Em paralelo, métodos de decomposição e planejamento — como \textit{Least-to-Most Prompting} \cite{zhou2022least}, \textit{Decomposed Prompting} \cite{khot2022decomposed} e \textit{Plan-and-Solve Prompting} \cite{wang2023plan} — reforçam empiricamente que quebrar objetivos complexos em subtarefas, separar planejamento de execução e limitar o escopo contextual de cada passo reduz erros de lógica e omissões de etapas, especialmente quando combinado com verificação automática. Assim, a melhoria não se explica apenas por “mais tokens” ou por uma chamada mais longa, mas pelo desenho de um pipeline que controla o que entra no contexto, quando o modelo planeja, e como a resposta é validada e reescrita.
-
-O segundo problema refere-se às práticas correntes de “thinking” em LLMs e às limitações impostas por janelas de contexto longas. Em arquiteturas populares de agentes, como \textit{ReAct} \cite{yao2022react} (\textit{Synergizing Reasoning and Acting}) já mencionado, o modelo tende a operar acumulando em uma única janela um histórico crescente de raciocínios, ações e observações — um desenho que facilita o encadeamento narrativo do processo, mas que também amplia o risco de degradação conforme o volume de contexto aumenta. Esse tipo de limitação é consistente com evidências empíricas sobre o uso de contextos longos: em ``\textit{Lost in the Middle}'' \cite{liu2023lost} (Liu et al.), por exemplo, observa-se degradação de desempenho em cenários nos quais o modelo precisa recuperar e utilizar informações relevantes em sequências extensas, especialmente quando esses trechos ficam “perdidos” no meio do contexto. Na prática, a comunidade de engenharia costuma descrever esse acúmulo progressivo e suas consequências como “esgotamento de contexto”, “compactação” e “context rot”: à medida que o histórico cresce, parte do conteúdo relevante perde saliência, compete por atenção com ruído e pode ser “diluída” por resumos implícitos, levando a omissões, inconsistências e aumento de alucinações.
-
-Frente a essas propostas, adotamos como referência prática a implementação do \textit{Ralph Wiggum Loop} popularizada por Geoffrey Huntley \cite{ghuntley2025ralph} no contexto de desenvolvimento de software, na qual um agente é conduzido por um ciclo rígido de execução e verificação para produzir artefatos corretos (p. ex., código) sob restrições operacionais claras. O objetivo deste trabalho é adaptar essa arquitetura — originalmente aplicada a tarefas de engenharia de software — para investigar se os mesmos princípios melhoram a resolução de questões objetivas em benchmarks de múltipla escolha. Em termos gerais, o \textit{Ralph Wiggum Loop} pode ser entendido como um pipeline em que (i) ocorre uma quebra inicial do objetivo em subtarefas e fases, e (ii) cada fase é executada de maneira isolada e ``stateless'', isto é, sem carregar diretamente o histórico completo da fase anterior: em vez de continuidade conversacional, o sistema preserva apenas artefatos controlados (como instruções, respostas intermediárias ou resultados de validação) e reinicializa o contexto a cada iteração (``\textit{Fresh Context}''). Embora o nome e o formato operacional sejam recentes, a lógica do loop se apoia em linhas acadêmicas já discutidas — decomposição (\textit{Least-to-Most} \cite{zhou2022least}; \textit{Decomposed Prompting} \cite{khot2022decomposed}), separação entre planejamento e execução (\textit{Plan-and-Solve} \cite{wang2023plan}) e ciclos de reflexão/autodepuração guiados por avaliação externa (\textit{Reflexion} \cite{shinn2023reflexion}; \textit{Self-Debugging} \cite{chen2023selfdebug}) — oferecendo um arcabouço pragmático para aplicar esses achados em orquestrações reproduzíveis.
+Técnicas consolidadas na literatura, como \textit{Chain-of-Thought} \cite{wei2022chain}, \textit{ReAct} \cite{yao2022react} e abordagens de autorreflexão \cite{shinn2023reflexion}, já demonstraram que processos iterativos superam as inferências de passo único. Contudo, em arquiteturas populares de agentes, o modelo tende a operar acumulando um histórico crescente de raciocínios em uma única janela. Isso frequentemente resulta em alucinações e degradação devido à compactação excessiva do contexto. Para contornar essa limitação, propomos a estruturação do raciocínio baseada em princípios de decomposição e \textit{statelessness} aplicados de forma determinística.
 
 Neste trabalho, adotamos a hipótese de que a qualidade objetiva das saídas em tarefas complexas depende tanto do LLM base quanto do ``\textit{Harness}'' que governa seu uso. Para testar essa premissa, nossa meta é avaliar o impacto da orquestração estruturada --- inspirada no \textit{Ralph Wiggum Loop} \cite{ghuntley2025ralph} --- frente à inferência direta tradicional. A avaliação em andamento baseia-se em benchmarks acadêmicos rigorosos, visando demonstrar se uma arquitetura composta por etapas de decomposição e verificação iterativa é capaz de elevar o desempenho de modelos com menos parâmetros a patamares competitivos, superando abordagens lineares em métricas de acurácia.
 
-\FloatBarrier
+Em suma, as principais contribuições almejadas por este estudo são:
+\begin{itemize}
+    \item \textbf{Sistematização do paradigma \textit{stateless}:} Implementação de um pipeline de inferência que isola o contexto entre etapas, mitigando alucinações ligadas ao histórico longo.
+    \item \textbf{Adaptação de Domínio:} Aplicação do \textit{Ralph Wiggum Loop} --- originado na automação de engenharia de software --- para resolução estruturada de problemas de propósito geral e conhecimento enciclopédico.
+    \item \textbf{Análise Quantitativa Estratificada:} Estabelecimento de um *benchmark* cruzado avaliando o impacto da orquestração sobre a inferência linear, utilizando modelos abertos (Llama 3.1) e fechados (GPT-4o, Claude 3.5 Sonnet).
+\end{itemize}
+
+% \FloatBarrier
+% =================================================
+\section{Trabalhos Relacionados}
+% =================================================
+
+O desenvolvimento de arquiteturas e técnicas de \textit{harness} para potencializar o raciocínio de LLMs tem sido um campo ativo de pesquisa, subdividindo-se em estratégias de \textit{prompting} estendido e fluxos de trabalho baseados em agentes.
+
+\subsection{Estratégias de Raciocínio e Agentes}
+
+A literatura demonstra amplamente que a inferência primária de um modelo pode ser significativamente aprimorada quando estruturada em fases. O método \textit{Chain-of-Thought} \cite{wei2022chain} e sua generalização \textit{Tree of Thoughts} \cite{yao2023tree} evidenciaram a importância de induzir o modelo a explicitar passos intermediários. Abordagens como \textit{ReAct} \cite{yao2022react} deram um passo além ao sinergizar o raciocínio interno com a capacidade de invocar ferramentas externas (\textit{Acting}), permitindo contornar alucinações por meio de observações diretas do ambiente. 
+
+Paralelamente, pipelines interativos baseados em \textit{feedback} demonstram alta eficácia. \textit{Reflexion} \cite{shinn2023reflexion} implementou ciclos em que o modelo atua como seu próprio crítico, revisando saídas com base em reforço verbal externo, e o \textit{Self-Debugging} \cite{chen2023selfdebug} mostrou que os LLMs podem depurar seus próprios erros quando guiados de forma sistemática. Adicionalmente, métodos focados na redução da sobrecarga cognitiva através da divisão de tarefas complexas --- como \textit{Least-to-Most} \cite{zhou2022least}, \textit{Decomposed Prompting} \cite{khot2022decomposed} e \textit{Plan-and-Solve} \cite{wang2023plan} --- sustentam a premissa de que separar planejamento e execução mitiga falhas lógicas e omissões.
+
+\subsection{Orquestração Estruturada e o Ralph Wiggum Loop}
+
+Embora as técnicas supracitadas representem a base teórica de agentes autônomos, muitas dependem do acúmulo contínuo de estado em uma única janela de contexto, fenômeno que agrava a degradação e o esquecimento descritos em \textit{Lost in the Middle} \cite{liu2023lost}. Frente a esse problema, o \textit{Ralph Wiggum Loop} \cite{ghuntley2025ralph} emergiu na comunidade de engenharia de software como um paradigma pragmático alternativo. A técnica isola a execução em etapas rigidamente separadas e reinicializa o contexto a cada iteração (\textit{Fresh Context}), armazenando estritamente os resultados intermediários essenciais.
+
+A validação acadêmica rigorosa de uma estrutura semelhante a esta foi recentemente evidenciada por McComb et al. \cite{supervising_ralph_wiggum_2026}, que avaliaram o impacto de agentes baseados no \textit{Ralph Wiggum Loop} para a resolução de problemas complexos de design de pacotes de baterias na engenharia. O estudo comprovou não apenas a eficácia da abordagem \textit{stateless}, mas propôs aprimoramentos através de ciclos metacognitivos de co-regulação (CRDAL), nos quais um agente avaliador atua criticando ativamente o design a fim de mitigar vieses e fixações de paradigma.
+
+Este trabalho apoia-se em fundamentações similares para justificar o uso do paradigma de execução \textit{stateless} em nossa orquestração. Contudo, enquanto McComb et al. \cite{supervising_ralph_wiggum_2026} concentraram a arquitetura na otimização de métricas tangíveis de engenharia e modelagem paramétrica, nossa metodologia isola e adapta os ganhos da orquestração estrita do \textit{Ralph Loop} para elevar a capacidade de resolução de questões de propósito geral em múltiplos domínios do conhecimento (representados pelos benchmarks MMLU e GPQA). 
+
+% \FloatBarrier
 % =================================================
 \section{Representação do processo}
 % =================================================
@@ -235,7 +259,7 @@ Na configuração direta, a tarefa é enviada ao modelo como uma única instruç
 A Figura~\ref{fig:comparacao-geral} sintetiza essa distinção em nível macro. Em vez de tratar a resposta como consequência imediata de uma única chamada ao modelo, a arquitetura proposta a representa como resultado de uma sequência organizada de análise, decomposição, processamento, integração e validação \cite{ghuntley2025ralph,shen2023hugginggpt}. Esse contraste é importante porque estabelece, visualmente, a diferença entre o \textit{baseline} do experimento e a condição principal que será avaliada ao longo do trabalho.
 
 \figlocal{
-\resizebox{0.90\columnwidth}{!}{%
+\resizebox{0.50\columnwidth}{!}{%
 \begin{tikzpicture}[node distance=0.32cm and 0.55cm, transform shape]
 
 % Coluna esquerda
@@ -271,7 +295,7 @@ A Figura~\ref{fig:comparacao-geral} sintetiza essa distinção em nível macro. 
 Embora a comparação geral seja suficiente para diferenciar as duas condições experimentais, ela ainda não mostra como a arquitetura proposta reorganiza internamente a resolução de uma tarefa. A literatura sobre agentes de linguagem indica que ciclos iterativos de planejamento, execução e reflexão são superiores à geração monolítica em tarefas de múltiplas etapas \cite{shinn2023reflexion,yao2023tree}. Por isso, a Figura~\ref{fig:estrutura-processo} detalha a lógica de transformação da questão em resposta, destacando que o processo intermediário não é um acréscimo meramente estético, mas uma estratégia de estruturação da inferência \cite{madaan2023selfrefine,wang2023selfconsistency}. Nessa perspectiva, a tarefa deixa de ser tratada como um bloco indivisível e passa a ser abordada como uma sequência coordenada de operações menores, cada uma com função específica dentro do pipeline \cite{shen2023hugginggpt}.
 
 \figlocal{
-\resizebox{0.65\columnwidth}{!}{%
+\resizebox{0.45\columnwidth}{!}{%
 \begin{tikzpicture}[node distance=0.45cm, transform shape]
 \node[wideblock, minimum width=4.0cm, minimum height=0.65cm] (q) {\scriptsize Questão recebida};
 \node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of q] (a) {\scriptsize Identificação do problema};
@@ -292,7 +316,7 @@ Embora a comparação geral seja suficiente para diferenciar as duas condições
 
 Essa representação torna a seção mais útil ao artigo porque ela deixa de ser apenas uma abertura visual e passa a introduzir, de maneira argumentativa, o objeto metodológico que será aprofundado a seguir. A decomposição em etapas menores está alinhada a resultados experimentais que mostram ganhos de desempenho quando o raciocínio é explicitado antes da escolha da alternativa final \cite{wei2022chain,kojima2022large,wang2023selfconsistency}. Assim, a representação do processo contribui para reduzir ambiguidades sobre o que exatamente será comparado no experimento e prepara a leitura da metodologia de forma mais coerente.
 
-\FloatBarrier
+% \FloatBarrier
 
 % =================================================
 \section{Metodologia}
@@ -309,7 +333,7 @@ O desenho experimental parte de uma lógica comparativa rigorosa: a mesma quest�
 A Figura~\ref{fig:desenho-experimental} resume esse princípio. A partir de uma mesma entrada, duas rotas são construídas: uma rota de referência, mais simples, e uma rota principal, mais estruturada. Ao final, ambas produzem uma resposta comparável com o gabarito da questão, o que permite levar a comparação adiante na etapa de avaliação dos resultados \cite{hendrycks2021measuring,rein2023gpqa}.
 
 \figlocal{
-\resizebox{\columnwidth}{!}{%
+\resizebox{0.50\columnwidth}{!}{%
 \begin{tikzpicture}[node distance=0.6cm and 0.6cm, transform shape]
 \node[wideblock, minimum width=3.6cm, minimum height=0.7cm] (q0) {\scriptsize Questão selecionada};
 \node[wideblock, minimum width=3.4cm, minimum height=0.7cm, below left=0.6cm and 0.4cm of q0] (b1) {\scriptsize Uso direto};
@@ -341,7 +365,7 @@ Na prática, o pipeline proposto recebe a questão e faz uma análise prévia pa
 A Figura~\ref{fig:fluxo-detalhado} ilustra essa dinâmica. O objetivo do diagrama não é impor uma regra rígida de execução, mas expor a lógica geral da arquitetura: uma série organizada de ações menores, desenhadas para diminuir a incerteza da inferência e garantir mais controle sobre a resposta gerada \cite{ghuntley2025ralph,shinn2023reflexion}.
 
 \figlocal{
-\resizebox{0.55\columnwidth}{!}{%
+\resizebox{0.40\columnwidth}{!}{%
 \begin{tikzpicture}[node distance=0.45cm, transform shape]
 \node[wideblock, minimum width=4.0cm, minimum height=0.65cm] (a) {\scriptsize Questão do benchmark};
 \node[wideblock, minimum width=4.0cm, minimum height=0.65cm, below=of a] (b) {\scriptsize Análise do enunciado};
@@ -369,7 +393,7 @@ Embora a arquitetura principal já seja suficiente para estabelecer a comparaç�
 A Figura~\ref{fig:componentes-arquitetura} apresenta uma visão mais estrutural do pipeline, destacando a relação entre o núcleo de execução, o módulo de verificação e os recursos auxiliares. Essa representação evidencia que a arquitetura proposta não é apenas uma cadeia linear de passos, mas um arranjo em que diferentes componentes apoiam a produção e a validação da resposta \cite{ghuntley2025ralph,shinn2023reflexion}.
 
 \figlocal{
-\resizebox{\columnwidth}{!}{%
+\resizebox{0.50\columnwidth}{!}{%
 \begin{tikzpicture}[node distance=0.8cm and 0.6cm, transform shape]
 \node[wideblock, minimum width=3.4cm, minimum height=0.7cm] (q) {\scriptsize Questão de entrada};
 \node[wideblock, minimum width=3.8cm, minimum height=0.7cm, below=0.7cm of q] (core) {\scriptsize Núcleo de orquestração};
@@ -388,7 +412,7 @@ A Figura~\ref{fig:componentes-arquitetura} apresenta uma visão mais estrutural 
 }{Visão estrutural da arquitetura proposta, com o núcleo de orquestração interagindo com módulos de ferramentas e verificação.}{fig:componentes-arquitetura}
 
 A inserção desses módulos auxiliares ajuda a explicar por que a arquitetura proposta deve ser compreendida como uma composição de etapas e não apenas como um prompt maior ou mais detalhado. O ganho esperado, caso ele exista, não decorre exclusivamente da redação da instrução inicial, mas da possibilidade de distribuir funções diferentes entre partes distintas do sistema, permitindo revisão, controle e apoio externo durante a execução \cite{madaan2023selfrefine,mcp_multiagent2025,sarkar2025mcp}.
-\FloatBarrier
+% \FloatBarrier
 
 % =================================================
 \section{Plano de avaliação}
@@ -425,7 +449,7 @@ GPT 5.4 & Direto & 97\% \\
 }
 \end{table}
 
-\FloatBarrier
+% \FloatBarrier
 % =================================================
 \section{Referências}
 % =================================================
