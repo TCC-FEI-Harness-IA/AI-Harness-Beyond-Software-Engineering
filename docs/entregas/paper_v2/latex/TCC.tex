@@ -205,7 +205,7 @@
 
 \raggedright
 
-\inovatitle{Sistemas Compostos de IA: Otimização de Respostas em Benchmarks Objetivos Através de uma Arquitetura Híbrida de Inferência e Validação com Multi-Agentes, Ferramentas e Orquestração Cognitiva}
+\inovatitle{Sistemas Compostos de IA: Otimização de Respostas em Benchmarks Objetivos por meio de Orquestração Baseada no Ralph Loop}
 
 \autores{Hugo Emílio Nomura, Pedro Henrique Correia de Oliveira, Pedro Henrique Satoru Lima Takahashi, Vitor Monteiro Vianna}
 
@@ -413,7 +413,7 @@ Quando a avaliação global indica que os critérios de aceitação não foram p
 
 Esse \textit{prompt} é então submetido ao \texttt{atomic\_tasks\_planner\_agent}, o mesmo agente da fase de quebra de tarefas independentes, que gera um novo conjunto de tarefas complementares. Essas novas tarefas são concatenadas ao campo \texttt{tasks} do \texttt{planning.json} original, e o pipeline retorna à fase de resolução das tarefas para executá-las.
 
-Esse mecanismo constitui, na prática, um segundo nível de loop que garante a convergência iterativa do pipeline: a cada ciclo, o conteúdo gerado aproxima-se do que é necessário para satisfazer todos os critérios de aceitação, sem desperdiçar o trabalho já realizado nas iterações anteriores.
+Esse mecanismo constitui, na prática, um segundo nível de loop que garante a convergência iterativa do pipeline: a cada ciclo, o conteúdo gerado aproxima-se do que é necessário para satisfazer todos os critérios de aceitação, sem desperprdiçar o trabalho já realizado nas iterações anteriores.
 
 % -------------------------------------------------
 \subsubsection{Criação da resposta final}
