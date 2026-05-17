@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
   <diagram name="Página-1" id="JqvE3wWPPY2aX9wsRf88">
-    <mxGraphModel dx="13470" dy="6220" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1224" dy="982" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -179,7 +179,7 @@
         <mxCell id="YJjzWlIq-3hENTF15K_v-99" edge="1" parent="YJjzWlIq-3hENTF15K_v-107" source="YJjzWlIq-3hENTF15K_v-70" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-73" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-70" parent="YJjzWlIq-3hENTF15K_v-107" style="rounded=0;whiteSpace=wrap;html=1;" value="Quebrar tasks independentes" vertex="1">
+        <mxCell id="YJjzWlIq-3hENTF15K_v-70" parent="YJjzWlIq-3hENTF15K_v-107" style="rounded=0;whiteSpace=wrap;html=1;" value="Quebra de tasks independentes" vertex="1">
           <mxGeometry height="70" width="140" x="65" y="380" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-98" edge="1" parent="YJjzWlIq-3hENTF15K_v-107" source="YJjzWlIq-3hENTF15K_v-72" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-70" value="">
@@ -228,7 +228,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-86" parent="YJjzWlIq-3hENTF15K_v-107" style="rounded=0;whiteSpace=wrap;html=1;" value="Cria um plano adicional para captar as informações faltantes" vertex="1">
+        <mxCell id="YJjzWlIq-3hENTF15K_v-86" parent="YJjzWlIq-3hENTF15K_v-107" style="rounded=0;whiteSpace=wrap;html=1;" value="Criação de plano adicional complementar" vertex="1">
           <mxGeometry height="70" width="140" x="285" y="690" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-92" edge="1" parent="YJjzWlIq-3hENTF15K_v-107" source="YJjzWlIq-3hENTF15K_v-90" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-83" value="Sim">
@@ -252,35 +252,23 @@
         <mxCell id="YJjzWlIq-3hENTF15K_v-102" parent="YJjzWlIq-3hENTF15K_v-107" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Prompt entrada" vertex="1">
           <mxGeometry height="50" width="50" x="110" y="100" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-159" connectable="0" parent="1" style="group" value="" vertex="1">
-          <mxGeometry height="430" width="490" x="5060" y="4880" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-160" parent="YJjzWlIq-3hENTF15K_v-159" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
-          <mxGeometry height="430" width="490" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-161" parent="YJjzWlIq-3hENTF15K_v-159" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Criação da resposta final&lt;/font&gt;&lt;/b&gt;" vertex="1">
-          <mxGeometry height="50" width="260" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-162" parent="YJjzWlIq-3hENTF15K_v-159" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;div&gt;- Analisa os criterios&amp;nbsp;&lt;/div&gt;" vertex="1">
-          <mxGeometry height="100" width="340" x="60" y="170" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-168" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="NOTAS GERAIS:&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Antes de iniciar a metodologia, explicar nosso entendimento de agentes. No nosso caso, agente é SOMENTE um template de prompt.&lt;/div&gt;&lt;div&gt;- Nos vamos mostrar o prompt de TODOS os agentes&lt;/div&gt;&lt;div&gt;- Explicar que para a escrita de promtps vamos usar MARKDOWN. Aqui pode ser legal colcoar alguma referencia de paper que mostre que promtps com markdown tem resultados melhores&lt;/div&gt;" vertex="1">
-          <mxGeometry height="200" width="600" x="4300" y="350" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-168" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="NOTAS GERAIS:&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Antes de iniciar a metodologia, explicar nosso entendimento de agentes. No nosso caso, agente é SOMENTE um template de prompt.&lt;/div&gt;&lt;div&gt;- Nos vamos mostrar o prompt de TODOS os agentes&lt;/div&gt;&lt;div&gt;- Explicar que para a escrita de promtps vamos usar MARKDOWN. Aqui pode ser legal colcoar alguma referencia de paper que mostre que promtps com markdown tem resultados melhores&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Nos desenhos que explicam o fluxo de cada fase de maneira mais detalha, é necessairio deixar bem claro como as fazes se conectam, usando texto. por exemplo, &quot;Definição critérios de aceite da resposta final&quot; termina com &quot;json com os criterios&quot;, o texto deve explicar que vai ser salvo um arquivo json localmente, e que a proxima fase &quot;Quebra de Tasks Independentes&quot; vai recuperar esse arquivo para iniciar&lt;/div&gt;" vertex="1">
+          <mxGeometry height="230" width="600" x="4300" y="400" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-136" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
-          <mxGeometry height="800" width="840" x="5050" y="1260" as="geometry" />
+          <mxGeometry height="930" width="470" x="5060" y="1380" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-137" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Quebra de Tasks Independentes&lt;/font&gt;&lt;/b&gt;" vertex="1">
-          <mxGeometry height="50" width="260" x="5050" y="1260" as="geometry" />
+          <mxGeometry height="50" width="260" x="5060" y="1380" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-180" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-173" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-174" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-173" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Define os criterios de aceitação da resposta final" vertex="1">
-          <mxGeometry height="70" width="140" x="5110" y="1370" as="geometry" />
+          <mxGeometry height="70" width="170" x="5087.5" y="1490" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-143" connectable="0" parent="1" style="group" value="" vertex="1">
-          <mxGeometry height="1450" width="840" x="5050" y="2120" as="geometry" />
+          <mxGeometry height="1450" width="840" x="5060" y="2360" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-141" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
           <mxGeometry height="1450" width="840" as="geometry" />
@@ -291,7 +279,7 @@
         <mxCell id="YJjzWlIq-3hENTF15K_v-195" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-193" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-194" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-193" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="Json com os as fases criadas (prd.json)" vertex="1">
+        <mxCell id="YJjzWlIq-3hENTF15K_v-193" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="Json com os as fases criadas (planning.json)" vertex="1">
           <mxGeometry height="70" width="150" x="55" y="110" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-198" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-194" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-196" value="">
@@ -308,8 +296,10 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-260" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-196" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-259" value="">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-260" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-196" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-279" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="430" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-261" connectable="0" parent="YJjzWlIq-3hENTF15K_v-260" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Não" vertex="1">
           <mxGeometry relative="1" x="0.1098" as="geometry">
@@ -351,7 +341,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-204" parent="YJjzWlIq-3hENTF15K_v-143" style="rhombus;whiteSpace=wrap;html=1;" value="Criterio Aceite ok ?" vertex="1">
+        <mxCell id="YJjzWlIq-3hENTF15K_v-204" parent="YJjzWlIq-3hENTF15K_v-143" style="rhombus;whiteSpace=wrap;html=1;" value="&lt;meta charset=&quot;utf-8&quot;&gt;&lt;b style=&quot;forced-color-adjust: none; box-shadow: none !important; color: rgb(255, 255, 255); font-family: Helvetica; font-size: 12px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(27, 29, 30); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;&lt;font style=&quot;forced-color-adjust: none; box-shadow: none !important; font-size: 21px;&quot;&gt;resposta final&lt;/font&gt;&lt;/b&gt;" vertex="1">
           <mxGeometry height="70" width="140" x="60" y="970" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-247" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-234" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-243">
@@ -406,100 +396,68 @@
         <mxCell id="YJjzWlIq-3hENTF15K_v-263" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-249" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-262" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-281" edge="1" parent="YJjzWlIq-3hENTF15K_v-143" source="YJjzWlIq-3hENTF15K_v-249" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;dashPattern=1 4;" target="YJjzWlIq-3hENTF15K_v-280">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-249" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="salva a resposta em um arquivo local" vertex="1">
           <mxGeometry height="70" width="140" x="307.5" y="1160" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-144" parent="YJjzWlIq-3hENTF15K_v-143" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;div&gt;&lt;div&gt;&lt;div&gt;&lt;b&gt;PARTE ESCRITA ESPERADA&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;br style=&quot;text-align: left;&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;- Explicar que o ralph loop consiste em ficar tentando resolver uma terefa até ela dar certo. Por isso o max_iteractions&lt;/div&gt;&lt;div&gt;- prompt do&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;revisor_resultado_tarefa&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;- Formato que salvamos as respostas (ver como o ralph looop padrão faz)&lt;/span&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="190" width="340" x="490" y="70" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-259" parent="YJjzWlIq-3hENTF15K_v-143" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Prox. fase (Compara o compilado com os criterios de aceitação)" vertex="1">
-          <mxGeometry height="70" width="130" x="260" y="390" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-259" parent="YJjzWlIq-3hENTF15K_v-143" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Avaliação de critérios de aceitação)" vertex="1">
+          <mxGeometry height="70" width="80" x="320" y="390" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-262" parent="YJjzWlIq-3hENTF15K_v-143" style="rounded=0;whiteSpace=wrap;html=1;" value="Atualiza a task, &quot;pass_phase&quot;: True" vertex="1">
           <mxGeometry height="70" width="140" x="307.5" y="1300" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-140" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="&lt;div&gt;&lt;div&gt;&lt;b&gt;PARTE ESCRITA ESPERADA&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;- Esplicação gerais, tipo:&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;div&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;- Cada task deve ser autosuficiente&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;- As tasks devem ser quebradas de um modo onde eu não precise de contexto de outra fase para resolver essa&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;- Basicamente um plano de resolução &quot;Atomico&quot; (atomico no sentido de maxima divisão)&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;- Cada task deve ter criterio de aceite&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Formato JSON de retorno com as tasks, que vai ser usado no Ralph Loop&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
-          <mxGeometry height="160" width="320" x="5540" y="1300" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-279" parent="YJjzWlIq-3hENTF15K_v-143" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
+          <mxGeometry height="50" width="50" x="270" y="400" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-151" connectable="0" parent="1" style="group" value="" vertex="1">
-          <mxGeometry height="640" width="490" x="5050" y="3630" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-152" parent="YJjzWlIq-3hENTF15K_v-151" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
-          <mxGeometry height="640" width="490" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-153" parent="YJjzWlIq-3hENTF15K_v-151" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Aceite de criterios de aceitação&lt;/font&gt;&lt;/b&gt;" vertex="1">
-          <mxGeometry height="54.65116279069767" width="260" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-154" parent="YJjzWlIq-3hENTF15K_v-151" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;div&gt;&lt;div&gt;Como vai ser definido se o criterio de aceitação para montar a resposta final foi aceito.&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Esse fluxo vai ser usado pelo criterio de aceitação de uma TASK e para o compialdo de Tasks&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Adicionar o prompt modelo&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Existe alguma estrategia que algum PAPER use para definir criterio de aceite? Talvez algum tipo de pontuação de 0 a 10, sla&lt;/div&gt;" vertex="1">
-          <mxGeometry height="207.67441860465115" width="340" x="70" y="120.23255813953487" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-155" connectable="0" parent="1" style="group" value="" vertex="1">
-          <mxGeometry height="430" width="490" x="5050" y="4360" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-156" parent="YJjzWlIq-3hENTF15K_v-155" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
-          <mxGeometry height="430" width="490" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-157" parent="YJjzWlIq-3hENTF15K_v-155" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Fluxo de não aceite de criterio de aceitação&lt;/font&gt;&lt;/b&gt;" vertex="1">
-          <mxGeometry height="50" width="260" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-158" parent="YJjzWlIq-3hENTF15K_v-155" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Identificação de qual ou quais criterio nao foram cumpridos&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Criação de plano adiicional.&lt;/div&gt;&lt;div&gt;- O plano adicional&lt;/div&gt;" vertex="1">
-          <mxGeometry height="100" width="340" x="60" y="140" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-280" parent="YJjzWlIq-3hENTF15K_v-143" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Ver com que o Ralph loop padrão salva" vertex="1">
+          <mxGeometry height="70" width="130" x="580" y="1150" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-163" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
-          <mxGeometry height="530" width="560" x="5050" y="660" as="geometry" />
+          <mxGeometry height="650" width="260" x="5050" y="660" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-164" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Definição critérios de aceite da resposta final&lt;/font&gt;&lt;/b&gt;" vertex="1">
           <mxGeometry height="50" width="260" x="5050" y="660" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-169" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-166" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-167" value="">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-169" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-166" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="5180" y="850" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-166" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Prompt entrada" vertex="1">
-          <mxGeometry height="50" width="50" x="5155" y="780" as="geometry" />
+          <mxGeometry height="50" width="50" x="5155" y="740" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-171" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-167" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-170" value="">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-316" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-315" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="5180" y="920" as="sourcePoint" />
+          </mxGeometry>
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-167" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;criador_criterios_aceite&quot;" vertex="1">
-          <mxGeometry height="70" width="140" x="5110" y="920" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-170" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Json com os criterios" vertex="1">
-          <mxGeometry height="70" width="140" x="5110" y="1070" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-172" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;div&gt;&lt;b&gt;PARTE ESCRITA ESPERADA&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Prompt do &quot;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;criador_criterios_aceite&quot;, que vai ter toda a logica de definição dos criterios&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;- Formato do JSON gerado com os criterios&lt;/span&gt;&lt;/div&gt;" vertex="1">
-          <mxGeometry height="140" width="200" x="5350" y="780" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-273" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-272" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="5180" y="1160" as="sourcePoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-181" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-174" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-176" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-189" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-174" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;dashPattern=1 4;endArrow=none;endFill=0;" target="YJjzWlIq-3hENTF15K_v-177">
+        <mxCell id="YJjzWlIq-3hENTF15K_v-174" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;criador_tarefas_atomicas&quot;" vertex="1">
+          <mxGeometry height="70" width="165" x="5090" y="1630" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-324" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-175" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-276">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-174" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;criador_tarefas_atomicas&quot;" vertex="1">
-          <mxGeometry height="70" width="150" x="5105" y="1510" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-175" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Json com os as fases criadas (prd.json)" vertex="1">
-          <mxGeometry height="70" width="150" x="5105" y="1940" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-175" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Json com os as fases criadas (planning.json)" vertex="1">
+          <mxGeometry height="70" width="150" x="5097.5" y="2060" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-182" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-176" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-179" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-190" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-176" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;dashed=1;dashPattern=1 4;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;endArrow=none;endFill=0;" target="YJjzWlIq-3hENTF15K_v-178">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="5383" y="1667" />
-              <mxPoint x="5383" y="1625" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-176" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;revisor_tarefas_atomicas&quot;" vertex="1">
-          <mxGeometry height="70" width="150" x="5105" y="1650" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-177" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Esse cara tem toda a logica de quebrar testes e ter critério de aceite" vertex="1">
-          <mxGeometry height="70" width="130" x="5310" y="1510" as="geometry" />
-        </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-178" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Esse Ja esse verifica se o formato das tasks esta correto e se todas possuem critério de aceite claro. Se o formato estiver errado, justifica" vertex="1">
-          <mxGeometry height="70" width="130" x="5470" y="1580" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-176" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;atomic_tasks_revisor_agent&quot;" vertex="1">
+          <mxGeometry height="70" width="165" x="5090" y="1770" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-183" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-179" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-175" value="">
           <mxGeometry relative="1" as="geometry" />
@@ -512,24 +470,162 @@
         <mxCell id="YJjzWlIq-3hENTF15K_v-187" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-179" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-186" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-179" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="Formato das taks ok?" vertex="1">
-          <mxGeometry height="90" width="90" x="5135" y="1780" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-314" connectable="0" parent="YJjzWlIq-3hENTF15K_v-187" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Não" vertex="1">
+          <mxGeometry relative="1" x="-0.2844" y="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-179" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="Taks ok?" vertex="1">
+          <mxGeometry height="90" width="90" x="5127.5" y="1900" as="geometry" />
         </mxCell>
         <mxCell id="YJjzWlIq-3hENTF15K_v-188" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-186" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-176">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="5410" y="1685" />
+              <mxPoint x="5410" y="1805" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-192" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-186" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=1 4;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;endArrow=none;endFill=0;" target="YJjzWlIq-3hENTF15K_v-191" value="">
+        <mxCell id="YJjzWlIq-3hENTF15K_v-186" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;atomic_tasks_rewriter_agent&quot;" vertex="1">
+          <mxGeometry height="70" width="170" x="5330" y="1910" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-154" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;div&gt;&lt;div&gt;Como vai ser definido se o criterio de aceitação para montar a resposta final foi aceito.&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Esse fluxo vai ser usado pelo criterio de aceitação de uma TASK e para o compialdo de Tasks&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Adicionar o prompt modelo&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Existe alguma estrategia que algum PAPER use para definir criterio de aceite? Talvez algum tipo de pontuação de 0 a 10, sla&lt;/div&gt;" vertex="1">
+          <mxGeometry height="207.67441860465115" width="340" x="5560" y="3872.322558139535" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-272" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
+          <mxGeometry height="50" width="50" x="5155" y="1220" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-275" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="(Quebra de tasks independentes)" vertex="1">
+          <mxGeometry height="70" width="80" x="5205" y="1210" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-276" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
+          <mxGeometry height="50" width="50" x="5147.5" y="2200" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-277" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="(Resolução das tarefas - Ralph Loop)" vertex="1">
+          <mxGeometry height="70" width="80" x="5193.75" y="2190" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-292" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Se retornar que nao cumpre, vai fornecer uma justificativa" vertex="1">
+          <mxGeometry height="100" width="130" x="4950" y="3990" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-152" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="540" width="840" x="5060" y="3870" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-153" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Avaliação de criterios de aceitação&lt;/font&gt;&lt;/b&gt;" vertex="1">
+          <mxGeometry height="60" width="260" x="5060" y="3870" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-267" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-264" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-266" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-186" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;reescrita_tarefas_atomicas&quot;" vertex="1">
-          <mxGeometry height="70" width="150" x="5330" y="1790" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-264" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL para agente &quot;avaliador_criterios_aceitação&quot;" vertex="1">
+          <mxGeometry height="70" width="190" x="5090" y="4010" as="geometry" />
         </mxCell>
-        <mxCell id="YJjzWlIq-3hENTF15K_v-191" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Esse entende a justificativa do &quot;por que ta errado&quot;, e retorna o plano corrigido" vertex="1">
-          <mxGeometry height="70" width="130" x="5370" y="1920" as="geometry" />
+        <mxCell id="YJjzWlIq-3hENTF15K_v-265" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Esse agente deve receber o resultado de todas as fazes e cruza com os critérios de aceite da resposta final" vertex="1">
+          <mxGeometry height="100" width="130" x="5300" y="4000" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-266" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="Cumpre os critérios de aceite da resposta final?" vertex="1">
+          <mxGeometry height="70" width="150" x="5110" y="4150" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-284" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-266" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="YJjzWlIq-3hENTF15K_v-282" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="5280" y="4365" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-286" connectable="0" parent="YJjzWlIq-3hENTF15K_v-284" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Não" vertex="1">
+          <mxGeometry relative="1" x="-0.1009" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-289" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-266" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="YJjzWlIq-3hENTF15K_v-287" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="5185" y="4400" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-290" connectable="0" parent="YJjzWlIq-3hENTF15K_v-289" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Sim" vertex="1">
+          <mxGeometry relative="1" x="-0.0364" y="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-282" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
+          <mxGeometry height="50" width="50" x="5360" y="4160" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-283" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="(Criação de plano adicional complementar)" vertex="1">
+          <mxGeometry height="70" width="80" x="5410" y="4150" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-287" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
+          <mxGeometry height="50" width="50" x="5160" y="4330" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-288" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="(Criação da resposta final)" vertex="1">
+          <mxGeometry height="70" width="80" x="5210" y="4320" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-158" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Aqui ele recebe da ultima fase a resposta do &quot;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;avaliador_criterios_aceitação&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&quot; que contem o porque de nao ser aceito&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Criação de plano adiicional.&lt;/div&gt;&lt;div&gt;- O plano adicional&lt;/div&gt;" vertex="1">
+          <mxGeometry height="100" width="340" x="5900" y="4460" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-156" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;container=0;" value="" vertex="1">
+          <mxGeometry height="650" width="840" x="5060" y="4460" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-157" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="&lt;font style=&quot;font-size: 21px;&quot;&gt;&lt;b&gt;Criação de plano adicional complementar&lt;/b&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="260" x="5060" y="4460" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-300" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-293" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-299" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-293" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="LLM_CALL para agente &quot;criador_tarefas_atomicas&quot;" vertex="1">
+          <mxGeometry height="70" width="190" x="5100" y="4700" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-294" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;container=0;" value="Esse vai ser agente responsavel por criar um prompt de entrada, simulando oq o usuario faz no inicio. Para isso, ele pega o retorno do &quot;avaliador_criterios_aceitação&quot; e cria o novo promp solicitando somente oq falta" vertex="1">
+          <mxGeometry height="70" width="420" x="5330" y="4550" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-297" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-296" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-293" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-296" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="LLM_CALL para agente &quot;criacao_pompt_criterios_faltantes&quot;" vertex="1">
+          <mxGeometry height="70" width="190" x="5100" y="4550" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-298" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;container=0;" value="Passa o prompt gerado pelo ultimo agenda, como se fosse uma nova entrada de usuario" vertex="1">
+          <mxGeometry height="70" width="420" x="5330" y="4700" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-303" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-299" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="YJjzWlIq-3hENTF15K_v-301">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-299" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="Concatena as novas fases criadas ao PRD.json original" vertex="1">
+          <mxGeometry height="70" width="190" x="5100" y="4870" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-301" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Próx. fase" vertex="1">
+          <mxGeometry height="50" width="50" x="5170" y="5030" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-302" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="(Resolução das tarefas (Ralph Loop))" vertex="1">
+          <mxGeometry height="70" width="80" x="5220" y="5020" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-160" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="400" width="830" x="5060" y="5160" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-161" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;b&gt;&lt;font style=&quot;font-size: 21px;&quot;&gt;Criação da resposta final&lt;/font&gt;&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="260" x="5060" y="5160" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-313" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-309" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="YJjzWlIq-3hENTF15K_v-312">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-309" parent="1" style="rounded=0;whiteSpace=wrap;html=1;container=0;" value="LLM_CALL para agente &quot;final_response_creator&quot;" vertex="1">
+          <mxGeometry height="70" width="190" x="5095" y="5270" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-310" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;container=0;" value="Esse agente vai receber somente os RESULTADOS de todas as fases e os critérios de aceites da resposta final, para construir&amp;nbsp;&amp;nbsp;" vertex="1">
+          <mxGeometry height="70" width="420" x="5330" y="5270" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-312" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" value="Return" vertex="1">
+          <mxGeometry height="50" width="50" x="5165" y="5450" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-317" edge="1" parent="1" source="YJjzWlIq-3hENTF15K_v-315" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="5180" y="1090" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-315" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;expected_output_format_agent&quot;" vertex="1">
+          <mxGeometry height="70" width="187.5" x="5086.25" y="970" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-318" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LLM_CALL usando o Agente &quot;acceptance_criteria_agent&quot;" vertex="1">
+          <mxGeometry height="70" width="187.5" x="5086.25" y="850" as="geometry" />
+        </mxCell>
+        <mxCell id="YJjzWlIq-3hENTF15K_v-322" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Cria o &quot;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: transparent; text-align: left;&quot;&gt;planning.json&lt;/span&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: transparent;&quot;&gt;&quot;, contendo os critérios de aceite e formato de saida esperado para a resposta final&lt;/span&gt;" vertex="1">
+          <mxGeometry height="70" width="187.5" x="5086.25" y="1090" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
