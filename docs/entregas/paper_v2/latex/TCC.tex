@@ -413,7 +413,7 @@ Quando a avaliação global indica que os critérios de aceitação não foram p
 
 Esse \textit{prompt} é então submetido ao \texttt{atomic\_tasks\_planner\_agent}, o mesmo agente da fase de quebra de tarefas independentes, que gera um novo conjunto de tarefas complementares. Essas novas tarefas são concatenadas ao campo \texttt{tasks} do \texttt{planning.json} original, e o pipeline retorna à fase de resolução das tarefas para executá-las.
 
-Esse mecanismo constitui, na prática, um segundo nível de loop que garante a convergência iterativa do pipeline: a cada ciclo, o conteúdo gerado aproxima-se do que é necessário para satisfazer todos os critérios de aceitação, sem desperprdiçar o trabalho já realizado nas iterações anteriores.
+Esse mecanismo constitui, na prática, um segundo nível de loop que garante a convergência iterativa do pipeline: a cada ciclo, o conteúdo gerado aproxima-se do que é necessário para satisfazer todos os critérios de aceitação, sem desperdiçar o trabalho já realizado nas iterações anteriores.
 
 % -------------------------------------------------
 \subsubsection{Criação da resposta final}
@@ -466,7 +466,28 @@ GPT 5.4 & Direto & 97\% \\
 }
 \end{table}
 
-% \FloatBarrier
+% =================================================
+\section{Glossário de Termos}
+% =================================================
+
+\subsection{Termos citados}
+\begin{description}
+    \item[LLM (\textit{Large Language Model}):] Modelo de inteligência artificial treinado em grandes volumes de texto para compreensão e geração de linguagem natural. \\ \url{https://en.wikipedia.org/wiki/Large_language_model}
+
+    \item[\textit{Ralph Wiggum Loop}:] Paradigma arquitetural de orquestração \textit{stateless} que isola a execução de tarefas em etapas rigidamente separadas. Reinicializa o contexto a cada iteração (\textit{Fresh Context}), persistindo apenas as informações intermediárias essenciais em arquivos para evitar a degradação de histórico. \\ \url{https://ghuntley.com/specs/ralph/}
+
+    \item[\textit{Harness} (Orquestração):] Estrutura lógica e regras de governança que envolvem um modelo base para guiar seu processo de inferência e interação com ferramentas. Variações nessas estruturas arquiteturais podem causar impactos substanciais no desempenho de agentes, conceito também explorado na literatura recente em publicações como \textit{Nonstandard Errors in AI Agents}. \\ \url{https://arxiv.org/abs/2603.16744}
+\end{description}
+
+\subsection{Ferramentas citadas}
+\begin{description}
+    \item[Cloud Code:] Interface de linha de comando (CLI) focada em desenvolvimento assistido por IA, oferecendo forte integração a modelos da família Anthropic. \\ \url{https://www.anthropic.com/}
+
+    \item[Codex:] Modelo de linguagem e ferramenta desenvolvidos pela OpenAI especialmente otimizados para tarefas de geração e compreensão de sintaxe de código de programação. \\ \url{https://openai.com/}
+
+    \item[OpenCLI:] Interface de linha de comando de código aberto desenvolvida para facilitar a conexão e interação técnica com diferentes provedores de modelos de linguagem. \\ \url{https://opencli.ai/}
+\end{description}
+
 % =================================================
 \section{Referências}
 % =================================================
