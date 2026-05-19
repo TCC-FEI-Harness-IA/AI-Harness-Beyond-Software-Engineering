@@ -275,7 +275,7 @@ O diagrama a seguir apresenta o fluxo macro do pipeline de \textit{thinking} pro
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=1\columnwidth]{diagrams/fluxo_macro}
+  \includesvg[width=1\columnwidth, height=0.70\textheight, keepaspectratio]{diagrams/fluxo_macro}
   \caption{Fluxo macro do pipeline de \textit{thinking}.}
   \label{fig:fluxo_macro}
 \end{figure}
@@ -306,7 +306,7 @@ Adicionalmente, todos os \textit{prompts} são construídos utilizando a sintaxe
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=0.6\columnwidth]{diagrams/definicao_criterios_de_aceite_da_resposta_final}
+  \includesvg[width=0.8\columnwidth, height=0.42\textheight, keepaspectratio]{diagrams/definicao_criterios_de_aceite_da_resposta_final}
   \caption{Fase de definição dos critérios de aceite da resposta final.}
   \label{fig:definicao_criterios}
 \end{figure}
@@ -338,7 +338,7 @@ O campo \texttt{tasks} é inicialmente vazio e será preenchido pela fase seguin
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=1\columnwidth]{diagrams/quebra_de_tasks_independentes}
+  \includesvg[width=1\columnwidth, height=0.46\textheight, keepaspectratio]{diagrams/quebra_de_tasks_independentes}
   \caption{Fase de quebra de tarefas independentes.}
   \label{fig:quebra_tasks}
 \end{figure}
@@ -369,7 +369,7 @@ O campo \texttt{pass\_phase} é inicializado como \texttt{false} para todas as t
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=1\columnwidth]{diagrams/resolucao_das_tarefas_ralph_loop}
+  \includesvg[width=1\columnwidth, height=0.50\textheight, keepaspectratio]{diagrams/resolucao_das_tarefas_ralph_loop}
   \caption{Resolução iterativa das tarefas utilizando o Ralph Loop.}
   \label{fig:ralph_loop}
 \end{figure}
@@ -388,7 +388,7 @@ Para mitigar o risco de \textit{deadlock}, implementa-se um mecanismo de control
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=1\columnwidth]{diagrams/avaliacao_de_criterios_de_aceitacao}
+  \includesvg[width=1\columnwidth, height=0.32\textheight, keepaspectratio]{diagrams/avaliacao_de_criterios_de_aceitacao}
   \caption{Avaliação global dos critérios de aceitação.}
   \label{fig:avaliacao_criterios}
 \end{figure}
@@ -403,7 +403,7 @@ A lógica é análoga à dos revisores de tarefa individual, porém operando em 
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=0.6\columnwidth]{diagrams/criacao_de_plano_complementar}
+  \includesvg[width=0.6\columnwidth, height=0.20\textheight, keepaspectratio]{diagrams/criacao_de_plano_complementar}
   \caption{Criação de plano complementar para critérios não atendidos.}
   \label{fig:plano_complementar}
 \end{figure}
@@ -420,7 +420,7 @@ Esse mecanismo constitui, na prática, um segundo nível de loop que garante a c
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=0.5\columnwidth]{diagrams/criacao_da_resposta_final}
+  \includesvg[width=0.65\columnwidth, height=0.26\textheight, keepaspectratio]{diagrams/criacao_da_resposta_final}
   \caption{Fase de composição da resposta final.}
   \label{fig:resposta_final}
 \end{figure}
@@ -436,30 +436,30 @@ O agente \texttt{final\_response\_composer\_agent} recebe como entrada o arquivo
 
 O plano de avaliação visa mensurar o impacto da arquitetura de orquestração na acurácia de modelos de linguagem em tarefas de raciocínio geral, comparando sistematicamente a inferência direta com a orquestrada. Para essa validação, a metodologia contempla cinco modelos selecionados para cobrir uma progressão de complexidade: Llama 3.1 (8B, 70B e 405B), Claude Sonnet 4.6 e GPT 5.4.
 
-Para cada modelo, está prevista a comparação de duas configurações: (i) uma inferência "linear", realizada por meio de uma requisição direta ao modelo sem processamento auxiliar, e (ii) a mesma inferência mediada pelo \textit{Harness} proposto, empregando ciclos de verificação e ferramentas externas. O desempenho será medido por meio de 180 questões amostradas das bases GPQA \cite{rein2023gpqa}, MMLU \cite{hendrycks2021measuring} e MMLU-Pro \cite{wang2024mmlu-pro}, escolhidas por seu elevado rigor acadêmico. A métrica primária consistirá na acurácia, obtida pela correspondência estrita entre a alternativa final selecionada pelo sistema e o gabarito.
+Para cada modelo, está prevista a comparação de duas configurações: (i) uma inferência "linear", realizada por meio de uma requisição direta ao modelo sem processamento auxiliar, e (ii) a mesma inferência mediada pelo \textit{Harness} proposto, empregando ciclos de verificação e ferramentas externas. O desempenho será medido por meio de 180 questões amostradas das bases \textit{GPQA} \cite{rein2023gpqa}, \textit{MMLU} \cite{hendrycks2021measuring} e \textit{MMLU-Pro} \cite{wang2024mmlu-pro}, escolhidas por seu elevado rigor acadêmico. A métrica primária consistirá na acurácia, obtida pela correspondência estrita entre a alternativa final selecionada pelo sistema e o gabarito.
 
 A execução seguirá um protocolo no qual, inicialmente, os modelos estabelecem seu desempenho de base na inferência padrão. Na sequência, as métricas serão reavaliadas sob a arquitetura orquestrada (inicialmente focada na família Llama), sempre respeitando restrições operacionais \textit{stateless}. O objetivo esperado desta avaliação é verificar se o \textit{harness} altera o posicionamento dos modelos no ranking global, testando a hipótese de que a orquestração estruturada suplanta ganhos atrelados puramente à escala de parâmetros.
 
-A Tabela~\ref{tab:dados-esperados} apresenta as projeções de acurácia que fundamentam este plano e o benchmark pretendido para a validação da arquitetura.
+A Tabela~\ref{tab:dados-esperados} apresenta as posições relativas esperadas no ranking de desempenho, ilustrando o posicionamento hipotético de cada configuração.
 
 \begin{table}[H]
 \centering
-\caption{Projeção de acurácia média esperada por modelo e configuração (dados hipotéticos para fins de planejamento).}
+\caption{Posição esperada no ranking de desempenho por modelo e configuração (hipotético, para fins de planejamento).}
 \label{tab:dados-esperados}
 \helvetfont{
 \small
 \begin{tabular}{lcc}
 \toprule
-\textbf{Modelo} & \textbf{Configuração} & \textbf{Acurácia Esperada} \\
+\textbf{Modelo} & \textbf{Configuração} & \textbf{Posição Esperada} \\
 \midrule
-Llama 3.1 8B & Direto & 52\% \\
-Llama 3.1 70B & Direto & 74\% \\
-Llama 3.1 8B & Ralph Loop & 77\% \\
-Llama 3.1 405B & Direto & 84\% \\
-Llama 3.1 70B & Ralph Loop & 88\% \\
-Claude Sonnet 4.6 & Direto & 91\% \\
-Llama 3.1 405B & Ralph Loop & 94\% \\
-GPT 5.4 & Direto & 97\% \\
+Llama 3.1 8B   & Direto     & 8\textsuperscript{o} \\
+Llama 3.1 70B  & Direto     & 7\textsuperscript{o} \\
+Llama 3.1 8B   & Ralph Loop & 6\textsuperscript{o} \\
+Llama 3.1 405B & Direto     & 5\textsuperscript{o} \\
+Llama 3.1 70B  & Ralph Loop & 4\textsuperscript{o} \\
+Claude Sonnet 4.6 & Direto  & 3\textsuperscript{o} \\
+Llama 3.1 405B & Ralph Loop & 2\textsuperscript{o} \\
+GPT 5.4        & Direto     & 1\textsuperscript{o} \\
 \bottomrule
 \end{tabular}
 }
