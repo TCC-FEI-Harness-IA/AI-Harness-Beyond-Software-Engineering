@@ -275,7 +275,7 @@ O diagrama a seguir apresenta o fluxo macro do pipeline de \textit{thinking} pro
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=1\columnwidth, height=0.70\textheight, keepaspectratio]{diagrams/fluxo_macro}
+  \includesvg[width=1\columnwidth]{diagrams/fluxo_macro}
   \caption{Fluxo macro do pipeline de \textit{thinking}.}
   \label{fig:fluxo_macro}
 \end{figure}
@@ -338,7 +338,7 @@ O campo \texttt{tasks} é inicialmente vazio e será preenchido pela fase seguin
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=1\columnwidth, height=0.46\textheight, keepaspectratio]{diagrams/quebra_de_tasks_independentes}
+  \includesvg[width=1\columnwidth]{diagrams/quebra_de_tasks_independentes}
   \caption{Fase de quebra de tarefas independentes.}
   \label{fig:quebra_tasks}
 \end{figure}
@@ -369,7 +369,7 @@ O campo \texttt{pass\_phase} é inicializado como \texttt{false} para todas as t
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=1\columnwidth, height=0.50\textheight, keepaspectratio]{diagrams/resolucao_das_tarefas_ralph_loop}
+  \includesvg[width=1\columnwidth]{diagrams/resolucao_das_tarefas_ralph_loop}
   \caption{Resolução iterativa das tarefas utilizando o Ralph Loop.}
   \label{fig:ralph_loop}
 \end{figure}
@@ -393,7 +393,7 @@ Para mitigar o risco de \textit{deadlock}, implementa-se um mecanismo de control
   \label{fig:avaliacao_criterios}
 \end{figure}
 
-Ao término da resolução de todas as tarefas do plano, o pipeline consolida os resultados armazenados no \texttt{tasks\_results.json} e os submete a uma avaliação global frente aos critérios de aceitação definidos em \texttt{general\_infos.acceptance\_criteria} do \texttt{planning.json}. Essa fase é executada pelo agente \texttt{final\_response\_acceptance\_criteria\_reviewer\_agent}, que recebe ambos os artefatos como entrada.
+Ao término da resolução de todas as tarefas do plano, o pipeline consolida os resultados armazenados no \texttt{tasks\_results.json} e os submete a uma avaliação global frente aos critérios de aceitação definidos em \texttt{general\_infos.acceptance\_criteria} do \texttt{planning.json}. Essa fase é executada pelo agente {\scriptsize\texttt{final\_response\_acceptance\_criteria\_reviewer\_agent}}, que recebe ambos os artefatos como entrada.
 
 A lógica é análoga à dos revisores de tarefa individual, porém operando em um nível de abstração superior: em vez de avaliar uma resposta pontual contra critérios locais de uma tarefa, o agente avalia se o conjunto total de resultados gerados fornece insumos suficientes para construir uma resposta final que atenda a todos os critérios globais. Dois fluxos de saída são possíveis a partir dessa avaliação: caso todos os critérios sejam considerados atendidos, o pipeline avança para a criação da resposta final; caso contrário, avança para a criação de um plano adicional complementar.
 
@@ -403,7 +403,7 @@ A lógica é análoga à dos revisores de tarefa individual, porém operando em 
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=0.6\columnwidth, height=0.20\textheight, keepaspectratio]{diagrams/criacao_de_plano_complementar}
+  \includesvg[width=0.85\columnwidth, height=0.35\textheight, keepaspectratio]{diagrams/criacao_de_plano_complementar}
   \caption{Criação de plano complementar para critérios não atendidos.}
   \label{fig:plano_complementar}
 \end{figure}
@@ -420,7 +420,7 @@ Esse mecanismo constitui, na prática, um segundo nível de loop que garante a c
 
 \begin{figure}[H]
   \centering
-  \includesvg[width=0.65\columnwidth, height=0.26\textheight, keepaspectratio]{diagrams/criacao_da_resposta_final}
+  \includesvg[width=0.65\columnwidth, height=0.18\textheight, keepaspectratio]{diagrams/criacao_da_resposta_final}
   \caption{Fase de composição da resposta final.}
   \label{fig:resposta_final}
 \end{figure}
