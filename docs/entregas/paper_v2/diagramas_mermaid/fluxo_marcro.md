@@ -1,26 +1,40 @@
 ```mermaid
 flowchart TD
 
-    A([Prompt entrada])
+    A([Prompt de entrada])
 
-    B["Define os criterios de aceitação da resposta final"]
-    C["Quebra de tasks independentes"]
-    D["Resolução das tarefas (Ralph Loop)"]
-    E["Compila as informações de resultado entre as fases"]
-    F["Compara o compilado com os critérios de aceitação"]
+    B["Define os critérios de aceitação da resposta final"]
+    C["Quebra em tasks independentes"]
 
-    G{"Critérios Atendidos?"}
+    subgraph Processamento ["Ciclo de Execução de Tarefas (Micro Loop)"]
+        direction TB
+        TaskCheck{"Existem tarefas<br>pendentes?"}
+        GetTask["Obtém próxima tarefa com status 'not-initiated'"]
+        ResolveTask["Resolução da tarefa (Ralph Loop interno)"]
+        UpdateTask["Marca a tarefa como 'completed'"]
+
+        TaskCheck -- Sim --> GetTask
+        GetTask --> ResolveTask
+        ResolveTask --> UpdateTask
+        UpdateTask --> TaskCheck
+    end
+
+    E["Compila as informações de resultado de todas as tarefas concluídas"]
+    F["Compara o compilado com os critérios de aceitação globais"]
+
+    G{"Avaliação do Macro Loop:<br>Todos os critérios<br>atendidos?"}
 
     H["Cria a resposta final"]
     I([Fim])
 
-    J["Identifica critério de aceitação não atendido"]
-    K["Criação de plano adicional complementar"]
+    J["Identifica critério de aceitação não atendido no compilado"]
+    K["Criação de plano adicional complementar (Novas tasks)"]
 
     A --> B
     B --> C
-    C --> D
-    D --> E
+    C --> TaskCheck
+
+    TaskCheck -- Não --> E
     E --> F
     F --> G
 
@@ -29,6 +43,6 @@ flowchart TD
 
     G -- Não --> J
     J --> K
-    K --> D
+    K --> TaskCheck
 
 ```
