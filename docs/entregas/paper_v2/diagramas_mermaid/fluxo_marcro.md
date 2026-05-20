@@ -9,9 +9,9 @@ flowchart TD
     subgraph Processamento ["Ciclo de Execução de Tarefas (Micro Loop)"]
         direction TB
         TaskCheck{"Existem tarefas<br>pendentes?"}
-        GetTask["Obtém próxima tarefa com status 'not-initiated'"]
+        GetTask["Obtém próxima tarefa com 'pass_phase: false'"]
         ResolveTask["Resolução da tarefa (Ralph Loop interno)"]
-        UpdateTask["Marca a tarefa como 'completed'"]
+        UpdateTask["Marca a tarefa com 'pass_phase: true'"]
 
         TaskCheck -- Sim --> GetTask
         GetTask --> ResolveTask
