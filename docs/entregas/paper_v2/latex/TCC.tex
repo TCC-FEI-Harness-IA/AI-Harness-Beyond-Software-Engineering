@@ -308,12 +308,80 @@ Todos os \textit{prompts} de agentes são redigidos em inglês. Estudos como os 
 Adicionalmente, todos os \textit{prompts} são construídos utilizando a sintaxe \textit{Markdown}, com delimitadores explícitos de seção para separar instruções gerais, contexto de entrada e especificações de saída. Estudos como os de He et al.~\cite{he2024promptformatting} e Liu et al.~\cite{liu2025contentformat} mostram que a formatação do \textit{prompt} afeta de forma mensurável o desempenho dos modelos, e que otimizações conjuntas de conteúdo e formato produzem ganhos adicionais sobre a otimização exclusiva do conteúdo textual. A adoção de \textit{Markdown} visa, portanto, tornar delimitadores, hierarquias e restrições mais salientes durante a inferência, contribuindo para respostas mais consistentes com as instruções fornecidas.
 
 % -------------------------------------------------
-\subsubsection{Definição dos critérios de aceite da resposta final}
+\subsubsection{Definição dos critérios de aceite da resposta final} \label{subsec:definicao_criterios}
 % -------------------------------------------------
 
 \begin{figure}
   \centering
-  \includesvg[width=0.8\columnwidth, height=0.42\textheight, keepaspectratio]{diagrams/definicao_criterios_de_aceite_da_resposta_final}
+  \tikzset{
+      % Estilo para bloco de processo
+      process/.style={
+          rectangle, 
+          draw=black, 
+          thick,
+          fill=white, 
+          text width=4.6cm, 
+          text centered, 
+          minimum height=1.1cm,
+          font=\sffamily\small
+      },
+      % Estilo para o círculo (Próx. fase / Prompt)
+      circleNode/.style={
+          circle,
+          draw=black,
+          thick,
+          fill=white,
+          minimum size=1.1cm,
+          align=center,
+          font=\sffamily\small,
+          inner sep=1pt
+      },
+      % Estilo para descrição de texto sem borda
+      labelNode/.style={
+          align=left,
+          font=\sffamily\small,
+          text width=3.4cm,
+          inner sep=2pt
+      },
+      % Estilo padrão das setas
+      arrow/.style={
+          -{Stealth[scale=1.1]},
+          thick,
+          font=\sffamily\small
+      }
+  }
+
+  \resizebox{0.75\columnwidth}{!}{%
+  \begin{tikzpicture}[node distance=0.8cm and 0.5cm]
+
+      % --- EIXO CENTRAL VERTICAL ---
+      % Círculo 1: Prompt de Entrada
+      \node (prompt) [circleNode] {Prompt\\entrada};
+      
+      % Bloco 1: Chamada LLM 1
+      \node (llm1) [process, below=of prompt] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{acceptance\_criteria\_agent}''}};
+      
+      % Bloco 2: Chamada LLM 2
+      \node (llm2) [process, below=of llm1] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{expected\_output\_format\_agent}''}};
+      
+      % Bloco 3: Criação do planning.json
+      \node (cria) [process, below=of llm2] {Cria o ``\texttt{planning.json}'', contendo \\ os critérios de aceite e formato de \\ saída esperado para a resposta final};
+
+      % Círculo "Próx. fase" posicionado abaixo
+      \node (prox) [circleNode, below=of cria, yshift=-0.2cm] {Próx.\\fase};
+      
+      % Texto descritivo à direita do círculo (CORRIGIDO)
+      \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Quebra de tasks independentes)};
+
+      % --- CONEXÕES / SETAS ---
+      
+      \draw [arrow] (prompt) -- (llm1);
+      \draw [arrow] (llm1) -- (llm2);
+      \draw [arrow] (llm2) -- (cria);
+      \draw [arrow] (cria) -- (prox);
+
+  \end{tikzpicture}%
+  }
   \caption{Fase de definição dos critérios de aceite da resposta final.}
   \label{fig:definicao_criterios}
 \end{figure}
@@ -340,12 +408,109 @@ Os resultados dessas duas chamadas são então consolidados em um arquivo JSON d
 O campo \texttt{tasks} é inicialmente vazio e será preenchido pela fase seguinte. A separação entre \texttt{general\_infos} e \texttt{tasks} é proposital: as informações gerais são invariantes ao longo de todo o pipeline, enquanto as tarefas podem ser adicionadas iterativamente por planos complementares.
 
 % -------------------------------------------------
-\subsubsection{Quebra de Tasks Independentes}
+\subsubsection{Quebra de Tasks Independentes} \label{subsec:quebra_tasks}
 % -------------------------------------------------
 
 \begin{figure}
   \centering
-  \includesvg[width=1\columnwidth]{diagrams/quebra_de_tasks_independentes}
+  \tikzset{
+      % Estilo para bloco de processo
+      process/.style={
+          rectangle, 
+          draw=black, 
+          thick,
+          fill=white, 
+          text width=6.5cm, 
+          text centered, 
+          minimum height=1.1cm,
+          font=\sffamily\small
+      },
+      % Estilo para o losango de decisão
+      decision/.style={
+          diamond, 
+          draw=black, 
+          thick,
+          fill=white, 
+          text width=2.4cm, 
+          text centered, 
+          minimum height=1.6cm,
+          inner sep=0pt,
+          font=\sffamily\small
+      },
+      % Estilo para o círculo (Próx. fase)
+      circleNode/.style={
+          circle,
+          draw=black,
+          thick,
+          fill=white,
+          minimum size=1.1cm,
+          align=center,
+          font=\sffamily\small,
+          inner sep=1pt
+      },
+      % Estilo para descrição de texto sem borda
+      labelNode/.style={
+          align=left,
+          font=\sffamily\small,
+          text width=3.4cm,
+          inner sep=2pt
+      },
+      % Estilo padrão das setas
+      arrow/.style={
+          -{Stealth[scale=1.1]},
+          thick,
+          font=\sffamily\small
+      }
+  }
+
+  \resizebox{0.98\columnwidth}{!}{%
+  \begin{tikzpicture}[node distance=0.8cm and 0.5cm]
+
+      % --- EIXO CENTRAL ---
+      % Bloco 1: Define os critérios
+      \node (definicao) [process] {Define os critérios de aceitação \\ da resposta final};
+      
+      % Bloco 2: Planejador das tarefas atômicas
+      \node (planner) [process, below=of definicao] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{atomic\_tasks\_planner\_agent}''}};
+      
+      % Bloco 3: Revisor das tarefas atômicas
+      \node (revisor) [process, below=of planner] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{atomic\_tasks\_revisor\_agent}''}};
+
+      % Bloco 4: Losango de Decisão "Tasks ok?"
+      \node (decisao) [decision, below=of revisor, yshift=-0.2cm] {Tasks ok?};
+
+      % Bloco 5: JSON com fases criadas
+      \node (json) [process, below=of decisao, yshift=-0.2cm] {JSON com as fases criadas \\ (\texttt{planning.json})};
+
+      % Círculo "Próx. fase" posicionado abaixo
+      \node (prox) [circleNode, below=of json] {Próx.\\fase};
+      
+      % Texto descritivo à direita do círculo
+      \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Resolução das tarefas - Ralph Loop)};
+
+      % --- FLUXO "NÃO" (DIREITA) ---
+      % Bloco de Reescrita (Rewriter) posicionado à direita do losango
+      \node (rewriter) [process, right=of decisao, xshift=1.2cm, text width=6.0cm] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{atomic\_tasks\_rewriter\_agent}''}};
+
+      % --- CONEXÕES / SETAS ---
+      
+      % Fluxo Linear Central
+      \draw [arrow] (definicao) -- (planner);
+      \draw [arrow] (planner) -- (revisor);
+      \draw [arrow] (revisor) -- (decisao);
+      
+      % Decisão -> Sim (Abaixo)
+      \draw [arrow] (decisao.south) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Sim} (json.north);
+      \draw [arrow] (json) -- (prox);
+      
+      % Decisão -> Não (Direita)
+      \draw [arrow] (decisao.east) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Não} (rewriter.west);
+      
+      % Loop de Reescrita -> Revisor (Linha em L invertido)
+      \draw [arrow] (rewriter.north) |- (revisor.east);
+
+  \end{tikzpicture}%
+  }
   \caption{Fase de quebra de tarefas independentes.}
   \label{fig:quebra_tasks}
 \end{figure}
@@ -371,13 +536,150 @@ Cada tarefa do plano é representada no \texttt{planning.json} no seguinte forma
 O campo \texttt{pass\_phase} é inicializado como \texttt{false} para todas as tarefas e atualizado para \texttt{true} ao final da execução bem-sucedida de cada uma, funcionando como marcador de progresso para o mecanismo iterativo.
 
 % -------------------------------------------------
-\subsubsection{Resolução das tarefas — Ralph Loop}
+\subsubsection{Resolução das tarefas — Ralph Loop} \label{subsec:resolucao_tarefas}
 % -------------------------------------------------
 
 \begin{figure}
   \centering
-  \includesvg[width=1\columnwidth]{diagrams/resolucao_das_tarefas_ralph_loop}
-  \caption{Resolução iterativa das tarefas utilizando o Ralph Loop.}
+  \tikzset{
+      % Estilo para bloco de processo
+      process/.style={
+          rectangle, 
+          draw=black, 
+          thick,
+          fill=white, 
+          text width=4.6cm, 
+          text centered, 
+          minimum height=1.1cm,
+          font=\sffamily\small
+      },
+      % Estilo para o losango de decisão
+      decision/.style={
+          diamond, 
+          draw=black, 
+          thick,
+          fill=white, 
+          text width=2.8cm, 
+          text centered, 
+          minimum height=1.8cm,
+          inner sep=0pt,
+          font=\sffamily\small
+      },
+      % Estilo para losango vazio pequeno
+      decision_empty/.style={
+          diamond, 
+          draw=black, 
+          thick,
+          fill=white, 
+          minimum size=0.7cm, 
+          inner sep=0pt
+      },
+      % Estilo para o círculo (Próx. fase)
+      circleNode/.style={
+          circle,
+          draw=black,
+          thick,
+          fill=white,
+          minimum size=1.1cm,
+          align=center,
+          font=\sffamily\small,
+          inner sep=1pt
+      },
+      % Estilo para descrição de texto sem borda
+      labelNode/.style={
+          align=left,
+          font=\sffamily\small,
+          text width=3.4cm,
+          inner sep=2pt
+      },
+      % Estilo padrão das setas
+      arrow/.style={
+          -{Stealth[scale=1.1]},
+          thick,
+          font=\sffamily\small
+      }
+  }
+
+  \resizebox{0.98\columnwidth}{!}{%
+  \begin{tikzpicture}[node distance=0.8cm and 0.5cm]
+
+      % --- EIXO CENTRAL VERTICAL ---
+      % Bloco 1: JSON com tarefas
+      \node (json) [process] {JSON com as fases criadas \\ (\texttt{planning.json})};
+      
+      % Bloco 2: Existe alguma task...
+      \node (existe) [process, below=of json] {Existe alguma task com \\ ``\texttt{pass\_phase}: \texttt{False}''?};
+      
+      % Bloco 3: Losango vazio pequeno
+      \node (empty_dec) [decision_empty, below=of existe, yshift=-0.2cm] {};
+      
+      % Bloco 4: LLM_CALL contendo somente o conteúdo da fase
+      \node (llm_fase) [process, below=of empty_dec, yshift=-0.2cm] {LLM\_CALL contendo \\ somente o conteúdo da fase};
+      
+      % Bloco 5: task_interactions ++
+      \node (interactions) [process, below=of llm_fase] {\texttt{task\_interactions} ++};
+      
+      % Bloco 6: LLM_CALL para agente reviewer
+      \node (reviewer) [process, below=of interactions] {LLM\_CALL para agente \\ {\scriptsize ``\texttt{task\_outcome\_reviewer\_agent}''}};
+      
+      % Bloco 7: Losango de Decisão "Cumpre os critérios?"
+      \node (cumpre) [decision, below=of reviewer, yshift=-0.3cm] {Cumpre os critérios?};
+
+      % --- FLUXO "NÃO" DA PRIMEIRA DECISÃO (DIREITA) ---
+      % Círculo "Próx. fase" posicionado à direita do losango vazio
+      \node (prox) [circleNode, right=of empty_dec, xshift=1.2cm] {Próx.\\fase};
+      
+      % Texto descritivo à direita do círculo
+      \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Avaliação de critérios de aceitação)};
+
+      % --- FLUXO DA SEGUNDA DECISÃO (DIREITA) ---
+      % Losango de Decisão "Atingiu o max_iterations?"
+      \node (max_iter) [decision, right=of cumpre, xshift=1.8cm] {Atingiu o \\ \texttt{max\_iterations}?};
+      
+      % Bloco de Feedback (LLM_CALL contendo...) alinhado verticalmente com max_iter e horizontalmente com interactions
+      \node (llm_feedback) [process, text width=4.2cm] at (max_iter |- interactions) {LLM\_CALL contendo: \\ - A última iteração (\textit{prompt} + resposta) \\ - Justificativa de não aceite};
+
+      % Bloco 8: Salva a resposta (abaixo de max_iter)
+      \node (salva) [process, below=of max_iter, yshift=-0.5cm] {Salva a resposta no \\ ``\texttt{tasks\_results.json}''};
+      
+      % Bloco 9: Atualiza a task (abaixo de salva)
+      \node (atualiza) [process, below=of salva] {Atualiza a task, \\ ``\texttt{pass\_phase}: \texttt{True}''};
+
+      % --- CONEXÕES / SETAS ---
+      
+      % Fluxo Linear Central
+      \draw [arrow] (json) -- (existe);
+      \draw [arrow] (existe) -- (empty_dec);
+      \draw [arrow] (empty_dec) -- node[midway, fill=white] {Sim} (llm_fase);
+      \draw [arrow] (llm_fase) -- (interactions);
+      \draw [arrow] (interactions) -- (reviewer);
+      \draw [arrow] (reviewer) -- (cumpre);
+      
+      % Cumpre -> Sim -> Salva (linha em L)
+      \draw [arrow] (cumpre.south) |- node[near start, fill=white] {Sim} (salva.west);
+      \draw [arrow] (salva) -- (atualiza);
+      
+      % Retorno do Micro Loop (Atualiza -> Sobe -> Existe)
+      \draw [arrow] (atualiza.east) -- ++(0.6,0) |- (existe.east);
+      
+      % Decisão Vazia -> Não (Direita)
+      \draw [arrow] (empty_dec.east) -- node[midway, fill=white] {Não} (prox.west);
+      
+      % Cumpre -> Não (Direita) -> Max Iter
+      \draw [arrow] (cumpre.east) -- node[midway, fill=white] {Não} (max_iter.west);
+      
+      % Max Iter -> Sim (Abaixo) -> Salva
+      \draw [arrow] (max_iter.south) -- node[midway, fill=white] {Sim} (salva.north);
+      
+      % Max Iter -> Não (Acima) -> LLM Feedback
+      \draw [arrow] (max_iter.north) -- node[midway, fill=white] {Não} (llm_feedback.south);
+      
+      % LLM Feedback -> Interactions
+      \draw [arrow] (llm_feedback.west) -- (interactions.east);
+
+  \end{tikzpicture}%
+  }
+  \caption{Fase de resolução iterativa das tarefas (Ralph Loop).}
   \label{fig:ralph_loop}
 \end{figure}
 
@@ -390,27 +692,176 @@ No que diz respeito à persistência dos resultados, adota-se uma adaptação do
 Para mitigar o risco de \textit{deadlock}, implementa-se um mecanismo de controle denominado \textit{pânico}. Um contador \texttt{task\_interactions} é incrementado a cada chamada ao LLM dentro do ciclo de uma tarefa. Quando esse contador atinge o valor de \texttt{max\_iterations}, a fase encerra automaticamente e a resposta disponível no momento é salva no \texttt{tasks\_results.json}, mesmo que os critérios não tenham sido plenamente atendidos.
 
 % -------------------------------------------------
-\subsubsection{Avaliação dos critérios de aceitação}
+\subsubsection{Avaliação dos critérios de aceitação} \label{subsec:avaliacao_criterios}
 % -------------------------------------------------
 
 \begin{figure}
   \centering
-  \includesvg[width=1\columnwidth, height=0.32\textheight, keepaspectratio]{diagrams/avaliacao_de_criterios_de_aceitacao}
-  \caption{Avaliação global dos critérios de aceitação.}
+  \tikzset{
+      % Estilo para bloco de processo (LLM Call)
+      process/.style={
+          rectangle, 
+          draw=black, 
+          thick,
+          fill=white, 
+          text width=6.5cm, 
+          text centered, 
+          minimum height=1.1cm,
+          font=\sffamily\small
+      },
+      % Estilo para o losango de decisão
+      decision/.style={
+          diamond, 
+          draw=black, 
+          thick,
+          fill=white, 
+          text width=3.0cm, 
+          text centered, 
+          minimum height=1.8cm,
+          inner sep=0pt,
+          font=\sffamily\small
+      },
+      % Estilo para o círculo (Próx. fase)
+      circleNode/.style={
+          circle,
+          draw=black,
+          thick,
+          fill=white,
+          minimum size=1.1cm,
+          align=center,
+          font=\sffamily\small,
+          inner sep=1pt
+      },
+      % Estilo para descrição de texto sem borda
+      labelNode/.style={
+          align=left,
+          font=\sffamily\small,
+          text width=3.4cm,
+          inner sep=2pt
+      },
+      % Estilo padrão das setas
+      arrow/.style={
+          -{Stealth[scale=1.1]},
+          thick,
+          font=\sffamily\small
+      }
+  }
+
+  \resizebox{0.98\columnwidth}{!}{%
+  \begin{tikzpicture}[node distance=0.8cm and 0.5cm]
+
+      % --- EIXO CENTRAL ---
+      % Bloco 1: LLM Call
+      \node (llm) [process] {LLM\_CALL para agente \\ {\fontsize{6pt}{7pt}\selectfont ``\texttt{final\_response\_acceptance\_criteria\_reviewer\_agent}''}};
+      
+      % Bloco 2: Losango de Decisão
+      \node (decisao) [decision, below=of llm, yshift=-0.2cm] {Cumpre os critérios de aceite da resposta final?};
+
+      % --- FLUXO "NÃO" (DIREITA) ---
+      % Círculo "Próx. fase" posicionado à direita do losango
+      \node (prox_nao) [circleNode, right=of decisao, xshift=0.45cm] {Próx.\\fase};
+      
+      % Texto descritivo à direita do círculo
+      \node (acao_nao) [labelNode, right=of prox_nao, xshift=-0.35cm] {(Criação de plano adicional complementar)};
+
+      % --- FLUXO "SIM" (ABAIXO) ---
+      % Círculo "Próx. fase" posicionado abaixo do losango
+      \node (prox_sim) [circleNode, below=of decisao, yshift=-0.5cm] {Próx.\\fase};
+      
+      % Texto descritivo à direita do círculo
+      \node (acao_sim) [labelNode, right=of prox_sim, xshift=-0.35cm] {(Criação da resposta final)};
+
+      % --- CONEXÕES / SETAS ---
+      
+      % LLM -> Decisão
+      \draw [arrow] (llm) -- (decisao);
+      
+      % Decisão -> Não (Direita)
+      \draw [arrow] (decisao.east) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Não} (prox_nao.west);
+      
+      % Decisão -> Sim (Abaixo)
+      \draw [arrow] (decisao.south) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Sim} (prox_sim.north);
+
+  \end{tikzpicture}%
+  }
+  \caption{Fluxograma de avaliação dos critérios de aceitação da resposta final.}
   \label{fig:avaliacao_criterios}
 \end{figure}
-
 Ao término da resolução de todas as tarefas do plano, o pipeline consolida os resultados armazenados no \texttt{tasks\_results.json} e os submete a uma avaliação global frente aos critérios de aceitação definidos em \texttt{general\_infos.acceptance\_criteria} do \texttt{planning.json}. Essa fase é executada pelo agente {\scriptsize\texttt{final\_response\_acceptance\_criteria\_reviewer\_agent}}, que recebe ambos os artefatos como entrada.
 
 A lógica é análoga à dos revisores de tarefa individual, porém operando em um nível de abstração superior: em vez de avaliar uma resposta pontual contra critérios locais de uma tarefa, o agente avalia se o conjunto total de resultados gerados fornece insumos suficientes para construir uma resposta final que atenda a todos os critérios globais. Dois fluxos de saída são possíveis a partir dessa avaliação: caso todos os critérios sejam considerados atendidos, o pipeline avança para a criação da resposta final; caso contrário, avança para a criação de um plano adicional complementar.
 
 % -------------------------------------------------
-\subsubsection{Criação de plano complementar}
+\subsubsection{Criação de plano complementar} \label{subsec:criacao_plano_complementar}
 % -------------------------------------------------
 
 \begin{figure}
   \centering
-  \includesvg[width=0.85\columnwidth, height=0.35\textheight, keepaspectratio]{diagrams/criacao_de_plano_complementar}
+  \tikzset{
+      % Estilo para bloco de processo
+      process/.style={
+          rectangle, 
+          draw=black, 
+          thick,
+          fill=white, 
+          text width=4.6cm, 
+          text centered, 
+          minimum height=1.1cm,
+          font=\sffamily\small
+      },
+      % Estilo para o círculo (Próx. fase)
+      circleNode/.style={
+          circle,
+          draw=black,
+          thick,
+          fill=white,
+          minimum size=1.1cm,
+          align=center,
+          font=\sffamily\small,
+          inner sep=1pt
+      },
+      % Estilo para descrição de texto sem borda
+      labelNode/.style={
+          align=left,
+          font=\sffamily\small,
+          text width=3.4cm,
+          inner sep=2pt
+      },
+      % Estilo padrão das setas
+      arrow/.style={
+          -{Stealth[scale=1.1]},
+          thick,
+          font=\sffamily\small
+      }
+  }
+
+  \resizebox{0.75\columnwidth}{!}{%
+  \begin{tikzpicture}[node distance=0.8cm and 0.5cm]
+
+      % --- EIXO CENTRAL VERTICAL ---
+      % Bloco 1: Criador do Gap Prompt
+      \node (llm1) [process] {LLM\_CALL para agente \\ {\scriptsize ``\texttt{acceptance\_gap\_prompt\_creator}''}};
+      
+      % Bloco 2: Planejador das tarefas atômicas
+      \node (llm2) [process, below=of llm1] {LLM\_CALL para agente \\ {\scriptsize ``\texttt{atomic\_tasks\_planner\_agent}''}};
+      
+      % Bloco 3: Concatenação das fases
+      \node (concatena) [process, below=of llm2] {Concatena as novas fases criadas \\ ao ``\texttt{planning.json}'' original};
+
+      % Círculo "Próx. fase" posicionado abaixo
+      \node (prox) [circleNode, below=of concatena, yshift=-0.2cm] {Próx.\\fase};
+      
+      % Texto descritivo à direita do círculo
+      \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Resolução das tarefas (Ralph Loop))};
+
+      % --- CONEXÕES / SETAS ---
+      
+      \draw [arrow] (llm1) -- (llm2);
+      \draw [arrow] (llm2) -- (concatena);
+      \draw [arrow] (concatena) -- (prox);
+
+  \end{tikzpicture}%
+  }
   \caption{Criação de plano complementar para critérios não atendidos.}
   \label{fig:plano_complementar}
 \end{figure}
@@ -422,7 +873,7 @@ Esse \textit{prompt} é então submetido ao \texttt{atomic\_tasks\_planner\_agen
 Esse mecanismo constitui, na prática, um segundo nível de loop que garante a convergência iterativa do pipeline: a cada ciclo, o conteúdo gerado aproxima-se do que é necessário para satisfazer todos os critérios de aceitação, sem desperdiçar o trabalho já realizado nas iterações anteriores.
 
 % -------------------------------------------------
-\subsubsection{Criação da resposta final}
+\subsubsection{Criação da resposta final} \label{subsec:resposta_final}
 % -------------------------------------------------
 
 A fase de criação da resposta final assume que o \texttt{tasks\_results.json} contém todos os insumos necessários para compor uma resposta que satisfaça integralmente os critérios de aceitação globais — premissa garantida pela fase de avaliação anterior. É nesta fase, e somente nesta, que o conteúdo do \texttt{tasks\_results.json} é efetivamente recuperado e utilizado.
