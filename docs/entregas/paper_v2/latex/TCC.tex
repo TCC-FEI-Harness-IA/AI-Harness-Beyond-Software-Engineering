@@ -32,6 +32,13 @@
 % Evita o esticamento vertical exagerado (Resolve o Underfull \vbox)
 \raggedbottom
 
+% Parâmetros de flutuação de figuras extremamente permissivos (Evita colunas vazias)
+\renewcommand{\topfraction}{0.9}       % Fração máxima da página ocupada por figuras no topo
+\renewcommand{\bottomfraction}{0.8}    % Fração máxima ocupada por figuras no rodapé
+\renewcommand{\textfraction}{0.05}      % Fração mínima obrigatória de texto na página (apenas 5%)
+\renewcommand{\floatpagefraction}{0.75} % Fração mínima ocupada por floats em página isolada
+
+
 % Diagramas
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning}
@@ -232,13 +239,13 @@ Para validar a abordagem, são utilizadas as bases \textit{MMLU} e \textit{GPQA}
 \section{Introdução}
 % =================================================
 
-Os modelos de linguagem de grande porte (\textit{Large Language Models} — \textit{LLMs}) \cite{brown2020language} deixaram de ser apenas geradores de texto e passaram a funcionar como plataformas compostas por diferentes camadas de processamento, coordenação e abstração. Essa evolução permitiu capacidades como raciocínio em múltiplas etapas, planejamento intermediário e orquestração de subagentes, mas também tornou evidente que boa parte da melhoria observada nas respostas não vem apenas do modelo base, e sim das arquiteturas e \textit{pipelines} que organizam o processo de inferência.
+Os modelos de linguagem de grande porte (\textit{Large Language Models}) \cite{brown2020language} deixaram de ser apenas geradores de texto e passaram a funcionar como plataformas compostas por diferentes camadas de processamento, coordenação e abstração. Essa evolução permitiu capacidades como raciocínio em múltiplas etapas, planejamento intermediário e orquestração de subagentes, mas também tornou evidente que boa parte da melhoria observada nas respostas não vem apenas do modelo base, e sim das arquiteturas e \textit{pipelines} que organizam o processo de inferência.
 
 Este trabalho parte de dois problemas centrais observados tanto na prática quanto na literatura: (1) a diferença frequente entre respostas iniciais e respostas revisadas produzidas por um mesmo modelo — algo comum em interações com modelos mais antigos, especialmente durante a popularização do \textit{GPT-3.5}, quando perguntas como "Tem certeza?", "revise sua resposta" ou até mesmo o apontamento direto de erro ("você errou") frequentemente levavam o modelo a corrigir sua própria saída —, e (2) a forma como fluxos de raciocínio (\textit{prompting} encadeado, agentes e \textit{pipelines}) são implementados atualmente, incluindo suas limitações relacionadas ao crescimento do contexto.
 
 O primeiro problema surge porque, em tarefas não triviais, a primeira resposta gerada pelo modelo costuma ser apenas uma tentativa inicial, sujeita a erros, omissões e inconsistências. Diversos trabalhos mostram que essa limitação pode ser reduzida quando a inferência é dividida em etapas menores, com validações e \textit{feedback} intermediário. \textit{Chain-of-Thought} \cite{wei2022chain} e \textit{Tree of Thoughts} \cite{yao2023tree}, por exemplo, mostram ganhos ao incentivar o modelo a gerar e avaliar passos intermediários de raciocínio; \textit{ReAct} \cite{yao2022react} demonstra benefícios ao alternar raciocínio com ações e observações; enquanto abordagens iterativas, como \textit{Reflexion} \cite{shinn2023reflexion} (reflexão após avaliação externa), \textit{Self-Debugging} \cite{chen2023selfdebug} (correção guiada por testes) e \textit{Self-Refine} \cite{madaan2023selfrefine} (refinamento iterativo baseado em \textit{feedback} gerado pelo próprio modelo), indicam que ciclos de tentativa, avaliação e revisão podem aumentar significativamente a taxa de acerto. Em paralelo, métodos de decomposição e planejamento — como \textit{Least-to-Most Prompting} \cite{zhou2022least}, \textit{Decomposed Prompting} \cite{khot2022decomposed} e \textit{Plan-and-Solve Prompting} \cite{wang2023plan} — reforçam empiricamente que dividir problemas complexos em subtarefas, separar planejamento de execução e limitar o escopo contextual de cada etapa reduz erros lógicos e omissões, especialmente quando existe algum mecanismo de verificação automática. Assim, a melhora observada não depende apenas de gerar mais \textit{tokens} ou realizar chamadas mais longas, mas da forma como o \textit{pipeline} controla o contexto, organiza o planejamento e valida as respostas intermediárias.
 
-O segundo problema está relacionado às práticas atuais de \textit{thinking} em \textit{LLMs} e às limitações de janelas de contexto extensas. Em arquiteturas populares de agentes, como \textit{ReAct} \cite{yao2022react}, já citado anteriormente, o modelo normalmente opera acumulando em uma única janela um histórico crescente de raciocínios, ações e observações. Embora isso facilite o encadeamento do processo, também aumenta o risco de degradação conforme o contexto cresce. Esse comportamento é consistente com evidências empíricas sobre contextos longos: no trabalho \textit{Lost in the Middle} \cite{liu2023lost}, por exemplo, observa-se perda de desempenho quando o modelo precisa recuperar informações relevantes em sequências extensas, principalmente quando essas informações ficam "perdidas" no meio do contexto. Na prática, a comunidade costuma descrever esse acúmulo progressivo usando termos como "esgotamento de contexto", "compactação" e \textit{context rot}: conforme o histórico aumenta, partes importantes do conteúdo perdem relevância relativa, competem com ruído e podem ser diluídas por resumos implícitos, levando a omissões, inconsistências e aumento de alucinações.
+O segundo problema está relacionado às práticas atuais de \textit{thinking} em \textit{LLMs} e às limitações de janelas de contexto extensas. Em arquiteturas populares de agentes, como \textit{ReAct} \cite{yao2022react}, já citado anteriormente, o modelo normalmente opera acumulando em uma única janela um histórico crescente de raciocínios, ações e observações. Embora isso facilite o encadeamento do processo, também aumenta o risco de degradação conforme o contexto cresce. Esse comportamento é consistente com evidências empíricas sobre contextos longos: no trabalho de Liu et al. \cite{liu2023lost}, por exemplo, observa-se perda de desempenho quando o modelo precisa recuperar informações relevantes em sequências extensas, principalmente quando essas informações ficam "perdidas" no meio do contexto. Na prática, a comunidade costuma descrever esse acúmulo progressivo usando termos como "esgotamento de contexto", "compactação" e \textit{context rot}: conforme o histórico aumenta, partes importantes do conteúdo perdem relevância relativa, competem com ruído e podem ser diluídas por resumos implícitos, levando a omissões, inconsistências e aumento de alucinações.
 
 Diante dessas propostas, adotamos como referência prática o \textit{Ralph Wiggum Loop} \cite{ghuntley2025ralph}, popularizado por Geoffrey Huntley no contexto de desenvolvimento de software. Nesse modelo, um agente executa tarefas seguindo um ciclo rígido de geração, validação e repetição, buscando produzir artefatos corretos sob critérios objetivos de aceite. O objetivo deste trabalho é adaptar essa arquitetura — originalmente voltada para engenharia de software — para investigar se os mesmos princípios podem melhorar a resolução de questões objetivas em benchmarks de múltipla escolha. Em termos gerais, o \textit{Ralph Wiggum Loop} pode ser entendido como um \textit{pipeline} baseado em dois pilares principais: (i) a decomposição do objetivo em fases menores e isoladas e (ii) a execução iterativa de cada fase até que critérios de aceite previamente definidos sejam satisfeitos. Assim, cada etapa é executada de maneira \textit{stateless}, sem carregar diretamente todo o histórico da fase anterior; em vez disso, o sistema preserva apenas artefatos controlados, como instruções, respostas intermediárias ou resultados de validação, reinicializando o contexto a cada nova iteração (\textit{Fresh Context}). Além disso, cada fase passa por um ciclo contínuo de tentativa e validação: a resposta produzida pelo modelo é avaliada contra critérios específicos e, caso não seja considerada satisfatória, a própria fase é executada novamente até atingir o resultado esperado antes de avançar para a próxima etapa. Embora o nome e o formato operacional sejam recentes, a lógica do loop se conecta diretamente a linhas acadêmicas já discutidas — decomposição (\textit{Least-to-Most} \cite{zhou2022least}; \textit{Decomposed Prompting} \cite{khot2022decomposed}), separação entre planejamento e execução (\textit{Plan-and-Solve} \cite{wang2023plan}) e ciclos de reflexão e autodepuração iterativa (\textit{Reflexion} \cite{shinn2023reflexion}; \textit{Self-Debugging} \cite{chen2023selfdebug}; \textit{Self-Refine} \cite{madaan2023selfrefine}) — oferecendo uma forma pragmática de aplicar esses conceitos em \textit{pipelines} reproduzíveis.
 
@@ -259,11 +266,11 @@ Paralelamente, pipelines interativos baseados em \textit{feedback} demonstram al
 
 \subsection{Orquestração Estruturada e o Ralph Wiggum Loop}
 
-Embora as técnicas supracitadas representem a base teórica de agentes autônomos, muitas dependem do acúmulo contínuo de estado em uma única janela de contexto, fenômeno que agrava a degradação e o esquecimento descritos no trabalho \textit{Lost in the Middle} \cite{liu2023lost}. Frente a esse problema, o \textit{Ralph Wiggum Loop} \cite{ghuntley2025ralph} emergiu na comunidade de engenharia de software como um paradigma pragmático alternativo. A técnica isola a execução em etapas rigidamente separadas e reinicializa o contexto a cada iteração (\textit{Fresh Context}), armazenando estritamente os resultados intermediários essenciais.
+Embora as técnicas supracitadas representem a base teórica de agentes autônomos, muitas dependem do acúmulo contínuo de estado em uma única janela de contexto, fenômeno que agrava a degradação e o esquecimento descritos por Liu et al. \cite{liu2023lost}. Frente a esse problema, o \textit{Ralph Wiggum Loop} \cite{ghuntley2025ralph} emergiu na comunidade de engenharia de software como um paradigma pragmático alternativo. A técnica isola a execução em etapas rigidamente separadas e reinicializa o contexto a cada iteração (\textit{Fresh Context}), armazenando estritamente os resultados intermediários essenciais.
 
-A validação acadêmica rigorosa de uma estrutura semelhante a esta foi recentemente evidenciada pelo estudo \textit{Supervising Ralph Wiggum: Exploring a Metacognitive Co-Regulation Agentic AI Loop for Engineering Design}~\cite{supervising_ralph_wiggum_2026}, que avaliou o impacto de agentes baseados no \textit{Ralph Wiggum Loop} para a resolução de problemas complexos de design de pacotes de baterias na engenharia. O estudo comprovou não apenas a eficácia da abordagem \textit{stateless}, mas propôs aprimoramentos através de ciclos metacognitivos de co-regulação (CRDAL), nos quais um agente avaliador atua criticando ativamente o design a fim de mitigar vieses e fixações de paradigma.
+A validação acadêmica rigorosa de uma estrutura semelhante a esta foi recentemente evidenciada pelo estudo de McComb et al.~\cite{supervising_ralph_wiggum_2026}, que avaliou o impacto de agentes baseados no \textit{Ralph Wiggum Loop} para a resolução de problemas complexos de design de pacotes de baterias na engenharia. O estudo comprovou não apenas a eficácia da abordagem \textit{stateless}, mas propôs aprimoramentos através de ciclos metacognitivos de co-regulação (CRDAL), nos quais um agente avaliador atua criticando ativamente o design a fim de mitigar vieses e fixações de paradigma.
 
-Este trabalho apoia-se em fundamentações similares para justificar o uso do paradigma de execução \textit{stateless} em nossa orquestração. Contudo, enquanto o estudo \textit{Supervising Ralph Wiggum: Exploring a Metacognitive Co-Regulation Agentic AI Loop for Engineering Design}~\cite{supervising_ralph_wiggum_2026} concentrou a arquitetura na otimização de métricas tangíveis de engenharia e modelagem paramétrica, nossa metodologia isola e adapta os ganhos da orquestração estrita do \textit{Ralph Loop} para elevar a capacidade de resolução de questões de propósito geral em múltiplos domínios do conhecimento (representados pelos \textit{datasets} MMLU e GPQA).
+Este trabalho apoia-se em fundamentações similares para justificar o uso do paradigma de execução \textit{stateless} em nossa orquestração. Contudo, enquanto o estudo de McComb et al.~\cite{supervising_ralph_wiggum_2026} concentrou a arquitetura na otimização de métricas tangíveis de engenharia e modelagem paramétrica, nossa metodologia isola e adapta os ganhos da orquestração estrita do \textit{Ralph Loop} para elevar a capacidade de resolução de questões de propósito geral em múltiplos domínios do conhecimento (representados pelos \textit{datasets} MMLU e GPQA).
 
 % =================================================
 \section{Metodologia}
@@ -273,7 +280,7 @@ Este trabalho apoia-se em fundamentações similares para justificar o uso do pa
 
 O diagrama a seguir apresenta o fluxo macro do pipeline de \textit{thinking} proposto neste trabalho, oferecendo uma visão consolidada de todas as fases que o compõem.
 
-\begin{figure}[H]
+\begin{figure}
   \centering
   \includesvg[width=1\columnwidth]{diagrams/fluxo_macro1.1}
   \caption{Fluxo macro do pipeline de \textit{thinking}.}
@@ -296,15 +303,15 @@ A seguir, cada fase do pipeline é detalhada individualmente. Para cada fase, s�
 
 Neste trabalho, adota-se uma definição restrita de \textit{agente}: trata-se de um componente composto exclusivamente por um \textit{prompt} pré-definido e uma chamada ao modelo de linguagem (\textit{LLM\_CALL}). Diferentemente de arquiteturas que atribuem a agentes acesso a ferramentas externas, chamadas a APIs, servidores MCP ou capacidades de navegação, os agentes aqui descritos operam de forma isolada — recebem um contexto de entrada estruturado, processam via LLM e retornam uma saída textual ou estruturada em JSON. Essa restrição é intencional: ao eliminar dependências externas, torna-se possível avaliar de forma mais direta o impacto da orquestração e do \textit{prompting} sobre a qualidade das respostas, isolando as variáveis de interesse do estudo.
 
-Todos os \textit{prompts} de agentes são redigidos em inglês. Estudos como \textit{Beyond English: Evaluating Multilingual Capabilities of Large Language Models}~\cite{huang2024beyond} e \textit{Language Models are Multilingual Chain-of-Thought Reasoners}~\cite{shi2023multilingualcot} mostram que modelos de linguagem multilíngues tendem a produzir resultados de maior qualidade quando instruídos no idioma em que foram mais amplamente treinados — predominantemente o inglês —, independentemente do idioma da questão de entrada. O trabalho \textit{Cross-lingual Prompting: Enhancing Multilingual Capabilities of Large Language Models}~\cite{qin2023crosslingual} reforça esse achado ao demonstrar que a combinação de \textit{prompting} em inglês com raciocínio \textit{zero-shot} em cadeia produz ganhos consistentes mesmo em línguas de menor representação nos dados de treinamento. A adoção do inglês como idioma padrão dos \textit{prompts} de agentes visa, portanto, maximizar a qualidade do raciocínio interno do modelo, sem prejuízo ao idioma da resposta entregue ao usuário — que é determinado separadamente, conforme descrito na seção seguinte.
+Todos os \textit{prompts} de agentes são redigidos em inglês. Estudos como os de Huang et al.~\cite{huang2024beyond} e Shi et al.~\cite{shi2023multilingualcot} mostram que modelos de linguagem multilíngues tendem a produzir resultados de maior qualidade quando instruídos no idioma em que foram mais amplamente treinados — predominantemente o inglês —, independentemente do idioma da questão de entrada. O trabalho de Qin et al.~\cite{qin2023crosslingual} reforça esse achado ao demonstrar que a combinação de \textit{prompting} em inglês com raciocínio \textit{zero-shot} em cadeia produz ganhos consistentes mesmo em línguas de menor representação nos dados de treinamento. A adoção do inglês como idioma padrão dos \textit{prompts} de agentes visa, portanto, maximizar a qualidade do raciocínio interno do modelo, sem prejuízo ao idioma da resposta entregue ao usuário — que é determinado separadamente, conforme descrito na seção seguinte.
 
-Adicionalmente, todos os \textit{prompts} são construídos utilizando a sintaxe \textit{Markdown}, com delimitadores explícitos de seção para separar instruções gerais, contexto de entrada e especificações de saída. Estudos como \textit{The Impact of Prompt Formatting on Large Language Model Performance}~\cite{he2024promptformatting} e \textit{Beyond Prompt Content: Enhancing LLM Performance via Content-Format Integrated Prompt Optimization}~\cite{liu2025contentformat} mostram que a formatação do \textit{prompt} afeta de forma mensurável o desempenho dos modelos, e que otimizações conjuntas de conteúdo e formato produzem ganhos adicionais sobre a otimização exclusiva do conteúdo textual. A adoção de \textit{Markdown} visa, portanto, tornar delimitadores, hierarquias e restrições mais salientes durante a inferência, contribuindo para respostas mais consistentes com as instruções fornecidas.
+Adicionalmente, todos os \textit{prompts} são construídos utilizando a sintaxe \textit{Markdown}, com delimitadores explícitos de seção para separar instruções gerais, contexto de entrada e especificações de saída. Estudos como os de He et al.~\cite{he2024promptformatting} e Liu et al.~\cite{liu2025contentformat} mostram que a formatação do \textit{prompt} afeta de forma mensurável o desempenho dos modelos, e que otimizações conjuntas de conteúdo e formato produzem ganhos adicionais sobre a otimização exclusiva do conteúdo textual. A adoção de \textit{Markdown} visa, portanto, tornar delimitadores, hierarquias e restrições mais salientes durante a inferência, contribuindo para respostas mais consistentes com as instruções fornecidas.
 
 % -------------------------------------------------
 \subsubsection{Definição dos critérios de aceite da resposta final}
 % -------------------------------------------------
 
-\begin{figure}[H]
+\begin{figure}
   \centering
   \includesvg[width=0.8\columnwidth, height=0.42\textheight, keepaspectratio]{diagrams/definicao_criterios_de_aceite_da_resposta_final}
   \caption{Fase de definição dos critérios de aceite da resposta final.}
@@ -336,7 +343,7 @@ O campo \texttt{tasks} é inicialmente vazio e será preenchido pela fase seguin
 \subsubsection{Quebra de Tasks Independentes}
 % -------------------------------------------------
 
-\begin{figure}[H]
+\begin{figure}
   \centering
   \includesvg[width=1\columnwidth]{diagrams/quebra_de_tasks_independentes}
   \caption{Fase de quebra de tarefas independentes.}
@@ -367,7 +374,7 @@ O campo \texttt{pass\_phase} é inicializado como \texttt{false} para todas as t
 \subsubsection{Resolução das tarefas — Ralph Loop}
 % -------------------------------------------------
 
-\begin{figure}[H]
+\begin{figure}
   \centering
   \includesvg[width=1\columnwidth]{diagrams/resolucao_das_tarefas_ralph_loop}
   \caption{Resolução iterativa das tarefas utilizando o Ralph Loop.}
@@ -386,7 +393,7 @@ Para mitigar o risco de \textit{deadlock}, implementa-se um mecanismo de control
 \subsubsection{Avaliação dos critérios de aceitação}
 % -------------------------------------------------
 
-\begin{figure}[H]
+\begin{figure}
   \centering
   \includesvg[width=1\columnwidth, height=0.32\textheight, keepaspectratio]{diagrams/avaliacao_de_criterios_de_aceitacao}
   \caption{Avaliação global dos critérios de aceitação.}
@@ -401,7 +408,7 @@ A lógica é análoga à dos revisores de tarefa individual, porém operando em 
 \subsubsection{Criação de plano complementar}
 % -------------------------------------------------
 
-\begin{figure}[H]
+\begin{figure}
   \centering
   \includesvg[width=0.85\columnwidth, height=0.35\textheight, keepaspectratio]{diagrams/criacao_de_plano_complementar}
   \caption{Criação de plano complementar para critérios não atendidos.}
@@ -418,52 +425,9 @@ Esse mecanismo constitui, na prática, um segundo nível de loop que garante a c
 \subsubsection{Criação da resposta final}
 % -------------------------------------------------
 
-\begin{figure}[H]
-  \centering
-  \includesvg[width=0.65\columnwidth, height=0.18\textheight, keepaspectratio]{diagrams/criacao_da_resposta_final}
-  \caption{Fase de composição da resposta final.}
-  \label{fig:resposta_final}
-\end{figure}
-
 A fase de criação da resposta final assume que o \texttt{tasks\_results.json} contém todos os insumos necessários para compor uma resposta que satisfaça integralmente os critérios de aceitação globais — premissa garantida pela fase de avaliação anterior. É nesta fase, e somente nesta, que o conteúdo do \texttt{tasks\_results.json} é efetivamente recuperado e utilizado.
 
 O agente \texttt{final\_response\_composer\_agent} recebe como entrada o arquivo completo de resultados, o campo \texttt{general\_infos.expected\_output\_format} do \texttt{planning.json} e o \textit{prompt} original do usuário, utilizando-os em conjunto para compor a resposta final no formato e idioma especificados. O retorno desse agente é a saída direta do pipeline ao usuário, encerrando o processo de \textit{thinking}.
-
-
-% =================================================
-\section{Plano de avaliação}
-% =================================================
-
-O plano de avaliação visa mensurar o impacto da arquitetura de orquestração na acurácia de modelos de linguagem em tarefas de raciocínio geral, comparando sistematicamente a inferência direta com a orquestrada. Para essa validação, a metodologia contempla cinco modelos selecionados para cobrir uma progressão de complexidade: Llama 3.1 (8B, 70B e 405B), Claude Sonnet 4.6 e GPT 5.4.
-
-Para cada modelo, está prevista a comparação de duas configurações: (i) uma inferência "linear", realizada por meio de uma requisição direta ao modelo sem processamento auxiliar, e (ii) a mesma inferência mediada pelo \textit{Harness} proposto, empregando ciclos de verificação e ferramentas externas. O desempenho será medido por meio de 180 questões amostradas das bases \textit{GPQA} \cite{rein2023gpqa}, \textit{MMLU} \cite{hendrycks2021measuring} e \textit{MMLU-Pro} \cite{wang2024mmlu-pro}, escolhidas por seu elevado rigor acadêmico. A métrica primária consistirá na acurácia, obtida pela correspondência estrita entre a alternativa final selecionada pelo sistema e o gabarito.
-
-A execução seguirá um protocolo no qual, inicialmente, os modelos estabelecem seu desempenho de base na inferência padrão. Na sequência, as métricas serão reavaliadas sob a arquitetura orquestrada (inicialmente focada na família Llama), sempre respeitando restrições operacionais \textit{stateless}. O objetivo esperado desta avaliação é verificar se o \textit{harness} altera o posicionamento dos modelos no ranking global, testando a hipótese de que a orquestração estruturada suplanta ganhos atrelados puramente à escala de parâmetros.
-
-A Tabela~\ref{tab:dados-esperados} apresenta as posições relativas esperadas no ranking de desempenho, ilustrando o posicionamento hipotético de cada configuração.
-
-\begin{table}[H]
-\centering
-\caption{Posição esperada no ranking de desempenho por modelo e configuração (hipotético, para fins de planejamento).}
-\label{tab:dados-esperados}
-\helvetfont{
-\small
-\begin{tabular}{lcc}
-\toprule
-\textbf{Modelo} & \textbf{Configuração} & \textbf{Posição Esperada} \\
-\midrule
-Llama 3.1 8B   & Direto     & 8\textsuperscript{o} \\
-Llama 3.1 70B  & Direto     & 7\textsuperscript{o} \\
-Llama 3.1 8B   & Ralph Loop & 6\textsuperscript{o} \\
-Llama 3.1 405B & Direto     & 5\textsuperscript{o} \\
-Llama 3.1 70B  & Ralph Loop & 4\textsuperscript{o} \\
-Claude Sonnet 4.6 & Direto  & 3\textsuperscript{o} \\
-Llama 3.1 405B & Ralph Loop & 2\textsuperscript{o} \\
-GPT 5.4        & Direto     & 1\textsuperscript{o} \\
-\bottomrule
-\end{tabular}
-}
-\end{table}
 
 % =================================================
 \section{Glossário de Termos}
@@ -475,7 +439,7 @@ GPT 5.4        & Direto     & 1\textsuperscript{o} \\
 
     \item[\textit{Ralph Wiggum Loop}:] Paradigma arquitetural de orquestração \textit{stateless} que isola a execução de tarefas em etapas rigidamente separadas. Reinicializa o contexto a cada iteração (\textit{Fresh Context}), persistindo apenas as informações intermediárias essenciais em arquivos para evitar a degradação de histórico. \\ \url{https://ghuntley.com/specs/ralph/}
 
-    \item[\textit{Harness} (Orquestração):] Estrutura lógica e regras de governança que envolvem um modelo base para guiar seu processo de inferência e interação com ferramentas. Variações nessas estruturas arquiteturais podem causar impactos substanciais no desempenho de agentes, conceito também explorado na literatura recente em publicações como \textit{Nonstandard Errors in AI Agents}. \\ \url{https://arxiv.org/abs/2603.16744}
+    \item[\textit{Harness} (Orquestração):] Estrutura lógica e regras de governança que envolvem um modelo base para guiar seu processo de inferência e interação com ferramentas. Variações nessas estruturas arquiteturais podem causar impactos substanciais no desempenho de agentes, conceito também explorado na literatura recente em estudos sobre erros não padrão em agentes de IA. \\ \url{https://arxiv.org/abs/2603.16744}
 \end{description}
 
 \subsection{Ferramentas citadas}
