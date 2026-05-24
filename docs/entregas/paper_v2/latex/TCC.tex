@@ -242,18 +242,19 @@ Para validar a adaptabilidade e eficácia dessa abordagem estruturada, o impacto
 \section{Introdução}
 % =================================================
 
-Os modelos de linguagem de grande porte (\textit{Large Language Models}) \cite{brown2020language} deixaram de ser apenas geradores de texto e passaram a funcionar como plataformas compostas por diferentes camadas de processamento, coordenação e abstração. Essa evolução permitiu capacidades como raciocínio em múltiplas etapas, planejamento intermediário e orquestração de subagentes, mas também tornou evidente que boa parte da melhoria observada nas respostas não vem apenas do modelo base, e sim das arquiteturas e \textit{pipelines} que organizam o processo de inferência.
+Os \textit{Large Language Models} (\textit{LLMs}) \cite{brown2020language} consolidaram-se como o núcleo de uma nova geração de sistemas capazes de executar tarefas complexas de processamento de linguagem natural, incluindo geração de texto, resolução de problemas, planejamento intermediário e suporte à tomada de decisão. Embora o modelo base permaneça fundamentalmente um gerador probabilístico de \textit{tokens}, a evolução recente ocorreu principalmente nas arquiteturas e nos \textit{harnesses} que organizam sua utilização prática. Esses sistemas adicionam camadas de coordenação, decomposição de tarefas, validação intermediária e orquestração de múltiplas inferências, permitindo que o modelo execute fluxos mais sofisticados do que uma única chamada linear de entrada e saída.
 
-Este trabalho parte de dois problemas centrais observados tanto na prática quanto na literatura: (1) a diferença frequente entre respostas iniciais e respostas revisadas produzidas por um mesmo modelo — algo comum em interações com modelos mais antigos, especialmente durante a popularização do \textit{GPT-3.5}, quando perguntas como "Tem certeza?", "revise sua resposta" ou até mesmo o apontamento direto de erro ("você errou") frequentemente levavam o modelo a corrigir sua própria saída —, e (2) a forma como fluxos de raciocínio (\textit{prompting} encadeado, agentes e \textit{pipelines}) são implementados atualmente, incluindo suas limitações relacionadas ao crescimento do contexto.
+Nesse contexto, diversos trabalhos passaram a investigar formas de melhorar a qualidade das respostas produzidas por \textit{LLMs} por meio da estruturação do processo de inferência. Entre os principais desafios discutidos na literatura estão: (i) a limitação de respostas produzidas em uma única etapa de geração, especialmente em tarefas que demandam raciocínio complexo, múltiplas etapas de decisão ou validação intermediária; e (ii) os efeitos negativos do crescimento excessivo do contexto em arquiteturas iterativas de agentes e \textit{pipelines}. Esses problemas motivaram o surgimento de abordagens baseadas em decomposição, planejamento e ciclos de reflexão, buscando aumentar a robustez das respostas sem modificar diretamente os pesos do modelo.
 
-O primeiro problema surge porque, em tarefas não triviais, a primeira resposta gerada pelo modelo costuma ser apenas uma tentativa inicial, sujeita a erros, omissões e inconsistências. Diversos trabalhos mostram que essa limitação pode ser reduzida quando a inferência é dividida em etapas menores, com validações e \textit{feedback} intermediário. \textit{Chain-of-Thought} \cite{wei2022chain} e \textit{Tree of Thoughts} \cite{yao2023tree}, por exemplo, mostram ganhos ao incentivar o modelo a gerar e avaliar passos intermediários de raciocínio; \textit{ReAct} \cite{yao2022react} demonstra benefícios ao alternar raciocínio com ações e observações; enquanto abordagens iterativas, como \textit{Reflexion} \cite{shinn2023reflexion} (reflexão após avaliação externa), \textit{Self-Debugging} \cite{chen2023selfdebug} (correção guiada por testes) e \textit{Self-Refine} \cite{madaan2023selfrefine} (refinamento iterativo baseado em \textit{feedback} gerado pelo próprio modelo), indicam que ciclos de tentativa, avaliação e revisão podem aumentar significativamente a taxa de acerto. Em paralelo, métodos de decomposição e planejamento — como \textit{Least-to-Most Prompting} \cite{zhou2022least}, \textit{Decomposed Prompting} \cite{khot2022decomposed} e \textit{Plan-and-Solve Prompting} \cite{wang2023plan} — reforçam empiricamente que dividir problemas complexos em subtarefas, separar planejamento de execução e limitar o escopo contextual de cada etapa reduz erros lógicos e omissões, especialmente quando existe algum mecanismo de verificação automática. Assim, a melhora observada não depende apenas de gerar mais \textit{tokens} ou realizar chamadas mais longas, mas da forma como o \textit{pipeline} controla o contexto, organiza o planejamento e valida as respostas intermediárias.
+No primeiro caso, diferentes pesquisas demonstram que dividir a inferência em etapas menores pode melhorar significativamente o desempenho em tarefas complexas. Trabalhos como \textit{Chain-of-Thought} \cite{wei2022chain}, \textit{Tree of Thoughts} \cite{yao2023tree} e \textit{Least-to-Most Prompting} \cite{zhou2022least} mostram que a decomposição explícita do raciocínio favorece a resolução de problemas que exigem múltiplas inferências intermediárias. Da mesma forma, abordagens como \textit{ReAct} \cite{yao2022react} combinam raciocínio e ações iterativas, enquanto métodos como \textit{Reflexion} \cite{shinn2023reflexion}, \textit{Self-Debugging} \cite{chen2023selfdebug} e \textit{Self-Refine} \cite{madaan2023selfrefine} exploram ciclos sucessivos de avaliação e refinamento da própria resposta gerada. Em conjunto, esses trabalhos indicam que ganhos de desempenho não dependem exclusivamente do tamanho do modelo ou da quantidade de \textit{tokens} gerados, mas também da maneira como o processo de inferência é estruturado e validado.
 
-O segundo problema está relacionado às práticas atuais de \textit{thinking} em \textit{LLMs} e às limitações de janelas de contexto extensas. Em arquiteturas populares de agentes, como \textit{ReAct} \cite{yao2022react}, já citado anteriormente, o modelo normalmente opera acumulando em uma única janela um histórico crescente de raciocínios, ações e observações. Embora isso facilite o encadeamento do processo, também aumenta o risco de degradação conforme o contexto cresce. Esse comportamento é consistente com evidências empíricas sobre contextos longos: no trabalho de Liu et al. \cite{liu2023lost}, por exemplo, observa-se perda de desempenho quando o modelo precisa recuperar informações relevantes em sequências extensas, principalmente quando essas informações ficam "perdidas" no meio do contexto. Na prática, a comunidade costuma descrever esse acúmulo progressivo usando termos como "esgotamento de contexto", "compactação" e \textit{context rot}: conforme o histórico aumenta, partes importantes do conteúdo perdem relevância relativa, competem com ruído e podem ser diluídas por resumos implícitos, levando a omissões, inconsistências e aumento de alucinações.
+O segundo problema está relacionado às limitações observadas em arquiteturas iterativas que acumulam grandes volumes de contexto ao longo da execução. Em abordagens modernas de agentes, especialmente aquelas inspiradas em ciclos contínuos de raciocínio e observação, o histórico completo de interações costuma permanecer na janela de contexto durante toda a inferência. Embora essa estratégia preserve continuidade, ela também aumenta a dificuldade de recuperação de informações relevantes conforme o contexto cresce. Liu et al. \cite{liu2023lost}, por exemplo, demonstram empiricamente perda de desempenho em tarefas que exigem localizar informações relevantes em sequências extensas. Trabalhos recentes também discutem fenômenos associados à degradação progressiva do contexto, incluindo compressão implícita de informações, perda de relevância contextual e aumento de inconsistências em execuções longas, frequentemente associados na literatura contemporânea ao conceito de \textit{context rot}.
 
-Diante dessas propostas, adotamos como referência prática o \textit{Ralph Wiggum Loop} \cite{ghuntley2025ralph}, popularizado por Geoffrey Huntley no contexto de desenvolvimento de software. Nesse modelo, um agente executa tarefas seguindo um ciclo rígido de geração, validação e repetição, buscando produzir artefatos corretos sob critérios objetivos de aceite. O objetivo deste trabalho é adaptar essa arquitetura — originalmente voltada para engenharia de software — para investigar se os mesmos princípios podem melhorar a resolução de questões objetivas em benchmarks de múltipla escolha. Em termos gerais, o \textit{Ralph Wiggum Loop} pode ser entendido como um \textit{pipeline} baseado em dois pilares principais: (i) a decomposição do objetivo em fases menores e isoladas e (ii) a execução iterativa de cada fase até que critérios de aceite previamente definidos sejam satisfeitos. Assim, cada etapa é executada de maneira \textit{stateless}, sem carregar diretamente todo o histórico da fase anterior; em vez disso, o sistema preserva apenas artefatos controlados, como instruções, respostas intermediárias ou resultados de validação, reinicializando o contexto a cada nova iteração (\textit{Fresh Context}). Além disso, cada fase passa por um ciclo contínuo de tentativa e validação: a resposta produzida pelo modelo é avaliada contra critérios específicos e, caso não seja considerada satisfatória, a própria fase é executada novamente até atingir o resultado esperado antes de avançar para a próxima etapa. Embora o nome e o formato operacional sejam recentes, a lógica do loop se conecta diretamente a linhas acadêmicas já discutidas — decomposição (\textit{Least-to-Most} \cite{zhou2022least}; \textit{Decomposed Prompting} \cite{khot2022decomposed}), separação entre planejamento e execução (\textit{Plan-and-Solve} \cite{wang2023plan}) e ciclos de reflexão e autodepuração iterativa (\textit{Reflexion} \cite{shinn2023reflexion}; \textit{Self-Debugging} \cite{chen2023selfdebug}; \textit{Self-Refine} \cite{madaan2023selfrefine}) — oferecendo uma forma pragmática de aplicar esses conceitos em \textit{pipelines} reproduzíveis.
+Paralelamente ao avanço acadêmico dessas técnicas, a área de engenharia de software passou a investir intensamente em arquiteturas de \textit{deep thinking} e em \textit{harnesses} especializados para aumentar a capacidade operacional de \textit{LLMs} em tarefas complexas de desenvolvimento. Ferramentas recentes como \textit{Claude Code}, \textit{GPT Codex}, \textit{Open CLI} e \textit{Devin} exemplificam essa tendência ao combinar planejamento, decomposição de tarefas, validação iterativa e execução coordenada de múltiplas inferências. Nesse contexto, uma das abordagens que ganhou notoriedade foi o \textit{Ralph Wiggum Loop} \cite{ghuntley2025ralph}, popularizado por Geoffrey Huntley no contexto de engenharia de software. Em sua formulação original, entretanto, o modelo não foi concebido para cenários generalistas, mas especificamente para fluxos de desenvolvimento baseados em conceitos próprios da engenharia de software, como definição de funcionalidades, requisitos, critérios de aceite e integração com sistemas de versionamento como \textit{Git}. Ainda assim, sua estrutura apresenta dois pilares centrais relevantes para problemas discutidos na literatura de \textit{LLMs}: a decomposição do processo em tarefas independentes sem reaproveitamento contínuo do contexto entre etapas e a execução repetitiva de cada tarefa até que ela seja considerada satisfatoriamente concluída.
 
-Neste trabalho, adotamos a hipótese de que a qualidade objetiva das respostas em tarefas de múltipla escolha depende não apenas do \textit{LLM} utilizado, mas também do \textit{Harness} que governa sua execução — isto é, do conjunto de estratégias de decomposição, validação e orquestração de chamadas aplicadas entre o \textit{prompt} inicial e a resposta final, sem uso de ferramentas externas. Para testar essa hipótese, buscamos medir o quanto esse \textit{Harness} melhora os resultados em comparação com chamadas simples ao modelo, utilizando três modelos distintos (\textit{Llama 3.1 8B}, \textit{Llama 3.1 70B}, \textit{Llama 3.1 405B}) escolhidos para representar diferentes níveis de complexidade, desde modelos menores até incluir ao menos um modelo moderno. Para cada modelo, comparamos duas configurações: (i) uma inferência linear, realizada por meio de uma única chamada direta ao modelo, e (ii) a mesma inferência mediada pelo nosso \textit{Harness} — um \textit{pipeline} estruturado inspirado no \textit{Ralph Wiggum Loop}, contendo fases de planejamento, execução e validação realizadas exclusivamente por chamadas iterativas ao próprio modelo. A avaliação de desempenho é realizada por meio de \textit{benchmarks} construídos sobre as bases \textit{GPQA} e \textit{MMLU}, compostas por questões de múltipla escolha com alternativas e gabaritos conhecidos; nesses conjuntos, a métrica principal utilizada é a acurácia obtida pela correspondência entre a alternativa selecionada pelo sistema e o gabarito oficial.
+Este trabalho parte da hipótese de que parte significativa da melhoria observada em sistemas modernos baseados em \textit{LLMs} não está apenas no modelo utilizado, mas também no \textit{harness} responsável por organizar o processo de inferência. Assim, propõe-se a adaptação dos princípios do \textit{Ralph Wiggum Loop}, originalmente voltados para engenharia de software, para um contexto mais geral de resolução de tarefas em linguagem natural. O objetivo central é investigar se a combinação entre decomposição de tarefas, isolamento contextual entre etapas, validação iterativa e ciclos de reexecução controlada pode melhorar a qualidade das respostas quando comparada a inferências lineares tradicionais realizadas em uma única chamada ao modelo. Para tornar essa melhoria mensurável de maneira objetiva e reproduzível, a avaliação experimental utiliza \textit{benchmarks} de múltipla escolha, estratégia amplamente adotada em trabalhos recentes sobre raciocínio e orquestração de \textit{LLMs}, como \textit{ReAct} \cite{yao2022react} e \textit{Beyond the Strongest LLM: Multi-Turn Multi-Agent Orchestration vs. Single LLMs on Benchmarks} \cite{wang2025beyond}, por permitir comparação direta entre a resposta produzida pelo sistema e um gabarito conhecido.
 
+Para avaliar essa hipótese, o trabalho compara duas estratégias de inferência: (i) uma execução linear tradicional, baseada em uma única chamada direta ao \textit{LLM}; e (ii) uma execução mediada por um \textit{harness} que adapta os princípios do \textit{Ralph Wiggum Loop}, originalmente concebido para fluxos de engenharia de software, para cenários generalistas de resolução de problemas e perguntas de múltiplas complexidades, como as propostas pelos \textit{benchmarks} utilizados neste trabalho. Os experimentos são conduzidos utilizando diferentes modelos da família \textit{Llama 3.1}, representando distintos níveis de complexidade computacional, e avaliados por meio dos \textit{benchmarks} \textit{MMLU}, amplamente utilizado na literatura para avaliação multitarefa de \textit{LLMs} \cite{hendrycks2021measuring}, e \textit{GPQA}, benchmark proposto para avaliar questões de nível avançado resistentes à simples recuperação de informação \cite{rein2023gpqa}. A principal métrica utilizada é a acurácia obtida pela correspondência entre a alternativa selecionada pelo sistema e a resposta oficial de cada questão.
 % \FloatBarrier
 % =================================================
 \section{Trabalhos Relacionados}
@@ -319,12 +320,12 @@ Adicionalmente, todos os \textit{prompts} são construídos utilizando a sintaxe
   \tikzset{
       % Estilo para bloco de processo
       process/.style={
-          rectangle, 
-          draw=black, 
+          rectangle,
+          draw=black,
           thick,
-          fill=white, 
-          text width=4.6cm, 
-          text centered, 
+          fill=white,
+          text width=4.6cm,
+          text centered,
           minimum height=1.1cm,
           font=\sffamily\small
       },
@@ -360,24 +361,24 @@ Adicionalmente, todos os \textit{prompts} são construídos utilizando a sintaxe
       % --- EIXO CENTRAL VERTICAL ---
       % Círculo 1: Prompt de Entrada
       \node (prompt) [circleNode] {Prompt\\entrada};
-      
+
       % Bloco 1: Chamada LLM 1
       \node (llm1) [process, below=of prompt] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{acceptance\_criteria\_agent}''}};
-      
+
       % Bloco 2: Chamada LLM 2
       \node (llm2) [process, below=of llm1] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{expected\_output\_format\_agent}''}};
-      
+
       % Bloco 3: Criação do planning.json
       \node (cria) [process, below=of llm2] {Cria o ``\texttt{planning.json}'', contendo \\ os critérios de aceite e formato de \\ saída esperado para a resposta final};
 
       % Círculo "Próx. fase" posicionado abaixo
       \node (prox) [circleNode, below=of cria, yshift=-0.2cm] {Próx.\\fase};
-      
+
       % Texto descritivo à direita do círculo (CORRIGIDO)
       \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Quebra de tasks independentes)};
 
       % --- CONEXÕES / SETAS ---
-      
+
       \draw [arrow] (prompt) -- (llm1);
       \draw [arrow] (llm1) -- (llm2);
       \draw [arrow] (llm2) -- (cria);
@@ -419,23 +420,23 @@ O campo \texttt{tasks} é inicialmente vazio e será preenchido pela fase seguin
   \tikzset{
       % Estilo para bloco de processo
       process/.style={
-          rectangle, 
-          draw=black, 
+          rectangle,
+          draw=black,
           thick,
-          fill=white, 
-          text width=6.5cm, 
-          text centered, 
+          fill=white,
+          text width=6.5cm,
+          text centered,
           minimum height=1.1cm,
           font=\sffamily\small
       },
       % Estilo para o losango de decisão
       decision/.style={
-          diamond, 
-          draw=black, 
+          diamond,
+          draw=black,
           thick,
-          fill=white, 
-          text width=2.4cm, 
-          text centered, 
+          fill=white,
+          text width=2.4cm,
+          text centered,
           minimum height=1.6cm,
           inner sep=0pt,
           font=\sffamily\small
@@ -472,10 +473,10 @@ O campo \texttt{tasks} é inicialmente vazio e será preenchido pela fase seguin
       % --- EIXO CENTRAL ---
       % Bloco 1: Define os critérios
       \node (definicao) [process] {Define os critérios de aceitação \\ da resposta final};
-      
+
       % Bloco 2: Planejador das tarefas atômicas
       \node (planner) [process, below=of definicao] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{atomic\_tasks\_planner\_agent}''}};
-      
+
       % Bloco 3: Revisor das tarefas atômicas
       \node (revisor) [process, below=of planner] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{atomic\_tasks\_revisor\_agent}''}};
 
@@ -487,7 +488,7 @@ O campo \texttt{tasks} é inicialmente vazio e será preenchido pela fase seguin
 
       % Círculo "Próx. fase" posicionado abaixo
       \node (prox) [circleNode, below=of json] {Próx.\\fase};
-      
+
       % Texto descritivo à direita do círculo
       \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Resolução das tarefas - Ralph Loop)};
 
@@ -496,19 +497,19 @@ O campo \texttt{tasks} é inicialmente vazio e será preenchido pela fase seguin
       \node (rewriter) [process, right=of decisao, xshift=1.2cm, text width=6.0cm] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{atomic\_tasks\_rewriter\_agent}''}};
 
       % --- CONEXÕES / SETAS ---
-      
+
       % Fluxo Linear Central
       \draw [arrow] (definicao) -- (planner);
       \draw [arrow] (planner) -- (revisor);
       \draw [arrow] (revisor) -- (decisao);
-      
+
       % Decisão -> Sim (Abaixo)
       \draw [arrow] (decisao.south) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Sim} (json.north);
       \draw [arrow] (json) -- (prox);
-      
+
       % Decisão -> Não (Direita)
       \draw [arrow] (decisao.east) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Não} (rewriter.west);
-      
+
       % Loop de Reescrita -> Revisor (Linha em L invertido)
       \draw [arrow] (rewriter.north) |- (revisor.east);
 
@@ -547,34 +548,34 @@ O campo \texttt{pass\_phase} é inicializado como \texttt{false} para todas as t
   \tikzset{
       % Estilo para bloco de processo
       process/.style={
-          rectangle, 
-          draw=black, 
+          rectangle,
+          draw=black,
           thick,
-          fill=white, 
-          text width=4.6cm, 
-          text centered, 
+          fill=white,
+          text width=4.6cm,
+          text centered,
           minimum height=1.1cm,
           font=\sffamily\small
       },
       % Estilo para o losango de decisão
       decision/.style={
-          diamond, 
-          draw=black, 
+          diamond,
+          draw=black,
           thick,
-          fill=white, 
-          text width=2.8cm, 
-          text centered, 
+          fill=white,
+          text width=2.8cm,
+          text centered,
           minimum height=1.8cm,
           inner sep=0pt,
           font=\sffamily\small
       },
       % Estilo para losango vazio pequeno
       decision_empty/.style={
-          diamond, 
-          draw=black, 
+          diamond,
+          draw=black,
           thick,
-          fill=white, 
-          minimum size=0.7cm, 
+          fill=white,
+          minimum size=0.7cm,
           inner sep=0pt
       },
       % Estilo para o círculo (Próx. fase)
@@ -609,47 +610,47 @@ O campo \texttt{pass\_phase} é inicializado como \texttt{false} para todas as t
       % --- EIXO CENTRAL VERTICAL ---
       % Bloco 1: JSON com tarefas
       \node (json) [process] {JSON com as fases criadas \\ (\texttt{planning.json})};
-      
+
       % Bloco 2: Existe alguma task...
       \node (existe) [process, below=of json] {Existe alguma task com \\ ``\texttt{pass\_phase}: \texttt{False}''?};
-      
+
       % Bloco 3: Losango vazio pequeno
       \node (empty_dec) [decision_empty, below=of existe, yshift=-0.2cm] {};
-      
+
       % Bloco 4: LLM_CALL contendo somente o conteúdo da fase
       \node (llm_fase) [process, below=of empty_dec, yshift=-0.2cm] {LLM\_CALL contendo \\ somente o conteúdo da fase};
-      
+
       % Bloco 5: task_interactions ++
       \node (interactions) [process, below=of llm_fase] {\texttt{task\_interactions} ++};
-      
+
       % Bloco 6: LLM_CALL para agente reviewer
       \node (reviewer) [process, below=of interactions] {LLM\_CALL para agente \\ {\scriptsize ``\texttt{task\_outcome\_reviewer\_agent}''}};
-      
+
       % Bloco 7: Losango de Decisão "Cumpre os critérios?"
       \node (cumpre) [decision, below=of reviewer, yshift=-0.3cm] {Cumpre os critérios?};
 
       % --- FLUXO "NÃO" DA PRIMEIRA DECISÃO (DIREITA) ---
       % Círculo "Próx. fase" posicionado à direita do losango vazio
       \node (prox) [circleNode, right=of empty_dec, xshift=1.2cm] {Próx.\\fase};
-      
+
       % Texto descritivo à direita do círculo
       \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Avaliação de critérios de aceitação)};
 
       % --- FLUXO DA SEGUNDA DECISÃO (DIREITA) ---
       % Losango de Decisão "Atingiu o max_iterations?"
       \node (max_iter) [decision, right=of cumpre, xshift=1.8cm] {Atingiu o \\ \texttt{max\_iterations}?};
-      
+
       % Bloco de Feedback (LLM_CALL contendo...) alinhado verticalmente com max_iter e horizontalmente com interactions
       \node (llm_feedback) [process, text width=4.2cm] at (max_iter |- interactions) {LLM\_CALL contendo: \\ - A última iteração (\textit{prompt} + resposta) \\ - Justificativa de não aceite};
 
       % Bloco 8: Salva a resposta (abaixo de max_iter)
       \node (salva) [process, below=of max_iter, yshift=-0.5cm] {Salva a resposta no \\ ``\texttt{tasks\_results.json}''};
-      
+
       % Bloco 9: Atualiza a task (abaixo de salva)
       \node (atualiza) [process, below=of salva] {Atualiza a task, \\ ``\texttt{pass\_phase}: \texttt{True}''};
 
       % --- CONEXÕES / SETAS ---
-      
+
       % Fluxo Linear Central
       \draw [arrow] (json) -- (existe);
       \draw [arrow] (existe) -- (empty_dec);
@@ -657,26 +658,26 @@ O campo \texttt{pass\_phase} é inicializado como \texttt{false} para todas as t
       \draw [arrow] (llm_fase) -- (interactions);
       \draw [arrow] (interactions) -- (reviewer);
       \draw [arrow] (reviewer) -- (cumpre);
-      
+
       % Cumpre -> Sim -> Salva (linha em L)
       \draw [arrow] (cumpre.south) |- node[near start, fill=white] {Sim} (salva.west);
       \draw [arrow] (salva) -- (atualiza);
-      
+
       % Retorno do Micro Loop (Atualiza -> Sobe -> Existe)
       \draw [arrow] (atualiza.east) -- ++(0.6,0) |- (existe.east);
-      
+
       % Decisão Vazia -> Não (Direita)
       \draw [arrow] (empty_dec.east) -- node[midway, fill=white] {Não} (prox.west);
-      
+
       % Cumpre -> Não (Direita) -> Max Iter
       \draw [arrow] (cumpre.east) -- node[midway, fill=white] {Não} (max_iter.west);
-      
+
       % Max Iter -> Sim (Abaixo) -> Salva
       \draw [arrow] (max_iter.south) -- node[midway, fill=white] {Sim} (salva.north);
-      
+
       % Max Iter -> Não (Acima) -> LLM Feedback
       \draw [arrow] (max_iter.north) -- node[midway, fill=white] {Não} (llm_feedback.south);
-      
+
       % LLM Feedback -> Interactions
       \draw [arrow] (llm_feedback.west) -- (interactions.east);
 
@@ -703,23 +704,23 @@ Para mitigar o risco de \textit{deadlock}, implementa-se um mecanismo de control
   \tikzset{
       % Estilo para bloco de processo (LLM Call)
       process/.style={
-          rectangle, 
-          draw=black, 
+          rectangle,
+          draw=black,
           thick,
-          fill=white, 
-          text width=6.5cm, 
-          text centered, 
+          fill=white,
+          text width=6.5cm,
+          text centered,
           minimum height=1.1cm,
           font=\sffamily\small
       },
       % Estilo para o losango de decisão
       decision/.style={
-          diamond, 
-          draw=black, 
+          diamond,
+          draw=black,
           thick,
-          fill=white, 
-          text width=3.0cm, 
-          text centered, 
+          fill=white,
+          text width=3.0cm,
+          text centered,
           minimum height=1.8cm,
           inner sep=0pt,
           font=\sffamily\small
@@ -756,32 +757,32 @@ Para mitigar o risco de \textit{deadlock}, implementa-se um mecanismo de control
       % --- EIXO CENTRAL ---
       % Bloco 1: LLM Call
       \node (llm) [process] {LLM\_CALL para agente \\ {\fontsize{6pt}{7pt}\selectfont ``\texttt{final\_response\_acceptance\_criteria\_reviewer\_agent}''}};
-      
+
       % Bloco 2: Losango de Decisão
       \node (decisao) [decision, below=of llm, yshift=-0.2cm] {Cumpre os critérios de aceite da resposta final?};
 
       % --- FLUXO "NÃO" (DIREITA) ---
       % Círculo "Próx. fase" posicionado à direita do losango
       \node (prox_nao) [circleNode, right=of decisao, xshift=0.45cm] {Próx.\\fase};
-      
+
       % Texto descritivo à direita do círculo
       \node (acao_nao) [labelNode, right=of prox_nao, xshift=-0.35cm] {(Criação de plano adicional complementar)};
 
       % --- FLUXO "SIM" (ABAIXO) ---
       % Círculo "Próx. fase" posicionado abaixo do losango
       \node (prox_sim) [circleNode, below=of decisao, yshift=-0.5cm] {Próx.\\fase};
-      
+
       % Texto descritivo à direita do círculo
       \node (acao_sim) [labelNode, right=of prox_sim, xshift=-0.35cm] {(Criação da resposta final)};
 
       % --- CONEXÕES / SETAS ---
-      
+
       % LLM -> Decisão
       \draw [arrow] (llm) -- (decisao);
-      
+
       % Decisão -> Não (Direita)
       \draw [arrow] (decisao.east) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Não} (prox_nao.west);
-      
+
       % Decisão -> Sim (Abaixo)
       \draw [arrow] (decisao.south) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Sim} (prox_sim.north);
 
@@ -803,12 +804,12 @@ A lógica é análoga à dos revisores de tarefa individual, porém operando em 
   \tikzset{
       % Estilo para bloco de processo
       process/.style={
-          rectangle, 
-          draw=black, 
+          rectangle,
+          draw=black,
           thick,
-          fill=white, 
-          text width=4.6cm, 
-          text centered, 
+          fill=white,
+          text width=4.6cm,
+          text centered,
           minimum height=1.1cm,
           font=\sffamily\small
       },
@@ -844,21 +845,21 @@ A lógica é análoga à dos revisores de tarefa individual, porém operando em 
       % --- EIXO CENTRAL VERTICAL ---
       % Bloco 1: Criador do Gap Prompt
       \node (llm1) [process] {LLM\_CALL para agente \\ {\scriptsize ``\texttt{acceptance\_gap\_prompt\_creator}''}};
-      
+
       % Bloco 2: Planejador das tarefas atômicas
       \node (llm2) [process, below=of llm1] {LLM\_CALL para agente \\ {\scriptsize ``\texttt{atomic\_tasks\_planner\_agent}''}};
-      
+
       % Bloco 3: Concatenação das fases
       \node (concatena) [process, below=of llm2] {Concatena as novas fases criadas \\ ao ``\texttt{planning.json}'' original};
 
       % Círculo "Próx. fase" posicionado abaixo
       \node (prox) [circleNode, below=of concatena, yshift=-0.2cm] {Próx.\\fase};
-      
+
       % Texto descritivo à direita do círculo
       \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Resolução das tarefas (Ralph Loop))};
 
       % --- CONEXÕES / SETAS ---
-      
+
       \draw [arrow] (llm1) -- (llm2);
       \draw [arrow] (llm2) -- (concatena);
       \draw [arrow] (concatena) -- (prox);
