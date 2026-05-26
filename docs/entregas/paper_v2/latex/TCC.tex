@@ -12,7 +12,7 @@
 \usepackage{float}
 \usepackage{placeins}
 \usepackage{caption}
-\usepackage{xcolor}
+\usepackage[table]{xcolor}
 \usepackage{fancyhdr}
 \usepackage{helvet}
 \usepackage{titlesec}
@@ -902,6 +902,42 @@ Esse mecanismo constitui, na prática, um segundo nível de loop que garante a c
 A fase de criação da resposta final assume que o \texttt{tasks\_results.json} contém todos os insumos necessários para compor uma resposta que satisfaça integralmente os critérios de aceitação globais, premissa garantida pela fase de avaliação anterior. É nesta fase, e somente nesta, que o conteúdo do \texttt{tasks\_results.json} é efetivamente recuperado e utilizado.
 
 O agente \texttt{final\_response\_composer\_agent} recebe como entrada o arquivo completo de resultados, o campo \texttt{general\_infos.expected\_output\_format} do \texttt{planning.json} e o \textit{prompt} original do usuário, utilizando-os em conjunto para compor a resposta final no formato e idioma especificados. O retorno desse agente é a saída direta do pipeline ao usuário, encerrando o processo de \textit{thinking}.
+
+% -------------------------------------------------
+\section{Cronograma do projeto}
+% -------------------------------------------------
+
+\begin{table*}[tb]
+  \centering
+  \caption{Cronograma das atividades do projeto.}
+  \label{tab:cronograma}
+  \renewcommand{\arraystretch}{1.2}
+  \setlength{\tabcolsep}{4pt}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{|>{\columncolor{gray!15}}p{6.7cm}|*{9}{>{\centering\arraybackslash}p{0.72cm}|}}
+    \hline
+    \rowcolor{azulFEI!20}
+    \textbf{Atividade} & \textbf{jan} & \textbf{fev} & \textbf{mar} & \textbf{abr} & \textbf{mai} & \textbf{jun} & \textbf{jul} & \textbf{ago} & \textbf{set} \\
+    \hline
+    Revisão bibliográfica e delimitação do problema & X & X &  &  &  &  &  &  &  \\
+    \hline
+    Definição da arquitetura do harness e dos artefatos de estado &  & X & X &  &  &  &  &  &  \\
+    \hline
+    Planejamento e decomposição em tarefas atômicas &  &  & X & X &  &  &  &  &  \\
+    \hline
+    Implementação do Micro Loop de resolução iterativa &  &  &  & X & X &  &  &  &  \\
+    \hline
+    Avaliação global e criação de plano complementar &  &  &  &  & X & X &  &  &  \\
+    \hline
+    Integração da composição da resposta final &  &  &  &  &  & X & X &  &  \\
+    \hline
+    Execução dos experimentos com MMLU e GPQA &  &  &  &  &  &  & X & X &  \\
+    \hline
+    Análise dos resultados e redação final &  &  &  &  &  &  &  & X & X \\
+    \hline
+  \end{tabular}%
+  }
+\end{table*}
 
 
 % =================================================
