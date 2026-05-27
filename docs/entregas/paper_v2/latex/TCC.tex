@@ -6,7 +6,15 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[brazilian]{babel}
-\usepackage[a4paper,top=2cm,bottom=3cm,left=2cm,right=2cm,footskip=0.8cm]{geometry}
+
+\usepackage[
+    a4paper,
+    top=2cm,
+    bottom=3cm,
+    left=2cm,
+    right=2cm,
+    footskip=0.8cm
+]{geometry}
 
 \usepackage{graphicx}
 \usepackage{float}
@@ -25,26 +33,43 @@
 \usepackage{booktabs}
 \usepackage{microtype}
 
+% SVG
 \usepackage{svg}
+
+% Código
 \usepackage{listings}
 \usepackage{courier}
 
-% Evita o esticamento vertical exagerado (Resolve o Underfull \vbox)
+% -------------------------------------------------
+% AJUSTES DE LAYOUT
+% -------------------------------------------------
+
+% Evita esticamento vertical exagerado
 \raggedbottom
 
-% Parâmetros de flutuação de figuras extremamente permissivos (Evita colunas vazias)
-\renewcommand{\topfraction}{0.9}       % Fração máxima da página ocupada por figuras no topo
-\renewcommand{\bottomfraction}{0.8}    % Fração máxima ocupada por figuras no rodapé
-\renewcommand{\textfraction}{0.05}      % Fração mínima obrigatória de texto na página (apenas 5%)
-\renewcommand{\floatpagefraction}{0.75} % Fração mínima ocupada por floats em página isolada
+% Parâmetros permissivos para figuras
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.75}
 
-
-% Diagramas
+% -------------------------------------------------
+% DIAGRAMAS
+% -------------------------------------------------
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning}
 
-% Bibliografia no padrão numérico
-\usepackage[backend=biber,style=ieee,sorting=none,language=portuguese]{biblatex}
+% -------------------------------------------------
+% BIBLIOGRAFIA
+% -------------------------------------------------
+
+\usepackage[
+    backend=biber,
+    style=ieee,
+    sorting=none,
+    language=portuguese
+]{biblatex}
+
 \addbibresource{referencias.bib}
 
 % -------------------------------------------------
@@ -241,19 +266,17 @@ O impacto empírico da abordagem será avaliado com os \textit{benchmarks} MMLU 
 \section{Introdução}
 % =================================================
 
-Os \textit{Large Language Models} (LLMs)~\cite{brown2020language} consolidaram-se como o núcleo de uma nova geração de sistemas capazes de executar tarefas complexas de processamento de linguagem natural, incluindo geração de texto, resolução de problemas, planejamento intermediário e suporte à tomada de decisão. Embora o modelo base permaneça fundamentalmente um gerador probabilístico de \textit{tokens}, a evolução recente ocorreu principalmente nas arquiteturas e nos \textit{harnesses} que organizam sua utilização prática. Esses sistemas adicionam camadas de coordenação, decomposição de tarefas, validação intermediária e orquestração de múltiplas inferências, permitindo que o modelo execute fluxos mais sofisticados do que uma única chamada linear de entrada e saída.
+Os \textit{Large Language Models} (LLMs) consolidaram-se como o núcleo de uma nova geração de sistemas capazes de executar tarefas complexas de processamento de linguagem natural, incluindo geração de texto, resolução de problemas, planejamento intermediário e suporte à tomada de decisão. Apesar dessas capacidades, os modelos que servem como base para esses sistemas continuam sendo, em essência, geradores probabilísticos de \textit{tokens}, operando a partir de uma entrada de texto e retornando como saída outro texto. Nesse contexto, parte significativa da evolução recente dos sistemas baseados em LLMs passou a ocorrer não apenas nos próprios modelos, mas também nas estruturas responsáveis por organizar sua utilização prática. Trabalhos recentes, como ~\cite{lee2026metaharness}, afirmam que ``The performance of large language model (LLM) systems depends not only on model weights, but also on their harness: the code that determines what information to store, retrieve, and present to the model'', evidenciando o papel dos chamados \textit{harnesses} na ampliação das capacidades desses sistemas. Ferramentas modernas, como o \textit{ChatGPT}, incorporam tais mecanismos para adicionar camadas de coordenação, decomposição de tarefas, validação intermediária e orquestração de múltiplas inferências, permitindo que o modelo execute fluxos significativamente mais sofisticados do que uma única chamada linear de entrada e saída.
 
-Nesse contexto, diversos trabalhos passaram a investigar formas de melhorar a qualidade das respostas produzidas por LLMs por meio da estruturação do processo de inferência. Entre os principais desafios discutidos na literatura estão: (i) a limitação de respostas produzidas em uma única etapa de geração, especialmente em tarefas que demandam raciocínio complexo, múltiplas etapas de decisão ou validação intermediária; e (ii) os efeitos negativos do crescimento excessivo do contexto em arquiteturas iterativas de agentes e \textit{pipelines}. Esses problemas motivaram o surgimento de abordagens baseadas em decomposição, planejamento e ciclos de reflexão, buscando aumentar a robustez das respostas sem modificar diretamente os pesos do modelo.
+Abordagens baseadas em uma única chamada ao modelo, nas quais toda a resposta é produzida em uma única etapa de inferência, apresentam limitações importantes em tarefas que exigem raciocínio complexo, múltiplas etapas de decisão ou validações intermediárias. Como resposta a esse problema, diferentes linhas de pesquisa passaram a explorar fluxos estruturados de \textit{thinking}, nos quais o processo de inferência é explicitamente decomposto em etapas sucessivas de raciocínio, planejamento, execução e refinamento. Trabalhos baseados em \textit{Chain-of-Thought}~\cite{wei2022chain}, \textit{Tree of Thoughts}~\cite{yao2023tree} e na técnica de \textit{Least-to-Most}~\cite{zhou2022least} demonstram que a decomposição explícita do raciocínio favorece significativamente a resolução de tarefas complexas. De maneira semelhante, abordagens como \textit{ReAct}~\cite{yao2022react} combinam raciocínio e ações iterativas, enquanto métodos como \textit{Reflexion}~\cite{shinn2023reflexion}, \textit{Self-Debugging}~\cite{chen2023selfdebug} e \textit{Self-Refine}~\cite{madaan2023selfrefine} exploram ciclos sucessivos de avaliação, crítica e refinamento da própria resposta gerada. Em conjunto, esses trabalhos indicam que ganhos de desempenho não dependem exclusivamente do tamanho do modelo ou da quantidade de \textit{tokens} gerados, mas também da maneira como o processo de inferência é estruturado, coordenado e validado ao longo da execução.
 
-No primeiro caso, diferentes pesquisas demonstram que dividir a inferência em etapas menores pode melhorar significativamente o desempenho em tarefas complexas. Trabalhos baseados em \textit{Chain-of-Thought}~\cite{wei2022chain}, \textit{Tree of Thoughts}~\cite{yao2023tree} e na técnica de \textit{Least-to-Most}~\cite{zhou2022least} mostram que a decomposição explícita do raciocínio favorece a resolução de problemas que exigem múltiplas inferências intermediárias. Da mesma forma, abordagens como \textit{ReAct}~\cite{yao2022react} combinam raciocínio e ações iterativas, enquanto métodos como \textit{Reflexion}~\cite{shinn2023reflexion}, \textit{Self-Debugging}~\cite{chen2023selfdebug} e \textit{Self-Refine}~\cite{madaan2023selfrefine} exploram ciclos sucessivos de avaliação e refinamento da própria resposta gerada. Em conjunto, esses trabalhos indicam que ganhos de desempenho não dependem exclusivamente do tamanho do modelo ou da quantidade de \textit{tokens} gerados, mas também da maneira como o processo de inferência é estruturado e validado.
+Apesar dos ganhos observados nessas arquiteturas iterativas compostas por agentes, ciclos de reflexão ou \textit{pipelines} sucessivos, tais abordagens também introduzem novos desafios relacionados ao gerenciamento do contexto acumulado durante a inferência. Em muitos desses sistemas, o histórico completo de interações permanece armazenado na janela de contexto ao longo de toda a execução como mecanismo de preservação da continuidade do raciocínio. Embora essa estratégia favoreça rastreabilidade e coerência entre etapas intermediárias, ela também aumenta progressivamente a dificuldade de recuperação de informações relevantes conforme o contexto cresce. Liu et al.~\cite{liu2023lost}, por exemplo, demonstram que ocorre perda de desempenho em tarefas que exigem localizar informações relevantes em sequências extensas. Trabalhos recentes também passaram a discutir fenômenos associados à degradação progressiva do contexto em execuções longas, incluindo compressão implícita de informações, perda de relevância contextual e aumento de inconsistências ao longo da inferência. Esses efeitos vêm sendo frequentemente associados, ao conceito de \textit{context rot}, termo utilizado por Hong et al.~\cite{hong2025context} para descrever a degradação gradual da qualidade das respostas conforme o volume de contexto acumulado aumenta.
 
-O segundo problema está relacionado às limitações observadas em arquiteturas iterativas que acumulam grandes volumes de contexto ao longo da execução. Em abordagens modernas de agentes, especialmente aquelas inspiradas em ciclos contínuos de raciocínio e observação, o histórico completo de interações costuma permanecer na janela de contexto durante toda a inferência. Embora essa estratégia preserve continuidade, ela também aumenta a dificuldade de recuperação de informações relevantes conforme o contexto cresce. Liu et al.~\cite{liu2023lost}, por exemplo, demonstram empiricamente perda de desempenho em tarefas que exigem localizar informações relevantes em sequências extensas. Trabalhos recentes também discutem fenômenos associados à degradação progressiva do contexto, incluindo compressão implícita de informações, perda de relevância contextual e aumento de inconsistências em execuções longas, frequentemente associados na literatura contemporânea ao conceito de \textit{context rot}.
+Além do avanço acadêmico dessas abordagens, a indústria de engenharia de software também passou a investir intensamente em arquiteturas de \textit{deep thinking} e em \textit{harnesses} especializados para ampliar a capacidade operacional de LLMs em tarefas complexas de desenvolvimento. Ferramentas recentes, como \textit{Claude Code}, \textit{GPT Codex}, \textit{OpenCLI} e \textit{Devin}, exemplificam essa tendência ao combinar planejamento, decomposição de tarefas, validação iterativa e execução coordenada de múltiplas inferências. Nesse contexto, uma das abordagens que ganhou notoriedade foi o \textit{Ralph Wiggum Loop}~\cite{ghuntley2025ralph}, popularizado por Geoffrey Huntley no contexto de engenharia de software. Em sua formulação original, entretanto, o modelo não foi concebido para cenários generalistas, mas especificamente para fluxos de desenvolvimento baseados em conceitos próprios da engenharia de software, como definição de funcionalidades, requisitos, critérios de aceite e integração com sistemas de versionamento, como o \textit{Git}. Ainda assim, sua estrutura apresenta dois princípios centrais relevantes para os problemas discutidos na literatura de LLMs: a decomposição do processo em tarefas independentes, reduzindo a necessidade de reaproveitamento contínuo do contexto entre etapas, e a execução iterativa de cada tarefa até que critérios mínimos de qualidade sejam satisfatoriamente atingidos.
 
-Paralelamente ao avanço acadêmico dessas técnicas, a área de engenharia de software passou a investir intensamente em arquiteturas de \textit{deep thinking} e em \textit{harnesses} especializados para aumentar a capacidade operacional de LLMs em tarefas complexas de desenvolvimento. Ferramentas recentes como Claude Code, GPT Codex, OpenCLI e Devin exemplificam essa tendência ao combinar planejamento, decomposição de tarefas, validação iterativa e execução coordenada de múltiplas inferências. Nesse contexto, uma das abordagens que ganhou notoriedade foi o Ralph Wiggum Loop~\cite{ghuntley2025ralph}, popularizado por Geoffrey Huntley no contexto de engenharia de software. Em sua formulação original, entretanto, o modelo não foi concebido para cenários generalistas, mas especificamente para fluxos de desenvolvimento baseados em conceitos próprios da engenharia de software, como definição de funcionalidades, requisitos, critérios de aceite e integração com sistemas de versionamento como Git. Ainda assim, sua estrutura apresenta dois pilares centrais relevantes para problemas discutidos na literatura de LLMs: a decomposição do processo em tarefas independentes sem reaproveitamento contínuo do contexto entre etapas e a execução repetitiva de cada tarefa até que ela seja considerada satisfatoriamente concluída.
+Este trabalho parte de três premissas consolidadas na literatura: que abordagens de \textit{thinking} podem melhorar a qualidade das respostas de LLMs em cenários específicos, como os de tarefas complexas; que tais abordagens introduzem problemas associados ao crescimento excessivo do contexto acumulado, fenômeno descrito como \textit{context rot}; e que o \textit{Ralph Wiggum Loop}~\cite{ghuntley2025ralph}, concebido por Huntley para fluxos de engenharia de software, oferece princípios estruturais capazes de mitigar esse problema por meio de decomposição de tarefas e isolamento contextual entre etapas. A partir dessas premissas, propõe-se a adaptação do \textit{Ralph Wiggum Loop} para um contexto generalista de resolução de tarefas em linguagem natural a partir de um \textit{prompt} de entrada fornecido pelo usuário. Diferentemente da proposta original, centrada em desenvolvimento de software, definições de funcionalidades, critérios de aceite baseados em requisitos funcionais e integração com ferramentas de versionamento (como Git), a adaptação proposta investiga se, ao adaptar a estrutura do \textit{Ralph Wiggum Loop} a um fluxo completo de \textit{thinking} aplicável à resolução de perguntas gerais e à exploração de problemas diversos e de diferentes complexidades, também haverá melhora na qualidade dessas respostas quando comparadas a uma única etapa de inferência.
 
-Este trabalho parte da hipótese de que parte significativa da melhoria observada em sistemas modernos baseados em LLMs não está apenas no modelo utilizado, mas também no \textit{harness} responsável por organizar o processo de inferência. Assim, propõe-se a adaptação dos princípios do Ralph Wiggum Loop, originalmente voltados para engenharia de software, para um contexto mais geral de resolução de tarefas em linguagem natural. O objetivo central é investigar se a combinação entre decomposição de tarefas, isolamento contextual entre etapas, validação iterativa e ciclos de reexecução controlada pode melhorar a qualidade das respostas quando comparada a inferências lineares tradicionais realizadas em uma única chamada ao modelo. Para tornar essa melhoria mensurável de maneira objetiva e reproduzível, a avaliação experimental utiliza \textit{benchmarks} de múltipla escolha, estratégia amplamente adotada em trabalhos recentes sobre raciocínio e orquestração de LLMs, como \textit{ReAct}~\cite{yao2022react} e \textit{Beyond the Strongest LLM: Multi-Turn Multi-Agent Orchestration vs. Single LLMs on Benchmarks}~\cite{wang2025beyond}, por permitir comparação direta entre a resposta produzida pelo sistema e um gabarito conhecido.
-
-Para avaliar essa hipótese, o trabalho compara duas estratégias de inferência: (i) uma execução linear tradicional, baseada em uma única chamada direta ao LLM; e (ii) uma execução mediada por um \textit{harness} que adapta os princípios do Ralph Wiggum Loop, originalmente concebido para fluxos de engenharia de software, para cenários generalistas de resolução de problemas e perguntas de múltiplas complexidades, como as propostas pelos \textit{benchmarks} utilizados neste trabalho. Os experimentos são conduzidos utilizando diferentes modelos da família Llama 3.1, representando distintos níveis de complexidade computacional, e avaliados por meio dos \textit{benchmarks} MMLU, amplamente utilizado na literatura para avaliação multitarefa de LLMs~\cite{hendrycks2021measuring}, e GPQA, benchmark proposto para avaliar questões de nível avançado resistentes à simples recuperação de informação~\cite{rein2023gpqa}. A principal métrica utilizada é a acurácia obtida pela correspondência entre a alternativa selecionada pelo sistema e a resposta oficial de cada questão.
+Para avaliar essa hipótese de maneira objetiva, reproduzível e quantitativa, o trabalho compara diretamente duas estratégias de inferência: (i) uma chamada tradicional a um modelo de LLM, na qual toda a resposta é produzida em uma única etapa de inferência; e (ii) uma execução mediada pelo \textit{harness} proposto, que adapta o \textit{Ralph Wiggum Loop} para cenários generalistas. O objetivo experimental é medir em que magnitude a aplicação desse fluxo estruturado de \textit{thinking} melhora a qualidade das respostas em relação à inferência singular tradicional. Para permitir essa quantificação, os experimentos utilizam \textit{benchmarks} compostos por questões e respostas previamente definidas, estratégia amplamente adotada para mensuração de ganhos em arquiteturas de raciocínio e orquestração de LLMs, e usada em trabalhos como \textit{ReAct}~\cite{yao2022react} e \textit{Beyond the Strongest LLM}~\cite{wang2025beyond}. Os experimentos são conduzidos com diferentes modelos da família Llama 3.1, com diferentes quantidades de parâmetros utilizados na execução do modelo, representando distintos níveis de complexidade computacional, e avaliados por meio dos \textit{benchmarks} MMLU~\cite{hendrycks2021measuring} e GPQA~\cite{rein2023gpqa}, sendo a acurácia, medida pela quantidade de acertos entre a alternativa selecionada pelo sistema de LLM e o gabarito oficial.
 % \FloatBarrier
 % =================================================
 \section{Conceitos}
@@ -938,6 +961,6 @@ O agente \texttt{final\_response\_composer\_agent} recebe como entrada o arquivo
 \section{Referências}
 % =================================================
 
-\printbibliography[heading=none]
+\printbibliography
 
 \end{document}
