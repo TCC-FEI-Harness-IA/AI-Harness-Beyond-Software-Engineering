@@ -33,6 +33,7 @@
 \usepackage{booktabs}
 \usepackage{microtype}
 \usepackage{enumitem}
+\usepackage{amsmath}
 
 % SVG
 \usepackage{svg}
@@ -105,6 +106,11 @@
 }
 
 \setlist[itemize]{leftmargin=1.2em,labelsep=0.4em}
+
+% Label para saída do LLM dentro de exemplos
+\newcommand{\saidaLLM}{%
+  \smallskip\noindent\textit{Saída esperada do modelo:}\smallskip\par
+}
 
 % -------------------------------------------------
 % CONFIGURAÇÃO DO PACOTE LISTINGS PARA JSON
@@ -373,7 +379,7 @@ A adaptação do \textit{Ralph Wiggum Loop} para um contexto generalista de reso
 
 Em linhas gerais, propomos uma conversão do conceito de histórias de usuário para tarefas, o que nos permite manter um fluxo muito próximo do original, contendo as etapas de ``Planejamento'' e ``Execução em Loop''. Entretanto, passa a ser necessário considerar a criação de um retorno ao usuário, algo que não constitui uma preocupação no \textit{Ralph Wiggum Loop} original. Dessa forma, incorporamos uma nova fase após o fluxo de execução, denominada ``Criação da Resposta Final'', que contém toda a lógica necessária para agrupar os resultados produzidos pelas tarefas anteriores em uma resposta que apresente o conteúdo e o formato esperados pelo usuário.
 
-Para ilustrar concretamente cada etapa do fluxo, adota-se ao longo desta seção o seguinte \textit{input} de usuário como referência:
+Para ilustrar concretamente cada etapa do fluxo, adota-se ao longo desta seção o seguinte \textit{input} de referência:
 
 \begin{exemplo}
 Qual dos seguintes números é simultaneamente primo, par e maior que 2?
@@ -385,6 +391,8 @@ Qual dos seguintes números é simultaneamente primo, par e maior que 2?
     \item Nenhuma das anteriores
 \end{enumerate}
 \end{exemplo}
+
+Ao longo da descrição de cada fase, são apresentadas expressões que indicam quais informações compõem a entrada submetida ao modelo e qual saída é esperada. As nomenclaturas adotadas nessas expressões, como ``Pergunta do usuário'' ou ``Template~A.1'', representam os componentes lógicos necessários para montar o \textit{prompt} de cada fase. O termo ``Pergunta do usuário'' refere-se ao \textit{input} original fornecido ao sistema. Os termos na forma ``Template~X'' referem-se a \textit{prompts} fixos de instrução, cuja função é orientar o modelo sobre o que deve fazer naquela etapa específica. Já os termos na forma ``Resultado Fase~X'' referem-se à saída produzida pelo modelo em uma etapa anterior, que pode ser reutilizada como entrada em etapas seguintes. Essas expressões não descrevem uma implementação concreta, mas sim a organização conceitual das informações que devem ser reunidas para que cada etapa do fluxo cumpra sua função.
 
 
 % ──────────────────────────────────────────────────────────────
@@ -400,20 +408,27 @@ O planejamento é o início de todo o fluxo, compreendendo duas etapas que prepa
 
 Essa etapa representa uma adição em relação ao paradigma original. No contexto de engenharia de software, cada tarefa concluída resultava em um \textit{commit} que preservava o progresso diretamente no repositório, de modo que, ao término de todas as histórias de usuário, o produto final já estava pronto. No fluxo adaptado, entretanto, a conclusão de todas as tarefas não produz automaticamente uma saída utilizável: após todas as tarefas serem concluídas, é necessário construir uma resposta final que consolide os resultados gerados. Os critérios de aceite gerais definem as regras que essa resposta deverá respeitar, abrangendo aspectos como o idioma a ser utilizado, o formato de apresentação esperado e os tópicos-chave que devem constar no conteúdo final.
 
-A implementação dessa etapa utiliza um \textit{template} fixo (Template~A.1), no qual o \textit{input} fornecido pelo usuário é injetado. Esse \textit{template} contém um \textit{prompt} que solicita ao modelo a definição de uma lista de critérios de aceite, os quais serão resgatados posteriormente na fase de Criação da Resposta Final. Especificamente, o \textit{template} solicita a definição do idioma a ser usado na resposta final, do formato em que a resposta deve ser construída e dos tópicos-chave do conteúdo que devem estar presentes. A relação de entrada e saída dessa etapa pode ser expressa como:
+Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~A.1) que será combinado com a pergunta do usuário. Esse \textit{template} deve instruir o modelo a analisar a pergunta recebida e, a partir dela, produzir uma lista de critérios de aceite que a resposta final deverá satisfazer. As instruções contidas no \textit{template} devem solicitar ao modelo que identifique o idioma em que a pergunta foi formulada e determine em qual idioma a resposta deve ser redigida; que analise a estrutura da pergunta para definir o formato mais adequado de apresentação da resposta, como a seleção de uma alternativa, a produção de um texto dissertativo ou a apresentação de um valor numérico; e que extraia os tópicos-chave e restrições do enunciado que deverão obrigatoriamente constar na resposta. A saída esperada desse \textit{template} é uma lista estruturada de critérios, onde cada critério define uma condição objetiva e verificável que a resposta final precisará atender. A relação de entrada e saída dessa etapa pode ser expressa como:
 
-\begin{equation}
-  \begin{aligned}
-    	ext{Pergunta do usuário} + \text{Template A.1} \\
-    \longrightarrow \text{Resultado Fase A.1}
-  \end{aligned}
-\end{equation}
+\begin{multline*}
+  \text{Pergunta do usuário} + \text{Template A.1} \\
+  \longrightarrow \text{Resultado Fase A.1}
+\end{multline*}
 
-
-O resultado produzido é armazenado localmente em arquivo ou na memória do programa.
+Nessa expressão, ``Pergunta do usuário'' é o \textit{input} original recebido pelo sistema e ``Template~A.1'' é o \textit{prompt} fixo de instrução descrito acima. O ``Resultado Fase~A.1'' é a lista de critérios de aceite gerais produzida pelo modelo, que deve ser armazenada localmente em arquivo ou na memória do programa para uso posterior na fase de Criação da Resposta Final.
 
 \begin{exemplo}
-Considerando o \textit{input} de referência, o modelo deveria retornar critérios como: ``A pergunta deve ser respondida em Português do Brasil''; ``Responda somente a alternativa, sem conter explicações adicionais''; e ``Garanta que o valor encontrado ao final corresponde a uma das alternativas fornecidas''.
+Considerando o \textit{input} de referência, o modelo deveria retornar uma lista de critérios como os seguintes.
+
+\saidaLLM
+
+\begin{quote}
+``A pergunta deve ser respondida em Português do Brasil.''
+
+``Responda somente a alternativa, sem conter explicações adicionais.''
+
+``Garanta que o valor encontrado ao final corresponde a uma das alternativas fornecidas.''
+\end{quote}
 \end{exemplo}
 
 
@@ -422,19 +437,19 @@ Considerando o \textit{input} de referência, o modelo deveria retornar critéri
 
 A segunda etapa do planejamento é responsável por quebrar a pergunta do usuário em pequenas tarefas autônomas. Cada tarefa precisa ter pelo menos um critério de aceite, isto é, uma condição que define o conteúdo esperado para que a tarefa possa ser considerada concluída. A ideia central é criar tarefas que gerem insumos capazes de, em conjunto, sustentar a construção da resposta final.
 
-A implementação utiliza um \textit{template} fixo (Template~A.2), no qual o \textit{input} do usuário é injetado e a quebra em tarefas é solicitada. Esse \textit{template} especifica que tarefas de objetivo único possuem uma única responsabilidade pontual, como ``identificar os números primos'' ou ``identificar os números pares'', e nunca múltiplas responsabilidades simultâneas. Além de ter um único objetivo, cada tarefa deve ser descrita da forma mais detalhada possível, de modo a evitar desvios durante a resolução. O \textit{template} também torna explícito que o contexto de execução de uma tarefa não é transferido para a próxima, já que somente pontos específicos sintetizados como aprendizados pontuais serão preservados. Por fim, toda tarefa deve conter pelo menos um critério de aceite que valide se a resposta gerada contém o conteúdo necessário para encerrá-la. A relação de entrada e saída pode ser expressa como:
+Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~A.2) que será combinado com a pergunta do usuário. Esse \textit{template} deve instruir o modelo a decompor a pergunta em tarefas de objetivo único, onde cada tarefa possui uma única responsabilidade pontual, como ``identificar os números primos'' ou ``identificar os números pares'', e nunca múltiplas responsabilidades simultâneas. As instruções devem orientar o modelo a descrever cada tarefa da forma mais detalhada possível, incluindo os dados de entrada sobre os quais ela opera e o resultado esperado, de modo a evitar desvios durante a resolução. O \textit{template} deve também explicitar que o contexto de execução de uma tarefa não será transferido para a próxima, pois somente aprendizados pontuais sintetizados ao final de cada tarefa serão preservados; essa restrição precisa ser clara para que o modelo crie tarefas verdadeiramente autossuficientes. Por fim, o \textit{template} deve exigir que cada tarefa contenha pelo menos um critério de aceite individual, formulado como condição objetiva e verificável que valide se a resposta gerada atende ao esperado, e que inclua critérios restritivos que impeçam a tarefa de extrapolar seu escopo, como ``a resposta não deve tentar resolver a questão final'' e ``a resposta não deve avaliar condições pertencentes a outras tarefas''. A saída esperada é uma lista ordenada de tarefas, cada uma acompanhada de sua descrição e de seus critérios de aceite individuais. A relação de entrada e saída pode ser expressa como:
 
-\begin{equation*}
-  \begin{aligned}
-    	ext{Pergunta do usuário} + \text{Template A.2} \\
-    \longrightarrow \text{Resultado Fase A.2}
-  \end{aligned}
-\end{equation*}
+\begin{multline*}
+  \text{Pergunta do usuário} + \text{Template A.2} \\
+  \longrightarrow \text{Resultado Fase A.2}
+\end{multline*}
 
-O resultado produzido é armazenado localmente em arquivo ou na memória do programa.
+Nessa expressão, ``Pergunta do usuário'' é o \textit{input} original, ``Template~A.2'' é o \textit{prompt} fixo de instrução descrito acima, e ``Resultado Fase~A.2'' é a lista de tarefas com seus respectivos critérios, que deve ser armazenada localmente em arquivo ou na memória do programa.
 
 \begin{exemplo}
-Considerando o \textit{input} de referência, o modelo deveria retornar algo como:
+Considerando o \textit{input} de referência, o modelo deveria retornar uma decomposição como a seguinte.
+
+\saidaLLM
 
 \textbf{Tarefa 1}
 \begin{itemize}
@@ -479,9 +494,9 @@ Considerando o \textit{input} de referência, o modelo deveria retornar algo com
 % ──────────────────────────────────────────────────────────────
 \subsection{Execução em Loop}
 
-A fase de execução preserva a estrutura iterativa do Ralph Wiggum Loop original, mas adapta o mecanismo de conclusão de cada unidade de trabalho. Na formulação original, a conclusão de uma história de usuário é verificada por meio da execução de testes automatizados e da análise dos critérios de aceite associados ao código produzido. No fluxo adaptado, como não há código a ser testado, o modelo simplesmente resolve a tarefa selecionada e, em seguida, verifica se o resultado satisfaz os critérios de aceite individuais definidos no planejamento. Caso os critérios não sejam atingidos, o modelo repete a resolução da mesma tarefa até que sejam satisfeitos.
+A fase de execução preserva a estrutura iterativa do paradigma original, mas adapta o mecanismo de conclusão de cada unidade de trabalho. Na formulação original, a conclusão de uma história de usuário é verificada por meio da execução de testes automatizados e da análise dos critérios de aceite associados ao código produzido. No fluxo adaptado, como não há código a ser testado, o modelo simplesmente resolve a tarefa selecionada e, em seguida, verifica se o resultado satisfaz os critérios de aceite individuais definidos no planejamento. Caso os critérios não sejam atingidos, o modelo repete a resolução da mesma tarefa até que sejam satisfeitos.
 
-Ao concluir uma tarefa com sucesso, o modelo realiza dois registros distintos com finalidades diferentes: \textbf{(i)} persiste a resposta aprovada em armazenamento local ou na memória da aplicação, em formato suficientemente estruturado para que cada resultado possa ser recuperado individualmente, servindo de insumo para a Criação da Resposta Final; e \textbf{(ii)} extrai os aprendizados pontuais da execução, isto é, informações secas e objetivas descobertas ao longo das tentativas, que serão injetados no contexto da próxima tarefa como mecanismo de \textit{Fresh Context}. É fundamental ressaltar que esses dois registros têm escopos completamente distintos: os resultados armazenados alimentam exclusivamente a fase C; os aprendizados pontuais têm papel restrito à Execução em Loop e não participam da construção da resposta final. Antes de iniciar a execução da tarefa seguinte, o contexto é reinicializado e os aprendizados acumulados são injetados como primeira entrada do novo contexto, de forma estruturada e explícita. Esse mecanismo garante que o conhecimento relevante seja preservado sem que o ruído e as redundâncias das etapas anteriores sejam herdados, mitigando ativamente o fenômeno de \textit{context rot}~\cite{hong2025context}.
+Ao concluir uma tarefa com sucesso, o modelo realiza dois registros distintos com finalidades diferentes: \textbf{(i)} persiste a resposta aprovada em armazenamento local ou na memória da aplicação, em formato suficientemente estruturado para que cada resultado possa ser recuperado individualmente, servindo de insumo para a fase de Criação da Resposta Final; e \textbf{(ii)} extrai os aprendizados pontuais da execução, isto é, informações secas e objetivas descobertas ao longo das tentativas, que serão injetados no contexto da próxima tarefa como mecanismo de \textit{Fresh Context}. É fundamental ressaltar que esses dois registros têm escopos completamente distintos: os resultados armazenados alimentam exclusivamente a fase de Criação da Resposta Final; os aprendizados pontuais têm papel restrito à Execução em Loop e não participam da construção da resposta final. Antes de iniciar a execução da tarefa seguinte, o contexto é reinicializado e os aprendizados acumulados são injetados como primeira entrada do novo contexto, de forma estruturada e explícita. Esse mecanismo garante que o conhecimento relevante seja preservado sem que o ruído e as redundâncias das etapas anteriores sejam herdados, mitigando ativamente o fenômeno de \textit{context rot}~\cite{hong2025context}.
 
 Após cada tarefa concluída, o fluxo verifica programaticamente se ainda existem tarefas disponíveis na lista produzida pelo planejamento. Caso haja, uma nova iteração é iniciada: o contexto é reinicializado, os aprendizados acumulados são injetados e a próxima tarefa é selecionada. Caso contrário, o fluxo avança para a fase de Criação da Resposta Final, levando consigo apenas os resultados armazenados, sem os aprendizados pontuais. Essa verificação é puramente programática e não envolve chamada ao LLM.
 
@@ -489,71 +504,92 @@ Após cada tarefa concluída, o fluxo verifica programaticamente se ainda existe
 % ————————————————————————
 \subsubsection{Seleção da tarefa e resolução} \label{subsec:ExecucaoB1}
 
-Essa etapa é responsável por selecionar a próxima tarefa disponível na lista gerada pelo planejamento e submetê-la ao modelo para resolução. Ao iniciar uma nova tarefa, e somente nesse momento, o contexto é reinicializado. Os aprendizados pontuais acumulados nas tarefas anteriores são injetados no início do novo contexto, antes da descrição da tarefa atual, garantindo continuidade do conhecimento relevante sem carregar o ruído das execuções anteriores. Na primeira tarefa do ciclo, não há aprendizados acumulados, de modo que o contexto inicial contém apenas a tarefa a ser resolvida.
+Essa subseção corresponde às etapas B.1 e B.2 do fluxo ilustrado na Figura~\ref{fig:ralph_loop_adaptado}: a seleção da próxima tarefa disponível na lista gerada pelo planejamento (B.1) e sua subsequente resolução pelo modelo (B.2). Ao iniciar uma nova tarefa, e somente nesse momento, o contexto é reinicializado. Os aprendizados pontuais acumulados nas tarefas anteriores são injetados no início do novo contexto, antes da descrição da tarefa atual, garantindo continuidade do conhecimento relevante sem carregar o ruído das execuções anteriores. Na primeira tarefa do ciclo, não há aprendizados acumulados, de modo que o contexto inicial contém apenas a tarefa a ser resolvida.
 
-A implementação utiliza um \textit{template} fixo (Template~B.1) que orienta o modelo a focar exclusivamente no objetivo da tarefa atual, sem tentar antecipar ou resolver etapas posteriores. O contexto de entrada é montado a partir de três componentes: os aprendizados pontuais acumulados das tarefas anteriores (quando houver), a descrição completa da tarefa selecionada conforme definida no planejamento, e o próprio Template~B.1. A relação de entrada e saída pode ser expressa como:
+Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~B.1) que será combinado com a descrição da tarefa e, quando houver, com os aprendizados acumulados. Esse \textit{template} deve instruir o modelo a focar exclusivamente no objetivo da tarefa que está sendo apresentada, sem tentar antecipar ou resolver etapas posteriores do fluxo. As instruções devem orientar o modelo a produzir uma resposta que cubra completamente o objetivo descrito na tarefa e que respeite os limites de escopo estabelecidos nos critérios de aceite individuais. O contexto de entrada é montado a partir de três componentes: os aprendizados pontuais acumulados das tarefas anteriores (quando houver), a descrição completa da tarefa selecionada conforme definida no planejamento, e o próprio Template~B.1. A saída esperada é a resolução completa da tarefa, aqui chamada de Resultado Preliminar~B. A relação de entrada e saída pode ser expressa como:
 
-\begin{equation*}
-  \begin{aligned}
-    	ext{Aprendizados Acumulados} + \text{Tarefa Selecionada} \\
-    + \text{Template B.1} \longrightarrow \text{Resultado Preliminar B}
-  \end{aligned}
-\end{equation*}
+\begin{multline*}
+  \text{Aprendizados Acumulados} \\
+  + \text{Tarefa Selecionada} + \text{Template B.1} \\
+  \longrightarrow \text{Resultado Preliminar B}
+\end{multline*}
+
+Nessa expressão, ``Aprendizados Acumulados'' são os fatos objetivos extraídos das tarefas já concluídas (vazio na primeira tarefa), ``Tarefa Selecionada'' é a descrição completa da tarefa com seus critérios de aceite conforme definidos no Resultado Fase~A.2, e ``Template~B.1'' é o \textit{prompt} fixo de instrução descrito acima. O ``Resultado Preliminar~B'' é a resposta produzida pelo modelo para a tarefa, que seguirá para verificação na etapa seguinte.
 
 \begin{exemplo}
-Considerando a Tarefa~1 como primeira tarefa do ciclo, o contexto não contém aprendizados acumulados. O modelo deveria retornar algo como:
+Considerando a Tarefa~1 como primeira tarefa do ciclo, o contexto não contém aprendizados acumulados.
 
+\saidaLLM
+
+\begin{quote}
 ``Entre as alternativas (2, 4, 6), somente o número 2 é primo. Um número primo é aquele divisível exclusivamente por 1 e por ele mesmo. O número 4 possui divisores adicionais (1, 2 e 4) e o 6 também (1, 2, 3 e 6), portanto nenhum dos dois é primo. Resultado: [2].''
+\end{quote}
 \end{exemplo}
 
 
 % ————————————————————————
-\subsubsection{Verificação dos critérios de aceite individuais} \label{subsec:ExecucaoB2}
+\subsubsection{Verificação dos critérios de aceitação da tarefa} \label{subsec:ExecucaoB2}
 
-Essa etapa verifica se o Resultado Preliminar B produzido na etapa anterior atende a todos os critérios de aceite individuais associados à tarefa em execução. Trata-se de um mecanismo de controle de qualidade interno: se todos os critérios forem atendidos, o fluxo avança para o armazenamento do resultado; caso contrário, a tarefa é reapresentada ao modelo para uma nova tentativa. É importante destacar que, ao contrário do que ocorre na transição entre tarefas distintas, o contexto \emph{não} é reinicializado durante as tentativas de repetição de uma mesma tarefa. Essa escolha é intencional: a tentativa anterior, com os critérios não satisfeitos explicitamente sinalizados, permanece no contexto e auxilia o modelo a identificar o que deve ser corrigido na próxima execução.
+Essa etapa verifica se o Resultado Preliminar~B produzido na etapa anterior atende a todos os critérios de aceite individuais associados à tarefa em execução. Trata-se de um mecanismo de controle de qualidade interno: se todos os critérios forem atendidos, o fluxo avança para o armazenamento do resultado; caso contrário, a tarefa é reapresentada ao modelo para uma nova tentativa. É importante destacar que, ao contrário do que ocorre na transição entre tarefas distintas, o contexto \emph{não} é reinicializado durante as tentativas de repetição de uma mesma tarefa. Essa escolha é intencional: a tentativa anterior, com os critérios não satisfeitos explicitamente sinalizados, permanece no contexto e auxilia o modelo a identificar o que deve ser corrigido na próxima execução.
 
-A implementação utiliza um \textit{template} fixo (Template~B.2) que orienta o modelo a verificar, critério por critério, se o resultado atende ao esperado, retornando uma decisão estruturada (aprovado ou reprovado) e, em caso de reprovação, identificando quais critérios não foram satisfeitos. A relação de entrada e saída pode ser expressa como:
+Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~B.2) que será combinado com o Resultado Preliminar~B e com os critérios de aceite individuais da tarefa. Esse \textit{template} deve instruir o modelo a avaliar o resultado recebido contra cada critério de aceite, um por um, identificando para cada critério se ele foi atendido ou não e justificando essa decisão. As instruções devem exigir que a saída contenha uma decisão final estruturada (aprovado ou reprovado) e, em caso de reprovação, a lista explícita dos critérios que não foram satisfeitos. A relação de entrada e saída pode ser expressa como:
 
-\begin{equation*}
-  \begin{aligned}
-    	ext{Resultado Preliminar B} + \text{Critérios da Tarefa} \\
-    + \text{Template B.2} \longrightarrow \text{Decisão}
-  \end{aligned}
-\end{equation*}
+\begin{multline*}
+  \text{Resultado Preliminar B} \\
+  + \text{Critérios da Tarefa} + \text{Template B.2} \\
+  \longrightarrow \text{Decisão (Aprovado / Reprovado)}
+\end{multline*}
+
+Nessa expressão, ``Resultado Preliminar~B'' é a resposta produzida na etapa anterior, ``Critérios da Tarefa'' são os critérios de aceite individuais definidos no Resultado Fase~A.2 para a tarefa em questão, e ``Template~B.2'' é o \textit{prompt} fixo de instrução descrito acima.
 
 \begin{exemplo}
-\textbf{Cenário de aprovação.} Avaliando o resultado da Tarefa~1 contra seus critérios de aceite:
+\textbf{Cenário de aprovação.} Avaliando o resultado da Tarefa~1 contra seus critérios de aceite.
+
+\saidaLLM
+
+\begin{quote}
 \begin{itemize}
   \item ``Deve retornar a lista de números primos.'' \\ \textit{Atendido}: a lista [2] foi retornada.
   \item ``Deve incluir explicação da regra de identificação de primos.'' \\ \textit{Atendido}: a explicação por divisores foi fornecida.
   \item ``A resposta não deve tentar resolver a questão final.'' \\ \textit{Atendido}: o modelo não antecipou a resposta.
   \item ``A resposta não deve avaliar nenhuma outra condição.'' \\ \textit{Atendido}: somente a primalidade foi avaliada.
 \end{itemize}
-Decisão: \textbf{Aprovado}. O fluxo avança para o armazenamento do resultado.
+Decisão: \textbf{Aprovado}.
+\end{quote}
 
-\smallskip
+O fluxo avança para o armazenamento do resultado.
+
+\bigskip
 \textbf{Cenário de reprovação e nova tentativa.} Considere a Tarefa~2 (``identifique quais números são pares''). O aprendizado acumulado da Tarefa~1 já está no contexto: ``O único número primo entre as alternativas é o 2''. Suponha que o modelo produza na primeira tentativa:
 
-\smallskip
-``Todos os números 2, 4 e 6 são pares, pois são divisíveis por 2. No entanto, como apenas o 2 é primo (identificado anteriormente) e o 2 não é maior que 2, nenhuma alternativa satisfaz simultaneamente as três condições. Portanto, a resposta é D) Nenhuma das anteriores.''
+\saidaLLM
 
-\smallskip
+\begin{quote}
+``Todos os números 2, 4 e 6 são pares, pois são divisíveis por 2. No entanto, como apenas o 2 é primo (identificado anteriormente) e o 2 não é maior que 2, nenhuma alternativa satisfaz simultaneamente as três condições. Portanto, a resposta é D) Nenhuma das anteriores.''
+\end{quote}
+
 Avaliando esse resultado contra os critérios da Tarefa~2:
+
+\saidaLLM
+
+\begin{quote}
 \begin{itemize}
   \item ``Deve retornar a lista de números pares.'' \\ \textit{Atendido}: os três números foram identificados.
   \item ``Deve incluir explicação da regra de identificação de pares.'' \\ \textit{Atendido}: a divisibilidade por 2 foi mencionada.
   \item ``A resposta não deve tentar resolver a questão final.'' \\ \textbf{Não atendido}: o modelo antecipou a resposta final.
   \item ``A resposta não deve avaliar nenhuma outra condição.'' \\ \textbf{Não atendido}: o modelo cruzou condições de outras tarefas.
 \end{itemize}
-Decisão: \textbf{Reprovado}. O fluxo retorna à resolução da Tarefa~2, mantendo o contexto com a tentativa reprovada e os critérios não satisfeitos identificados.
+Decisão: \textbf{Reprovado}.
+\end{quote}
 
-\smallskip
-Na segunda tentativa, com o \textit{feedback} anterior no contexto, o modelo retorna:
+O fluxo retorna à resolução da Tarefa~2, mantendo o contexto com a tentativa reprovada e os critérios não satisfeitos identificados. Na segunda tentativa, com o \textit{feedback} anterior no contexto, o modelo retorna:
 
-\smallskip
+\saidaLLM
+
+\begin{quote}
 ``Entre as alternativas (2, 4, 6), todos os três números são pares, pois cada um deles é divisível por 2 sem deixar resto (2÷2=1, 4÷2=2, 6÷2=3). Resultado: [2, 4, 6].''
+\end{quote}
 
-\smallskip
 Todos os critérios da Tarefa~2 são agora atendidos. Decisão: \textbf{Aprovado}. O fluxo avança.
 \end{exemplo}
 
@@ -561,30 +597,26 @@ Todos os critérios da Tarefa~2 são agora atendidos. Decisão: \textbf{Aprovado
 % ————————————————————————
 \subsubsection{Armazenamento do resultado} \label{subsec:ExecucaoB3}
 
-Quando a resposta de uma tarefa é aprovada na verificação dos critérios de aceite, ela é persistida localmente. Somente essa resposta aprovada é armazenada: todo o ruído gerado pelos ciclos de tentativa anteriores, incluindo respostas reprovadas, histórico de verificações e \textit{feedback} intermediário, não é persistido e será descartado quando o contexto for reinicializado na transição para a próxima tarefa. O armazenamento é indexado por tarefa, de modo que cada resultado possa ser recuperado individualmente pela fase de Criação da Resposta Final. Esses resultados armazenados são o único insumo factual utilizado na fase~C para a construção da resposta ao usuário; os aprendizados pontuais, tratados na etapa seguinte, têm escopo restrito à Execução em Loop e não participam da criação da resposta final.
+Quando a resposta de uma tarefa é aprovada na verificação dos critérios de aceite, ela é persistida localmente. Somente essa resposta aprovada é armazenada: todo o ruído gerado pelos ciclos de tentativa anteriores, incluindo respostas reprovadas, histórico de verificações e \textit{feedback} intermediário, não é persistido e será descartado quando o contexto for reinicializado na transição para a próxima tarefa. O armazenamento é indexado por tarefa, de modo que cada resultado possa ser recuperado individualmente pela fase de Criação da Resposta Final. Esses resultados armazenados são o único insumo factual utilizado na fase de Criação da Resposta Final para a construção da resposta ao usuário; os aprendizados pontuais, tratados na etapa seguinte, têm escopo restrito à Execução em Loop e não participam da criação da resposta final.
 
-Do ponto de vista de implementação, a resposta aprovada na etapa~B.2 é persistida no armazenamento local ou na memória da aplicação, indexada pelo identificador da tarefa. O formato de armazenamento é uma decisão de implementação, sendo que qualquer estrutura que permita recuperar individualmente o resultado de cada tarefa é adequada. Não há chamada adicional ao LLM nessa etapa. A relação de entrada e saída pode ser expressa como:
+Do ponto de vista prático, a resposta aprovada na etapa anterior é persistida no armazenamento local ou na memória da aplicação, indexada pelo identificador da tarefa. O formato de armazenamento é uma decisão de implementação, sendo que qualquer estrutura que permita recuperar individualmente o resultado de cada tarefa é adequada. Não há chamada adicional ao LLM nessa etapa. A relação de entrada e saída pode ser expressa como:
 
 \[
   \text{Resposta Aprovada} \longrightarrow \text{Armazenamento local}
 \]
 
 \begin{exemplo}
-A Tarefa~2 exigiu duas tentativas antes de ser aprovada. Somente a segunda é armazenada. A estrutura abaixo utiliza JSON a título ilustrativo; qualquer representação equivalente é válida:
+A Tarefa~2 exigiu duas tentativas antes de ser aprovada. Somente a segunda é armazenada. A primeira tentativa reprovada, aquela que antecipou indevidamente a resposta final, permanece apenas no contexto ativo durante o ciclo de repetição e é descartada na reinicialização.
 
-\smallskip
-\texttt{\{ "tarefa": 2, "resultado": "Entre as alternativas (2,~4,~6), todos os três números são pares, pois cada um é divisível por 2 sem deixar resto. Resultado: [2, 4, 6]." \}}
-
-\smallskip
-A primeira tentativa reprovada não é persistida. Ao término da Execução em Loop, o armazenamento contém exclusivamente as respostas aprovadas de cada tarefa:
+Ao término da Execução em Loop, o armazenamento contém exclusivamente as respostas aprovadas de cada tarefa:
 
 \begin{itemize}
-  \item \texttt{\{ "tarefa": 1, "resultado": "O único número primo entre (2, 4, 6) é o 2. Os números 4 e 6 possuem divisores além de 1 e eles mesmos." \}}
-  \item \texttt{\{ "tarefa": 2, "resultado": "Entre (2, 4, 6), todos os três números são pares: 2, 4 e 6." \}}
-  \item \texttt{\{ "tarefa": 3, "resultado": "Os números estritamente maiores que 2 entre as alternativas são 4 e 6. O número 2 não satisfaz essa condição pois 2 > 2 é falso." \}}
+  \item Tarefa~1: ``Entre as alternativas (2, 4, 6), somente o número 2 é primo. Um número primo é aquele divisível exclusivamente por 1 e por ele mesmo. O número 4 possui divisores adicionais (1, 2 e 4) e o 6 também (1, 2, 3 e 6), portanto nenhum dos dois é primo. Resultado: [2].''
+  \item Tarefa~2: ``Entre as alternativas (2, 4, 6), todos os três números são pares, pois cada um deles é divisível por 2 sem deixar resto (2÷2=1, 4÷2=2, 6÷2=3). Resultado: [2, 4, 6].''
+  \item Tarefa~3: ``Os números estritamente maiores que 2 entre as alternativas são 4 e 6. O número 2 não satisfaz essa condição pois 2~>~2 é falso. Resultado: [4, 6].''
 \end{itemize}
 
-Esse conjunto é entregue à fase~C como base exclusiva para a construção da resposta final.
+Esse conjunto é entregue à fase de Criação da Resposta Final como base exclusiva para a construção da resposta.
 \end{exemplo}
 
 
@@ -593,37 +625,40 @@ Esse conjunto é entregue à fase~C como base exclusiva para a construção da r
 
 Os aprendizados pontuais funcionam como as ``anotações internas'' do fluxo de \textit{thinking}: são fatos secos e objetivos descobertos durante a execução de uma tarefa que podem ser úteis para resolver as tarefas subsequentes. Exemplos típicos incluem o resultado de um cálculo intermediário, uma fórmula identificada, uma conversão de unidade de medida, um valor recuperado após busca ou uma lista de candidatos filtrados. Em todos os casos, o registro deve conter apenas a informação em si, sem qualquer contexto de como ela foi obtida. A extração de aprendizados considera o contexto completo da tarefa, incluindo as tentativas reprovadas, pois fatos úteis podem ter emergido mesmo em execuções que não passaram na verificação de critérios. Os aprendizados pontuais têm escopo estritamente restrito à Execução em Loop: são injetados no início do contexto de cada nova tarefa para subsidiar a resolução, mas não são incluídos, em nenhuma hipótese, na fase de Criação da Resposta Final.
 
-A implementação utiliza um \textit{template} fixo (Template~B.4) aplicado sobre o contexto completo da tarefa concluída. Esse \textit{template} instrui o modelo a identificar fatos concretos que possam ser úteis nas próximas tarefas, registrá-los em formato de lista seca sem narrativa ou contexto, e descartar todo o restante. Os aprendizados extraídos são adicionados à memória acumulada, que será injetada no início do contexto da próxima tarefa. A relação de entrada e saída pode ser expressa como:
+Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~B.4) que será aplicado sobre o contexto completo da tarefa concluída. Esse \textit{template} deve instruir o modelo a percorrer todo o conteúdo gerado durante a resolução da tarefa, incluindo tentativas reprovadas e a resposta aprovada, e a identificar quaisquer fatos concretos e objetivos que possam ser úteis nas próximas tarefas. As instruções devem exigir que os aprendizados sejam registrados como sentenças curtas e factuais, sem narrativa, sem justificativas e sem referência ao processo de resolução; cada aprendizado deve conter apenas o fato em si. A saída esperada é uma lista compacta de fatos pontuais. A relação de entrada e saída dessa etapa pode ser expressa como:
 
-\begin{equation*}
-  \begin{aligned}
-    	ext{Contexto Completo da Tarefa} + \text{Template B.4} \\
-    \longrightarrow \text{Aprendizados Pontuais} \rightarrow \text{Memória Acumulada}
-  \end{aligned}
-\end{equation*}
+\begin{multline*}
+  \text{Contexto Completo da Tarefa} \\
+  + \text{Template B.4} \\
+  \longrightarrow \text{Aprendizados Pontuais}
+\end{multline*}
+
+Nessa expressão, ``Contexto Completo da Tarefa'' é o histórico integral da execução da tarefa, contendo todas as tentativas (reprovadas e aprovada) e suas respectivas verificações. ``Template~B.4'' é o \textit{prompt} fixo de instrução descrito acima. ``Aprendizados Pontuais'' são os fatos extraídos, que são adicionados à Memória Acumulada. A Memória Acumulada é simplesmente o local onde os aprendizados pontuais de todas as tarefas já concluídas vão se acumulando ao longo do processo; a cada nova tarefa iniciada, todo o conteúdo dessa memória é injetado no início do novo contexto. Essa memória não é utilizada na construção da resposta final.
 
 \begin{exemplo}
-Após a conclusão das três tarefas, a memória acumulada conteria algo como:
+Após a conclusão das três tarefas, a Memória Acumulada conteria algo como o seguinte.
 
-\smallskip
+\saidaLLM
+
+\begin{quote}
 ``Primos entre (2, 4, 6): [2]'' \\
 ``Pares entre (2, 4, 6): [2, 4, 6]'' \\
 ``Maiores que 2 entre (2, 4, 6): [4, 6]''
+\end{quote}
 
-\smallskip
 Esse bloco compacto seria injetado no início do contexto de uma eventual Tarefa~4 e não é utilizado na construção da resposta final.
 
-\smallskip
+\bigskip
 Como contraponto, o trecho a seguir ilustra o formato \textbf{inválido} de aprendizado, por ser verboso e conter contexto desnecessário:
 
-\smallskip
+\begin{quote}
 \textit{Inválido:} ``Durante a execução da Tarefa 2, após uma tentativa reprovada por ter antecipado a resposta final, foi identificado que todos os números 2, 4 e 6 são pares, verificando a divisibilidade de cada um por 2.''
+\end{quote}
 
-\smallskip
 O aprendizado pontual válido extrai apenas o fato: ``Pares entre (2, 4, 6): [2, 4, 6]''.
 \end{exemplo}
 
-A distinção entre resultado armazenado (etapa~B.3) e aprendizado pontual (etapa~B.4) é estrutural e intencional. O resultado é a resposta completa e verificada da tarefa, destinada à síntese da fase~C. O aprendizado é um fragmento seco de fato, destinado exclusivamente a subsidiar a execução das tarefas seguintes dentro do loop.
+A distinção entre resultado armazenado (etapa anterior) e aprendizado pontual é estrutural e intencional. O resultado é a resposta completa e verificada da tarefa, destinada à síntese da fase de Criação da Resposta Final. O aprendizado é um fragmento seco de fato, destinado exclusivamente a subsidiar a execução das tarefas seguintes dentro do loop.
 
 
 % ──────────────────────────────────────────────────────────────
@@ -639,34 +674,55 @@ Após o encerramento do loop, o modelo compila os resultados armazenados e verif
 % ————————————————————————
 \subsubsection{Compilação dos resultados e verificação dos critérios gerais} \label{subsec:RespostaC1}
 
-Essa etapa reúne todos os resultados armazenados durante a Execução em Loop e verifica se o conjunto de informações produzido é suficiente para satisfazer cada um dos critérios de aceite gerais definidos na etapa~A.1. A distinção central em relação à etapa~B.2 é o escopo da verificação: enquanto lá a avaliação é local, com cada tarefa verificada contra seus próprios critérios individuais, aqui a avaliação é global, e o conjunto completo de resultados é considerado para determinar se é possível construir uma resposta final completa e correta.
+Essa etapa reúne todos os resultados armazenados durante a Execução em Loop e verifica se o conjunto de informações produzido é suficiente para satisfazer cada um dos critérios de aceite gerais definidos na etapa~A.1. A distinção central em relação à verificação realizada na Execução em Loop é o escopo da avaliação: enquanto lá a verificação é local, com cada tarefa avaliada contra seus próprios critérios individuais, aqui a avaliação é global, e o conjunto completo de resultados é considerado para determinar se é possível construir uma resposta final completa e correta.
 
-A implementação utiliza um \textit{template} fixo (Template~C.1) que instrui o modelo a listar os resultados de cada tarefa, avaliar critério geral por critério geral se os resultados em conjunto permitem satisfazê-los, e retornar uma decisão estruturada com identificação dos critérios não atendidos, quando for o caso. A relação de entrada e saída pode ser expressa como:
+Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~C.1) que será combinado com os resultados armazenados e com os critérios gerais definidos na etapa~A.1. Esse \textit{template} deve instruir o modelo a listar os resultados de cada tarefa e então avaliar, critério geral por critério geral, se os resultados em conjunto fornecem informação suficiente para satisfazê-los. As instruções devem exigir que a saída contenha uma decisão para cada critério (atendível ou não atendível) e uma decisão final estruturada (aprovado ou reprovado), com identificação explícita dos critérios não atendidos quando for o caso. A relação de entrada e saída pode ser expressa como:
 
-\begin{equation*}
-  \begin{aligned}
-    	ext{Resultados Armazenados} + \text{Critérios Gerais (A.1)} \\
-    + \text{Template C.1} \longrightarrow \text{Decisão}
-  \end{aligned}
-\end{equation*}
+\begin{multline*}
+  \text{Resultados Armazenados} \\
+  + \text{Critérios Gerais (A.1)} + \text{Template C.1} \\
+  \longrightarrow \text{Decisão (Aprovado / Reprovado)}
+\end{multline*}
+
+Nessa expressão, ``Resultados Armazenados'' são as respostas aprovadas de todas as tarefas concluídas, ``Critérios Gerais (A.1)'' são os critérios de aceite gerais produzidos no Resultado Fase~A.1, e ``Template~C.1'' é o \textit{prompt} fixo de instrução descrito acima.
 
 \begin{exemplo}
-\textbf{Cenário de aprovação.} Com os três resultados disponíveis ao término do loop (T1: o único primo é [2]; T2: todos os números são pares [2, 4, 6]; T3: os maiores que 2 são [4, 6]), a avaliação contra os critérios gerais de A.1 produz:
+\textbf{Cenário de aprovação.} Com os três resultados disponíveis ao término do loop, a avaliação contra os critérios gerais de A.1 produz:
 
+\saidaLLM
+
+\begin{quote}
+Resultados disponíveis:
+\begin{itemize}
+  \item Tarefa~1: ``Entre as alternativas (2, 4, 6), somente o número 2 é primo. Um número primo é aquele divisível exclusivamente por 1 e por ele mesmo. O número 4 possui divisores adicionais (1, 2 e 4) e o 6 também (1, 2, 3 e 6), portanto nenhum dos dois é primo. Resultado: [2].''
+  \item Tarefa~2: ``Entre as alternativas (2, 4, 6), todos os três números são pares, pois cada um deles é divisível por 2 sem deixar resto (2÷2=1, 4÷2=2, 6÷2=3). Resultado: [2, 4, 6].''
+  \item Tarefa~3: ``Os números estritamente maiores que 2 entre as alternativas são 4 e 6. O número 2 não satisfaz essa condição pois 2~>~2 é falso. Resultado: [4, 6].''
+\end{itemize}
+
+Avaliação dos critérios gerais:
 \begin{itemize}
   \item ``A pergunta deve ser respondida em Português do Brasil.'' \\ \textit{Atendível}: todos os resultados estão em português.
   \item ``Responda somente a alternativa, sem explicações adicionais.'' \\ \textit{Atendível}: os dados disponíveis permitem identificar a alternativa correta.
   \item ``O valor encontrado deve corresponder a uma das alternativas.'' \\ \textit{Atendível}: primo $\cap$ par $\cap$ maior que 2 = $\varnothing$, o que corresponde à alternativa D.
 \end{itemize}
-Decisão: \textbf{Aprovado}. O fluxo avança para a construção da resposta final.
+Decisão: \textbf{Aprovado}.
+\end{quote}
 
-\smallskip
-\textbf{Cenário de reprovação.} Considere uma variação em que os critérios gerais incluam: ``A resposta deve ser sustentada por uma verificação explícita de qual conjunto de alternativas satisfaz simultaneamente todas as condições enunciadas.'' Os três resultados cobrem cada condição individualmente, mas nenhuma tarefa realizou a análise de interseção:
+O fluxo avança para a construção da resposta final.
 
+\bigskip
+\textbf{Cenário de reprovação.} Considere uma variação em que os critérios gerais incluam: ``A resposta deve ser sustentada por uma verificação explícita de qual conjunto de alternativas satisfaz simultaneamente todas as condições enunciadas.'' Os três resultados cobrem cada condição individualmente, mas nenhuma tarefa realizou a análise de interseção.
+
+\saidaLLM
+
+\begin{quote}
 \begin{itemize}
   \item ``Verificação explícita da interseção dos conjuntos.'' \\ \textbf{Não atendido}: nenhuma tarefa realizou a verificação combinada das três condições.
 \end{itemize}
-Decisão: \textbf{Reprovado}. O fluxo avança para o Planejamento Adicional.
+Decisão: \textbf{Reprovado}.
+\end{quote}
+
+O fluxo avança para o Planejamento Adicional.
 \end{exemplo}
 
 
@@ -675,18 +731,22 @@ Decisão: \textbf{Reprovado}. O fluxo avança para o Planejamento Adicional.
 
 Quando os critérios gerais não são atendidos, o Planejamento Adicional funciona como uma extensão da fase~A.2: identifica as lacunas específicas nos resultados disponíveis e cria novas tarefas individuais para supri-las. Diferentemente do planejamento inicial, que parte da pergunta do usuário sem qualquer contexto de execução, o Planejamento Adicional tem acesso ao conjunto de resultados já produzidos e ao mapeamento preciso dos critérios que ainda não foram satisfeitos. Essa informação torna as novas tarefas mais pontuais e direcionadas, evitando retrabalho sobre o que já foi verificado. As novas tarefas são adicionadas à fila de execução e o fluxo retorna à etapa~B.1, agora com o contexto dos aprendizados acumulados de todas as tarefas anteriores disponível.
 
-A implementação utiliza um \textit{template} fixo (Template~C.2) que orienta o modelo a identificar os critérios gerais não atendidos, raciocinar sobre que tipo de informação adicional seria necessária para satisfazê-los, e formular novas tarefas de objetivo único com critérios de aceite individuais, seguindo o mesmo padrão estabelecido na fase~A.2. A relação de entrada e saída pode ser expressa como:
+Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~C.2) que será combinado com os critérios gerais não atendidos e com os resultados já armazenados. Esse \textit{template} deve instruir o modelo a identificar os critérios gerais que não foram satisfeitos, raciocinar sobre que tipo de informação adicional seria necessária para satisfazê-los e formular novas tarefas de objetivo único com critérios de aceite individuais, seguindo o mesmo padrão estabelecido na fase~A.2. A relação de entrada e saída pode ser expressa como:
 
-\begin{equation*}
-  \begin{aligned}
-    	ext{Critérios Não Atendidos} + \text{Resultados Armazenados} \\
-    + \text{Template C.2} \longrightarrow \text{Novas Tarefas}
-  \end{aligned}
-\end{equation*}
+\begin{multline*}
+  \text{Critérios Não Atendidos} \\
+  + \text{Resultados Armazenados} + \text{Template C.2} \\
+  \longrightarrow \text{Novas Tarefas}
+\end{multline*}
+
+Nessa expressão, ``Critérios Não Atendidos'' são os critérios gerais identificados como não satisfeitos na etapa anterior, ``Resultados Armazenados'' são as respostas aprovadas de todas as tarefas já concluídas, e ``Template~C.2'' é o \textit{prompt} fixo de instrução descrito acima.
 
 \begin{exemplo}
-A partir da reprovação identificada no cenário anterior, o Planejamento Adicional produziria algo como:
+A partir da reprovação identificada no cenário anterior, o modelo produziria novas tarefas como a seguinte.
 
+\saidaLLM
+
+\begin{quote}
 \textbf{Tarefa 4}
 \begin{itemize}
   \item Tarefa: ``Dadas as listas já identificadas — primos: [2]; pares: [2, 4, 6]; maiores que 2: [4, 6] —, determine quais números aparecem simultaneamente nas três listas.''
@@ -697,40 +757,46 @@ A partir da reprovação identificada no cenário anterior, o Planejamento Adici
     \item ``A resposta não deve construir a resposta final ao usuário.''
   \end{itemize}
 \end{itemize}
+\end{quote}
 
-Com os aprendizados de T1, T2 e T3 injetados no contexto, o modelo executa a Tarefa~4 e retorna algo como:
+Essa nova tarefa é enviada à Execução em Loop. Com os aprendizados de T1, T2 e T3 injetados no contexto, o modelo executa a Tarefa~4.
 
-\smallskip
-``Verificando a interseção: primos [2] $\cap$ pares [2, 4, 6] $\cap$ maiores que 2 [4, 6]. O número 2 está em \{primos\} e \{pares\}, mas não em \{maiores que 2\} (pois $2 > 2$ é falso). Os números 4 e 6 estão em \{pares\} e \{maiores que 2\}, mas não em \{primos\}. Resultado da interseção: $\{\}$ (conjunto vazio).''
+\saidaLLM
 
-\smallskip
-Após a aprovação da Tarefa~4, o fluxo retorna a C.1. Com quatro resultados disponíveis, todos os critérios gerais são atendidos e o fluxo avança para a construção da resposta final.
+\begin{quote}
+``Verificando a interseção: primos [2] $\cap$ pares [2, 4, 6] $\cap$ maiores que 2 [4, 6]. O número 2 está em \{primos\} e \{pares\}, mas não em \{maiores que 2\} (pois $2 > 2$ é falso). Os números 4 e 6 estão em \{pares\} e \{maiores que 2\}, mas não em \{primos\}. Resultado da interseção: $\{\}$ (conjunto vazio — nenhum número satisfaz simultaneamente as três condições).''
+\end{quote}
+
+Após a aprovação da Tarefa~4, o fluxo retorna à compilação dos resultados para nova verificação. Desta vez, com quatro resultados disponíveis, todos os critérios gerais são atendidos e o fluxo avança para a construção da resposta final.
 \end{exemplo}
 
-O mecanismo de Planejamento Adicional pode ocorrer mais de uma vez caso as novas tarefas criadas ainda não sejam suficientes para satisfazer todos os critérios gerais. A cada retorno a C.1, o conjunto de resultados disponíveis é maior, convergindo progressivamente para a completude.
+O mecanismo de Planejamento Adicional pode ocorrer mais de uma vez caso as novas tarefas criadas ainda não sejam suficientes para satisfazer todos os critérios gerais. A cada retorno à compilação, o conjunto de resultados disponíveis é maior, convergindo progressivamente para a completude.
 
 
 % ————————————————————————
 \subsubsection{Construção da resposta final} \label{subsec:RespostaC3}
 
-Com todos os critérios gerais satisfeitos, o modelo compõe a resposta final ao usuário. Essa etapa não realiza novo raciocínio analítico sobre o problema: seu objetivo é exclusivamente organizar e apresentar os resultados já produzidos no formato e idioma definidos pelos critérios gerais (fase~A.1). A distinção entre esta etapa e as anteriores é deliberada: ao separar o raciocínio analítico, realizado de forma incremental e verificada durante a Execução em Loop, da síntese da resposta final, reduz-se o risco de que a fase de apresentação introduza inferências não verificadas ou contradiga os resultados produzidos.
+Com todos os critérios gerais satisfeitos, o modelo compõe a resposta final ao usuário. Essa etapa não realiza novo raciocínio analítico sobre o problema: seu objetivo é exclusivamente organizar e apresentar os resultados já produzidos no formato e idioma definidos pelos critérios gerais (Resultado Fase~A.1). A distinção entre esta etapa e as anteriores é deliberada: ao separar o raciocínio analítico, realizado de forma incremental e verificada durante a Execução em Loop, da síntese da resposta final, reduz-se o risco de que a fase de apresentação introduza inferências não verificadas ou contradiga os resultados produzidos.
 
-A implementação utiliza um \textit{template} fixo (Template~C.3) que instrui o modelo a utilizar exclusivamente os resultados armazenados como base factual, respeitar o formato e o idioma definidos pelos critérios gerais, e não introduzir raciocínio ou informações novas que não estejam amparadas pelos resultados das tarefas. A relação de entrada e saída pode ser expressa como:
+Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~C.3) que será combinado com os resultados compilados e com os critérios gerais. Esse \textit{template} deve instruir o modelo a utilizar exclusivamente os resultados armazenados como base factual para compor a resposta, sem introduzir raciocínio ou informações novas que não estejam amparadas por esses resultados. As instruções devem também orientar o modelo a respeitar o formato e o idioma definidos nos critérios gerais. A relação de entrada e saída pode ser expressa como:
 
-\begin{equation*}
-  \begin{aligned}
-    	ext{Resultados Compilados} + \text{Critérios Gerais (A.1)} \\
-    + \text{Template C.3} \longrightarrow \text{Resposta Final}
-  \end{aligned}
-\end{equation*}
+\begin{multline*}
+  \text{Resultados Compilados} \\
+  + \text{Critérios Gerais (A.1)} + \text{Template C.3} \\
+  \longrightarrow \text{Resposta Final}
+\end{multline*}
+
+Nessa expressão, ``Resultados Compilados'' são as respostas aprovadas de todas as tarefas, ``Critérios Gerais (A.1)'' são os critérios definidos no Resultado Fase~A.1, e ``Template~C.3'' é o \textit{prompt} fixo de instrução descrito acima.
 
 \begin{exemplo}
-Em ambos os cenários (aprovação direta com três tarefas ou com Planejamento Adicional em quatro tarefas), os resultados indicam que primo $\cap$ par $\cap$ maior que 2 = $\varnothing$. Respeitando os critérios gerais — resposta em Português do Brasil, somente a alternativa, sem explicações adicionais, correspondente a uma das alternativas fornecidas —, a resposta final produzida é:
+Em ambos os cenários (aprovação direta com três tarefas ou com Planejamento Adicional em quatro tarefas), os resultados indicam que primo $\cap$ par $\cap$ maior que 2 = $\varnothing$. Respeitando os critérios gerais, a resposta final produzida é:
 
-\smallskip
+\saidaLLM
+
+\begin{quote}
 \textbf{D) Nenhuma das anteriores}
+\end{quote}
 
-\smallskip
 Essa resposta é então retornada ao usuário, encerrando o fluxo.
 \end{exemplo}
 
