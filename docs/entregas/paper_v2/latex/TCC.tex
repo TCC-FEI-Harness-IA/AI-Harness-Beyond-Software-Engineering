@@ -271,7 +271,7 @@
 
 \raggedright
 
-\inovatitle{Sistemas Compostos de IA: Otimização de Respostas em Benchmarks Objetivos por meio de Orquestração Baseada no Ralph Loop}
+\inovatitle{Um Harness de IA para Resolução de Perguntas em Linguagem Natural: Adaptando o Ralph Wiggum Loop Além do Desenvolvimento de Software}
 
 \autores{Hugo Emílio Nomura, Pedro Henrique Correia de Oliveira, Pedro Henrique Satoru Lima Takahashi, Vitor Monteiro Vianna}
 
@@ -285,11 +285,9 @@
 
 \email{cferreira@fei.edu.br}
 
-\resumo{Embora os \textit{Large Language Models} (LLMs) continuem operando como geradores de texto, sua evolução recente não depende apenas do aumento de capacidade ou da complexidade matemática. Soluções modernas incorporam planejamento, refinamento e ciclos iterativos de raciocínio para melhorar a qualidade e a consistência das saídas. No entanto, o uso prolongado desses mecanismos amplia a janela de contexto e pode causar degradação de informação (\textit{context rot}), reduzindo a confiabilidade das respostas.
+\resumo{Os \textit{Large Language Models} (LLMs), embora sejam em essência geradores probabilísticos de \textit{tokens}, alcançam ganhos expressivos de desempenho quando o processo de inferência é estruturado por \textit{harnesses} que incorporam planejamento, decomposição de tarefas e ciclos iterativos de refinamento. Entretanto, arquiteturas que preservam o histórico completo de execução em uma única janela de contexto introduzem degradação progressiva da qualidade das respostas conforme o contexto cresce, fenômeno denominado \textit{context rot}, que compromete a confiabilidade dos resultados em execuções longas.
 
-Este trabalho propõe adaptar os princípios do Ralph Wiggum Loop para cenários gerais de \textit{benchmarking}, com o objetivo de melhorar respostas por meio de chamadas iterativas ao próprio modelo, sem ferramentas externas. Para mitigar o \textit{context rot}, a arquitetura preserva um comportamento \textit{stateless} entre as fases, mantendo apenas os artefatos estritamente necessários a cada etapa.
-
-O impacto empírico da abordagem será avaliado com os \textit{benchmarks} MMLU e GPQA, comparando a acurácia de chamadas diretas ao modelo com a de execuções mediadas pelo \textit{harness} proposto.}
+Este trabalho propõe a adaptação do \textit{Ralph Wiggum Loop}, paradigma de orquestração originalmente concebido para fluxos focados em desenvolvimento e engenharia de software e que traz soluções para mitigar problemas de \textit{context rot}, para um fluxo de resolução generalista, focado em responder perguntas em linguagem natural. A hipótese é que essa estrutura melhora a qualidade das respostas em relação à inferência singular, e essa hipótese é avaliada por meio dos \textit{benchmarks} MMLU e GPQA, comparando chamadas diretas ao modelo com execuções mediadas pelo \textit{harness} proposto, utilizando modelos da família Llama~3.1 com diferentes quantidades de parâmetros. A acurácia, medida pela correspondência entre a alternativa selecionada pelo sistema e o gabarito oficial, é adotada como métrica principal.}
 
 \keyword{\textit{Large Language Models} (LLMs). Ralph Wiggum Loop. Sistemas Compostos de IA. Engenharia de Prompt. Decaimento de Contexto (\textit{context rot}).}
 
@@ -802,7 +800,14 @@ Essa resposta é então retornada ao usuário, encerrando o fluxo.
 
 
 % -------------------------------------------------
-\section{Cronograma do projeto}
+\section{Métodologia de avaliação}
+
+A métodologia de avaliação visa mensurar o impacto do \textit{harness} proposto na acurácia de modelos de linguagem em tarefas de raciocínio geral, comparando sistematicamente a inferência direta com a inferência orquestrada. Para essa validação, os experimentos são conduzidos com três modelos da família Llama~3.1, nas variantes de 8B, 70B e 405B parâmetros, escolhidos por representarem uma progressão controlada de escala computacional dentro de uma mesma arquitetura base. Essa escolha permite isolar o efeito da orquestração do efeito da escala, avaliando se os ganhos introduzidos pelo \textit{harness} se manifestam de forma consistente independentemente do tamanho do modelo.
+
+Para cada variante, são comparadas duas configurações de inferência: (i) uma chamada direta ao modelo, na qual toda a resposta é produzida em uma única etapa de inferência sem qualquer processamento auxiliar; e (ii) a mesma inferência mediada pelo \textit{harness} proposto, que aplica o fluxo completo de Planejamento, Execução em Loop e Criação da Resposta Final descrito na seção de metodologia, sem o uso de ferramentas externas. O desempenho é mensurado por meio de questões amostradas das bases MMLU~\cite{hendrycks2021measuring} e GPQA~\cite{rein2023gpqa}, escolhidas por seu elevado rigor acadêmico e por serem amplamente adotadas como referência na literatura de avaliação de LLMs. A métrica principal é a acurácia, obtida pela correspondência estrita entre a alternativa selecionada pelo sistema e o gabarito oficial.
+
+Para contextualizar os resultados obtidos em relação ao estado da arte, os valores de acurácia dos modelos Llama~3.1 nas duas configurações são comparados com os resultados de inferência direta já publicados para Claude Sonnet~4.6 e GPT~5.4 nos mesmos \textit{benchmarks}. Esses modelos comerciais não são submetidos ao \textit{harness} proposto: sua função é exclusivamente estabelecer um ponto de referência de mercado que permita situar o desempenho alcançado pela abordagem proposta em relação a sistemas modernos de grande escala.
+
 % -------------------------------------------------
 
 \begin{table*}[tb]
@@ -832,9 +837,6 @@ Essa resposta é então retornada ao usuário, encerrando o fluxo.
 \end{table*}
 
 
-% =================================================
-\section{Referências}
-% =================================================
 
 \printbibliography
 
