@@ -32,6 +32,7 @@
 \usepackage{newtxtext,newtxmath}
 \usepackage{booktabs}
 \usepackage{microtype}
+\usepackage{enumitem}
 
 % SVG
 \usepackage{svg}
@@ -329,618 +330,138 @@ Em sua formulação original, o \textit{Ralph Wiggum Loop} foi concebido especif
 \section{Metodologia}
 % =================================================
 
-\titleformat{\subsection}
-  {\color{grayFEI}\normalfont\fontfamily{phv}\selectfont\itshape\fontsize{10}{12}\selectfont}
-  {\arabic{subsection}.}        % Numeração arábica
-  {0.2em}
-  {}
-\renewcommand{\thesubsection}{\arabic{subsection}}  % Define arábica globalmente
-\titlespacing*{\subsection}{0pt}{6pt}{3pt}
+% \titleformat{\subsection}
+%   {\color{grayFEI}\normalfont\fontfamily{phv}\selectfont\itshape\fontsize{10}{12}\selectfont}
+%   {\arabic{subsection}.}        % Numeração arábica
+%   {0.2em}
+%   {}
+% \renewcommand{\thesubsection}{\arabic{subsection}}  % Define arábica globalmente
+% \titlespacing*{\subsection}{0pt}{6pt}{3pt}
 
-
-\subsection{Análise macro do processo de \textit{thinking}}
-
-O diagrama a seguir apresenta o fluxo macro do pipeline de \textit{thinking} proposto neste trabalho, oferecendo uma visão consolidada de todas as fases que o compõem.
-
-\begin{figure}
+\begin{figure*}[tb]
   \centering
-  \includesvg[width=1\columnwidth]{diagrams/fluxo_macro1.1}
-  \caption{Fluxo macro do pipeline de \textit{thinking}.}
-  \label{fig:fluxo_macro}
-\end{figure}
-
-O pipeline inicia-se a partir de um \textit{prompt} de entrada fornecido pelo usuário e segue etapas organizadas em loops aninhados: (i) definição dos critérios de aceitação e do formato de saída; (ii) decomposição do problema em tarefas atômicas independentes; (iii) processamento das tarefas no \textbf{Micro Loop}, onde cada subtarefa é resolvida individualmente até sua conclusão; (iv) compilação dos resultados para avaliação no \textbf{Macro Loop} em relação aos critérios globais. Se a avaliação identificar lacunas, o pipeline cria tarefas complementares e reinicia o Micro Loop até que todos os critérios sejam satisfeitos. Esse encadeamento estruturado favorece convergência iterativa e consistência lógica na geração da resposta final.
-
-Um aspecto central da arquitetura é a separação deliberada entre as fases de execução: cada etapa opera de forma \textit{stateless} em relação às demais, sem carregar diretamente o histórico de raciocínio das fases anteriores. Em vez disso, o sistema preserva apenas artefatos estruturados, como os arquivos \texttt{planning.json} e \texttt{tasks\_results.json}, que atuam como memória persistente e controlada entre as etapas. Essa escolha visa mitigar o contexto degradado (\textit{context rot}) e garantir que cada chamada ao LLM opere com o menor contexto necessário, reduzindo o risco de contaminação por raciocínios prévios.
-
-% -------------------------------------------------
-\subsection{Análise micro das fases}
-% -------------------------------------------------
-
-A seguir, cada fase do pipeline é detalhada individualmente. Para cada fase, são descritos: os agentes de LLM envolvidos, os dados de entrada e saída, e o fluxo de controle interno. Essa granularidade tem o objetivo de tornar o processo inteiramente replicável por pesquisadores externos.
-
-% -------------------------------------------------
-\subsubsection{Agentes de LLM}
-% -------------------------------------------------
-
-Neste trabalho, adota-se uma definição restrita de \textit{agente}: trata-se de um componente composto exclusivamente por um \textit{prompt} pré-definido e uma chamada ao modelo de linguagem (\texttt{LLM\_CALL}). Diferentemente de arquiteturas que atribuem a agentes acesso a ferramentas externas, chamadas a APIs, servidores MCP ou capacidades de navegação, os agentes aqui descritos operam de forma isolada, recebendo um contexto de entrada estruturado, processando via LLM e retornando uma saída textual ou estruturada em JSON. Essa restrição é intencional: ao eliminar dependências externas, torna-se possível avaliar de forma mais direta o impacto da orquestração e do \textit{prompting} sobre a qualidade das respostas, isolando as variáveis de interesse do estudo.
-
-Todos os \textit{prompts} de agentes são redigidos em inglês. Estudos como os de Huang et al.~\cite{huang2024beyond} e Shi et al.~\cite{shi2023multilingualcot} mostram que modelos de linguagem multilíngues tendem a produzir resultados de maior qualidade quando instruídos no idioma em que foram mais amplamente treinados, predominantemente o inglês, independentemente do idioma da questão de entrada. O trabalho de Qin et al.~\cite{qin2023crosslingual} reforça esse achado ao demonstrar que a combinação de \textit{prompting} em inglês com raciocínio \textit{zero-shot} em cadeia produz ganhos consistentes mesmo em línguas de menor representação nos dados de treinamento. A adoção do inglês como idioma padrão dos \textit{prompts} de agentes visa, portanto, maximizar a qualidade do raciocínio interno do modelo, sem prejuízo ao idioma da resposta entregue ao usuário, que é determinado separadamente, conforme descrito na seção seguinte.
-
-Adicionalmente, todos os \textit{prompts} são construídos utilizando a sintaxe \textit{Markdown}, com delimitadores explícitos de seção para separar instruções gerais, contexto de entrada e especificações de saída. Estudos como os de He et al.~\cite{he2024promptformatting} e Liu et al.~\cite{liu2025contentformat} mostram que a formatação do \textit{prompt} afeta de forma mensurável o desempenho dos modelos, e que otimizações conjuntas de conteúdo e formato produzem ganhos adicionais sobre a otimização exclusiva do conteúdo textual. A adoção de \textit{Markdown} visa, portanto, tornar delimitadores, hierarquias e restrições mais salientes durante a inferência, contribuindo para respostas mais consistentes com as instruções fornecidas.
-
-% -------------------------------------------------
-\subsubsection{Definição dos critérios de aceite da resposta final} \label{subsec:definicao_criterios}
-% -------------------------------------------------
-
-\begin{figure}
-  \centering
-  \tikzset{
-      % Estilo para bloco de processo
-      process/.style={
-          rectangle,
-          draw=black,
-          thick,
-          fill=white,
-          text width=4.6cm,
-          text centered,
-          minimum height=1.1cm,
-          font=\sffamily\small
-      },
-      % Estilo para o círculo (Próx. fase / Prompt)
-      circleNode/.style={
-          circle,
-          draw=black,
-          thick,
-          fill=white,
-          minimum size=1.1cm,
-          align=center,
-          font=\sffamily\small,
-          inner sep=1pt
-      },
-      % Estilo para descrição de texto sem borda
-      labelNode/.style={
-          align=left,
-          font=\sffamily\small,
-          text width=3.4cm,
-          inner sep=2pt
-      },
-      % Estilo padrão das setas
-      arrow/.style={
-          -{Stealth[scale=1.1]},
-          thick,
-          font=\sffamily\small
-      }
-  }
-
-  \resizebox{0.75\columnwidth}{!}{%
-  \begin{tikzpicture}[node distance=0.8cm and 0.5cm]
-
-      % --- EIXO CENTRAL VERTICAL ---
-      % Círculo 1: Prompt de Entrada
-      \node (prompt) [circleNode] {Prompt\\entrada};
-
-      % Bloco 1: Chamada LLM 1
-      \node (llm1) [process, below=of prompt] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{acceptance\_criteria\_agent}''}};
-
-      % Bloco 2: Chamada LLM 2
-      \node (llm2) [process, below=of llm1] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{expected\_output\_format\_agent}''}};
-
-      % Bloco 3: Criação do planning.json
-      \node (cria) [process, below=of llm2] {Cria o ``\texttt{planning.json}'', contendo \\ os critérios de aceite e formato de \\ saída esperado para a resposta final};
-
-      % Círculo \enquote{Próx. fase} posicionado abaixo
-      \node (prox) [circleNode, below=of cria, yshift=-0.2cm] {Próx.\\fase};
-
-      % Texto descritivo à direita do círculo (CORRIGIDO)
-      \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Quebra de tasks independentes)};
-
-      % --- CONEXÕES / SETAS ---
-
-      \draw [arrow] (prompt) -- (llm1);
-      \draw [arrow] (llm1) -- (llm2);
-      \draw [arrow] (llm2) -- (cria);
-      \draw [arrow] (cria) -- (prox);
-
-  \end{tikzpicture}%
-  }
-  \caption{Fase de definição dos critérios de aceite da resposta final.}
-  \label{fig:definicao_criterios}
-\end{figure}
-
-Esta fase é responsável por transformar o \textit{prompt} bruto do usuário em dois artefatos que guiarão todo o processo posterior: (i) uma lista de critérios de aceitação que a resposta final deverá satisfazer, e (ii) uma especificação do formato de saída esperado. Para isso, dois agentes são acionados em sequência a partir da mesma entrada.
-
-O \texttt{acceptance\_criteria\_agent} recebe o \textit{prompt} de entrada do usuário e é responsável por identificar e listar, de forma explícita, os critérios objetivos e verificáveis que uma resposta satisfatória deve cumprir. Em seguida, o \texttt{expected\_output\_format\_agent} analisa o mesmo \textit{prompt}, buscando por indicações explícitas de formato de saída, como ``retorne somente a alternativa correta'', ``responda em JSON'' ou ``elabore uma justificativa''. Caso nenhuma indicação seja encontrada, o agente infere o formato mais adequado ao tipo de tarefa: para questões de múltipla escolha, o padrão é ``retornar somente a letra da alternativa correta, sem explicações adicionais''; para questões abertas, ``texto corrido em formato Markdown''. O idioma da resposta final é tratado como parte integrante do formato de saída: se o usuário o especificou explicitamente, essa instrução é acatada; caso contrário, o agente infere o idioma a partir do idioma utilizado na entrada e o registra como especificação. Quando exemplos de saída são fornecidos pelo usuário, estes são incorporados ao campo correspondente.
-
-Os resultados dessas duas chamadas são então consolidados em um arquivo JSON denominado \texttt{planning.json}, que servirá de artefato central de memória estruturada para todas as fases subsequentes. A estrutura do \texttt{planning.json} é inspirada no \texttt{prd.json} do Ralph Wiggum Loop original, porém estendida para incorporar as informações de critérios de aceitação e formato de saída.
-
-\begin{lstlisting}[language=json]
-{
-  "general_infos": {
-    "acceptance_criteria": [],
-    "expected_output_format": {
-      "format": "",
-      "response_language": ""
-    }
-  },
-  "tasks": []
-}
-\end{lstlisting}
-
-O campo \texttt{tasks} é inicialmente vazio e será preenchido pela fase seguinte. A separação entre \texttt{general\_infos} e \texttt{tasks} é proposital: as informações gerais são invariantes ao longo de todo o pipeline, enquanto as tarefas podem ser adicionadas iterativamente por planos complementares.
-
-% -------------------------------------------------
-\subsubsection{Quebra de Tasks Independentes} \label{subsec:quebra_tasks}
-% -------------------------------------------------
-
-\begin{figure}
-  \centering
-  \tikzset{
-      % Estilo para bloco de processo
-      process/.style={
-          rectangle,
-          draw=black,
-          thick,
-          fill=white,
-          text width=6.5cm,
-          text centered,
-          minimum height=1.1cm,
-          font=\sffamily\small
-      },
-      % Estilo para o losango de decisão
-      decision/.style={
-          diamond,
-          draw=black,
-          thick,
-          fill=white,
-          text width=2.4cm,
-          text centered,
-          minimum height=1.6cm,
-          inner sep=0pt,
-          font=\sffamily\small
-      },
-      % Estilo para o círculo (Próx. fase)
-      circleNode/.style={
-          circle,
-          draw=black,
-          thick,
-          fill=white,
-          minimum size=1.1cm,
-          align=center,
-          font=\sffamily\small,
-          inner sep=1pt
-      },
-      % Estilo para descrição de texto sem borda
-      labelNode/.style={
-          align=left,
-          font=\sffamily\small,
-          text width=3.4cm,
-          inner sep=2pt
-      },
-      % Estilo padrão das setas
-      arrow/.style={
-          -{Stealth[scale=1.1]},
-          thick,
-          font=\sffamily\small
-      }
-  }
-
-  \resizebox{0.98\columnwidth}{!}{%
-  \begin{tikzpicture}[node distance=0.8cm and 0.5cm]
-
-      % --- EIXO CENTRAL ---
-      % Bloco 1: Define os critérios
-      \node (definicao) [process] {Define os critérios de aceitação \\ da resposta final};
-
-      % Bloco 2: Planejador das tarefas atômicas
-      \node (planner) [process, below=of definicao] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{atomic\_tasks\_planner\_agent}''}};
-
-      % Bloco 3: Revisor das tarefas atômicas
-      \node (revisor) [process, below=of planner] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{atomic\_tasks\_revisor\_agent}''}};
-
-      % Bloco 4: Losango de Decisão \enquote{Tasks ok?}
-      \node (decisao) [decision, below=of revisor, yshift=-0.2cm] {Tasks ok?};
-
-      % Bloco 5: JSON com fases criadas
-      \node (json) [process, below=of decisao, yshift=-0.2cm] {JSON com as fases criadas \\ (\texttt{planning.json})};
-
-      % Círculo \enquote{Próx. fase} posicionado abaixo
-      \node (prox) [circleNode, below=of json] {Próx.\\fase};
-
-      % Texto descritivo à direita do círculo
-      \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Resolução das tarefas - Ralph Loop)};
-
-      % --- FLUXO \enquote{NÃO} (DIREITA) ---
-      % Bloco de Reescrita (Rewriter) posicionado à direita do losango
-      \node (rewriter) [process, right=of decisao, xshift=1.2cm, text width=6.0cm] {LLM\_CALL usando o Agente \\ {\scriptsize ``\texttt{atomic\_tasks\_rewriter\_agent}''}};
-
-      % --- CONEXÕES / SETAS ---
-
-      % Fluxo Linear Central
-      \draw [arrow] (definicao) -- (planner);
-      \draw [arrow] (planner) -- (revisor);
-      \draw [arrow] (revisor) -- (decisao);
-
-      % Decisão -> Sim (Abaixo)
-      \draw [arrow] (decisao.south) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Sim} (json.north);
-      \draw [arrow] (json) -- (prox);
-
-      % Decisão -> Não (Direita)
-      \draw [arrow] (decisao.east) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Não} (rewriter.west);
-
-      % Loop de Reescrita -> Revisor (Linha em L invertido)
-      \draw [arrow] (rewriter.north) |- (revisor.east);
-
-  \end{tikzpicture}%
-  }
-  \caption{Fase de quebra de tarefas independentes.}
-  \label{fig:quebra_tasks}
-\end{figure}
-
-Esta fase é, em termos de responsabilidade lógica, a mais crítica de todo o pipeline: é aqui que se implementa o princípio central do Ralph Wiggum Loop, a decomposição do problema em unidades mínimas e independentes de execução. O agente \texttt{atomic\_tasks\_planner\_agent} recebe como entrada o \textit{prompt} do usuário e o campo \texttt{general\_infos} do \texttt{planning.json} gerado na fase anterior, e a partir disso constrói um plano de tarefas atômicas.
-
-O conceito de atomicidade empregado é preciso: uma tarefa é considerada atômica quando representa a menor unidade de trabalho possível e pode ser executada e avaliada de forma completamente independente das demais tarefas do plano, sem necessidade de acessar ou reutilizar os resultados de outras tarefas durante sua própria execução. Essa propriedade é fundamental para garantir o funcionamento correto do mecanismo de \textit{fresh context}, pois, se tarefas dependessem umas das outras durante a execução, seria necessário carregar contexto acumulado, o que reintroduziria os problemas de degradação que a arquitetura busca mitigar.
-
-Após a geração do plano inicial, o agente \texttt{atomic\_tasks\_revisor\_agent} é acionado para verificar se todas as tarefas propostas satisfazem o critério de independência, retornando um JSON com um campo booleano de aprovação e uma justificativa. Se problemas forem identificados, o agente \texttt{atomic\_tasks\_rewriter\_agent}, que incorpora em seu \textit{prompt} todas as regras e restrições do planejador, é acionado para reescrever o plano com base na justificativa fornecida. Esse ciclo de revisão repete-se até que o revisor valide o plano, garantindo que apenas tarefas verdadeiramente independentes avancem para a fase de execução.
-
-Cada tarefa do plano é representada no \texttt{planning.json} no seguinte formato:
-
-\begin{lstlisting}[language=json]
-{
-  "id": "",
-  "title": "",
-  "description": "",
-  "acceptance_criteria": [],
-  "pass_phase": false
-}
-\end{lstlisting}
-
-O campo \texttt{pass\_phase} é inicializado como \texttt{false} para todas as tarefas e atualizado para \texttt{true} ao final da execução bem-sucedida de cada uma, funcionando como marcador de progresso para o mecanismo iterativo.
-
-% -------------------------------------------------
-\subsubsection{Resolução das tarefas — Ralph Loop} \label{subsec:resolucao_tarefas}
-% -------------------------------------------------
-
-\begin{figure}
-  \centering
-  \tikzset{
-      % Estilo para bloco de processo
-      process/.style={
-          rectangle,
-          draw=black,
-          thick,
-          fill=white,
-          text width=4.6cm,
-          text centered,
-          minimum height=1.1cm,
-          font=\sffamily\small
-      },
-      % Estilo para o losango de decisão
-      decision/.style={
-          diamond,
-          draw=black,
-          thick,
-          fill=white,
-          text width=2.8cm,
-          text centered,
-          minimum height=1.8cm,
-          inner sep=0pt,
-          font=\sffamily\small
-      },
-      % Estilo para losango vazio pequeno
-      decision_empty/.style={
-          diamond,
-          draw=black,
-          thick,
-          fill=white,
-          minimum size=0.7cm,
-          inner sep=0pt
-      },
-      % Estilo para o círculo (Próx. fase)
-      circleNode/.style={
-          circle,
-          draw=black,
-          thick,
-          fill=white,
-          minimum size=1.1cm,
-          align=center,
-          font=\sffamily\small,
-          inner sep=1pt
-      },
-      % Estilo para descrição de texto sem borda
-      labelNode/.style={
-          align=left,
-          font=\sffamily\small,
-          text width=3.4cm,
-          inner sep=2pt
-      },
-      % Estilo padrão das setas
-      arrow/.style={
-          -{Stealth[scale=1.1]},
-          thick,
-          font=\sffamily\small
-      }
-  }
-
-  \resizebox{0.98\columnwidth}{!}{%
-  \begin{tikzpicture}[node distance=0.8cm and 0.5cm]
-
-      % --- EIXO CENTRAL VERTICAL ---
-      % Bloco 1: JSON com tarefas
-      \node (json) [process] {JSON com as fases criadas \\ (\texttt{planning.json})};
-
-      % Bloco 2: Existe alguma task...
-      \node (existe) [process, below=of json] {Existe alguma task com \\ ``\texttt{pass\_phase}: \texttt{False}''?};
-
-      % Bloco 3: Losango vazio pequeno
-      \node (empty_dec) [decision_empty, below=of existe, yshift=-0.2cm] {};
-
-      % Bloco 4: LLM_CALL contendo somente o conteúdo da fase
-      \node (llm_fase) [process, below=of empty_dec, yshift=-0.2cm] {LLM\_CALL contendo \\ somente o conteúdo da fase};
-
-      % Bloco 5: task_interactions ++
-      \node (interactions) [process, below=of llm_fase] {\texttt{task\_interactions} ++};
-
-      % Bloco 6: LLM_CALL para agente reviewer
-      \node (reviewer) [process, below=of interactions] {LLM\_CALL para agente \\ {\scriptsize ``\texttt{task\_outcome\_reviewer\_agent}''}};
-
-      % Bloco 7: Losango de Decisão \enquote{Cumpre os critérios?}
-      \node (cumpre) [decision, below=of reviewer, yshift=-0.3cm] {Cumpre os critérios?};
-
-      % --- FLUXO \enquote{NÃO} DA PRIMEIRA DECISÃO (DIREITA) ---
-      % Círculo \enquote{Próx. fase} posicionado à direita do losango vazio
-      \node (prox) [circleNode, right=of empty_dec, xshift=1.2cm] {Próx.\\fase};
-
-      % Texto descritivo à direita do círculo
-      \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Avaliação de critérios de aceitação)};
-
-      % --- FLUXO DA SEGUNDA DECISÃO (DIREITA) ---
-      % Losango de Decisão \enquote{Atingiu o max_iterations?}
-      \node (max_iter) [decision, right=of cumpre, xshift=1.8cm] {Atingiu o \\ \texttt{max\_iterations}?};
-
-      % Bloco de Feedback (LLM_CALL contendo...) alinhado verticalmente com max_iter e horizontalmente com interactions
-      \node (llm_feedback) [process, text width=4.2cm] at (max_iter |- interactions) {LLM\_CALL contendo: \\ - A última iteração (\textit{prompt} + resposta) \\ - Justificativa de não aceite};
-
-      % Bloco 8: Salva a resposta (abaixo de max_iter)
-      \node (salva) [process, below=of max_iter, yshift=-0.5cm] {Salva a resposta no \\ ``\texttt{tasks\_results.json}''};
-
-      % Bloco 9: Atualiza a task (abaixo de salva)
-      \node (atualiza) [process, below=of salva] {Atualiza a task, \\ ``\texttt{pass\_phase}: \texttt{True}''};
-
-      % --- CONEXÕES / SETAS ---
-
-      % Fluxo Linear Central
-      \draw [arrow] (json) -- (existe);
-      \draw [arrow] (existe) -- (empty_dec);
-      \draw [arrow] (empty_dec) -- node[midway, fill=white] {Sim} (llm_fase);
-      \draw [arrow] (llm_fase) -- (interactions);
-      \draw [arrow] (interactions) -- (reviewer);
-      \draw [arrow] (reviewer) -- (cumpre);
-
-      % Cumpre -> Sim -> Salva (linha em L)
-      \draw [arrow] (cumpre.south) |- node[near start, fill=white] {Sim} (salva.west);
-      \draw [arrow] (salva) -- (atualiza);
-
-      % Retorno do Micro Loop (Atualiza -> Sobe -> Existe)
-      \draw [arrow] (atualiza.east) -- ++(0.6,0) |- (existe.east);
-
-      % Decisão Vazia -> Não (Direita)
-      \draw [arrow] (empty_dec.east) -- node[midway, fill=white] {Não} (prox.west);
-
-      % Cumpre -> Não (Direita) -> Max Iter
-      \draw [arrow] (cumpre.east) -- node[midway, fill=white] {Não} (max_iter.west);
-
-      % Max Iter -> Sim (Abaixo) -> Salva
-      \draw [arrow] (max_iter.south) -- node[midway, fill=white] {Sim} (salva.north);
-
-      % Max Iter -> Não (Acima) -> LLM Feedback
-      \draw [arrow] (max_iter.north) -- node[midway, fill=white] {Não} (llm_feedback.south);
-
-      % LLM Feedback -> Interactions
-      \draw [arrow] (llm_feedback.west) -- (interactions.east);
-
-  \end{tikzpicture}%
-  }
-  \caption{Fase de resolução iterativa das tarefas (Ralph Loop).}
-  \label{fig:ralph_loop}
-\end{figure}
-
-Esta fase implementa o núcleo iterativo do Ralph Wiggum Loop adaptado ao contexto deste trabalho. O processo inicia pela verificação do \texttt{planning.json}: enquanto existirem tarefas com \texttt{pass\_phase: false}, o pipeline seleciona a próxima tarefa pendente e inicia um ciclo de tentativa, avaliação e revisão.
-
-Cada iteração do ciclo consiste em: (i) uma chamada ao LLM contendo exclusivamente o conteúdo da tarefa atual, sem histórico acumulado de outras tarefas, seguida de (ii) uma chamada ao agente \texttt{task\_outcome\_reviewer\_agent}, que compara a resposta gerada com os \texttt{acceptance\_criteria} da tarefa. O revisor retorna um JSON com um campo booleano de aprovação e uma justificativa. Se o revisor aprovar a resposta, ela é salva no arquivo \texttt{tasks\_results.json} e o campo \texttt{pass\_phase} da tarefa é atualizado para \texttt{true}. Se reprovar, a justificativa é incorporada à próxima chamada ao LLM, configurando um ciclo de refinamento guiado, análogo aos mecanismos de \textit{Reflexion}~\cite{shinn2023reflexion} e \textit{Self-Debugging}~\cite{chen2023selfdebug}.
-
-No que diz respeito à persistência dos resultados, adota-se uma adaptação do princípio original do Ralph Wiggum Loop, que estabelece que ``All memory lives in files and git, not the model''. Como o presente trabalho aplica o pipeline a cenários distintos do desenvolvimento de software, o mecanismo de \textit{commit} em repositório Git é substituído pelo arquivo \texttt{tasks\_results.json}, que acumula exclusivamente as respostas finais aprovadas de cada tarefa, sem registrar histórico de raciocínio, tentativas anteriores ou qualquer metadado do ciclo iterativo.
-
-Para mitigar o risco de \textit{deadlock}, implementa-se um mecanismo de controle denominado \textit{pânico}. Um contador \texttt{task\_interactions} é incrementado a cada chamada ao LLM dentro do ciclo de uma tarefa. Quando esse contador atinge o valor de \texttt{max\_iterations}, a fase encerra automaticamente e a resposta disponível no momento é salva no \texttt{tasks\_results.json}, mesmo que os critérios não tenham sido plenamente atendidos.
-
-% -------------------------------------------------
-\subsubsection{Avaliação dos critérios de aceitação} \label{subsec:avaliacao_criterios}
-% -------------------------------------------------
-
-\begin{figure}
-  \centering
-  \tikzset{
-      % Estilo para bloco de processo (LLM Call)
-      process/.style={
-          rectangle,
-          draw=black,
-          thick,
-          fill=white,
-          text width=6.5cm,
-          text centered,
-          minimum height=1.1cm,
-          font=\sffamily\small
-      },
-      % Estilo para o losango de decisão
-      decision/.style={
-          diamond,
-          draw=black,
-          thick,
-          fill=white,
-          text width=3.0cm,
-          text centered,
-          minimum height=1.8cm,
-          inner sep=0pt,
-          font=\sffamily\small
-      },
-      % Estilo para o círculo (Próx. fase)
-      circleNode/.style={
-          circle,
-          draw=black,
-          thick,
-          fill=white,
-          minimum size=1.1cm,
-          align=center,
-          font=\sffamily\small,
-          inner sep=1pt
-      },
-      % Estilo para descrição de texto sem borda
-      labelNode/.style={
-          align=left,
-          font=\sffamily\small,
-          text width=3.4cm,
-          inner sep=2pt
-      },
-      % Estilo padrão das setas
-      arrow/.style={
-          -{Stealth[scale=1.1]},
-          thick,
-          font=\sffamily\small
-      }
-  }
-
-  \resizebox{0.98\columnwidth}{!}{%
-  \begin{tikzpicture}[node distance=0.8cm and 0.5cm]
-
-      % --- EIXO CENTRAL ---
-      % Bloco 1: LLM Call
-      \node (llm) [process] {LLM\_CALL para agente \\ {\fontsize{6pt}{7pt}\selectfont ``\texttt{final\_response\_acceptance\_criteria\_reviewer\_agent}''}};
-
-      % Bloco 2: Losango de Decisão
-      \node (decisao) [decision, below=of llm, yshift=-0.2cm] {Cumpre os critérios de aceite da resposta final?};
-
-      % --- FLUXO \enquote{NÃO} (DIREITA) ---
-      % Círculo \enquote{Próx. fase} posicionado à direita do losango
-      \node (prox_nao) [circleNode, right=of decisao, xshift=0.45cm] {Próx.\\fase};
-
-      % Texto descritivo à direita do círculo
-      \node (acao_nao) [labelNode, right=of prox_nao, xshift=-0.35cm] {(Criação de plano adicional complementar)};
-
-      % --- FLUXO \enquote{SIM} (ABAIXO) ---
-      % Círculo \enquote{Próx. fase} posicionado abaixo do losango
-      \node (prox_sim) [circleNode, below=of decisao, yshift=-0.5cm] {Próx.\\fase};
-
-      % Texto descritivo à direita do círculo
-      \node (acao_sim) [labelNode, right=of prox_sim, xshift=-0.35cm] {(Criação da resposta final)};
-
-      % --- CONEXÕES / SETAS ---
-
-      % LLM -> Decisão
-      \draw [arrow] (llm) -- (decisao);
-
-      % Decisão -> Não (Direita)
-      \draw [arrow] (decisao.east) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Não} (prox_nao.west);
-
-      % Decisão -> Sim (Abaixo)
-      \draw [arrow] (decisao.south) -- node[midway, fill=white, font=\sffamily\small, inner sep=2pt] {Sim} (prox_sim.north);
-
-  \end{tikzpicture}%
-  }
-  \caption{Fluxograma de avaliação dos critérios de aceitação da resposta final.}
-  \label{fig:avaliacao_criterios}
-\end{figure}
-Ao término da resolução de todas as tarefas do plano, o pipeline consolida os resultados armazenados no \texttt{tasks\_results.json} e os submete a uma avaliação global frente aos critérios de aceitação definidos em \texttt{general\_infos.acceptance\_criteria} do \texttt{planning.json}. Essa fase é executada pelo agente {\scriptsize\texttt{final\_response\_acceptance\_criteria\_reviewer\_agent}}, que recebe ambos os artefatos como entrada.
-
-A lógica é análoga à dos revisores de tarefa individual, porém operando em um nível de abstração superior: em vez de avaliar uma resposta pontual contra critérios locais de uma tarefa, o agente avalia se o conjunto total de resultados gerados fornece insumos suficientes para construir uma resposta final que atenda a todos os critérios globais. Dois fluxos de saída são possíveis a partir dessa avaliação: caso todos os critérios sejam considerados atendidos, o pipeline avança para a criação da resposta final; caso contrário, avança para a criação de um plano adicional complementar.
-
-% -------------------------------------------------
-\subsubsection{Criação de plano complementar} \label{subsec:criacao_plano_complementar}
-% -------------------------------------------------
-
-\begin{figure}
-  \centering
-  \tikzset{
-      % Estilo para bloco de processo
-      process/.style={
-          rectangle,
-          draw=black,
-          thick,
-          fill=white,
-          text width=4.6cm,
-          text centered,
-          minimum height=1.1cm,
-          font=\sffamily\small
-      },
-      % Estilo para o círculo (Próx. fase)
-      circleNode/.style={
-          circle,
-          draw=black,
-          thick,
-          fill=white,
-          minimum size=1.1cm,
-          align=center,
-          font=\sffamily\small,
-          inner sep=1pt
-      },
-      % Estilo para descrição de texto sem borda
-      labelNode/.style={
-          align=left,
-          font=\sffamily\small,
-          text width=3.4cm,
-          inner sep=2pt
-      },
-      % Estilo padrão das setas
-      arrow/.style={
-          -{Stealth[scale=1.1]},
-          thick,
-          font=\sffamily\small
-      }
-  }
-
-  \resizebox{0.75\columnwidth}{!}{%
-  \begin{tikzpicture}[node distance=0.8cm and 0.5cm]
-
-      % --- EIXO CENTRAL VERTICAL ---
-      % Bloco 1: Criador do Gap Prompt
-      \node (llm1) [process] {LLM\_CALL para agente \\ {\scriptsize ``\texttt{acceptance\_gap\_prompt\_creator}''}};
-
-      % Bloco 2: Planejador das tarefas atômicas
-      \node (llm2) [process, below=of llm1] {LLM\_CALL para agente \\ {\scriptsize ``\texttt{atomic\_tasks\_planner\_agent}''}};
-
-      % Bloco 3: Concatenação das fases
-      \node (concatena) [process, below=of llm2] {Concatena as novas fases criadas \\ ao ``\texttt{planning.json}'' original};
-
-      % Círculo \enquote{Próx. fase} posicionado abaixo
-      \node (prox) [circleNode, below=of concatena, yshift=-0.2cm] {Próx.\\fase};
-
-      % Texto descritivo à direita do círculo
-      \node (acao) [labelNode, right=of prox, xshift=-0.35cm] {(Resolução das tarefas (Ralph Loop))};
-
-      % --- CONEXÕES / SETAS ---
-
-      \draw [arrow] (llm1) -- (llm2);
-      \draw [arrow] (llm2) -- (concatena);
-      \draw [arrow] (concatena) -- (prox);
-
-  \end{tikzpicture}%
-  }
-  \caption{Criação de plano complementar para critérios não atendidos.}
-  \label{fig:plano_complementar}
-\end{figure}
-
-Quando a avaliação global indica que os critérios de aceitação não foram plenamente atendidos, o pipeline não retorna ao início, o que implicaria descartar e reprocessar etapas já concluídas. Em vez disso, adota-se uma estratégia de afunilamento progressivo: o agente \texttt{acceptance\_gap\_prompt\_creator} analisa a justificativa retornada pelo revisor global e produz um novo \textit{prompt} no estilo de entrada de usuário, descrevendo exclusivamente o que ainda precisa ser resolvido para cobrir as lacunas identificadas.
-
-Esse \textit{prompt} é então submetido ao \texttt{atomic\_tasks\_planner\_agent}, o mesmo agente da fase de quebra de tarefas independentes, que gera um novo conjunto de tarefas complementares. Essas novas tarefas são concatenadas ao campo \texttt{tasks} do \texttt{planning.json} original, e o pipeline retorna à fase de resolução das tarefas para executá-las.
-
-Esse mecanismo constitui, na prática, um segundo nível de loop que garante a convergência iterativa do pipeline: a cada ciclo, o conteúdo gerado aproxima-se do que é necessário para satisfazer todos os critérios de aceitação, sem desperdiçar o trabalho já realizado nas iterações anteriores.
-
-% -------------------------------------------------
-\subsubsection{Criação da resposta final} \label{subsec:resposta_final}
-% -------------------------------------------------
-
-A fase de criação da resposta final assume que o \texttt{tasks\_results.json} contém todos os insumos necessários para compor uma resposta que satisfaça integralmente os critérios de aceitação globais, premissa garantida pela fase de avaliação anterior. É nesta fase, e somente nesta, que o conteúdo do \texttt{tasks\_results.json} é efetivamente recuperado e utilizado.
-
-O agente \texttt{final\_response\_composer\_agent} recebe como entrada o arquivo completo de resultados, o campo \texttt{general\_infos.expected\_output\_format} do \texttt{planning.json} e o \textit{prompt} original do usuário, utilizando-os em conjunto para compor a resposta final no formato e idioma especificados. O retorno desse agente é a saída direta do pipeline ao usuário, encerrando o processo de \textit{thinking}.
+  \includegraphics[width=\textwidth]{diagrams/ralph_loop_adaptado_png}
+  \caption{Visão geral do \textit{Ralph Wiggum Loop} adaptado para resolução de perguntas em linguagem natural.}
+  \label{fig:ralph_loop_adaptado}
+\end{figure*}
+
+A adaptação do \textit{Ralph Wiggum Loop} para um contexto generalista de resolução de perguntas em linguagem natural exige ajustes estruturais em relação à formulação original, que foi concebida exclusivamente para fluxos de engenharia de software. A Figura~\ref{fig:ralph_loop_adaptado} apresenta uma visão geral do fluxo proposto, que preserva os princípios centrais do paradigma original, representado na Figura~\ref{fig:ralph_loop_original}.
+
+Em linhas gerais, propomos uma conversão do conceito de histórias de usuário para tarefas, o que nos permite manter um fluxo muito próximo do original, contendo as etapas de ``Planejamento'' e ``Execução em Loop''. Entretanto, passa a ser necessário considerar a criação de um retorno ao usuário, algo que não constitui uma preocupação no \textit{Ralph Wiggum Loop} original. Dessa forma, incorporamos uma nova fase após fluxo de execução, denominada ``Criação da Resposta Final'', que contém toda a lógica necessária para agrupar os resultados produzidos pelas tarefas anteriores em uma resposta que apresente o conteúdo e o formato esperados pelo usuário que realizou a solicitação.
+
+
+% A. Planejamento
+\subsection{Planejamento}
+
+O planejamento é o inicio de todo o fluxo. Aqui assumimos que estamos recebendo uma pergunta e vamos iniciar o fluxo de \textit{Thinking} da aplicação. Assim como exemplificado na Figura~\ref{fig:ralph_loop_adaptado}, o planejamento possui somente duas etapas:
+
+- Exemplo pratico de input passado pelo usuario:
+\begin{quote}
+Qual dos seguintes números é simultaneamente primo, par e maior que 2?
+
+\begin{enumerate}[label=\Alph*)]
+    \item 2
+    \item 4
+    \item 6
+    \item Nenhuma das anteriores
+\end{enumerate}
+\end{quote}
+
+\subsubsection{Defição dos critérios de aceite gerais}\label{subsec:planejamento-criterios}
+- Explicação da responsabilidade:
+  - Essa é uma fase que não era necessaria no contexto de desenvolvimento de software, ja que a cada tarefa que era entregue, um commit era feito salvando o progresso, e quando todas as terafas tivessem encerrado, o desenvolvimento tambemn estaria promto.
+  - Agora o cenario muda, apos todas as tarefas serem todas concluidas, vai ser necessario enviar uma resposta final usando o resultado das tarefas geradas, e esses criterios devem trazer definições que vão ser usadas.
+    - Vão ser definidos pontos como: Idioma a ser usado na resposta final, Qual o formato que deve ser construida a resposta final, topicos chaves do conteudo que devem estar presentes na resposta final
+
+- Como vai ser feito:
+  - Criação de um template FIXO, onde vai ser injetado o input passado pelo usuario. Esse template deve conter um prompt solicitando a definição de uma lista de criterios de aceite que vão ser resgatados na fase de criação da resposta final.
+  - Deve ficar claro que o tempelate dessa fase vai somente pedir aquebra e fornecer exemplos dessas quebras
+    - O template vai pedir para que ocorra definição de:
+      - Idioma a ser usado na resposta final
+      - Qual o formato que deve ser construida a resposta final
+      - Topicos chaves do conteudo que devem estar presentes na resposta final
+
+- Equação de funcinamento da fase:
+  - Pergunta do usuario + Template A.1 = Resultado Fase A.1
+  - O Resultado Fase A.1 deve ser armazenado localmente em um arquivo ou na memoria do programa
+
+- Exmplo pratico:
+  - Assumindo input passado no inicio o LLM deveria retornar algo como:
+    - "A pergunta deve ser respondida em Portugues do Brasil", "Reponda somente a alternativa, sem conter explicações adicionais", "Garanta que o valor encontrado ao final bate com uma das alternativas"
+
+\subsubsection{Quebra em tarefas de objetivo único com critérios de aceite individuais} \label{subsec:planejamento-tarefas}
+- Explicação da responsabilidade:
+  - Quebrar a pergunta do usuario em pequenas fases.
+  - Cada fase precisa ter um criterio de aceite, ou seja, o conteudo que esperamos que seja gerado para que a fase possa ser considarada como "Concluida"
+  - Aqui a ideia é criar fases que gerem insumos capazes de gerar uma resposta final ao se juntar.
+
+- Como vai ser feito:
+  - Criação de um template FIXO, onde vai ser injetado o input passado pelo usuario. Esse template deve conter um prompt solicitando a quebra da pergunta fornecida como input pelo ususario em tarefas.
+    - Ainda nesse template, deve ser especificado que as tarefas de objetivo único, nesse contexto, significam ter uma unica responsabilidade pontual, como "pegar uma formula" ou "buscar o dado X", mas nunca "Buscar pela formula X, substituir pelos varelas A, B, C e executar a conta matemática para encontrar o resultado".
+    - Alem de ter um unico objetivo, a terafa deve ser o mais detalhada possivel, para que não ocorram desvios de objetico.
+    - Nesse prompt de quebra tambem deve ficar claro que o contexto doque foi feito não vai pra proxima fase, somente serão salvos pontos especificos que podem ser uteis para fases posteriores, como "A formula X é usada para calcular o consumo de energia elétrica"
+    - Preciso que fique claro que o objetivo dessas fases é gerar insumos para que a a tarefa possa ser resolvida
+    - Tambem nesse template deve ser definido que toda terafa deve ter pelo menos um criterio de aceite, que valida se a resposta final gerada contem o conteudo necessario para encerrar a fase
+
+- Equação de funcinamento da fase:
+  - Pergunta do usuario + Template A.2 = Resultado Fase A.2
+    - O Resultado Fase A.2 deve ser armazenado localmente em um arquivo ou na memoria do programa
+
+- Exmplo pratico:
+  - Assumindo input passado no inicio o LLM deveria retornar algo como:
+    "
+  - Tarefa 1:
+    - Tarefa:
+      - "Dadas as opções (2, 4, 6), identifique quais desses números são primos"
+    - Critérios de aceite:
+      - "Deve retornar a lista de números primos encontrados nas alternativas."
+      - "Deve incluir uma breve explicação da regra de identificação de números primos."
+      - "A resposta não deve tentar resolver a questão final."
+      - "A resposta não deve avaliar nenhuma outra condição"
+
+  - Tarefa 2:
+    - Tarefa:
+      - "Dadas as opções (2, 4, 6), identifique quais desses números são pares"
+    - Critérios de aceite:
+      - "Deve retornar a lista de números pares encontrados nas alternativas."
+      - "Deve incluir uma breve explicação da regra de identificação de números pares."
+      - "A resposta não deve tentar resolver a questão final."
+      - "A resposta não deve avaliar nenhuma outra condição"
+
+  - Tarefa 3:
+    - Tarefa:
+      - "Dadas as opções (2, 4, 6), identifique quais desses números são estritamente maiores que 2."
+    - Critérios de aceite:
+      - "Deve retornar a lista de números maiores que 2 encontrados nas alternativas."
+      - "Deve incluir uma breve justificativa matemática para a comparação estabelecida."
+      - "A resposta não deve tentar resolver a questão final."
+      - "A resposta não deve avaliar nenhuma outra condição"
+    "
+
+    - Nota. O formato usado é somente de exemplo para mostrar o conteudo que deve ser gerado ao fim
+
+
+
+% B. Execução em Loop
+\subsection{Execução em Loop}
+
+A fase de execução preserva a estrutura iterativa do paradigma original, mas adapta o mecanismo de conclusão de cada unidade de trabalho. Na formulação original, a conclusão de uma história de usuário é verificada por meio da execução de testes automatizados e da análise dos critérios de aceite associados ao código produzido. No fluxo adaptado, como não há código a ser testado, o modelo simplesmente resolve a tarefa selecionada e, em seguida, verifica se o resultado satisfaz os critérios de aceite individuais definidos no planejamento. Caso os critérios não sejam atingidos, o modelo repete a resolução da mesma tarefa até que sejam satisfeitos.
+
+Ao concluir uma tarefa com sucesso, o modelo salva o resultado localmente e registra os aprendizados pontuais obtidos ao longo daquela execução. Esses aprendizados correspondem ao mecanismo de \textit{Fresh Context} do paradigma original: antes de iniciar a execução da tarefa seguinte, o contexto é reinicializado e os aprendizados acumulados são injetados como primeira entrada do novo contexto, de forma estruturada e explícita. Esse mecanismo garante que o conhecimento relevante seja preservado sem que o ruído e as redundâncias das etapas anteriores sejam herdados, mitigando ativamente o fenômeno de \textit{context rot}~\cite{hong2025context}. Para o armazenamento local dos resultados, adota-se o formato JSON por conveniência de manipulação programática, embora qualquer formato que permita recuperação posterior seja funcionalmente equivalente. O ciclo se repete até que todas as tarefas planejadas sejam concluídas.
+
+
+% C. Criação da Resposta Final
+\subsection{Criação da Resposta Final}
+
+A terceira fase constitui uma adição exclusiva do fluxo adaptado, sem correspondência direta na formulação original. No \textit{Ralph Wiggum Loop} concebido para engenharia de software, o produto final é o próprio código implementado e versionado ao longo das histórias; não há, portanto, necessidade de uma etapa de síntese posterior. No fluxo adaptado, os resultados das tarefas individuais são fragmentos de raciocínio que precisam ser compilados em uma resposta coesa e completa.
+
+Após o encerramento do loop, o modelo compila os resultados armazenados e verifica se as informações produzidas são suficientes para satisfazer todos os critérios de aceite gerais definidos no planejamento. Se os critérios forem integralmente atendidos, o modelo constrói a resposta final e a retorna ao usuário. Caso contrário, o sistema infere que o planejamento inicial foi insuficiente para cobrir todos os aspectos da pergunta e inicia uma fase de \textit{Planejamento Adicional}: o modelo identifica os critérios ainda não atendidos, cria novas tarefas individuais para supri-los e retorna à fase de Execução em Loop. Esse mecanismo garante que lacunas de planejamento sejam identificadas e corrigidas antes que a resposta final seja construída, preservando a completude e a coerência da saída.
+
+
+
+
+
+
 
 % -------------------------------------------------
 \section{Cronograma do projeto}
