@@ -413,6 +413,8 @@ A execução desta etapa envolve a associação da pergunta do usuário com inst
 \longrightarrow \text{\textit{Resultado Fase A.1}}
 \end{multline}
 
+Nesta equação, ``Pergunta do usuário'' representa o enunciado inicial e as opções de escolha inseridas no sistema, enquanto ``Template~A.1'' constitui o prompt fixo de instrução que orienta a análise. O ``Resultado Fase~A.1'' corresponde à lista final de critérios de aceite gerais que deverão ser satisfeitos para que a resposta final seja homologada.
+
 Os critérios de aceite estruturados gerados no Resultado Fase~A.1 são persistidos localmente (em disco ou em memória) para posterior validação global na fase de Criação da Resposta Final.
 
 \begin{exemplo}
@@ -442,7 +444,7 @@ Esta etapa é operacionalizada ao submeter a pergunta do usuário juntamente com
 \longrightarrow \text{\textit{Resultado Fase A.2}}
 \end{multline}
 
-O Resultado Fase~A.2 gerado, composto pela lista ordenada de tarefas e seus respectivos critérios individuais de aceitação, é armazenado localmente para posterior coordenação na fase de Execução em Loop.
+Na formulação descrita, ``Pergunta do usuário'' corresponde ao enunciado principal que orienta a resolução, ``Template~A.2'' identifica o prompt estruturado que instrui o modelo a realizar a divisão em tarefas, e ``Resultado Fase~A.2'' é o cronograma resultante contendo a lista ordenada de tarefas e as condições de aceitação individuais de cada uma delas. O Resultado Fase~A.2 gerado é armazenado localmente para posterior coordenação na fase de Execução em Loop.
 
 \begin{exemplo}
 Considerando o \textit{input} de referência, o modelo deveria retornar uma decomposição como a seguinte.
@@ -512,7 +514,7 @@ Para processar esta etapa, a descrição da tarefa selecionada é enviada ao mod
 \longrightarrow \text{\textit{Resultado Preliminar B}}
 \end{multline}
 
-O Resultado Preliminar~B gerado por esta operação é subsequentemente direcionado à fase de controle de qualidade para validação individual dos critérios.
+Nessa relação operacional, ``Aprendizados Acumulados'' refere-se ao conjunto de anotações internas compactas sintetizadas nas iterações anteriores (que se inicia vazio), ``Tarefa Selecionada'' consiste no bloco descritivo e critérios individuais definidos em Resultado Fase~A.2, e ``Template~B.1'' é o prompt estruturado de instrução. A variável ``Resultado Preliminar~B'' denota a resposta preliminar produzida que será submetida à validação. O Resultado Preliminar~B gerado por esta operação é subsequentemente direcionado à fase de controle de qualidade para validação individual dos critérios.
 
 \begin{exemplo}
 Considerando a Tarefa~1 como primeira tarefa do ciclo, o contexto não contém aprendizados acumulados.
@@ -530,7 +532,15 @@ Considerando a Tarefa~1 como primeira tarefa do ciclo, o contexto não contém a
 
 Essa etapa verifica se o Resultado Preliminar~B produzido na etapa anterior atende a todos os critérios de aceite individuais associados à tarefa em execução. Trata-se de um mecanismo de controle de qualidade interno: se todos os critérios forem atendidos, o fluxo avança para o armazenamento do resultado; caso contrário, a tarefa é reapresentada ao modelo para uma nova tentativa. É importante destacar que, ao contrário do que ocorre na transição entre tarefas distintas, o contexto \emph{não} é reinicializado durante as tentativas de repetição de uma mesma tarefa. Essa escolha é intencional e tambem é usada no \textit{Ralph Loop} original: a tentativa anterior, com os critérios não satisfeitos explicitamente sinalizados, permanece no contexto e auxilia o modelo a identificar o que deve ser corrigido na próxima execução.
 
-Esta etapa de validação operacionaliza-se por meio do Template~B.2, o \textbf{Cenário de reprovação e nova tentativa.}
+Esta validação lógica é formalizada na Equação~(\ref{eq:fluxo_b2}), onde se cruzam os resultados da inferência com os critérios estabelecidos:
+
+\begin{multline} \label{eq:fluxo_b2}
+\text{\textit{Resultado Preliminar B}} \\
++ \text{\textit{Critérios da Tarefa}} + \text{\textit{Template B.2}} \\
+\longrightarrow \text{\textit{Decisão (Aprovado / Reprovado)}}
+\end{multline}
+
+Nesta expressão, ``Resultado Preliminar~B'' é a resposta candidata produzida pelo modelo, ``Critérios da Tarefa'' corresponde às condições específicas indexadas no Resultado Fase~A.2, e ``Template~B.2'' é o prompt estruturado de validação que define as regras do processo de qualidade, culminando na ``Decisão (Aprovado / Reprovado)''. Esta etapa de validação operacionaliza-se por meio do Template~B.2, o \textbf{Cenário de reprovação e nova tentativa.}
 
 \begin{exemplo}
 Considere a Tarefa~2 (``identifique quais números são pares''). O aprendizado acumulado da Tarefa~1 já está no contexto: ``O único número primo entre as alternativas é o 2''. Suponha que o modelo produza na primeira tentativa:
@@ -576,6 +586,8 @@ Quando a resposta de uma tarefa é aprovada na verificação dos critérios de a
 \text{\textit{Resposta Aprovada}} \longrightarrow \text{\textit{Armazenamento local}}
 \end{equation}
 
+Nesta equação, ``Resposta Aprovada'' representa a solução da tarefa que atendeu satisfatoriamente a todos os critérios na etapa anterior, a qual é direcionada para o ``Armazenamento local'', que consiste na persistência física (em disco ou memória) indexada pelo identificador da tarefa correspondente.
+
 \begin{exemplo}
 A Tarefa~2 exigiu duas tentativas antes de ser aprovada. Somente a segunda é armazenada. A primeira tentativa reprovada, aquela que antecipou indevidamente a resposta final, permanece apenas no contexto ativo durante o ciclo de repetição e é descartada na reinicialização.
 
@@ -603,7 +615,7 @@ A extração de conhecimento é estruturada ao aplicar o Template~B.4 sobre o hi
 \longrightarrow \text{\textit{Aprendizados Pontuais}}
 \end{multline}
 
-Os aprendizados pontuais resultantes são anexados à Memória Acumulada da aplicação. Diferente dos resultados estruturados de B.3, esses fatos acumulados destinam-se unicamente a guiar os novos contextos das tarefas subsequentes e não alimentam a resposta do usuário.
+Nessa expressão, ``Contexto Completo da Tarefa'' compreende todo o histórico acumulado no contexto (incluindo tentativas anteriores reprovadas e interações com o validador), ``Template~B.4'' representa o prompt fixo que rege a compilação puramente factual, e ``Aprendizados Pontuais'' representa os tópicos secos resultantes anexados à Memória Acumulada. Os aprendizados pontuais resultantes são anexados à Memória Acumulada da aplicação. Diferente dos resultados estruturados de B.3, esses fatos acumulados destinam-se unicamente a guiar os novos contextos das tarefas subsequentes e não alimentam a resposta do usuário.
 
 \begin{exemplo}
 Após a conclusão da Tarefa~1 (identificação de números primos), a Memória Acumulada conteria um único aprendizado pontual realmente útil para guiar as etapas subsequentes, em vez de uma cópia da resposta completa gerada na etapa anterior ou de definições óbvias:
@@ -652,7 +664,7 @@ A validação global é efetuada ao associar os resultados consolidados com os c
 \longrightarrow \text{\textit{Decisão (Aprovado / Reprovado)}}
 \end{multline}
 
-Em caso de conformidade de todas as diretrizes, o fluxo prossegue diretamente para a consolidação e resposta; caso contrário, é deflagrada a etapa de Planejamento Adicional.
+Nesta formulação global, ``Resultados Armazenados'' refere-se ao conjunto de respostas das tarefas que foram homologadas individualmente, ``Critérios Gerais (A.1)'' denota as diretrizes gerais de aceitação mapeadas no Resultado Fase~A.1, e ``Template~C.1'' é o prompt estruturado de validação global que orienta o modelo a tomar a ``Decisão (Aprovado / Reprovado)''. Em caso de conformidade de todas as diretrizes, o fluxo prossegue diretamente para a consolidação e resposta; caso contrário, é deflagrada a etapa de Planejamento Adicional.
 
 \begin{exemplo}
 \textbf{Cenário de aprovação.} Com os três resultados disponíveis ao término do loop, a avaliação contra os critérios gerais de A.1 produz:
@@ -707,7 +719,7 @@ O planejamento adicional atua de forma cirúrgica para suprir as lacunas apontad
 \longrightarrow \text{\textit{Novas Tarefas}}
 \end{multline}
 
-As novas tarefas, estruturadas com critérios individuais de aceite próprios, são inseridas no topo da fila e processadas no ciclo de Execução em Loop, garantindo que o planejamento convirja para o aceite global.
+Nesta expressão, ``Critérios Não Atendidos'' são os critérios gerais identificados como não satisfeitos na etapa anterior, ``Resultados Armazenados'' são as respostas aprovadas de todas as tarefas já concluídas, e ``Template~C.2'' é o prompt fixo de instrução descrito acima que direciona o modelo a produzir as ``Novas Tarefas''. As novas tarefas, estruturadas com critérios individuais de aceite próprios, são inseridas no topo da fila e processadas no ciclo de Execução em Loop, garantindo que o planejamento convirja para o aceite global.
 
 \begin{exemplo}
 A partir da reprovação identificada no cenário anterior, o modelo produziria novas tarefas como a seguinte.
@@ -754,7 +766,7 @@ A síntese final é operacionalizada ao mesclar os resultados consolidados e os 
 \longrightarrow \text{\textit{Resposta Final}}
 \end{multline}
 
-Esta resposta compilada é finalmente entregue ao usuário, concluindo todo o ciclo do harness de IA.
+Nessa expressão, ``Resultados Compilados'' são as respostas aprovadas de todas as tarefas resolvidas e acumuladas, ``Critérios Gerais (A.1)'' são os critérios gerais definidos no Resultado Fase~A.1, e ``Template~C.3'' é o prompt fixo de instrução que orienta a compilação e formatação para produzir a ``Resposta Final''. Esta resposta compilada é finalmente entregue ao usuário, concluindo todo o ciclo do harness de IA.
 
 \begin{exemplo}
 Em ambos os cenários (aprovação direta com três tarefas ou com Planejamento Adicional em quatro tarefas), os resultados indicam que primo $\cap$ par $\cap$ maior que 2 = $\varnothing$. Respeitando os critérios gerais, a resposta final produzida é:
