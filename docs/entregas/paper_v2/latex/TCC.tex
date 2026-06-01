@@ -530,35 +530,10 @@ Considerando a Tarefa~1 como primeira tarefa do ciclo, o contexto não contém a
 
 Essa etapa verifica se o Resultado Preliminar~B produzido na etapa anterior atende a todos os critérios de aceite individuais associados à tarefa em execução. Trata-se de um mecanismo de controle de qualidade interno: se todos os critérios forem atendidos, o fluxo avança para o armazenamento do resultado; caso contrário, a tarefa é reapresentada ao modelo para uma nova tentativa. É importante destacar que, ao contrário do que ocorre na transição entre tarefas distintas, o contexto \emph{não} é reinicializado durante as tentativas de repetição de uma mesma tarefa. Essa escolha é intencional e tambem é usada no \textit{Ralph Loop} original: a tentativa anterior, com os critérios não satisfeitos explicitamente sinalizados, permanece no contexto e auxilia o modelo a identificar o que deve ser corrigido na próxima execução.
 
-Esta etapa de validação operacionaliza-se por meio do Template~B.2, o qual atua como um validador verbal. Esse gabarito orienta o modelo a inspecionar o Resultado Preliminar~B à luz de cada critério de aceite individual associado à tarefa. A resposta deve discriminar quais condições foram satisfeitas e, na ocorrência de qualquer falha, elencar detalhadamente as pendências que resultaram na reprovação. Essa sistemática de avaliação é formalizada na Equação~(\ref{eq:fluxo_b2}):
-
-\begin{multline} \label{eq:fluxo_b2}
-\text{\textit{Resultado Preliminar B}} \\
-+ \text{\textit{Critérios da Tarefa}} + \text{\textit{Template B.2}} \\
-\longrightarrow \text{\textit{Decisão (Aprovado / Reprovado)}}
-\end{multline}
-
-Se o resultado for classificado como reprovado, a tarefa retorna para nova iteração com o feedback integrado ao mesmo contexto de execução; caso seja aprovado, o resultado segue para a etapa de persistência.
+Esta etapa de validação operacionaliza-se por meio do Template~B.2, o \textbf{Cenário de reprovação e nova tentativa.}
 
 \begin{exemplo}
-\textbf{Cenário de aprovação.} Avaliando o resultado da Tarefa~1 contra seus critérios de aceite.
-
-\saidaLLM
-
-\begin{quote}
-\begin{itemize}
-  \item ``Deve retornar a lista de números primos.'' \\ \textit{Atendido}: a lista [2] foi retornada.
-  \item ``Deve incluir explicação da regra de identificação de primos.'' \\ \textit{Atendido}: a explicação por divisores foi fornecida.
-  \item ``A resposta não deve tentar resolver a questão final.'' \\ \textit{Atendido}: o modelo não antecipou a resposta.
-  \item ``A resposta não deve avaliar nenhuma outra condição.'' \\ \textit{Atendido}: somente a primalidade foi avaliada.
-\end{itemize}
-Decisão: \textbf{Aprovado}.
-\end{quote}
-
-O fluxo avança para o armazenamento do resultado.
-
-\bigskip
-\textbf{Cenário de reprovação e nova tentativa.} Considere a Tarefa~2 (``identifique quais números são pares''). O aprendizado acumulado da Tarefa~1 já está no contexto: ``O único número primo entre as alternativas é o 2''. Suponha que o modelo produza na primeira tentativa:
+Considere a Tarefa~2 (``identifique quais números são pares''). O aprendizado acumulado da Tarefa~1 já está no contexto: ``O único número primo entre as alternativas é o 2''. Suponha que o modelo produza na primeira tentativa:
 
 \saidaLLM
 
@@ -619,7 +594,7 @@ Esse conjunto é entregue à fase de Criação da Resposta Final como base exclu
 % ————————————————————————
 \subsubsection{Armazenamento dos aprendizados pontuais} \label{subsec:ExecucaoB4}
 
-Os aprendizados pontuais funcionam como as ``anotações internas'' do fluxo de \textit{thinking}: são fatos secos e objetivos descobertos durante a execução de uma tarefa que podem ser úteis para resolver as tarefas subsequentes. Exemplos típicos incluem o resultado de um cálculo intermediário, uma fórmula identificada, uma conversão de unidade de medida, um valor recuperado após busca ou uma lista de candidatos filtrados. Em todos os casos, o registro deve conter apenas a informação em si, sem qualquer contexto de como ela foi obtida. A extração de aprendizados considera o contexto completo da tarefa, incluindo as tentativas reprovadas, pois fatos úteis podem ter emergido mesmo em execuções que não passaram na verificação de critérios. Os aprendizados pontuais têm escopo estritamente restrito à Execução em Loop: são injetados no início do contexto de cada nova tarefa para subsidiar a resolução, mas não são incluídos, em nenhuma hipótese, na fase de Criação da Resposta Final.
+Os aprendizados pontuais funcionam como as ``anotações internas'' do fluxo de \textit{thinking}: são fatos secos e objetivos descobertos durante a execução de uma tarefa que podem ser úteis para guiar as tarefas subsequentes. Esses aprendizados não devem ser conceitos redundantes ou óbvios, mas sim dados de controle, metadados operacionais e restrições práticas descobertas na execução, como, por exemplo, registrar uma versão da linguagem específica disponível no ambiente. A extração de aprendizados considera o contexto completo da tarefa, incluindo as tentativas reprovadas, pois fatos úteis podem ter emergido mesmo em execuções que não passaram na verificação de critérios. Os aprendizados pontuais têm escopo estritamente restrito à Execução em Loop: são injetados no início do contexto de cada nova tarefa para subsidiar a resolução, mas não são incluídos, em nenhuma hipótese, na fase de Criação da Resposta Final.
 
 A extração de conhecimento é estruturada ao aplicar o Template~B.4 sobre o histórico completo de execução da tarefa. A instrução exige que o modelo compile exclusivamente fatos concretos descobertos durante as tentativas (aprovadas ou não), registrando-os em formato de tópicos sucintos e secos, sem justificativas ou descrições narrativas de processo. A geração dessas anotações internas é representada na Equação~(\ref{eq:fluxo_b4}):
 
@@ -631,26 +606,24 @@ A extração de conhecimento é estruturada ao aplicar o Template~B.4 sobre o hi
 Os aprendizados pontuais resultantes são anexados à Memória Acumulada da aplicação. Diferente dos resultados estruturados de B.3, esses fatos acumulados destinam-se unicamente a guiar os novos contextos das tarefas subsequentes e não alimentam a resposta do usuário.
 
 \begin{exemplo}
-Após a conclusão das três tarefas, a Memória Acumulada conteria algo como o seguinte.
+Após a conclusão da Tarefa~1 (identificação de números primos), a Memória Acumulada conteria um único aprendizado pontual realmente útil para guiar as etapas subsequentes, em vez de uma cópia da resposta completa gerada na etapa anterior ou de definições óbvias:
 
 \saidaLLM
 
 \begin{quote}
-``Primos entre (2, 4, 6): [2]'' \\
-``Pares entre (2, 4, 6): [2, 4, 6]'' \\
-``Maiores que 2 entre (2, 4, 6): [4, 6]''
+``Um número primo é aquele que só é divisível por 1 e por ele mesmo.''
 \end{quote}
 
-Esse bloco compacto seria injetado no início do contexto de uma eventual Tarefa~4 e não é utilizado na construção da resposta final.
+Esse bloco compacto de fatos atômicos é injetado no início do contexto das tarefas subsequentes para auxiliá-las, sem carregar a descrição e o formato verbal da resposta completa gerada anteriormente.
 
 \bigskip
-Como contraponto, o trecho a seguir ilustra o formato \textbf{inválido} de aprendizado, por ser verboso e conter contexto desnecessário:
+Como contraponto, o trecho a seguir ilustra o formato \textbf{inválido} de aprendizado, por ser excessivamente verboso, conter contexto processual irrelevante e não focar na restrição operacional útil:
 
 \begin{quote}
-\textit{Inválido:} ``Durante a execução da Tarefa 2, após uma tentativa reprovada por ter antecipado a resposta final, foi identificado que todos os números 2, 4 e 6 são pares, verificando a divisibilidade de cada um por 2.''
+\textit{Inválido:} ``Durante a execução da Tarefa 1, analisamos os números 2, 4 e 6, e depois de validarmos os divisores de cada um deles, concluímos que apenas o 2 é primo pois é divisível apenas por 1 e por ele mesmo.''
 \end{quote}
 
-O aprendizado pontual válido extrai apenas o fato: ``Pares entre (2, 4, 6): [2, 4, 6]''.
+O aprendizado pontual válido extrai puramente a informação útil: ``Um número primo é aquele que só é divisível por 1 e por ele mesmo.''.
 \end{exemplo}
 
 A distinção entre resultado armazenado (etapa anterior) e aprendizado pontual é estrutural e intencional. O resultado é a resposta completa e verificada da tarefa, destinada à síntese da fase de Criação da Resposta Final. O aprendizado é um fragmento seco de fato, destinado exclusivamente a subsidiar a execução das tarefas seguintes dentro do loop.
