@@ -287,7 +287,7 @@
 
 \resumo{Os \textit{Large Language Models} (LLMs), embora sejam em essência geradores probabilísticos de \textit{tokens}, alcançam ganhos expressivos de desempenho quando o processo de inferência é estruturado por \textit{harnesses} que incorporam planejamento, decomposição de tarefas e ciclos iterativos de refinamento. Entretanto, arquiteturas que preservam o histórico completo de execução em uma única janela de contexto introduzem degradação progressiva da qualidade das respostas conforme o contexto cresce, fenômeno denominado \textit{context rot}, que compromete a confiabilidade dos resultados em execuções longas.
 
-Este trabalho propõe a adaptação do \textit{Ralph Wiggum Loop}, paradigma de orquestração originalmente concebido para fluxos focados em desenvolvimento e engenharia de software e que traz soluções para mitigar problemas de \textit{context rot}, para um fluxo de resolução generalista, focado em responder perguntas em linguagem natural. A hipótese é que essa estrutura melhora a qualidade das respostas em relação à inferência singular, e essa hipótese é avaliada por meio dos \textit{benchmarks} MMLU e GPQA, comparando chamadas diretas ao modelo com execuções mediadas pelo \textit{harness} proposto, utilizando modelos da família Llama~3.1 com diferentes quantidades de parâmetros. A acurácia, medida pela correspondência entre a alternativa selecionada pelo sistema e o gabarito oficial, é adotada como métrica principal.}
+Este trabalho propõe a adaptação do \textit{Ralph Wiggum Loop}, paradigma de orquestração originalmente concebido para fluxos focados em desenvolvimento e engenharia de software e que traz soluções para mitigar problemas de \textit{context rot}, para um fluxo de resolução generalista, focado em responder perguntas em linguagem natural. A hipótese é que essa estrutura melhora a qualidade das respostas em relação à inferência singular, e essa hipótese é avaliada por meio dos \textit{datasets} MMLU e GPQA, comparando chamadas diretas ao modelo com execuções mediadas pelo \textit{harness} proposto, utilizando modelos da família Llama~3.1 com diferentes quantidades de parâmetros. A acurácia, medida pela correspondência entre a alternativa selecionada pelo sistema e o gabarito oficial, é adotada como métrica principal.}
 
 \keyword{\textit{Large Language Models} (LLMs). Ralph Wiggum Loop. Sistemas Compostos de IA. Engenharia de Prompt. Decaimento de Contexto (\textit{context rot}).}
 
@@ -328,7 +328,7 @@ Essa tendência se manifesta em ferramentas industriais que utilizam LLMs integr
 
 \subsection{Estratégias de Raciocínio e Refinamento}
 
-A literatura demonstra que a qualidade da inferência de um LLM pode ser melhorada de forma significativa quando o processo é estruturado em fases~\cite{wei2022chain, yao2023tree}. O método \textit{Chain-of-Thought}~\cite{wei2022chain} e sua generalização \textit{Tree of Thoughts}~\cite{yao2023tree} mostraram a importância de induzir o modelo a explicitar passos intermediários de raciocínio. Abordagens como \textit{ReAct}~\cite{yao2022react} ampliaram esse princípio ao combinar o raciocínio interno do modelo com a capacidade de invocar ferramentas externas, permitindo corrigir alucinações por meio de observações diretas do ambiente.
+A literatura demonstra que a qualidade da inferência de um LLM pode ser melhorada de forma significativa quando o processo é estruturado em fases~\cite{wei2022chain, yao2023tree}. O método \textit{Chain-of-Thought}~\cite{wei2022chain} e sua generalização \textit{Tree of Thoughts}~\cite{yao2023tree} mostraram a importância de induzir o modelo a explicitar passos intermediários de raciocínio. Abordagens como \textit{ReAct}~\cite{yao2022react} ampliaram esse princípio ao combinar o raciocínio interno do modelo com a capacidade de invocar ferramentas externas, permitindo corrigir alucinações~\cite{ji2023survey} por meio de observações diretas do ambiente.
 
 De forma complementar, pipelines baseados em ciclos de \textit{feedback} iterativo também apresentam ganhos consistentes. O framework \textit{Reflexion}~\cite{shinn2023reflexion} introduziu ciclos nos quais o modelo atua como seu próprio crítico, revisando saídas com base em reforço verbal externo. A abordagem de \textit{Self-Debugging}~\cite{chen2023selfdebug} demonstrou que LLMs podem identificar e corrigir seus próprios erros quando guiados de forma sistemática. Na mesma direção, o método \textit{Self-Refine}~\cite{madaan2023selfrefine} consolidou a eficácia do refinamento iterativo ao demonstrar que modelos podem gerar \textit{feedback} crítico sobre suas próprias respostas e utilizá-lo para melhorar as saídas de forma sucessiva, contornando limitações da geração em uma única etapa. Essa capacidade de autocrítica e revisão contínua constitui uma premissa fundamental para a proposta deste trabalho.
 
@@ -406,14 +406,14 @@ O planejamento é o início de todo o fluxo, compreendendo duas etapas que prepa
 
 Essa etapa representa uma adição em relação ao paradigma original. No contexto de engenharia de software, cada tarefa concluída resultava em um \textit{commit} que preservava o progresso diretamente no repositório, de modo que, ao término de todas as histórias de usuário, o produto final já estava pronto. No fluxo adaptado, entretanto, a conclusão de todas as tarefas não produz automaticamente uma saída utilizável: após todas as tarefas serem concluídas, é necessário construir uma resposta final que consolide os resultados gerados. Os critérios de aceite gerais definem as regras que essa resposta deverá respeitar, abrangendo aspectos como o idioma a ser utilizado, o formato de apresentação esperado e os tópicos-chave que devem constar no conteúdo final.
 
-Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~A.1) que será combinado com a pergunta do usuário. Esse \textit{template} deve instruir o modelo a analisar a pergunta recebida e, a partir dela, produzir uma lista de critérios de aceite que a resposta final deverá satisfazer. As instruções contidas no \textit{template} devem solicitar ao modelo que identifique o idioma em que a pergunta foi formulada e determine em qual idioma a resposta deve ser redigida; que analise a estrutura da pergunta para definir o formato mais adequado de apresentação da resposta, como a seleção de uma alternativa, a produção de um texto dissertativo ou a apresentação de um valor numérico; e que extraia os tópicos-chave e restrições do enunciado que deverão obrigatoriamente constar na resposta. A saída esperada desse \textit{template} é uma lista estruturada de critérios, onde cada critério define uma condição objetiva e verificável que a resposta final precisará atender. A relação de entrada e saída dessa etapa pode ser expressa como:
+A execução desta etapa envolve a associação da pergunta do usuário com instruções estruturadas, representadas pelo Template~A.1. Este gabarito orienta o modelo a analisar o enunciado recebido e produzir as diretrizes gerais que a resposta final precisará satisfazer. Especificamente, as instruções orientam o modelo a identificar o idioma de resposta adequado, a estrutura ideal do formato de saída (como seleção de alternativas ou desenvolvimento textual) e os termos e restrições obrigatórios definidos no enunciado. A relação de entrada e saída que formaliza essa transformação de prompts é descrita na Equação~(\ref{eq:fluxo_a1}):
 
-\begin{multline*}
-        	ext{\textit{Pergunta do usuário}} + \text{\textit{Template A.1}} \\
-  \longrightarrow \text{\textit{Resultado Fase A.1}}
-\end{multline*}
+\begin{multline} \label{eq:fluxo_a1}
+\text{\textit{Pergunta do usuário}} + \text{\textit{Template A.1}} \\
+\longrightarrow \text{\textit{Resultado Fase A.1}}
+\end{multline}
 
-Nessa expressão, ``Pergunta do usuário'' é o \textit{input} original recebido pelo sistema e ``Template~A.1'' é o \textit{prompt} fixo de instrução descrito acima. O ``Resultado Fase~A.1'' é a lista de critérios de aceite gerais produzida pelo modelo, que deve ser armazenada localmente em arquivo ou na memória do programa para uso posterior na fase de Criação da Resposta Final.
+Os critérios de aceite estruturados gerados no Resultado Fase~A.1 são persistidos localmente (em disco ou em memória) para posterior validação global na fase de Criação da Resposta Final.
 
 \begin{exemplo}
 Considerando o \textit{input} de referência, o modelo deveria retornar uma lista de critérios como os seguintes.
@@ -435,14 +435,14 @@ Considerando o \textit{input} de referência, o modelo deveria retornar uma list
 
 A segunda etapa do planejamento é responsável por quebrar a pergunta do usuário em pequenas tarefas autônomas. Cada tarefa precisa ter pelo menos um critério de aceite, isto é, uma condição que define o conteúdo esperado para que a tarefa possa ser considerada concluída. A ideia central é criar tarefas que gerem insumos capazes de, em conjunto, sustentar a construção da resposta final.
 
-Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~A.2) que será combinado com a pergunta do usuário. Esse \textit{template} deve instruir o modelo a decompor a pergunta em tarefas de objetivo único, onde cada tarefa possui uma única responsabilidade pontual, como ``identificar os números primos'' ou ``identificar os números pares'', e nunca múltiplas responsabilidades simultâneas. As instruções devem orientar o modelo a descrever cada tarefa da forma mais detalhada possível, incluindo os dados de entrada sobre os quais ela opera e o resultado esperado, de modo a evitar desvios durante a resolução. O \textit{template} deve também explicitar que o contexto de execução de uma tarefa não será transferido para a próxima, pois somente aprendizados pontuais sintetizados ao final de cada tarefa serão preservados; essa restrição precisa ser clara para que o modelo crie tarefas verdadeiramente autossuficientes. Por fim, o \textit{template} deve exigir que cada tarefa contenha pelo menos um critério de aceite individual, formulado como condição objetiva e verificável que valide se a resposta gerada atende ao esperado, e que inclua critérios restritivos que impeçam a tarefa de extrapolar seu escopo, como ``a resposta não deve tentar resolver a questão final'' e ``a resposta não deve avaliar condições pertencentes a outras tarefas''. A saída esperada é uma lista ordenada de tarefas, cada uma acompanhada de sua descrição e de seus critérios de aceite individuais. A relação de entrada e saída pode ser expressa como:
+Esta etapa é operacionalizada ao submeter a pergunta do usuário juntamente com o Template~A.2, cuja finalidade é instruir o modelo a realizar a decomposição em tarefas de responsabilidade única. O template orienta a caracterização detalhada de cada tarefa (como as respectivas entradas e saídas esperadas), deixando explícito que o contexto não será compartilhado diretamente entre as iterações subsequentes para mitigar o \textit{context rot}. Adicionalmente, exige-se que cada tarefa traga seus próprios critérios de aceite individuais e restrições de escopo que evitem resoluções precoces do problema principal. A relação operacional de transformação é formalizada na Equação~(\ref{eq:fluxo_a2}):
 
-\begin{multline*}
-        	ext{\textit{Pergunta do usuário}} + \text{\textit{Template A.2}} \\
-  \longrightarrow \text{\textit{Resultado Fase A.2}}
-\end{multline*}
+\begin{multline} \label{eq:fluxo_a2}
+\text{\textit{Pergunta do usuário}} + \text{\textit{Template A.2}} \\
+\longrightarrow \text{\textit{Resultado Fase A.2}}
+\end{multline}
 
-Nessa expressão, ``Pergunta do usuário'' é o \textit{input} original, ``Template~A.2'' é o \textit{prompt} fixo de instrução descrito acima, e ``Resultado Fase~A.2'' é a lista de tarefas com seus respectivos critérios, que deve ser armazenada localmente em arquivo ou na memória do programa.
+O Resultado Fase~A.2 gerado, composto pela lista ordenada de tarefas e seus respectivos critérios individuais de aceitação, é armazenado localmente para posterior coordenação na fase de Execução em Loop.
 
 \begin{exemplo}
 Considerando o \textit{input} de referência, o modelo deveria retornar uma decomposição como a seguinte.
@@ -504,15 +504,15 @@ Após cada tarefa concluída, o fluxo verifica programaticamente se ainda existe
 
 Essa subseção corresponde às etapas B.1 e B.2 do fluxo ilustrado na Figura~\ref{fig:ralph_loop_adaptado}: a seleção da próxima tarefa disponível na lista gerada pelo planejamento (B.1) e sua subsequente resolução pelo modelo (B.2). Ao iniciar uma nova tarefa, e somente nesse momento, o contexto é reinicializado. Os aprendizados pontuais acumulados nas tarefas anteriores são injetados no início do novo contexto, antes da descrição da tarefa atual, garantindo continuidade do conhecimento relevante sem carregar o ruído das execuções anteriores. Na primeira tarefa do ciclo, não há aprendizados acumulados, de modo que o contexto inicial contém apenas a tarefa a ser resolvida.
 
-Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~B.1) que será combinado com a descrição da tarefa e, quando houver, com os aprendizados acumulados. Esse \textit{template} deve instruir o modelo a focar exclusivamente no objetivo da tarefa que está sendo apresentada, sem tentar antecipar ou resolver etapas posteriores do fluxo. As instruções devem orientar o modelo a produzir uma resposta que cubra completamente o objetivo descrito na tarefa e que respeite os limites de escopo estabelecidos nos critérios de aceite individuais. O contexto de entrada é montado a partir de três componentes: os aprendizados pontuais acumulados das tarefas anteriores (quando houver), a descrição completa da tarefa selecionada conforme definida no planejamento, e o próprio Template~B.1. A saída esperada é a resolução completa da tarefa, aqui chamada de Resultado Preliminar~B. A relação de entrada e saída pode ser expressa como:
+Para processar esta etapa, a descrição da tarefa selecionada é enviada ao modelo em conjunto com o Template~B.1 e, caso existam iterações anteriores concluídas, com a memória de aprendizados acumulados. O Template~B.1 impõe um limite estrito ao modelo, instruindo-o a focar unicamente no escopo demarcado para a tarefa e a abster-se de resolver a questão final prematuramente. O fluxo lógico de processamento de entradas e geração de respostas preliminares é modelado na Equação~(\ref{eq:fluxo_b1}):
 
-\begin{multline*}
-         	ext{\textit{Aprendizados Acumulados}} \\
-  + \text{\textit{Tarefa Selecionada}} + \text{\textit{Template B.1}} \\
-  \longrightarrow \text{\textit{Resultado Preliminar B}}
-\end{multline*}
+\begin{multline} \label{eq:fluxo_b1}
+\text{\textit{Aprendizados Acumulados}} \\
++ \text{\textit{Tarefa Selecionada}} + \text{\textit{Template B.1}} \\
+\longrightarrow \text{\textit{Resultado Preliminar B}}
+\end{multline}
 
-Nessa expressão, ``Aprendizados Acumulados'' são os fatos objetivos extraídos das tarefas já concluídas (vazio na primeira tarefa), ``Tarefa Selecionada'' é a descrição completa da tarefa com seus critérios de aceite conforme definidos no Resultado Fase~A.2, e ``Template~B.1'' é o \textit{prompt} fixo de instrução descrito acima. O ``Resultado Preliminar~B'' é a resposta produzida pelo modelo para a tarefa, que seguirá para verificação na etapa seguinte.
+O Resultado Preliminar~B gerado por esta operação é subsequentemente direcionado à fase de controle de qualidade para validação individual dos critérios.
 
 \begin{exemplo}
 Considerando a Tarefa~1 como primeira tarefa do ciclo, o contexto não contém aprendizados acumulados.
@@ -530,15 +530,15 @@ Considerando a Tarefa~1 como primeira tarefa do ciclo, o contexto não contém a
 
 Essa etapa verifica se o Resultado Preliminar~B produzido na etapa anterior atende a todos os critérios de aceite individuais associados à tarefa em execução. Trata-se de um mecanismo de controle de qualidade interno: se todos os critérios forem atendidos, o fluxo avança para o armazenamento do resultado; caso contrário, a tarefa é reapresentada ao modelo para uma nova tentativa. É importante destacar que, ao contrário do que ocorre na transição entre tarefas distintas, o contexto \emph{não} é reinicializado durante as tentativas de repetição de uma mesma tarefa. Essa escolha é intencional e tambem é usada no \textit{Ralph Loop} original: a tentativa anterior, com os critérios não satisfeitos explicitamente sinalizados, permanece no contexto e auxilia o modelo a identificar o que deve ser corrigido na próxima execução.
 
-Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~B.2) que será combinado com o Resultado Preliminar~B e com os critérios de aceite individuais da tarefa. Esse \textit{template} deve instruir o modelo a avaliar o resultado recebido contra cada critério de aceite, um por um, identificando para cada critério se ele foi atendido ou não e justificando essa decisão. As instruções devem exigir que a saída contenha uma decisão final estruturada (aprovado ou reprovado) e, em caso de reprovação, a lista explícita dos critérios que não foram satisfeitos. A relação de entrada e saída pode ser expressa como:
+Esta etapa de validação operacionaliza-se por meio do Template~B.2, o qual atua como um validador verbal. Esse gabarito orienta o modelo a inspecionar o Resultado Preliminar~B à luz de cada critério de aceite individual associado à tarefa. A resposta deve discriminar quais condições foram satisfeitas e, na ocorrência de qualquer falha, elencar detalhadamente as pendências que resultaram na reprovação. Essa sistemática de avaliação é formalizada na Equação~(\ref{eq:fluxo_b2}):
 
-\begin{multline*}
-         	ext{\textit{Resultado Preliminar B}} \\
-  + \text{\textit{Critérios da Tarefa}} + \text{\textit{Template B.2}} \\
-  \longrightarrow \text{\textit{Decisão (Aprovado / Reprovado)}}
-\end{multline*}
+\begin{multline} \label{eq:fluxo_b2}
+\text{\textit{Resultado Preliminar B}} \\
++ \text{\textit{Critérios da Tarefa}} + \text{\textit{Template B.2}} \\
+\longrightarrow \text{\textit{Decisão (Aprovado / Reprovado)}}
+\end{multline}
 
-Nessa expressão, ``Resultado Preliminar~B'' é a resposta produzida na etapa anterior, ``Critérios da Tarefa'' são os critérios de aceite individuais definidos no Resultado Fase~A.2 para a tarefa em questão, e ``Template~B.2'' é o \textit{prompt} fixo de instrução descrito acima.
+Se o resultado for classificado como reprovado, a tarefa retorna para nova iteração com o feedback integrado ao mesmo contexto de execução; caso seja aprovado, o resultado segue para a etapa de persistência.
 
 \begin{exemplo}
 \textbf{Cenário de aprovação.} Avaliando o resultado da Tarefa~1 contra seus critérios de aceite.
@@ -595,13 +595,11 @@ Todos os critérios da Tarefa~2 são agora atendidos. Decisão: \textbf{Aprovado
 % ————————————————————————
 \subsubsection{Armazenamento do resultado} \label{subsec:ExecucaoB3}
 
-Quando a resposta de uma tarefa é aprovada na verificação dos critérios de aceite, ela é persistida localmente. Somente essa resposta aprovada é armazenada: todo o ruído gerado pelos ciclos de tentativa anteriores, incluindo respostas reprovadas, histórico de verificações e \textit{feedback} intermediário, não é persistido e será descartado quando o contexto for reinicializado na transição para a próxima tarefa. O armazenamento é indexado por tarefa, de modo que cada resultado possa ser recuperado individualmente pela fase de Criação da Resposta Final. Esses resultados armazenados são o único insumo factual utilizado na fase de Criação da Resposta Final para a construção da resposta ao usuário; os aprendizados pontuais, tratados na etapa seguinte, têm escopo restrito à Execução em Loop e não participam da criação da resposta final.
+Quando a resposta de uma tarefa é aprovada na verificação dos critérios de aceite, ela é persistida localmente. Somente essa resposta aprovada é armazenada: todo o ruído gerado pelos ciclos de tentativa anteriores (incluindo respostas reprovadas, histórico de verificações e \textit{feedback} intermediário) é descartado na reinicialização do contexto. O armazenamento é indexado por tarefa, de modo que cada resultado possa ser recuperado individualmente como insumo exclusivo da fase de Criação da Resposta Final. A persistência é meramente operacional e não envolve novas chamadas ao modelo, sendo formalizada na Equação~(\ref{eq:fluxo_b3}):
 
-Do ponto de vista prático, a resposta aprovada na etapa anterior é persistida no armazenamento local ou na memória da aplicação, indexada pelo identificador da tarefa. O formato de armazenamento é uma decisão de implementação, sendo que qualquer estrutura que permita recuperar individualmente o resultado de cada tarefa é adequada. Não há chamada adicional ao LLM nessa etapa. A relação de entrada e saída pode ser expressa como:
-
-\[
-      	ext{\textit{Resposta Aprovada}} \longrightarrow \text{\textit{Armazenamento local}}
-\]
+\begin{equation} \label{eq:fluxo_b3}
+\text{\textit{Resposta Aprovada}} \longrightarrow \text{\textit{Armazenamento local}}
+\end{equation}
 
 \begin{exemplo}
 A Tarefa~2 exigiu duas tentativas antes de ser aprovada. Somente a segunda é armazenada. A primeira tentativa reprovada, aquela que antecipou indevidamente a resposta final, permanece apenas no contexto ativo durante o ciclo de repetição e é descartada na reinicialização.
@@ -623,15 +621,14 @@ Esse conjunto é entregue à fase de Criação da Resposta Final como base exclu
 
 Os aprendizados pontuais funcionam como as ``anotações internas'' do fluxo de \textit{thinking}: são fatos secos e objetivos descobertos durante a execução de uma tarefa que podem ser úteis para resolver as tarefas subsequentes. Exemplos típicos incluem o resultado de um cálculo intermediário, uma fórmula identificada, uma conversão de unidade de medida, um valor recuperado após busca ou uma lista de candidatos filtrados. Em todos os casos, o registro deve conter apenas a informação em si, sem qualquer contexto de como ela foi obtida. A extração de aprendizados considera o contexto completo da tarefa, incluindo as tentativas reprovadas, pois fatos úteis podem ter emergido mesmo em execuções que não passaram na verificação de critérios. Os aprendizados pontuais têm escopo estritamente restrito à Execução em Loop: são injetados no início do contexto de cada nova tarefa para subsidiar a resolução, mas não são incluídos, em nenhuma hipótese, na fase de Criação da Resposta Final.
 
-Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~B.4) que será aplicado sobre o contexto completo da tarefa concluída. Esse \textit{template} deve instruir o modelo a percorrer todo o conteúdo gerado durante a resolução da tarefa, incluindo tentativas reprovadas e a resposta aprovada, e a identificar quaisquer fatos concretos e objetivos que possam ser úteis nas próximas tarefas. As instruções devem exigir que os aprendizados sejam registrados como sentenças curtas e factuais, sem narrativa, sem justificativas e sem referência ao processo de resolução; cada aprendizado deve conter apenas o fato em si. A saída esperada é uma lista compacta de fatos pontuais. A relação de entrada e saída dessa etapa pode ser expressa como:
+A extração de conhecimento é estruturada ao aplicar o Template~B.4 sobre o histórico completo de execução da tarefa. A instrução exige que o modelo compile exclusivamente fatos concretos descobertos durante as tentativas (aprovadas ou não), registrando-os em formato de tópicos sucintos e secos, sem justificativas ou descrições narrativas de processo. A geração dessas anotações internas é representada na Equação~(\ref{eq:fluxo_b4}):
 
-\begin{multline*}
-         	ext{\textit{Contexto Completo da Tarefa}} \\
-  + \text{\textit{Template B.4}} \\
-  \longrightarrow \text{\textit{Aprendizados Pontuais}}
-\end{multline*}
+\begin{multline} \label{eq:fluxo_b4}
+\text{\textit{Contexto Completo da Tarefa}} + \text{\textit{Template B.4}} \\
+\longrightarrow \text{\textit{Aprendizados Pontuais}}
+\end{multline}
 
-Nessa expressão, ``Contexto Completo da Tarefa'' é o histórico integral da execução da tarefa, contendo todas as tentativas (reprovadas e aprovada) e suas respectivas verificações. ``Template~B.4'' é o \textit{prompt} fixo de instrução descrito acima. ``Aprendizados Pontuais'' são os fatos extraídos, que são adicionados à Memória Acumulada. A Memória Acumulada é simplesmente o local onde os aprendizados pontuais de todas as tarefas já concluídas vão se acumulando ao longo do processo; a cada nova tarefa iniciada, todo o conteúdo dessa memória é injetado no início do novo contexto. Essa memória não é utilizada na construção da resposta final.
+Os aprendizados pontuais resultantes são anexados à Memória Acumulada da aplicação. Diferente dos resultados estruturados de B.3, esses fatos acumulados destinam-se unicamente a guiar os novos contextos das tarefas subsequentes e não alimentam a resposta do usuário.
 
 \begin{exemplo}
 Após a conclusão das três tarefas, a Memória Acumulada conteria algo como o seguinte.
@@ -672,17 +669,17 @@ Após o encerramento do loop, o modelo compila os resultados armazenados e verif
 % ————————————————————————
 \subsubsection{Compilação dos resultados e verificação dos critérios gerais} \label{subsec:RespostaC1}
 
-Essa etapa reúne todos os resultados armazenados durante a Execução em Loop e verifica se o conjunto de informações produzido é suficiente para satisfazer cada um dos critérios de aceite gerais definidos na etapa~A.1. A distinção central em relação à verificação realizada na Execução em Loop é o escopo da avaliação: enquanto lá a verificação é local, com cada tarefa avaliada contra seus próprios critérios individuais, aqui a avaliação é global, e o conjunto completo de resultados é considerado para determinar se é possível construir uma resposta final completa e correta.
+Essa etapa reúne todos os resultados armazenados durante a Execução em Loop e verifica se o conjunto de informações produzido é suficiente para satisfazer cada um dos critérios de aceite gerais definidos na etapa~A.1. A distinção central em relação à verificação realizada na fase de Execução em Loop reside no escopo da avaliação: na etapa anterior, a verificação possui caráter local, avaliando cada tarefa individualmente frente aos seus próprios critérios; nesta etapa, por outro lado, a avaliação é global, considerando se a união dos dados acumulados atende plenamente ao enunciado geral.
 
-Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~C.1) que será combinado com os resultados armazenados e com os critérios gerais definidos na etapa~A.1. Esse \textit{template} deve instruir o modelo a listar os resultados de cada tarefa e então avaliar, critério geral por critério geral, se os resultados em conjunto fornecem informação suficiente para satisfazê-los. As instruções devem exigir que a saída contenha uma decisão para cada critério (atendível ou não atendível) e uma decisão final estruturada (aprovado ou reprovado), com identificação explícita dos critérios não atendidos quando for o caso. A relação de entrada e saída pode ser expressa como:
+A validação global é efetuada ao associar os resultados consolidados com os critérios de A.1 sob as diretrizes do Template~C.1. O modelo avalia individualmente as condições e emite um veredito estruturado (aprovado ou reprovado), apontando as eventuais pendências. A dinâmica de controle global é formalizada na Equação~(\ref{eq:fluxo_c1}):
 
-\begin{multline*}
-         	ext{\textit{Resultados Armazenados}} \\
-  + \text{\textit{Critérios Gerais (A.1)}} + \text{\textit{Template C.1}} \\
-  \longrightarrow \text{\textit{Decisão (Aprovado / Reprovado)}}
-\end{multline*}
+\begin{multline} \label{eq:fluxo_c1}
+\text{\textit{Resultados Armazenados}} \\
++ \text{\textit{Critérios Gerais (A.1)}} + \text{\textit{Template C.1}} \\
+\longrightarrow \text{\textit{Decisão (Aprovado / Reprovado)}}
+\end{multline}
 
-Nessa expressão, ``Resultados Armazenados'' são as respostas aprovadas de todas as tarefas concluídas, ``Critérios Gerais (A.1)'' são os critérios de aceite gerais produzidos no Resultado Fase~A.1, e ``Template~C.1'' é o \textit{prompt} fixo de instrução descrito acima.
+Em caso de conformidade de todas as diretrizes, o fluxo prossegue diretamente para a consolidação e resposta; caso contrário, é deflagrada a etapa de Planejamento Adicional.
 
 \begin{exemplo}
 \textbf{Cenário de aprovação.} Com os três resultados disponíveis ao término do loop, a avaliação contra os critérios gerais de A.1 produz:
@@ -729,15 +726,15 @@ O fluxo avança para o Planejamento Adicional.
 
 Quando os critérios gerais não são atendidos, o Planejamento Adicional funciona como uma extensão da fase~A.2: identifica as lacunas específicas nos resultados disponíveis e cria novas tarefas individuais para supri-las. Diferentemente do planejamento inicial, que parte da pergunta do usuário sem qualquer contexto de execução, o Planejamento Adicional tem acesso ao conjunto de resultados já produzidos e ao mapeamento preciso dos critérios que ainda não foram satisfeitos. Essa informação torna as novas tarefas mais pontuais e direcionadas, evitando retrabalho sobre o que já foi verificado. As novas tarefas são adicionadas à fila de execução e o fluxo retorna à etapa~B.1, agora com o contexto dos aprendizados acumulados de todas as tarefas anteriores disponível.
 
-Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~C.2) que será combinado com os critérios gerais não atendidos e com os resultados já armazenados. Esse \textit{template} deve instruir o modelo a identificar os critérios gerais que não foram satisfeitos, raciocinar sobre que tipo de informação adicional seria necessária para satisfazê-los e formular novas tarefas de objetivo único com critérios de aceite individuais, seguindo o mesmo padrão estabelecido na fase~A.2. A relação de entrada e saída pode ser expressa como:
+O planejamento adicional atua de forma cirúrgica para suprir as lacunas apontadas pela verificação global. Ao conjugar os critérios não satisfeitos e as saídas previamente geradas com o Template~C.2, o modelo é induzido a planejar novos subproblemas independentes capazes de complementar o conteúdo em falta. Esse processo de expansão do escopo é delineado na Equação~(\ref{eq:fluxo_c2}):
 
-\begin{multline*}
-         	ext{\textit{Critérios Não Atendidos}} \\
-  + \text{\textit{Resultados Armazenados}} + \text{\textit{Template C.2}} \\
-  \longrightarrow \text{\textit{Novas Tarefas}}
-\end{multline*}
+\begin{multline} \label{eq:fluxo_c2}
+\text{\textit{Critérios Não Atendidos}} \\
++ \text{\textit{Resultados Armazenados}} + \text{\textit{Template C.2}} \\
+\longrightarrow \text{\textit{Novas Tarefas}}
+\end{multline}
 
-Nessa expressão, ``Critérios Não Atendidos'' são os critérios gerais identificados como não satisfeitos na etapa anterior, ``Resultados Armazenados'' são as respostas aprovadas de todas as tarefas já concluídas, e ``Template~C.2'' é o \textit{prompt} fixo de instrução descrito acima.
+As novas tarefas, estruturadas com critérios individuais de aceite próprios, são inseridas no topo da fila e processadas no ciclo de Execução em Loop, garantindo que o planejamento convirja para o aceite global.
 
 \begin{exemplo}
 A partir da reprovação identificada no cenário anterior, o modelo produziria novas tarefas como a seguinte.
@@ -774,17 +771,17 @@ O mecanismo de Planejamento Adicional pode ocorrer mais de uma vez caso as novas
 % ————————————————————————
 \subsubsection{Construção da resposta final} \label{subsec:RespostaC3}
 
-Com todos os critérios gerais satisfeitos, o modelo compõe a resposta final ao usuário. Essa etapa não realiza novo raciocínio analítico sobre o problema: seu objetivo é exclusivamente organizar e apresentar os resultados já produzidos no formato e idioma definidos pelos critérios gerais (Resultado Fase~A.1). A distinção entre esta etapa e as anteriores é deliberada: ao separar o raciocínio analítico, realizado de forma incremental e verificada durante a Execução em Loop, da síntese da resposta final, reduz-se o risco de que a fase de apresentação introduza inferências não verificadas ou contradiga os resultados produzidos.
+Com todos os critérios gerais satisfeitos, o modelo compõe a resposta final ao usuário. Essa etapa não realiza um novo raciocínio analítico sobre o problema: seu objetivo é exclusivamente organizar e apresentar os resultados já produzidos no formato e idioma definidos pelos critérios gerais (Resultado Fase~A.1). A distinção entre esta etapa e as anteriores é deliberada: ao separar o raciocínio analítico, realizado de forma incremental e verificada durante a Execução em Loop, da síntese da resposta final, reduz-se o risco de que a fase de apresentação introduza inferências não verificadas ou contradiga os resultados produzidos.
 
-Para executar essa etapa, é necessário montar um \textit{template} de \textit{prompt} fixo (Template~C.3) que será combinado com os resultados compilados e com os critérios gerais. Esse \textit{template} deve instruir o modelo a utilizar exclusivamente os resultados armazenados como base factual para compor a resposta, sem introduzir raciocínio ou informações novas que não estejam amparadas por esses resultados. As instruções devem também orientar o modelo a respeitar o formato e o idioma definidos nos critérios gerais. A relação de entrada e saída pode ser expressa como:
+A síntese final é operacionalizada ao mesclar os resultados consolidados e os critérios gerais com as diretrizes do Template~C.3, que proíbe terminantemente a inserção de novos fatos ou especulações que não estejam fundamentados na base de conhecimento gerada pelas tarefas. A relação operacional é expressa na Equação~(\ref{eq:fluxo_c3}):
 
-\begin{multline*}
-         	ext{\textit{Resultados Compilados}} \\
-  + \text{\textit{Critérios Gerais (A.1)}} + \text{\textit{Template C.3}} \\
-  \longrightarrow \text{\textit{Resposta Final}}
-\end{multline*}
+\begin{multline} \label{eq:fluxo_c3}
+\text{\textit{Resultados Compilados}} \\
++ \text{\textit{Critérios Gerais (A.1)}} + \text{\textit{Template C.3}} \\
+\longrightarrow \text{\textit{Resposta Final}}
+\end{multline}
 
-Nessa expressão, ``Resultados Compilados'' são as respostas aprovadas de todas as tarefas, ``Critérios Gerais (A.1)'' são os critérios definidos no Resultado Fase~A.1, e ``Template~C.3'' é o \textit{prompt} fixo de instrução descrito acima.
+Esta resposta compilada é finalmente entregue ao usuário, concluindo todo o ciclo do harness de IA.
 
 \begin{exemplo}
 Em ambos os cenários (aprovação direta com três tarefas ou com Planejamento Adicional em quatro tarefas), os resultados indicam que primo $\cap$ par $\cap$ maior que 2 = $\varnothing$. Respeitando os critérios gerais, a resposta final produzida é:
@@ -806,7 +803,7 @@ A métodologia de avaliação visa mensurar o impacto do \textit{harness} propos
 
 Para cada variante, são comparadas duas configurações de inferência: (i) uma chamada direta ao modelo, na qual toda a resposta é produzida em uma única etapa de inferência sem qualquer processamento auxiliar; e (ii) a mesma inferência mediada pelo \textit{harness} proposto, que aplica o fluxo completo de Planejamento, Execução em Loop e Criação da Resposta Final descrito na seção de metodologia, sem o uso de ferramentas externas. O desempenho é mensurado por meio de questões amostradas das bases MMLU~\cite{hendrycks2021measuring} e GPQA~\cite{rein2023gpqa}, escolhidas por seu elevado rigor acadêmico e por serem amplamente adotadas como referência na literatura de avaliação de LLMs. A métrica principal é a acurácia, obtida pela correspondência estrita entre a alternativa selecionada pelo sistema e o gabarito oficial.
 
-Para contextualizar os resultados obtidos em relação ao estado da arte, os valores de acurácia dos modelos Llama~3.1 nas duas configurações são comparados com os resultados de inferência direta já publicados para Claude Sonnet~4.6 e GPT~5.4 nos mesmos \textit{benchmarks}. Esses modelos comerciais não são submetidos ao \textit{harness} proposto: sua função é exclusivamente estabelecer um ponto de referência de mercado que permita situar o desempenho alcançado pela abordagem proposta em relação a sistemas modernos de grande escala.
+Para contextualizar os resultados obtidos em relação ao estado da arte, os valores de acurácia dos modelos Llama~3.1 nas duas configurações são comparados com os resultados de inferência direta já publicados para Claude Sonnet~4.6 e GPT~5.4 nos mesmos \textit{datasets}. Esses modelos comerciais não são submetidos ao \textit{harness} proposto: sua função é exclusivamente estabelecer um ponto de referência de mercado que permita situar o desempenho alcançado pela abordagem proposta em relação a sistemas modernos de grande escala.
 
 % -------------------------------------------------
 
