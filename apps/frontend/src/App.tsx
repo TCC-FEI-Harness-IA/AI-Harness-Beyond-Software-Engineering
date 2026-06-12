@@ -13,23 +13,52 @@ type Subtype =
   | 'store' | 'learn' | 'reset'
   | 'compile' | 'result'
 
-interface Chunk { type: 'thinking' | 'result'; subtype?: Subtype; content: string }
-interface ThinkingEntry { subtype: Subtype; content: string }
+type Task = 'setup' | 'T1' | 'T2' | 'T3' | 'synthesis'
 
-// ── Subtype config ─────────────────────────────────────────────────────────
+interface ContextWindow { context_id: string; context_size: number }
 
-const SUBTYPE: Record<Subtype, { color: string; label: string }> = {
-  setup:       { color: '#6366f1', label: 'Configuração'  },
-  tasks:       { color: '#3b82f6', label: 'Tarefas'       },
-  execute:     { color: '#8b5cf6', label: 'Execução'      },
-  reasoning:   { color: '#a78bfa', label: 'Raciocínio'    },
-  verify_pass: { color: '#10b981', label: 'Verificação ✓' },
-  verify_fail: { color: '#ef4444', label: 'Verificação ✗' },
-  store:       { color: '#06b6d4', label: 'Armazenamento' },
-  learn:       { color: '#f59e0b', label: 'Aprendizado'   },
-  reset:       { color: '#f97316', label: 'Reset'         },
-  compile:     { color: '#0ea5e9', label: 'Compilação'    },
-  result:      { color: '#22c55e', label: 'Resultado'     },
+interface Chunk {
+  type: 'thinking' | 'result'
+  subtype?: Subtype
+  task?: Task
+  content: string
+  total_tokens?: number
+  context_window?: ContextWindow
+}
+
+interface ThinkingEntry {
+  subtype: Subtype
+  task: Task
+  content: string
+  totalTokens?: number
+  contextId?: string
+  contextSize?: number
+}
+
+// ── Color per task (drives all visual accents) ─────────────────────────────
+
+const TASK_COLOR: Record<Task, string> = {
+  setup:     '#6366f1', // indigo  — fase A
+  T1:        '#a78bfa', // violeta — Tarefa 1
+  T2:        '#3b82f6', // azul    — Tarefa 2
+  T3:        '#10b981', // esmeralda — Tarefa 3
+  synthesis: '#f59e0b', // âmbar   — fase C
+}
+
+// ── Label per subtype (independent of color) ──────────────────────────────
+
+const SUBTYPE_LABEL: Record<Subtype, string> = {
+  setup:       'Configuração',
+  tasks:       'Tarefas',
+  execute:     'Execução',
+  reasoning:   'Raciocínio',
+  verify_pass: 'Verificação ✓',
+  verify_fail: 'Verificação ✗',
+  store:       'Armazenamento',
+  learn:       'Aprendizado',
+  reset:       'Reset',
+  compile:     'Compilação',
+  result:      'Resultado',
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -66,9 +95,13 @@ export default function App() {
   const [heroExiting, setHeroExiting] = useState(false)
   const [chatActive, setChatActive]   = useState(false)   // panels + footer visible
   const [entries, setEntries]         = useState<ThinkingEntry[]>([])
+  // track the active task so we inherit its color for subsequent subtypes
+  const activeTaskRef = useRef<Task>('setup')
   const [result, setResult]           = useState('')
   const [input, setInput]             = useState('')
-  const [expanded, setExpanded]       = useState(false)
+  const [expanded, setExpanded]         = useState(false)
+  const [selectedFlow, setSelectedFlow] = useState<'simple' | 'ralph_wiggum'>('ralph_wiggum')
+  const [selectedModel, setSelectedModel] = useState<'8B' | '70B' | '405B'>('8B')
 
   const thinkingRef    = useRef<HTMLDivElement>(null)
   const footerInputRef = useRef<HTMLInputElement>(null)
@@ -126,7 +159,16 @@ export default function App() {
           try {
             const chunk: Chunk = JSON.parse(raw)
             if (chunk.type === 'thinking') {
-              setEntries((p) => [...p, { subtype: chunk.subtype ?? 'execute', content: chunk.content }])
+              const task: Task = chunk.task ?? activeTaskRef.current
+              activeTaskRef.current = task
+              setEntries((p) => [...p, {
+                subtype: chunk.subtype ?? 'execute',
+                task,
+                content: chunk.content,
+                totalTokens: chunk.total_tokens,
+                contextId: chunk.context_window?.context_id,
+                contextSize: chunk.context_window?.context_size,
+              }])
             } else if (chunk.type === 'result') {
               setResult(chunk.content)
             }
@@ -151,6 +193,7 @@ export default function App() {
     setEntries([])
     setResult('')
     setPhase('streaming')
+    activeTaskRef.current = 'setup'
 
     if (!chatActive) {
       // First send: animate hero out, reveal chat layout
@@ -270,10 +313,12 @@ export default function App() {
             <div className="panel__content" ref={thinkingRef}>
               <div className="timeline">
                 {entries.map((entry, i) => {
-                  const cfg      = SUBTYPE[entry.subtype] ?? SUBTYPE.execute
+                  const color    = TASK_COLOR[entry.task] ?? TASK_COLOR.setup
                   const label    = phaseLabelFor(i, entries)
                   const isLast   = i === entries.length - 1
                   const isActive = isLast && phase === 'streaming'
+                  // connecting line: gradient toward next entry's task color (or border if last)
+                  const nextColor = entries[i + 1] ? TASK_COLOR[entries[i + 1].task] ?? color : undefined
                   return (
                     <div key={i}>
                       {label && (
@@ -283,26 +328,58 @@ export default function App() {
                         <div className="timeline__rail">
                           <div
                             className={`timeline__dot${isActive ? ' timeline__dot--pulse' : ''}`}
-                            style={{ background: cfg.color, boxShadow: `0 0 0 3px ${cfg.color}28` }}
+                            style={{ background: color, boxShadow: `0 0 0 3px ${color}28` }}
                           />
                           {!isLast && (
                             <div
                               className="timeline__line"
-                              style={{ background: `linear-gradient(to bottom, ${cfg.color}60, var(--border))` }}
+                              style={{
+                                background: nextColor && nextColor !== color
+                                  ? `linear-gradient(to bottom, ${color}80, ${nextColor}80)`
+                                  : `linear-gradient(to bottom, ${color}60, var(--border))`,
+                              }}
                             />
                           )}
                         </div>
                         <div
                           className={`msg-card${isActive ? ' msg-card--active' : ''}`}
-                          style={{ borderColor: isActive ? cfg.color : undefined }}
+                          style={{ borderColor: isActive ? color : undefined }}
                         >
                           <div
                             className="msg-card__tag"
-                            style={{ color: cfg.color, borderColor: `${cfg.color}40`, background: `${cfg.color}12` }}
+                            style={{ color, borderColor: `${color}40`, background: `${color}12` }}
                           >
-                            {cfg.label}
+                            {SUBTYPE_LABEL[entry.subtype] ?? entry.subtype}
                           </div>
                           <Md>{entry.content}</Md>
+                          {entry.contextId && (() => {
+                            const prevCtxId = i > 0 ? entries[i - 1].contextId : undefined
+                            const ctxChanges = entry.contextId !== prevCtxId
+                            const seenBefore = i > 0 && entries.slice(0, i).some(e => e.contextId === entry.contextId)
+                            const isNewCtx    = ctxChanges && !seenBefore
+                            const isReturnCtx = ctxChanges && seenBefore
+                            return (
+                              <div className={`msg-card__meta${isNewCtx ? ' msg-card__meta--new-ctx' : isReturnCtx ? ' msg-card__meta--return-ctx' : ''}`}>
+                                <span className="msg-card__meta-left">
+                                  <span className={`msg-card__ctx-id${isNewCtx ? ' msg-card__ctx-id--new' : isReturnCtx ? ' msg-card__ctx-id--return' : ''}`}>
+                                    {entry.contextId}
+                                  </span>
+                                  {isNewCtx && (
+                                    <span className="msg-card__ctx-badge">↺ nova janela</span>
+                                  )}
+                                  {isReturnCtx && (
+                                    <span className="msg-card__ctx-badge msg-card__ctx-badge--return">↩ janela retomada</span>
+                                  )}
+                                  <span className="msg-card__ctx-size">
+                                    {entry.contextSize?.toLocaleString('pt-BR')} tk
+                                  </span>
+                                </span>
+                                <span className="msg-card__meta-right">
+                                  Σ {entry.totalTokens?.toLocaleString('pt-BR')} tk
+                                </span>
+                              </div>
+                            )
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -351,6 +428,41 @@ export default function App() {
                 <p className="hero__tagline">
                   Harness de IA para Resolução de Perguntas em Linguagem Natural
                 </p>
+              </div>
+
+              <div className="hero__selectors">
+                <div className="selector-group">
+                  <span className="selector-group__label">Fluxo</span>
+                  <div className="selector-group__btns">
+                    {([
+                      { id: 'simple',       label: 'Inferência simples' },
+                      { id: 'ralph_wiggum', label: 'Ralph Wiggum Loop' },
+                    ] as const).map(({ id, label }) => (
+                      <button
+                        key={id}
+                        className={`selector-btn${selectedFlow === id ? ' selector-btn--active' : ''}`}
+                        onClick={() => setSelectedFlow(id)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="selector-group">
+                  <span className="selector-group__label">Modelo</span>
+                  <div className="selector-group__btns">
+                    {(['8B', '70B', '405B'] as const).map((size) => (
+                      <button
+                        key={size}
+                        className={`selector-btn${selectedModel === size ? ' selector-btn--active' : ''}`}
+                        onClick={() => setSelectedModel(size)}
+                      >
+                        Llama 3.1 {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className={`hero__bar${expanded ? ' hero__bar--expanded' : ''}`}>
