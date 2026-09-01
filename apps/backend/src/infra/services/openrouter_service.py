@@ -24,11 +24,11 @@ class OpenRouterService(ILLMService):
 
     def __get_endpoint(self) -> str:
         """Obtém o endpoint da OpenRouter a partir de variável de ambiente."""
-        return self.settings.get_var_env("OPENROUTER_API_URL")
+        return self.settings.openrouter_api_url
 
     def __get_api_key(self) -> str:
         """Obtém a API key da OpenRouter a partir de variável de ambiente."""
-        return self.settings.get_var_env("OPENROUTER_API_KEY").strip()
+        return self.settings.openrouter_api_key
 
     def __run_message_validations(
         self,
@@ -135,11 +135,11 @@ class OpenRouterService(ILLMService):
             "Content-Type": "application/json",
         }
 
-        http_referer = (self.settings.get_var_env("OPENROUTER_HTTP_REFERER") or "").strip()
+        http_referer = self.settings.openrouter_http_referer
         if http_referer:
             headers["HTTP-Referer"] = http_referer
 
-        title = (self.settings.get_var_env("OPENROUTER_X_TITLE") or "").strip()
+        title = self.settings.openrouter_x_title
         if title:
             headers["X-OpenRouter-Title"] = title
 
@@ -170,7 +170,7 @@ class OpenRouterService(ILLMService):
         headers = self.__build_headers()
 
         try:
-            timeout_seconds = float(self.settings.get_var_env("OPENROUTER_TIMEOUT_SECONDS") or "30")
+            timeout_seconds = self.settings.openrouter_timeout_seconds
             response = requests.post(
                 url=endpoint,
                 headers=headers,

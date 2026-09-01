@@ -1,5 +1,3 @@
-import json
-
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.interfaces.settings_interface import ISettings
 
@@ -89,43 +87,17 @@ class GenaiModel:
         return self.model_provider.value.lower() in self.available_providers
 
     def __load_available_models(self) -> set[str]:
-        """Carrega os modelos disponíveis da variável `genai_avaliable_models`.
+        """Carrega os modelos disponíveis a partir das configurações.
 
         Returns:
             set[str]: Conjunto normalizado (lowercase) de modelos permitidos.
         """
-        raw_value = (self.settings.get_var_env("genai_avaliable_models") or "").strip()
-        if not raw_value:
-            return set()
-
-        try:
-            parsed = json.loads(raw_value)
-            if isinstance(parsed, list):
-                return {str(item).strip().lower() for item in parsed if str(item).strip()}
-        except json.JSONDecodeError:
-            pass
-
-        return {item.strip().lower() for item in raw_value.split(",") if item.strip()}
+        return set(self.settings.genai_available_models)
 
     def __load_available_providers(self) -> set[str]:
-        """Carrega os provedores disponíveis da variável `genai_avaliable_providers`.
-
-        Aceita dois formatos:
-        - JSON list, por exemplo: `["open_router", "chatgpt"]`
-        - CSV simples, por exemplo: `open_router,chatgpt`
+        """Carrega os provedores disponíveis a partir das configurações.
 
         Returns:
             set[str]: Conjunto normalizado (lowercase) de provedores permitidos.
         """
-        raw_value = (self.settings.get_var_env("genai_avaliable_providers") or "").strip()
-        if not raw_value:
-            return set()
-
-        try:
-            parsed = json.loads(raw_value)
-            if isinstance(parsed, list):
-                return {str(item).strip().lower() for item in parsed if str(item).strip()}
-        except json.JSONDecodeError:
-            pass
-
-        return {item.strip().lower() for item in raw_value.split(",") if item.strip()}
+        return set(self.settings.genai_available_providers)

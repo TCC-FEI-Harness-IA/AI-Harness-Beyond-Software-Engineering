@@ -49,13 +49,13 @@ class LLMComplitionsAdapter(ILLMCompletions):
         return round(validated_temperature, 1)
 
     def __load_default_model_name(self) -> str:
-        return self.__validate_model_name(self.settings.get_var_env("OPENROUTER_MODEL"))
+        return self.__validate_model_name(self.settings.openrouter_model)
 
     def __load_default_max_tokens(self) -> int:
-        return self.__validate_max_tokens(self.settings.get_var_env("OPENROUTER_MAX_TOKENS"))
+        return self.__validate_max_tokens(self.settings.openrouter_max_tokens)
 
     def __load_default_temperature(self) -> float:
-        return self.__validate_temperature(self.settings.get_var_env("OPENROUTER_TEMPERATURE"))
+        return self.__validate_temperature(self.settings.openrouter_temperature)
 
     def send_message(
         self,
