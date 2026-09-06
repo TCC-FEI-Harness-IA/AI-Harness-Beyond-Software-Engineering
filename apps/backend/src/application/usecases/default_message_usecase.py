@@ -29,6 +29,8 @@ class DefaultMessageUseCase:
                 model_name=user_input.llm_model_config.provider_config.model_name,
                 max_tokens=user_input.llm_model_config.max_tokens,
                 temperature=user_input.llm_model_config.temperature,
+                provider=user_input.llm_model_config.provider,
+                endpoint=user_input.llm_model_config.provider_config.endpoint,
             )
             if llm_response is None:
                 raise ValueError("Resposta do LLM veio como None.")

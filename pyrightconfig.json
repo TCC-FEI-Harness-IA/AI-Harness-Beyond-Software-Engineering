@@ -1,12 +1,14 @@
 {
-  "venvPath": ".",
-  "venv": ".env",
-  "executionEnvironments": [
-    {
-      "root": "app",
-      "extraPaths": [
-        "app"
-      ]
-    }
-  ]
+  "include": [
+    "apps/backend/src",
+    "apps/backend/tests"
+  ],
+  "venvPath": "apps/backend",
+  "venv": ".venv",
+  "extraPaths": [
+    "apps/backend"
+  ],
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Windows",
+  "typeCheckingMode": "basic"
 }

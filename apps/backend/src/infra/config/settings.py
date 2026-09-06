@@ -12,6 +12,7 @@ class Settings(ISettings):
 
     def __load_vars_env(self) -> dict[str, str | None]:
         return {
+            "default_model_provider": os.getenv("DEFAULT_MODEL_PROVIDER", "azure_foundry"),
             "openrouter_api_url": os.getenv(
                 "OPENROUTER_API_URL",
                 "https://openrouter.ai/api/v1/chat/completions",
@@ -19,10 +20,17 @@ class Settings(ISettings):
             "openrouter_api_key": os.getenv("OPENROUTER_API_KEY", ""),
             "openrouter_http_referer": os.getenv("OPENROUTER_HTTP_REFERER", ""),
             "openrouter_x_title": os.getenv("OPENROUTER_X_TITLE", ""),
-            "openrouter_timeout_seconds": os.getenv("OPENROUTER_TIMEOUT_SECONDS", "30"),
+            "openrouter_timeout_seconds": os.getenv("OPENROUTER_TIMEOUT_SECONDS", "60"),
             "openrouter_model": os.getenv("OPENROUTER_MODEL"),
-            "openrouter_max_tokens": os.getenv("OPENROUTER_MAX_TOKENS"),
-            "openrouter_temperature": os.getenv("OPENROUTER_TEMPERATURE"),
+            "openrouter_max_tokens": os.getenv("OPENROUTER_MAX_TOKENS", "1024"),
+            "openrouter_temperature": os.getenv("OPENROUTER_TEMPERATURE", "0.7"),
+            "azure_foundry_endpoint": os.getenv("AZURE_FOUNDRY_ENDPOINT", ""),
+            "azure_foundry_api_key": os.getenv("AZURE_FOUNDRY_API_KEY", ""),
+            "azure_foundry_model": os.getenv("AZURE_FOUNDRY_MODEL", "meta-llama-3.1-8b-instruct"),
+            "azure_foundry_api_version": os.getenv("AZURE_FOUNDRY_API_VERSION", "2024-05-01-preview"),
+            "azure_foundry_max_tokens": os.getenv("AZURE_FOUNDRY_MAX_TOKENS", "1024"),
+            "azure_foundry_temperature": os.getenv("AZURE_FOUNDRY_TEMPERATURE", "0.7"),
+            "azure_foundry_timeout_seconds": os.getenv("AZURE_FOUNDRY_TIMEOUT_SECONDS", "60"),
             "genai_avaliable_models": os.getenv("genai_avaliable_models", ""),
             "genai_avaliable_providers": os.getenv("genai_avaliable_providers", ""),
         }
