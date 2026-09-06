@@ -14,18 +14,22 @@ class ILLMCompletions(ABC):
     @abstractmethod
     def send_message(
         self,
-        input_message: Message,
+        input_message: Message | list[Message],
         model_name: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        provider: str | None = None,
+        endpoint: str | None = None,
     ) -> LLMMessage:
-        """Envia uma mensagem para o provedor de LLM.
+        """Envia uma mensagem ou histórico de mensagens para o provedor de LLM.
 
         Args:
-            input_message: Mensagem de entrada a ser processada pelo LLM.
-            model_name: Nome do modelo a ser usado na chamada. Se `None`, usa o padrão da implementação.
-            max_tokens: Limite de tokens de saída. Se `None`, usa o padrão da implementação.
-            temperature: Temperatura da geração. Se `None`, usa o padrão da implementação.
+            input_message: Mensagem única ou lista sequencial de mensagens de domínio.
+            model_name: Nome do modelo a ser usado na chamada. Se `None`, usa o padrão.
+            max_tokens: Limite de tokens de saída. Se `None`, usa o padrão.
+            temperature: Temperatura da geração. Se `None`, usa o padrão.
+            provider: Provedor desejado (ex: "azure_foundry", "open_router", "mock").
+            endpoint: Endpoint customizado opcional.
 
         Returns:
             LLMMessage: Resultado da interação com o LLM.

@@ -510,7 +510,10 @@ class SendReasoningMessageUsecase:
     def __init__(self):
         ...
 
-    async def execute(self, _user_input: str) -> AsyncGenerator[str, None]:
+    async def execute(self, _user_input: str = "") -> AsyncGenerator[str, None]:
         for message in _MOCK_MESSAGES:
             yield json.dumps(message, ensure_ascii=False)
             await asyncio.sleep(1.2)
+
+
+ChainOfThoughtUseCase = SendReasoningMessageUsecase

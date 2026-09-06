@@ -72,8 +72,11 @@ class GenaiModel:
         Returns:
             bool: `True` quando o modelo atual é válido.
         """
-        if self.model_name is None or self.available_models is None:
+        if self.model_name is None:
             return False
+
+        if not self.available_models or "*" in self.available_models:
+            return True
 
         return self.model_name.lower() in self.available_models
 
@@ -83,8 +86,11 @@ class GenaiModel:
         Returns:
             bool: `True` quando o provedor atual é válido.
         """
-        if self.model_provider is None or self.available_providers is None:
+        if self.model_provider is None:
             return False
+
+        if not self.available_providers or "*" in self.available_providers:
+            return True
 
         return self.model_provider.value.lower() in self.available_providers
 
