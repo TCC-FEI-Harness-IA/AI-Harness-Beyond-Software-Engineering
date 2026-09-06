@@ -177,7 +177,7 @@ export default function App() {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      setEntries((p) => [...p, { subtype: 'execute', content: `**Erro:** ${msg}` }])
+      setEntries((p) => [...p, { subtype: 'execute', task: activeTaskRef.current, content: `**Erro:** ${msg}` }])
     } finally {
       setPhase('done')
     }
