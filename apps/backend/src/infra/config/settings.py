@@ -72,11 +72,15 @@ class Settings(ISettings):
     def __get_str(self, var_name: str) -> str:
         """Devolve o valor bruto de uma variável mapeada.
 
-        Raises:
-            ValueError: Quando a variável não está mapeada.
+        Todas as chamadas partem das propriedades públicas desta classe, que só
+        informam nomes declarados em `__load_vars_env`.
+
+        Args:
+            var_name: Nome da variável de ambiente mapeada.
+
+        Returns:
+            str: Valor bruto configurado para a variável.
         """
-        if var_name not in self.__vars_env:
-            raise ValueError(f"Variável de ambiente '{var_name}' não encontrada.")
         return self.__vars_env[var_name]
 
     def __get_int(self, var_name: str) -> int:

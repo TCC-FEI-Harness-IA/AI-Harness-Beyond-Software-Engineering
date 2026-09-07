@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from src.domain.classes.llm.llm_service_provider.llm_provider_request import LLMProviderRequest
-from src.domain.classes.llm.llm_service_provider.llm_provider_response import LLMProviderResponse
+from src.domain.entities.llm.llm_provider_request import LLMProviderRequest
+from src.domain.entities.llm.llm_provider_response import LLMProviderResponse
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 
 
@@ -28,7 +28,7 @@ class ILLMService(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def generate_response(self, request: LLMProviderRequest) -> LLMProviderResponse:
+    async def generate_response(self, request: LLMProviderRequest) -> LLMProviderResponse:
         """Executa uma chamada de chat completion no provedor.
 
         Args:
@@ -36,5 +36,9 @@ class ILLMService(ABC):
 
         Returns:
             LLMProviderResponse: Resultado padronizado da API.
+
+        Raises:
+            ValueError: Quando configurações obrigatórias ou dados do modelo são inválidos.
+            RuntimeError: Quando ocorre falha na chamada HTTP ao provedor.
         """
         raise NotImplementedError

@@ -1,0 +1,15 @@
+[run]
+source = src
+branch = True
+
+[report]
+show_missing = True
+skip_covered = False
+omit =
+    src/domain/interfaces/*
+    */__init__.py
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    raise NotImplementedError
+    @abstractmethod
