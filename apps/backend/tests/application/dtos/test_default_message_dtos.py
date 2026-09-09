@@ -36,22 +36,25 @@ def test_dto_de_saida_carrega_resposta_e_metricas() -> None:
     dto = DefaultMessageOutputDTO(
         message="pergunta",
         response="resposta",
+        session_id="sess_ab12",
         tokens_input=11,
         tokens_output=22,
-        inference_time_ms=0,
+        inference_time_ms=812,
     )
 
+    assert dto.session_id == "sess_ab12"
     assert dto.message == "pergunta"
     assert dto.response == "resposta"
     assert dto.tokens_input == 11
     assert dto.tokens_output == 22
-    assert dto.inference_time_ms == 0
+    assert dto.inference_time_ms == 812
 
 
 def test_dto_de_saida_e_imutavel() -> None:
     dto = DefaultMessageOutputDTO(
         message="pergunta",
         response="resposta",
+        session_id="sess_ab12",
         tokens_input=0,
         tokens_output=0,
         inference_time_ms=0,

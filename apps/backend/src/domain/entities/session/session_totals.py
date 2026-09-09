@@ -30,7 +30,7 @@ class SessionTotals:
         Returns:
             int: Soma de `tokens_input` e `tokens_output`.
         """
-        raise NotImplementedError
+        return self.tokens_input + self.tokens_output
 
     def add_message(self, message: SessionMessage) -> None:
         """Acumula os totais referentes a uma mensagem registrada.
@@ -38,4 +38,10 @@ class SessionTotals:
         Args:
             message: Mensagem recém-registrada na sessão.
         """
-        raise NotImplementedError
+        self.total_messages += 1
+        self.tokens_input += message.tokens_input
+        self.tokens_output += message.tokens_output
+        self.inference_time_ms += message.inference_time_ms
+
+        if message.total_tokens > 0:
+            self.total_llm_calls += 1

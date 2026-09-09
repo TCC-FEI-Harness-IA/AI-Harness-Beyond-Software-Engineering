@@ -1,6 +1,7 @@
 import logging
 
 from src.domain.entities.session.session import Session
+from src.domain.errors.session_not_found_error import SessionNotFoundError
 from src.domain.interfaces.session_repository_interface import ISessionRepository
 
 
@@ -29,4 +30,17 @@ class GetSessionUseCase:
         Raises:
             SessionNotFoundError: Quando a sessão não existe.
         """
-        raise NotImplementedError
+        try:
+            self.logger.info("Iniciando execução de GetSessionUseCase")
+
+            session = await self.repository.find_by_id(session_id=session_id)
+            if session is None:
+                raise SessionNotFoundError(session_id=session_id)
+
+            return session
+        except SessionNotFoundError:
+            self.logger.info("Sessão '%s' não encontrada", session_id)
+            raise
+        except Exception:
+            self.logger.exception("Erro ao executar GetSessionUseCase")
+            raise

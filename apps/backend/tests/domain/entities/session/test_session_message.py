@@ -49,3 +49,15 @@ def test_e_imutavel() -> None:
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         mensagem.content = "outro"
+
+
+def test_total_tokens_soma_entrada_e_saida() -> None:
+    mensagem = _nova_mensagem()
+
+    assert mensagem.total_tokens == 30
+
+
+def test_total_tokens_de_mensagem_sem_consumo_e_zero() -> None:
+    mensagem = dataclasses.replace(_nova_mensagem(), tokens_input=0, tokens_output=0)
+
+    assert mensagem.total_tokens == 0

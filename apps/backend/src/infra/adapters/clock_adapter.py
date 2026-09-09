@@ -1,6 +1,9 @@
-from datetime import datetime
+import time
+from datetime import UTC, datetime
 
 from src.domain.interfaces.clock_interface import IClock
+
+_MILLISECONDS_PER_SECOND = 1000
 
 
 class ClockAdapter(IClock):
@@ -12,7 +15,7 @@ class ClockAdapter(IClock):
         Returns:
             datetime: Instante atual em UTC, timezone-aware.
         """
-        raise NotImplementedError
+        return datetime.now(tz=UTC)
 
     def monotonic_ms(self) -> int:
         """Devolve um contador monotônico, usado para medir duração.
@@ -20,4 +23,4 @@ class ClockAdapter(IClock):
         Returns:
             int: Contador monotônico em milissegundos.
         """
-        raise NotImplementedError
+        return int(time.monotonic() * _MILLISECONDS_PER_SECOND)

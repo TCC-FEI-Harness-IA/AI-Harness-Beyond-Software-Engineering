@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -5,16 +6,19 @@ import pytest
 from src.application.dtos.default_message_input_dto import DefaultMessageInputDTO
 from src.application.dtos.default_message_output_dto import DefaultMessageOutputDTO
 from src.application.usecases.default_message_usecase import DefaultMessageUseCase
+from src.domain.interfaces.clock_interface import IClock
 from src.domain.interfaces.llm_completions_interface import ILLMCompletions
+from src.domain.interfaces.session_recorder_interface import ISessionRecorder
 from src.infra.routes.v1.message.dtos.default_input_dto import DefaultInputDTO
 from src.infra.startups.default_message_startup import DefaultMessageStartup
 
 _SAIDA_DE_APLICACAO = DefaultMessageOutputDTO(
     message="pergunta do usuario",
     response="resposta do modelo",
+    session_id="sess_ab12",
     tokens_input=11,
     tokens_output=22,
-    inference_time_ms=0,
+    inference_time_ms=812,
 )
 
 
@@ -53,12 +57,13 @@ def _build_startup_com_spy() -> tuple[DefaultMessageStartup, _SpyUseCase]:
 
 
 @pytest.fixture(autouse=True)
-def ambiente_de_modelo(monkeypatch: pytest.MonkeyPatch) -> None:
+def ambiente_de_modelo(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Garante configuração suficiente para o grafo do startup ser construído."""
     monkeypatch.setenv("OPENROUTER_MODEL", "vendor/modelo")
     monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", "vendor/modelo")
     monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router")
+    monkeypatch.setenv("RALPH_SESSIONS_STORAGE_PATH", str(tmp_path / "sessions"))
 
 
 def test_constroi_todo_o_grafo_sem_deixar_atributo_nulo() -> None:
@@ -73,6 +78,13 @@ def test_injeta_a_porta_de_completions_no_caso_de_uso() -> None:
 
     assert isinstance(startup.default_message_use_case, DefaultMessageUseCase)
     assert isinstance(startup.default_message_use_case.llm_completions, ILLMCompletions)
+
+
+def test_injeta_o_recorder_e_o_relogio_no_caso_de_uso() -> None:
+    startup = DefaultMessageStartup()
+
+    assert isinstance(startup.default_message_use_case.session_recorder, ISessionRecorder)
+    assert isinstance(startup.default_message_use_case.clock, IClock)
 
 
 async def test_traduz_o_dto_de_transporte_para_o_dto_de_aplicacao() -> None:
@@ -104,3 +116,7 @@ async def test_traduz_a_saida_de_aplicacao_para_o_dto_de_transporte() -> None:
 
     assert resposta.message == "pergunta do usuario"
     assert resposta.response == "resposta do modelo"
+    assert resposta.session_id == "sess_ab12"
+    assert resposta.tokens_input == 11
+    assert resposta.tokens_output == 22
+    assert resposta.inference_time_ms == 812

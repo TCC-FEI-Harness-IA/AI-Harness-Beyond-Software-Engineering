@@ -3,9 +3,14 @@ from inspect import getfile
 from src.application.dtos.default_message_input_dto import DefaultMessageInputDTO
 from src.application.usecases.default_message_usecase import DefaultMessageUseCase
 from src.domain.interfaces.settings_interface import ISettings
+from src.infra.adapters.clock_adapter import ClockAdapter
+from src.infra.adapters.id_generator_adapter import IdGeneratorAdapter
 from src.infra.adapters.llm_completions_adapter import LLMCompletionsAdapter
 from src.infra.adapters.model_catalog_adapter import ModelCatalogAdapter
+from src.infra.adapters.session_recorder_adapter import SessionRecorderAdapter
 from src.infra.config.settings import Settings
+from src.infra.mappers.session_document_mapper import SessionDocumentMapper
+from src.infra.repositories.json_file_session_repository import JsonFileSessionRepository
 from src.infra.routes.v1.message.dtos.default_input_dto import DefaultInputDTO
 from src.infra.routes.v1.message.dtos.default_output_dto import DefaultOutputDTO
 from src.infra.services.openrouter_service import OpenRouterService
@@ -37,8 +42,23 @@ class DefaultMessageStartup:
             logger=self.settings.logger(module_file=getfile(LLMCompletionsAdapter)),
             settings=self.settings,
         )
+        clock = ClockAdapter()
+        session_repository = JsonFileSessionRepository(
+            mapper=SessionDocumentMapper(),
+            settings=self.settings,
+            logger=self.settings.logger(module_file=getfile(JsonFileSessionRepository)),
+        )
+        session_recorder = SessionRecorderAdapter(
+            repository=session_repository,
+            clock=clock,
+            id_generator=IdGeneratorAdapter(settings=self.settings),
+            settings=self.settings,
+            logger=self.settings.logger(module_file=getfile(SessionRecorderAdapter)),
+        )
         self.default_message_use_case = DefaultMessageUseCase(
             llm_completions=llm_completions_adapter,
+            session_recorder=session_recorder,
+            clock=clock,
             logger=self.settings.logger(module_file=getfile(DefaultMessageUseCase)),
         )
         self.logger.info("DefaultMessageStartup inicializado")
@@ -63,4 +83,11 @@ class DefaultMessageStartup:
             )
         )
 
-        return DefaultOutputDTO(message=resultado.message, response=resultado.response)
+        return DefaultOutputDTO(
+            message=resultado.message,
+            response=resultado.response,
+            session_id=resultado.session_id,
+            tokens_input=resultado.tokens_input,
+            tokens_output=resultado.tokens_output,
+            inference_time_ms=resultado.inference_time_ms,
+        )

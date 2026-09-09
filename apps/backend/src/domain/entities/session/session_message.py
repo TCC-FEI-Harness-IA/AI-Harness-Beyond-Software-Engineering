@@ -44,4 +44,4 @@ class SessionMessage:
         Returns:
             int: Soma de `tokens_input` e `tokens_output`.
         """
-        raise NotImplementedError
+        return self.tokens_input + self.tokens_output

@@ -10,9 +10,10 @@ from src.main import create_app
 _SAIDA = DefaultMessageOutputDTO(
     message="pergunta do usuario",
     response="resposta do modelo",
+    session_id="sess_ab12",
     tokens_input=11,
     tokens_output=22,
-    inference_time_ms=0,
+    inference_time_ms=812,
 )
 
 
@@ -31,7 +32,14 @@ class _FakeStartup:
 
         from src.infra.routes.v1.message.dtos.default_output_dto import DefaultOutputDTO
 
-        return DefaultOutputDTO(message=_SAIDA.message, response=_SAIDA.response)
+        return DefaultOutputDTO(
+            message=_SAIDA.message,
+            response=_SAIDA.response,
+            session_id=_SAIDA.session_id,
+            tokens_input=_SAIDA.tokens_input,
+            tokens_output=_SAIDA.tokens_output,
+            inference_time_ms=_SAIDA.inference_time_ms,
+        )
 
 
 def _build_body(**overrides: Any) -> dict[str, Any]:
@@ -60,7 +68,14 @@ def test_fluxo_default_devolve_pergunta_e_resposta(client: TestClient) -> None:
     resposta = client.post("/v1/message/default", json=_build_body())
 
     assert resposta.status_code == 200
-    assert resposta.json() == {"message": "pergunta do usuario", "response": "resposta do modelo"}
+    assert resposta.json() == {
+        "message": "pergunta do usuario",
+        "response": "resposta do modelo",
+        "session_id": "sess_ab12",
+        "tokens_input": 11,
+        "tokens_output": 22,
+        "inference_time_ms": 812,
+    }
 
 
 def test_falha_do_fluxo_vira_erro_500_com_detalhe(client: TestClient) -> None:

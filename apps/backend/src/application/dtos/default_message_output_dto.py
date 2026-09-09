@@ -8,6 +8,7 @@ class DefaultMessageOutputDTO:
     Attributes:
         message: Pergunta original do usuário.
         response: Texto produzido pelo modelo.
+        session_id: Identificador da sessão gravada para esta inferência.
         tokens_input: Tokens consumidos na entrada.
         tokens_output: Tokens consumidos na saída.
         inference_time_ms: Tempo da chamada ao modelo, em milissegundos.
@@ -15,6 +16,7 @@ class DefaultMessageOutputDTO:
 
     message: str
     response: str
+    session_id: str
     tokens_input: int
     tokens_output: int
     inference_time_ms: int
