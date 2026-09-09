@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, WebSocket
 
 from src.infra.routes.v1.message.dtos.default_input_dto import DefaultInputDTO
 from src.infra.routes.v1.message.dtos.default_output_dto import DefaultOutputDTO
@@ -19,3 +19,9 @@ async def default_message(payload: DefaultInputDTO) -> DefaultOutputDTO:
         return await startup.run(payload=payload)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.websocket("/reasoning")
+async def reasoning(websocket: WebSocket) -> None:
+    """Executa o fluxo harness (Ralph Loop adaptado), emitindo um evento por etapa."""
+    raise NotImplementedError
