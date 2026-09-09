@@ -16,3 +16,18 @@ class BudgetVerdict:
     authorized: bool
     limit: BudgetLimitEnum | None = None
     reason: str | None = None
+
+    def __post_init__(self) -> None:
+        """Valida a invariante entre autorização, limite e motivo.
+
+        Raises:
+            ValueError: Quando um veredito autorizado carrega `limit` ou `reason`,
+                ou quando um veredito negado não identifica o `limit` responsável.
+        """
+        if self.authorized:
+            if self.limit is not None:
+                raise ValueError("Um veredito autorizado não pode carregar 'limit'.")
+            if self.reason is not None:
+                raise ValueError("Um veredito autorizado não pode carregar 'reason'.")
+        elif self.limit is None:
+            raise ValueError("Um veredito negado deve identificar o 'limit' responsável.")

@@ -31,3 +31,31 @@ def test_e_imutavel() -> None:
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         veredito.authorized = False
+
+
+def test_autorizado_com_limite_e_invalido() -> None:
+    with pytest.raises(ValueError) as erro:
+        BudgetVerdict(authorized=True, limit=BudgetLimitEnum.SESSION_TIMEOUT)
+
+    assert "limit" in str(erro.value)
+
+
+def test_autorizado_com_motivo_e_invalido() -> None:
+    with pytest.raises(ValueError) as erro:
+        BudgetVerdict(authorized=True, reason="qualquer motivo")
+
+    assert "reason" in str(erro.value)
+
+
+def test_negado_sem_limite_e_invalido() -> None:
+    with pytest.raises(ValueError) as erro:
+        BudgetVerdict(authorized=False)
+
+    assert "limit" in str(erro.value)
+
+
+def test_negado_sem_motivo_continua_valido_desde_que_tenha_limite() -> None:
+    veredito = BudgetVerdict(authorized=False, limit=BudgetLimitEnum.LLM_CALLS_PER_SESSION)
+
+    assert veredito.limit is BudgetLimitEnum.LLM_CALLS_PER_SESSION
+    assert veredito.reason is None

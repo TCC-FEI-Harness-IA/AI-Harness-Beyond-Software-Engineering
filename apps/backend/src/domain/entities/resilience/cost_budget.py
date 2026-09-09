@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
+
+_MINIMUM_LIMIT_VALUE = 0
 
 
 @dataclass(frozen=True)
@@ -22,3 +24,21 @@ class CostBudget:
     session_token_budget: int
     final_answer_token_reserve: int
     session_timeout_seconds: int
+
+    def __post_init__(self) -> None:
+        """Valida os limites congelados no início da sessão.
+
+        Raises:
+            ValueError: Quando algum limite não é positivo ou quando a reserva da
+                resposta final não é menor que o orçamento de tokens da sessão.
+        """
+        for field in fields(self):
+            value = getattr(self, field.name)
+            if value <= _MINIMUM_LIMIT_VALUE:
+                raise ValueError(f"O limite '{field.name}' deve ser maior que zero. Valor: '{value}'.")
+
+        if self.final_answer_token_reserve >= self.session_token_budget:
+            raise ValueError(
+                "O limite 'final_answer_token_reserve' deve ser menor que 'session_token_budget'. "
+                f"Valores: '{self.final_answer_token_reserve}' e '{self.session_token_budget}'."
+            )

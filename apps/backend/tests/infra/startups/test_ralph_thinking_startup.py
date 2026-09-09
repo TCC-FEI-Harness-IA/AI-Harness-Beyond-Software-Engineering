@@ -72,3 +72,54 @@ def test_injeta_o_caso_de_uso_do_fluxo_harness() -> None:
     startup = RalphThinkingStartup()
 
     assert isinstance(startup.ralph_thinking_use_case, RalphThinkingUseCase)
+
+
+_LIMITES_DE_AMBIENTE = {
+    "RALPH_MAX_TASK_ATTEMPTS": "7",
+    "RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS": "4",
+    "RALPH_MAX_TASKS_PER_SESSION": "9",
+    "RALPH_MAX_LLM_CALLS_PER_SESSION": "33",
+    "RALPH_SESSION_TOKEN_BUDGET": "5000",
+    "RALPH_FINAL_ANSWER_TOKEN_RESERVE": "500",
+    "RALPH_SESSION_TIMEOUT_SECONDS": "42",
+}
+
+
+def test_monta_o_budget_com_os_valores_do_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    for variavel, valor in _LIMITES_DE_AMBIENTE.items():
+        monkeypatch.setenv(variavel, valor)
+
+    budget = RalphThinkingStartup().cost_budget
+
+    assert budget.max_task_attempts == 7
+    assert budget.max_additional_planning_rounds == 4
+    assert budget.max_tasks_per_session == 9
+    assert budget.max_llm_calls_per_session == 33
+    assert budget.session_token_budget == 5000
+    assert budget.final_answer_token_reserve == 500
+    assert budget.session_timeout_seconds == 42
+
+
+def test_alterar_variavel_de_ambiente_altera_o_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RALPH_MAX_TASK_ATTEMPTS", "3")
+    antes = RalphThinkingStartup().cost_budget
+
+    monkeypatch.setenv("RALPH_MAX_TASK_ATTEMPTS", "8")
+    depois = RalphThinkingStartup().cost_budget
+
+    assert antes.max_task_attempts == 3
+    assert depois.max_task_attempts == 8
+
+
+def test_injeta_o_mesmo_guardiao_de_custo_em_todos_os_consumidores() -> None:
+    startup = RalphThinkingStartup()
+
+    assert startup.ralph_thinking_use_case.cost_guard is startup.cost_guard
+    for atributo in _PHASE_ATTRIBUTES:
+        assert getattr(startup, atributo).cost_guard is startup.cost_guard
+
+
+def test_o_guardiao_de_custo_usa_o_budget_montado_pelo_startup() -> None:
+    startup = RalphThinkingStartup()
+
+    assert startup.cost_guard.budget is startup.cost_budget

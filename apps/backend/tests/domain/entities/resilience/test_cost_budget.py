@@ -34,3 +34,47 @@ def test_e_imutavel() -> None:
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         budget.max_task_attempts = 5
+
+
+_CAMPOS_POSITIVOS = (
+    "max_task_attempts",
+    "max_additional_planning_rounds",
+    "max_tasks_per_session",
+    "max_llm_calls_per_session",
+    "session_token_budget",
+    "final_answer_token_reserve",
+    "session_timeout_seconds",
+)
+
+
+@pytest.mark.parametrize("campo", _CAMPOS_POSITIVOS)
+@pytest.mark.parametrize("valor", [0, -1])
+def test_recusa_limite_nao_positivo(campo: str, valor: int) -> None:
+    argumentos = dataclasses.asdict(_novo_budget()) | {campo: valor}
+
+    with pytest.raises(ValueError) as erro:
+        CostBudget(**argumentos)
+
+    assert campo in str(erro.value)
+
+
+def test_recusa_reserva_maior_ou_igual_ao_orcamento() -> None:
+    argumentos = dataclasses.asdict(_novo_budget()) | {
+        "session_token_budget": 1000,
+        "final_answer_token_reserve": 1000,
+    }
+
+    with pytest.raises(ValueError) as erro:
+        CostBudget(**argumentos)
+
+    assert "final_answer_token_reserve" in str(erro.value)
+    assert "session_token_budget" in str(erro.value)
+
+
+def test_aceita_reserva_menor_que_o_orcamento() -> None:
+    budget = CostBudget(**(dataclasses.asdict(_novo_budget()) | {
+        "session_token_budget": 1000,
+        "final_answer_token_reserve": 999,
+    }))
+
+    assert budget.final_answer_token_reserve == 999
