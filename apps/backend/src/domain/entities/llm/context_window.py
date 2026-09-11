@@ -35,7 +35,7 @@ class ContextWindow:
         Returns:
             int: Soma de `tokens_input` e `tokens_output`.
         """
-        raise NotImplementedError
+        return self.tokens_input + self.tokens_output
 
     def append(self, message: Message) -> None:
         """Anexa uma mensagem ao final da janela.
@@ -43,7 +43,7 @@ class ContextWindow:
         Args:
             message: Mensagem a ser anexada.
         """
-        raise NotImplementedError
+        self.messages.append(message)
 
     def register_usage(self, tokens: TokensUsage) -> None:
         """Acumula o consumo de tokens de uma chamada na janela.
@@ -51,7 +51,8 @@ class ContextWindow:
         Args:
             tokens: Consumo de tokens da chamada.
         """
-        raise NotImplementedError
+        self.tokens_input += tokens.tokens_input
+        self.tokens_output += tokens.tokens_output
 
     def is_empty(self) -> bool:
         """Informa se a janela ainda não recebeu nenhuma mensagem.
@@ -59,4 +60,4 @@ class ContextWindow:
         Returns:
             bool: `True` quando `messages` está vazia.
         """
-        raise NotImplementedError
+        return not self.messages

@@ -12,4 +12,4 @@ class GlobalVerificationPhase(BaseThinkingPhase):
         Returns:
             ThinkingPhaseEnum: `ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION`.
         """
-        raise NotImplementedError
+        return ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION

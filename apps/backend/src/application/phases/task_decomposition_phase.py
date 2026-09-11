@@ -12,4 +12,4 @@ class TaskDecompositionPhase(BaseThinkingPhase):
         Returns:
             ThinkingPhaseEnum: `ThinkingPhaseEnum.A2_TASK_DECOMPOSITION`.
         """
-        raise NotImplementedError
+        return ThinkingPhaseEnum.A2_TASK_DECOMPOSITION

@@ -12,4 +12,4 @@ class GeneralCriteriaPhase(BaseThinkingPhase):
         Returns:
             ThinkingPhaseEnum: `ThinkingPhaseEnum.A1_GENERAL_CRITERIA`.
         """
-        raise NotImplementedError
+        return ThinkingPhaseEnum.A1_GENERAL_CRITERIA

@@ -19,6 +19,17 @@ class IThinkingPhase(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def configure(self, model_name: str, max_tokens: int, temperature: float) -> None:
+        """Fixa os parâmetros do modelo usados por todas as execuções da fase.
+
+        Args:
+            model_name: Nome do modelo a ser usado nas chamadas da fase.
+            max_tokens: Limite de tokens de saída das chamadas da fase.
+            temperature: Temperatura de geração das chamadas da fase.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     async def execute(self, context: ContextWindow, variables: dict[str, str]) -> PhaseOutcome:
         """Executa a fase sobre a janela de contexto informada.
 

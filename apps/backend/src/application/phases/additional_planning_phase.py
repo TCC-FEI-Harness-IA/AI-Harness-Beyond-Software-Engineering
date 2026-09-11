@@ -12,4 +12,4 @@ class AdditionalPlanningPhase(BaseThinkingPhase):
         Returns:
             ThinkingPhaseEnum: `ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING`.
         """
-        raise NotImplementedError
+        return ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING

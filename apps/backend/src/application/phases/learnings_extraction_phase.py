@@ -12,4 +12,4 @@ class LearningsExtractionPhase(BaseThinkingPhase):
         Returns:
             ThinkingPhaseEnum: `ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION`.
         """
-        raise NotImplementedError
+        return ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION

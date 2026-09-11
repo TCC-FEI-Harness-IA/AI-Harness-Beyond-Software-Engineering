@@ -30,3 +30,19 @@ def test_e_imutavel() -> None:
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         relatorio.decision = VerificationDecisionEnum.REPROVED
+
+
+def test_aprovado_reflete_a_decisao() -> None:
+    aprovado = VerificationReport(
+        decision=VerificationDecisionEnum.APPROVED,
+        evaluations=(),
+        unmet_criteria_ids=(),
+    )
+    reprovado = VerificationReport(
+        decision=VerificationDecisionEnum.REPROVED,
+        evaluations=(),
+        unmet_criteria_ids=("AC1",),
+    )
+
+    assert aprovado.approved is True
+    assert reprovado.approved is False

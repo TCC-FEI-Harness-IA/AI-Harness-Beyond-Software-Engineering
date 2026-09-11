@@ -12,4 +12,4 @@ class FinalAnswerPhase(BaseThinkingPhase):
         Returns:
             ThinkingPhaseEnum: `ThinkingPhaseEnum.C3_FINAL_ANSWER`.
         """
-        raise NotImplementedError
+        return ThinkingPhaseEnum.C3_FINAL_ANSWER

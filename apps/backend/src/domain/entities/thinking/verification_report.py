@@ -25,4 +25,4 @@ class VerificationReport:
         Returns:
             bool: `True` quando a decisão é `VerificationDecisionEnum.APPROVED`.
         """
-        raise NotImplementedError
+        return self.decision is VerificationDecisionEnum.APPROVED

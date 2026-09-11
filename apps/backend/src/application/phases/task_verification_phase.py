@@ -12,4 +12,4 @@ class TaskVerificationPhase(BaseThinkingPhase):
         Returns:
             ThinkingPhaseEnum: `ThinkingPhaseEnum.B2_TASK_VERIFICATION`.
         """
-        raise NotImplementedError
+        return ThinkingPhaseEnum.B2_TASK_VERIFICATION

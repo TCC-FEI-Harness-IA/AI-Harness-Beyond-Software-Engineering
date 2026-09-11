@@ -3,6 +3,12 @@ from typing import Sequence
 from src.domain.entities.thinking.learning import Learning
 from src.domain.interfaces.learnings_memory_interface import ILearningsMemory
 
+_BLOCK_HEADING = "## Aprendizados acumulados"
+_BLOCK_SEPARATOR = "\n\n"
+_ITEM_PREFIX = "- "
+_ITEM_SEPARATOR = "\n"
+_EMPTY_BLOCK = ""
+
 
 class LearningsMemory(ILearningsMemory):
     """Armazenamento em memória dos aprendizados pontuais do loop de execução."""
@@ -17,7 +23,7 @@ class LearningsMemory(ILearningsMemory):
         Args:
             learnings: Aprendizados a acumular.
         """
-        raise NotImplementedError
+        self.__learnings.extend(learnings)
 
     def all(self) -> tuple[Learning, ...]:
         """Devolve todos os aprendizados acumulados até o momento.
@@ -25,7 +31,7 @@ class LearningsMemory(ILearningsMemory):
         Returns:
             tuple[Learning, ...]: Aprendizados acumulados, em ordem de extração.
         """
-        raise NotImplementedError
+        return tuple(self.__learnings)
 
     def is_empty(self) -> bool:
         """Informa se ainda não há nenhum aprendizado acumulado.
@@ -33,12 +39,17 @@ class LearningsMemory(ILearningsMemory):
         Returns:
             bool: `True` quando nenhum aprendizado foi acumulado.
         """
-        raise NotImplementedError
+        return not self.__learnings
 
     def render(self) -> str:
         """Renderiza os aprendizados acumulados como bloco markdown.
 
         Returns:
-            str: Bloco markdown pronto para injeção no início de um novo contexto.
+            str: Bloco markdown pronto para injeção no início de um novo contexto,
+            ou string vazia quando ainda não há aprendizados.
         """
-        raise NotImplementedError
+        if self.is_empty():
+            return _EMPTY_BLOCK
+
+        items = _ITEM_SEPARATOR.join(f"{_ITEM_PREFIX}{learning.content}" for learning in self.__learnings)
+        return f"{_BLOCK_HEADING}{_BLOCK_SEPARATOR}{items}"

@@ -25,4 +25,8 @@ class ContextWindowFactoryAdapter(IContextWindowFactory):
         Returns:
             ContextWindow: Janela de contexto recém-criada, vazia.
         """
-        raise NotImplementedError
+        return ContextWindow(
+            context_id=self.id_generator.new_context_id(),
+            phase=phase,
+            task_id=task_id,
+        )

@@ -12,4 +12,4 @@ class TaskResolutionPhase(BaseThinkingPhase):
         Returns:
             ThinkingPhaseEnum: `ThinkingPhaseEnum.B1_TASK_RESOLUTION`.
         """
-        raise NotImplementedError
+        return ThinkingPhaseEnum.B1_TASK_RESOLUTION

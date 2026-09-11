@@ -123,3 +123,29 @@ def test_o_guardiao_de_custo_usa_o_budget_montado_pelo_startup() -> None:
     startup = RalphThinkingStartup()
 
     assert startup.cost_guard.budget is startup.cost_budget
+
+
+def test_injeta_a_mesma_porta_de_completions_em_todas_as_fases() -> None:
+    startup = RalphThinkingStartup()
+
+    for atributo in _PHASE_ATTRIBUTES:
+        assert getattr(startup, atributo).llm_completions is startup.llm_completions
+
+
+def test_injeta_as_pecas_de_estado_da_sessao_no_caso_de_uso() -> None:
+    startup = RalphThinkingStartup()
+
+    assert startup.ralph_thinking_use_case.task_queue is startup.task_queue
+    assert startup.ralph_thinking_use_case.learnings_memory is startup.learnings_memory
+    assert startup.ralph_thinking_use_case.session_recorder is startup.session_recorder
+    assert startup.ralph_thinking_use_case.context_window_factory is startup.context_window_factory
+
+
+def test_cada_instanciacao_produz_estado_de_sessao_proprio() -> None:
+    primeiro = RalphThinkingStartup()
+    segundo = RalphThinkingStartup()
+
+    assert primeiro.task_queue is not segundo.task_queue
+    assert primeiro.learnings_memory is not segundo.learnings_memory
+    assert primeiro.cost_guard is not segundo.cost_guard
+    assert primeiro.session_recorder is not segundo.session_recorder
