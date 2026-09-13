@@ -14,7 +14,7 @@ class ModelConfigDTO(BaseModel):
 
     provider: Literal["local", "open_router"]
     provider_config: ProviderConfigDTO
-    max_tokens: int
+    max_tokens: int = Field(gt=0)
     temperature: float = Field(default=_DEFAULT_TEMPERATURE)
 
     @field_validator("temperature", mode="before")

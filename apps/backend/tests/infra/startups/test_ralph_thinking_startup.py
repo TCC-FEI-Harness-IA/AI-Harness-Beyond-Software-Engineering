@@ -1,6 +1,13 @@
+from typing import Any, AsyncGenerator
+
 import pytest
 
+from src.application.dtos.ralph_thinking_input_dto import RalphThinkingInputDTO
 from src.application.usecases.ralph_thinking_usecase import RalphThinkingUseCase
+from src.domain.entities.thinking.thinking_event import ThinkingEvent
+from src.domain.enums.thinking_event_subtype_enum import ThinkingEventSubtypeEnum
+from src.domain.enums.thinking_event_type_enum import ThinkingEventTypeEnum
+from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.interfaces.clock_interface import IClock
 from src.domain.interfaces.context_window_factory_interface import IContextWindowFactory
 from src.domain.interfaces.cost_guard_interface import ICostGuard
@@ -14,6 +21,8 @@ from src.domain.interfaces.session_repository_interface import ISessionRepositor
 from src.domain.interfaces.structured_response_parser_interface import IStructuredResponseParser
 from src.domain.interfaces.task_queue_interface import ITaskQueue
 from src.domain.interfaces.thinking_phase_interface import IThinkingPhase
+from src.infra.routes.v1.message.dtos.reasoning_event_dto import ReasoningEventDTO
+from src.infra.routes.v1.message.dtos.reasoning_input_dto import ReasoningInputDTO
 from src.infra.startups.ralph_thinking_startup import RalphThinkingStartup
 
 _PHASE_ATTRIBUTES = (
@@ -149,3 +158,103 @@ def test_cada_instanciacao_produz_estado_de_sessao_proprio() -> None:
     assert primeiro.learnings_memory is not segundo.learnings_memory
     assert primeiro.cost_guard is not segundo.cost_guard
     assert primeiro.session_recorder is not segundo.session_recorder
+
+
+_REASONING_PAYLOAD = ReasoningInputDTO.model_validate(
+    {
+        "message": {"user_input": "pergunta do usuario"},
+        "llm_model_config": {
+            "provider": "open_router",
+            "provider_config": {"model_name": "vendor/modelo"},
+            "max_tokens": 1200,
+            "temperature": 0.3,
+        },
+    }
+)
+
+_EVENT = ThinkingEvent(
+    type=ThinkingEventTypeEnum.THINKING,
+    subtype=ThinkingEventSubtypeEnum.EXECUTE,
+    phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION,
+    task="T1",
+    content="markdown renderizavel",
+    session_id="sess_01J",
+    total_tokens=642,
+    context_id="3a7f2b1",
+    context_size=182,
+    inference_time_ms=812,
+)
+
+
+class _FakeUseCase:
+    """Dublê do caso de uso, para isolar a tradução feita pelo `run`."""
+
+    def __init__(self, events: list[ThinkingEvent]) -> None:
+        self.events = events
+        self.received_input_dto: RalphThinkingInputDTO | None = None
+
+    async def execute(self, input_dto: RalphThinkingInputDTO) -> AsyncGenerator[ThinkingEvent, None]:
+        self.received_input_dto = input_dto
+        for event in self.events:
+            yield event
+
+
+async def _collect(generator: AsyncGenerator[Any, None]) -> list[Any]:
+    return [item async for item in generator]
+
+
+async def test_run_traduz_o_payload_de_transporte_para_o_dto_de_aplicacao() -> None:
+    startup = RalphThinkingStartup()
+    fake_use_case = _FakeUseCase(events=[_EVENT])
+    startup.ralph_thinking_use_case = fake_use_case
+
+    await _collect(startup.run(payload=_REASONING_PAYLOAD))
+
+    assert fake_use_case.received_input_dto == RalphThinkingInputDTO(
+        user_input="pergunta do usuario",
+        model_name="vendor/modelo",
+        max_tokens=1200,
+        temperature=0.3,
+    )
+
+
+async def test_run_converte_cada_thinking_event_em_reasoning_event_dto() -> None:
+    startup = RalphThinkingStartup()
+    startup.ralph_thinking_use_case = _FakeUseCase(events=[_EVENT])
+
+    eventos = await _collect(startup.run(payload=_REASONING_PAYLOAD))
+
+    assert eventos == [
+        ReasoningEventDTO(
+            type="thinking",
+            subtype="execute",
+            phase="B1",
+            task="T1",
+            session_id="sess_01J",
+            content="markdown renderizavel",
+            total_tokens=642,
+            context_window={"context_id": "3a7f2b1", "context_size": 182},
+            inference_time_ms=812,
+        )
+    ]
+
+
+async def test_run_devolve_um_evento_por_evento_emitido_pelo_caso_de_uso() -> None:
+    startup = RalphThinkingStartup()
+    outro_evento = ThinkingEvent(
+        type=ThinkingEventTypeEnum.RESULT,
+        subtype=ThinkingEventSubtypeEnum.COMPILE,
+        phase=ThinkingPhaseEnum.C3_FINAL_ANSWER,
+        task="synthesis",
+        content="resposta final",
+        session_id="sess_01J",
+        total_tokens=900,
+        context_id="9f1a2b3",
+        context_size=50,
+        inference_time_ms=120,
+    )
+    startup.ralph_thinking_use_case = _FakeUseCase(events=[_EVENT, outro_evento])
+
+    eventos = await _collect(startup.run(payload=_REASONING_PAYLOAD))
+
+    assert [evento.type for evento in eventos] == ["thinking", "result"]

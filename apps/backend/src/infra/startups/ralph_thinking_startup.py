@@ -1,5 +1,7 @@
 from inspect import getfile
+from typing import AsyncGenerator
 
+from src.application.dtos.ralph_thinking_input_dto import RalphThinkingInputDTO
 from src.application.phases.additional_planning_phase import AdditionalPlanningPhase
 from src.application.phases.final_answer_phase import FinalAnswerPhase
 from src.application.phases.general_criteria_phase import GeneralCriteriaPhase
@@ -10,6 +12,7 @@ from src.application.phases.task_resolution_phase import TaskResolutionPhase
 from src.application.phases.task_verification_phase import TaskVerificationPhase
 from src.application.usecases.ralph_thinking_usecase import RalphThinkingUseCase
 from src.domain.entities.resilience.cost_budget import CostBudget
+from src.domain.entities.thinking.thinking_event import ThinkingEvent
 from src.domain.interfaces.settings_interface import ISettings
 from src.domain.services.learnings_memory import LearningsMemory
 from src.domain.services.task_queue import TaskQueue
@@ -25,6 +28,9 @@ from src.infra.config.settings import Settings
 from src.infra.mappers.session_document_mapper import SessionDocumentMapper
 from src.infra.providers.file_prompt_template_provider import FilePromptTemplateProvider
 from src.infra.repositories.json_file_session_repository import JsonFileSessionRepository
+from src.infra.routes.v1.message.dtos.context_window_dto import ContextWindowDTO
+from src.infra.routes.v1.message.dtos.reasoning_event_dto import ReasoningEventDTO
+from src.infra.routes.v1.message.dtos.reasoning_input_dto import ReasoningInputDTO
 from src.infra.services.openrouter_service import OpenRouterService
 
 
@@ -134,6 +140,46 @@ class RalphThinkingStartup:
             logger=self.settings.logger(module_file=getfile(RalphThinkingUseCase)),
         )
         self.logger.info("RalphThinkingStartup inicializado")
+
+    async def run(self, payload: ReasoningInputDTO) -> AsyncGenerator[ReasoningEventDTO, None]:
+        """Executa o fluxo harness a partir do frame de abertura do WebSocket.
+
+        Args:
+            payload: Frame de abertura no contrato de transporte.
+
+        Yields:
+            ReasoningEventDTO: Evento de transporte equivalente a cada `ThinkingEvent`
+            emitido pelo caso de uso.
+        """
+        input_dto = RalphThinkingInputDTO(
+            user_input=payload.message.user_input,
+            model_name=payload.llm_model_config.provider_config.model_name,
+            max_tokens=payload.llm_model_config.max_tokens,
+            temperature=payload.llm_model_config.temperature,
+        )
+        async for event in self.ralph_thinking_use_case.execute(input_dto=input_dto):
+            yield self.__to_event_dto(event=event)
+
+    def __to_event_dto(self, event: ThinkingEvent) -> ReasoningEventDTO:
+        """Converte um `ThinkingEvent` de domínio no seu equivalente de transporte.
+
+        Args:
+            event: Evento emitido pelo caso de uso.
+
+        Returns:
+            ReasoningEventDTO: Evento pronto para ser serializado no WebSocket.
+        """
+        return ReasoningEventDTO(
+            type=event.type.value,
+            subtype=event.subtype.value,
+            phase=event.phase.value,
+            task=event.task,
+            session_id=event.session_id,
+            content=event.content,
+            total_tokens=event.total_tokens,
+            context_window=ContextWindowDTO(context_id=event.context_id, context_size=event.context_size),
+            inference_time_ms=event.inference_time_ms,
+        )
 
     def __phase_dependencies(self, phase_class: type) -> dict[str, object]:
         """Monta o mapa de dependências comuns injetadas em toda `IThinkingPhase`.

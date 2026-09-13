@@ -7,43 +7,54 @@ import './App.css'
 
 type Phase = 'idle' | 'streaming' | 'done'
 
+type EventType = 'thinking' | 'result' | 'degraded' | 'error'
+
 type Subtype =
   | 'setup' | 'tasks'
   | 'execute' | 'reasoning' | 'verify_pass' | 'verify_fail'
   | 'store' | 'learn' | 'reset'
-  | 'compile' | 'result'
+  | 'compile' | 'replan' | 'result'
 
-type Task = 'setup' | 'T1' | 'T2' | 'T3' | 'synthesis'
+type Task = string
 
 interface ContextWindow { context_id: string; context_size: number }
 
 interface Chunk {
-  type: 'thinking' | 'result'
+  type: EventType
   subtype?: Subtype
+  phase?: string
   task?: Task
+  session_id?: string
   content: string
   total_tokens?: number
   context_window?: ContextWindow
+  inference_time_ms?: number
 }
 
 interface ThinkingEntry {
+  type: EventType
   subtype: Subtype
   task: Task
   content: string
   totalTokens?: number
   contextId?: string
   contextSize?: number
+  sessionId?: string
+  inferenceTimeMs?: number
 }
 
 // ── Color per task (drives all visual accents) ─────────────────────────────
 
-const TASK_COLOR: Record<Task, string> = {
+const TASK_COLOR: Record<string, string> = {
   setup:     '#6366f1', // indigo  — fase A
   T1:        '#a78bfa', // violeta — Tarefa 1
   T2:        '#3b82f6', // azul    — Tarefa 2
   T3:        '#10b981', // esmeralda — Tarefa 3
   synthesis: '#f59e0b', // âmbar   — fase C
 }
+
+const DEGRADED_COLOR = '#f97316' // laranja — degradação de custo
+const ERROR_COLOR     = '#ef4444' // vermelho — falha
 
 // ── Label per subtype (independent of color) ──────────────────────────────
 
@@ -58,7 +69,21 @@ const SUBTYPE_LABEL: Record<Subtype, string> = {
   learn:       'Aprendizado',
   reset:       'Reset',
   compile:     'Compilação',
+  replan:      'Planejamento Adicional',
   result:      'Resultado',
+}
+
+function colorFor(entry: ThinkingEntry): string {
+  if (entry.type === 'error') return ERROR_COLOR
+  if (entry.type === 'degraded') return DEGRADED_COLOR
+  return TASK_COLOR[entry.task] ?? TASK_COLOR.setup
+}
+
+function labelFor(entry: ThinkingEntry): string {
+  const base = SUBTYPE_LABEL[entry.subtype] ?? entry.subtype
+  if (entry.type === 'error') return 'Erro'
+  if (entry.type === 'degraded') return `${base} (degradado)`
+  return base
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -98,6 +123,7 @@ export default function App() {
   // track the active task so we inherit its color for subsequent subtypes
   const activeTaskRef = useRef<Task>('setup')
   const [result, setResult]           = useState('')
+  const [sessionId, setSessionId]     = useState<string | undefined>()
   const [input, setInput]             = useState('')
   const [expanded, setExpanded]         = useState(false)
   const [selectedFlow, setSelectedFlow] = useState<'simple' | 'ralph_wiggum'>('ralph_wiggum')
@@ -122,63 +148,58 @@ export default function App() {
 
   // ── Streaming ────────────────────────────────────────────────────────────
 
-  const doStream = async (trimmed: string) => {
-    try {
-      const res = await fetch('/v1/message/reasoning', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: { user_input: trimmed },
-          llm_model_config: {
-            provider: 'open_router',
-            provider_config: { model_name: 'openai/gpt-4o-mini' },
-            max_tokens: 512,
-          },
-          reasoning_config: {
-            phase_breaking_strategy: 'predefined',
-            strategies: { predefined: { number_of_phases: 3 } },
-            next_phase_strategy: 'algorithmic',
-          },
-        }),
-      })
+  const doStream = (trimmed: string) => {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const ws = new WebSocket(`${protocol}//${location.host}/v1/message/reasoning`)
 
-      const reader  = res.body!.getReader()
-      const decoder = new TextDecoder()
-      let buffer    = ''
+    ws.onopen = () => {
+      ws.send(JSON.stringify({
+        message: { user_input: trimmed },
+        llm_model_config: {
+          provider: 'open_router',
+          provider_config: { model_name: 'openai/gpt-4o-mini' },
+          max_tokens: 512,
+          temperature: 0.7,
+        },
+      }))
+    }
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const raw = line.slice(6).trim()
-          if (!raw) continue
-          try {
-            const chunk: Chunk = JSON.parse(raw)
-            if (chunk.type === 'thinking') {
-              const task: Task = chunk.task ?? activeTaskRef.current
-              activeTaskRef.current = task
-              setEntries((p) => [...p, {
-                subtype: chunk.subtype ?? 'execute',
-                task,
-                content: chunk.content,
-                totalTokens: chunk.total_tokens,
-                contextId: chunk.context_window?.context_id,
-                contextSize: chunk.context_window?.context_size,
-              }])
-            } else if (chunk.type === 'result') {
-              setResult(chunk.content)
-            }
-          } catch { /* skip */ }
+    ws.onmessage = (event: MessageEvent<string>) => {
+      try {
+        const chunk: Chunk = JSON.parse(event.data)
+        if (chunk.session_id) setSessionId(chunk.session_id)
+
+        if (chunk.type === 'result') {
+          setResult(chunk.content)
+          return
         }
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setEntries((p) => [...p, { subtype: 'execute', content: `**Erro:** ${msg}` }])
-    } finally {
+
+        const task: Task = chunk.task ?? activeTaskRef.current
+        activeTaskRef.current = task
+        setEntries((p) => [...p, {
+          type: chunk.type,
+          subtype: chunk.subtype ?? 'execute',
+          task,
+          content: chunk.content,
+          totalTokens: chunk.total_tokens,
+          contextId: chunk.context_window?.context_id,
+          contextSize: chunk.context_window?.context_size,
+          sessionId: chunk.session_id,
+          inferenceTimeMs: chunk.inference_time_ms,
+        }])
+      } catch { /* skip */ }
+    }
+
+    ws.onerror = () => {
+      setEntries((p) => [...p, {
+        type: 'error',
+        subtype: 'execute',
+        task: activeTaskRef.current,
+        content: '**Erro:** falha na conexão com o servidor.',
+      }])
+    }
+
+    ws.onclose = () => {
       setPhase('done')
     }
   }
@@ -192,6 +213,7 @@ export default function App() {
     setInput('')
     setEntries([])
     setResult('')
+    setSessionId(undefined)
     setPhase('streaming')
     activeTaskRef.current = 'setup'
 
@@ -313,12 +335,12 @@ export default function App() {
             <div className="panel__content" ref={thinkingRef}>
               <div className="timeline">
                 {entries.map((entry, i) => {
-                  const color    = TASK_COLOR[entry.task] ?? TASK_COLOR.setup
+                  const color    = colorFor(entry)
                   const label    = phaseLabelFor(i, entries)
                   const isLast   = i === entries.length - 1
                   const isActive = isLast && phase === 'streaming'
                   // connecting line: gradient toward next entry's task color (or border if last)
-                  const nextColor = entries[i + 1] ? TASK_COLOR[entries[i + 1].task] ?? color : undefined
+                  const nextColor = entries[i + 1] ? colorFor(entries[i + 1]) : undefined
                   return (
                     <div key={i}>
                       {label && (
@@ -349,7 +371,7 @@ export default function App() {
                             className="msg-card__tag"
                             style={{ color, borderColor: `${color}40`, background: `${color}12` }}
                           >
-                            {SUBTYPE_LABEL[entry.subtype] ?? entry.subtype}
+                            {labelFor(entry)}
                           </div>
                           <Md>{entry.content}</Md>
                           {entry.contextId && (() => {
@@ -376,6 +398,7 @@ export default function App() {
                                 </span>
                                 <span className="msg-card__meta-right">
                                   Σ {entry.totalTokens?.toLocaleString('pt-BR')} tk
+                                  {entry.inferenceTimeMs !== undefined && ` · ${entry.inferenceTimeMs} ms`}
                                 </span>
                               </div>
                             )
@@ -403,7 +426,9 @@ export default function App() {
               {isDone && result && (
                 <div className="result-card">
                   <p className="result-card__text">{result}</p>
-                  <p className="result-card__caption">resposta gerada pelo harness</p>
+                  <p className="result-card__caption">
+                    resposta gerada pelo harness{sessionId && ` · ${sessionId}`}
+                  </p>
                 </div>
               )}
             </div>

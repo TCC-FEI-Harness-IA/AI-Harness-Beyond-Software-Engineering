@@ -1,4 +1,5 @@
 import pytest
+from pydantic import ValidationError
 
 from src.infra.routes.v1.message.dtos.model_config_dto import ModelConfigDTO
 
@@ -38,3 +39,14 @@ def test_endpoint_do_provedor_e_opcional() -> None:
     dto = ModelConfigDTO.model_validate(_BASE)
 
     assert dto.provider_config.endpoint is None
+
+
+@pytest.mark.parametrize("max_tokens", [0, -1])
+def test_max_tokens_nao_positivo_e_recusado(max_tokens: int) -> None:
+    with pytest.raises(ValidationError):
+        ModelConfigDTO.model_validate({**_BASE, "max_tokens": max_tokens})
+
+
+def test_provider_invalido_e_recusado() -> None:
+    with pytest.raises(ValidationError):
+        ModelConfigDTO.model_validate({**_BASE, "provider": "invalido"})
