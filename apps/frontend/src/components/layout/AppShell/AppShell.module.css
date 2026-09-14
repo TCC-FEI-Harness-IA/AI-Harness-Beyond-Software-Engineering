@@ -1,0 +1,30 @@
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1;
+}
+
+.mainWithSidebar {
+  flex: 1;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+}
+
+.sidebar {
+  border-right: 1px solid var(--color-hairline);
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .mainWithSidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+}
