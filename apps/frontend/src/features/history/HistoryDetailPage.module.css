@@ -1,0 +1,16 @@
+.skeletonWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-6);
+}
+
+.notice {
+  max-width: var(--content-max);
+  margin: var(--space-4) auto 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-soft);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}

@@ -1,11 +1,24 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as SessionApiModule from '@/api/sessionApi'
+import { HttpError } from '@/api/errors/HttpError'
 import { RunConfigProvider } from '@/state/RunConfigContext'
 import { ThemeProvider } from '@/state/ThemeContext'
 import { ViewModeProvider } from '@/state/ViewModeContext'
 import { AppRouter } from './AppRouter'
 import { buildHistoryDetailPath } from './routes'
+
+// As telas de histórico buscam sessões de verdade — para este smoke test de roteamento, uma
+// lista vazia é suficiente e evita qualquer chamada de rede real.
+vi.mock('@/api/sessionApi', async () => {
+  const actual = await vi.importActual<typeof SessionApiModule>('@/api/sessionApi')
+  return {
+    ...actual,
+    listSessionIds: vi.fn().mockResolvedValue([]),
+    getSession: vi.fn().mockRejectedValue(new HttpError(404, 'não encontrada')),
+  }
+})
 
 function renderAt(path: string, enableDevRoute = false): void {
   render(
@@ -41,14 +54,14 @@ describe('AppRouter', () => {
     expect(screen.getByText('Faça uma pergunta para começar')).toBeInTheDocument()
   })
 
-  it('renderiza o Histórico em /historico', () => {
+  it('renderiza o Histórico em /historico', async () => {
     renderAt('/historico')
-    expect(screen.getByRole('heading', { name: 'Histórico' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Histórico' })).toBeInTheDocument()
   })
 
-  it('renderiza o detalhe do histórico com o sessionId da URL', () => {
+  it('renderiza o detalhe do histórico com o sessionId da URL', async () => {
     renderAt('/historico/sess_ab12cd34ef56')
-    expect(screen.getByText('Sessão: sess_ab12cd34ef56')).toBeInTheDocument()
+    expect(await screen.findByText('Esta conversa não existe mais')).toBeInTheDocument()
   })
 
   it('cai na tela de não encontrado para uma rota desconhecida', () => {

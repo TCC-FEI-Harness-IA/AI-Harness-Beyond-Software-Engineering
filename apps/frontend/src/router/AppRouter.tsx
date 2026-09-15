@@ -7,6 +7,7 @@ import { HistoryListPage } from '@/features/history/HistoryListPage'
 import { HistoryDetailPage } from '@/features/history/HistoryDetailPage'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
 import { ComponentsGalleryPage } from '@/features/dev/ComponentsGalleryPage'
+import { SidebarSlotProvider, useSidebarSlotValue } from '@/state/SidebarSlotContext'
 import { ROUTES } from './routes'
 import styles from './AppRouter.module.css'
 
@@ -17,13 +18,16 @@ export interface AppRouterProps {
   enableDevRoute?: boolean
 }
 
-/** Monta a casca de layout e as rotas do app. Espera ser renderizado dentro de um Router. */
-export function AppRouter({ enableDevRoute = false }: AppRouterProps): JSX.Element {
-  // Chaveado pelo pathname para reiniciar a animação de entrada a cada troca de rota.
+// `AppShell` é montado uma única vez, acima das rotas (regra de reuso 8: nenhuma tela inventa o
+// próprio cabeçalho). A prop `sidebar` só é preenchida quando a tela atual a registra via
+// `useRegisterSidebar` (só `HistoryDetailPage`, FASE 07) — por isso a leitura do slot precisa
+// ficar dentro do `SidebarSlotProvider`, num componente separado deste.
+function AppShellWithRoutes({ enableDevRoute }: Required<AppRouterProps>): JSX.Element {
   const location = useLocation()
+  const sidebar = useSidebarSlotValue()
 
   return (
-    <AppShell>
+    <AppShell sidebar={sidebar ?? undefined}>
       <div key={location.pathname} className={styles.transition}>
         <Routes location={location}>
           <Route path={ROUTES.home} element={<HomePage />} />
@@ -38,5 +42,14 @@ export function AppRouter({ enableDevRoute = false }: AppRouterProps): JSX.Eleme
         </Routes>
       </div>
     </AppShell>
+  )
+}
+
+/** Monta a casca de layout e as rotas do app. Espera ser renderizado dentro de um Router. */
+export function AppRouter({ enableDevRoute = false }: AppRouterProps): JSX.Element {
+  return (
+    <SidebarSlotProvider>
+      <AppShellWithRoutes enableDevRoute={enableDevRoute} />
+    </SidebarSlotProvider>
   )
 }
