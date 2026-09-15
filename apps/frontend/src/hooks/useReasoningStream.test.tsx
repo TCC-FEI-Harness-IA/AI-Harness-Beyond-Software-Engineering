@@ -143,6 +143,29 @@ describe('useReasoningStream', () => {
     expect(socket.closeCalls).toEqual([1000])
   })
 
+  it('frame malformado no meio do stream gera um aviso não fatal e os frames seguintes continuam sendo processados', () => {
+    const { result } = renderHook(() => useReasoningStream(CONFIG))
+
+    act(() => {
+      result.current.start('pergunta')
+    })
+    const socket = FakeWebSocket.latest()
+    act(() => {
+      socket.emitOpen()
+      socket.emitMessage('{')
+    })
+
+    expect(result.current.run.warning).not.toBeNull()
+    expect(result.current.run.status).not.toBe('failed')
+    expect(result.current.isStreaming).toBe(true)
+
+    act(() => {
+      socket.emitMessage(VALID_EVENT)
+    })
+    expect(result.current.run.steps).toHaveLength(1)
+    expect(result.current.run.warning).toBeNull()
+  })
+
   it('start durante um streaming em andamento é ignorado', () => {
     const { result } = renderHook(() => useReasoningStream(CONFIG))
 

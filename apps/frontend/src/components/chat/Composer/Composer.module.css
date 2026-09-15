@@ -31,7 +31,9 @@
   font-size: var(--text-base);
   line-height: var(--leading-body);
   padding: var(--space-2) 0;
+  /* dvh (não vh) para não estourar quando o teclado virtual reduz a área visível no mobile. */
   max-height: 40vh;
+  max-height: 40dvh;
   overflow-y: auto;
 }
 

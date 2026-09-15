@@ -64,6 +64,10 @@ export function parseTasksFromMarkdown(markdown: string): ParsedTask[] {
   if (headers.length === 0) return []
 
   return headers.map((header, index) => {
+    // `TASK_HEADER_RE` tem dois grupos obrigatórios (`(T\d+)` e `(.+)`), e `header.index` sempre
+    // vem preenchido num match real de `matchAll` — os `?? ''`/`?? null`/`?? 0` são só para o
+    // TypeScript aceitar o acesso indexado, não um caso alcançável.
+    /* v8 ignore next 3 */
     const id = header[1] ?? ''
     const title = header[2]?.trim() ?? null
     const start = (header.index ?? 0) + header[0].length

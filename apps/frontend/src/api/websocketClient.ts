@@ -5,7 +5,6 @@ import { env } from '../config/env'
 import type { DefaultInputDTO } from '../domain/types/defaultInput'
 import type { ReasoningErrorFrame, ReasoningEventDTO } from '../domain/types/reasoningEvent'
 import { AppError } from './errors/AppError'
-import { ContractError } from './errors/ContractError'
 import { WebSocketError } from './errors/WebSocketError'
 import { WS_OPEN_TIMEOUT_MESSAGE } from './errors/messages'
 import { parseReasoningFrame } from './parsers/reasoningFrame'
@@ -18,6 +17,12 @@ export interface ReasoningStreamHandlers {
   onErrorFrame: (frame: ReasoningErrorFrame) => void
   onClose: (code: number) => void
   onFailure: (error: AppError) => void
+  /**
+   * Um único frame não pôde ser lido (JSON inválido ou fora do contrato de 9 campos), mas a
+   * conexão segue aberta e os próximos frames continuam sendo processados normalmente — não é
+   * uma falha da execução (README/FASE 08, seção 4: "frame malformado no meio do stream").
+   */
+  onFrameWarning: (message: string) => void
 }
 
 export interface ReasoningStreamHandle {
@@ -54,9 +59,7 @@ export function openReasoningStream(
     try {
       raw = JSON.parse(String(event.data))
     } catch {
-      handlers.onFailure(
-        new ContractError(`frame do WebSocket não é JSON válido: ${String(event.data).slice(0, 200)}`),
-      )
+      handlers.onFrameWarning(`frame do WebSocket não é JSON válido: ${String(event.data).slice(0, 200)}`)
       return
     }
 
@@ -68,7 +71,11 @@ export function openReasoningStream(
         handlers.onErrorFrame(frame)
       }
     } catch (error) {
-      handlers.onFailure(error instanceof AppError ? error : new ContractError(String(error)))
+      // `parseReasoningFrame` só lança `ContractError` (um `AppError`) — o `String(error)` é
+      // defensivo contra uma implementação futura que lance outra coisa.
+      /* v8 ignore next */
+      const message = error instanceof AppError ? error.message : String(error)
+      handlers.onFrameWarning(message)
     }
   }
 

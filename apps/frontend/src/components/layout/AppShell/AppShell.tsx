@@ -31,15 +31,35 @@ export function AppShell({ children, sidebar }: AppShellProps): JSX.Element {
   }, [isDrawerOpen])
 
   function handleDrawerKeyDown(event: KeyboardEvent<HTMLElement>): void {
-    if (event.key !== 'Escape') return
-    setIsDrawerOpen(false)
+    if (event.key === 'Escape') {
+      setIsDrawerOpen(false)
+      return
+    }
+    // Prende o foco dentro da gaveta enquanto ela estiver aberta (README, seção 8/FASE 08 § 3.2):
+    // no limite do ciclo de Tab, volta para a outra ponta em vez de escapar para o resto da página.
+    if (event.key !== 'Tab' || !isDrawerOpen) return
+    const focusable = asideRef.current?.querySelectorAll<HTMLElement>('a, button')
+    if (!focusable || focusable.length === 0) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (!first || !last) return
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
   }
 
   return (
     <div className={styles.shell}>
+      <a href="#main-content" className={styles.skipLink}>
+        Pular para o conteúdo
+      </a>
       <TopBar {...(sidebar ? { onToggleSidebar: () => setIsDrawerOpen((open) => !open) } : {})} />
       {sidebar ? (
-        <main className={styles.mainWithSidebar}>
+        <main id="main-content" className={styles.mainWithSidebar} tabIndex={-1}>
           {isDrawerOpen ? (
             <button
               type="button"
@@ -59,7 +79,9 @@ export function AppShell({ children, sidebar }: AppShellProps): JSX.Element {
           <div>{children}</div>
         </main>
       ) : (
-        <main className={styles.main}>{children}</main>
+        <main id="main-content" className={styles.main} tabIndex={-1}>
+          {children}
+        </main>
       )}
     </div>
   )

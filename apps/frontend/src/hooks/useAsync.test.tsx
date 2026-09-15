@@ -44,6 +44,27 @@ describe('useAsync', () => {
     expect(result.current.error.userMessage).toBe('Algo deu errado.')
   })
 
+  it('um erro que não é AppError vira ContractError, em vez de quebrar o estado da tela', async () => {
+    const run = vi.fn().mockRejectedValue(new Error('erro genérico inesperado'))
+    const { result } = renderHook(() => useAsync(run, []))
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('error')
+    })
+    if (result.current.status !== 'error') throw new Error('esperava status error')
+    expect(result.current.error.userMessage).toBe('O servidor respondeu em um formato inesperado.')
+  })
+
+  it('uma rejeição com AbortError não vira estado de erro (fica em loading)', async () => {
+    const run = vi.fn().mockRejectedValue(new DOMException('abortado', 'AbortError'))
+    const { result } = renderHook(() => useAsync(run, []))
+
+    await waitFor(() => expect(run).toHaveBeenCalled())
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(result.current.status).toBe('loading')
+  })
+
   it('reload() reexecuta a função sem mudar as deps', async () => {
     const run = vi.fn().mockResolvedValueOnce('primeiro').mockResolvedValueOnce('segundo')
     const { result } = renderHook(() => useAsync(run, []))

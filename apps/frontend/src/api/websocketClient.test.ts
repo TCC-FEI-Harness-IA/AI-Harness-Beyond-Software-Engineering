@@ -64,6 +64,7 @@ function makeHandlers() {
     onErrorFrame: vi.fn(),
     onClose: vi.fn(),
     onFailure: vi.fn(),
+    onFrameWarning: vi.fn(),
   }
 }
 
@@ -157,7 +158,7 @@ describe('openReasoningStream', () => {
     expect(socket.closeCalls).toEqual([1000])
   })
 
-  it('frame malformado vira onFailure e o socket continua aberto', async () => {
+  it('frame malformado vira onFrameWarning, não fecha o socket nem falha a execução, e o stream continua', async () => {
     const { openReasoningStream } = await importWebsocketClient()
     const handlers = makeHandlers()
     openReasoningStream(PAYLOAD, handlers)
@@ -166,8 +167,25 @@ describe('openReasoningStream', () => {
     socket.emitOpen()
     socket.emitMessage({ isso: 'não é um frame válido' })
 
-    expect(handlers.onFailure).toHaveBeenCalled()
+    expect(handlers.onFrameWarning).toHaveBeenCalled()
+    expect(handlers.onFailure).not.toHaveBeenCalled()
     expect(socket.closeCalls).toHaveLength(0)
+
+    socket.emitMessage(VALID_EVENT)
+    expect(handlers.onEvent).toHaveBeenCalledWith(VALID_EVENT)
+  })
+
+  it('JSON malformado ("{") também vira onFrameWarning, e frames seguintes continuam processados', async () => {
+    const { openReasoningStream } = await importWebsocketClient()
+    const handlers = makeHandlers()
+    openReasoningStream(PAYLOAD, handlers)
+
+    const socket = FakeWebSocket.latest()
+    socket.emitOpen()
+    socket.emitMessage('{')
+
+    expect(handlers.onFrameWarning).toHaveBeenCalled()
+    expect(handlers.onFailure).not.toHaveBeenCalled()
 
     socket.emitMessage(VALID_EVENT)
     expect(handlers.onEvent).toHaveBeenCalledWith(VALID_EVENT)
@@ -182,5 +200,72 @@ describe('openReasoningStream', () => {
     await vi.advanceTimersByTimeAsync(60)
 
     expect(handlers.onFailure).toHaveBeenCalled()
+  })
+
+  it('timeout que dispara depois que a conexão já abriu não faz nada', async () => {
+    vi.useFakeTimers()
+    const { openReasoningStream } = await importWebsocketClient({ VITE_WS_OPEN_TIMEOUT_MS: '50' })
+    const handlers = makeHandlers()
+    openReasoningStream(PAYLOAD, handlers)
+
+    const socket = FakeWebSocket.latest()
+    socket.emitOpen()
+    await vi.advanceTimersByTimeAsync(60)
+
+    expect(handlers.onFailure).not.toHaveBeenCalled()
+  })
+
+  it('mensagem recebida depois de handle.close() é ignorada', async () => {
+    const { openReasoningStream } = await importWebsocketClient()
+    const handlers = makeHandlers()
+    const handle = openReasoningStream(PAYLOAD, handlers)
+
+    const socket = FakeWebSocket.latest()
+    socket.emitOpen()
+    handle.close()
+    socket.emitMessage(VALID_EVENT)
+
+    expect(handlers.onEvent).not.toHaveBeenCalled()
+  })
+
+  it('um frame reduzido de erro fora do fluxo normal vira onErrorFrame', async () => {
+    const { openReasoningStream } = await importWebsocketClient()
+    const handlers = makeHandlers()
+    openReasoningStream(PAYLOAD, handlers)
+
+    const socket = FakeWebSocket.latest()
+    socket.emitOpen()
+    socket.emitMessage({ type: 'error', content: 'payload inválido' })
+
+    expect(handlers.onErrorFrame).toHaveBeenCalledWith({ type: 'error', content: 'payload inválido' })
+    expect(handlers.onEvent).not.toHaveBeenCalled()
+  })
+
+  it('um segundo evento close do servidor não dispara os handlers de novo', async () => {
+    const { openReasoningStream } = await importWebsocketClient()
+    const handlers = makeHandlers()
+    openReasoningStream(PAYLOAD, handlers)
+
+    const socket = FakeWebSocket.latest()
+    socket.emitOpen()
+    socket.emitClose(1000)
+    socket.emitClose(1000)
+
+    expect(handlers.onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('o evento "error" do socket apenas registra um aviso, sem chamar nenhum handler', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { openReasoningStream } = await importWebsocketClient()
+    const handlers = makeHandlers()
+    openReasoningStream(PAYLOAD, handlers)
+
+    const socket = FakeWebSocket.latest()
+    socket.emitOpen()
+    socket.emitError()
+
+    expect(warnSpy).toHaveBeenCalled()
+    expect(handlers.onFailure).not.toHaveBeenCalled()
+    warnSpy.mockRestore()
   })
 })

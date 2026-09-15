@@ -1,7 +1,7 @@
 // `unknown` → `DefaultOutputDTO` (README, FASE 02, seção 5) — resposta de
 // `POST /v1/message/default`.
 
-import type { DefaultOutputDTO } from '../../domain/types/defaultOutput'
+import type { DefaultOutputDTO } from '@/domain/types/defaultOutput'
 import { requireNumber, requireObject, requireString } from './primitives'
 
 export function parseDefaultOutput(raw: unknown): DefaultOutputDTO {

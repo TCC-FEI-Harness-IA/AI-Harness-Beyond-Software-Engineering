@@ -44,6 +44,17 @@ describe('parseTasksFromMarkdown', () => {
     expect(parseTasksFromMarkdown('texto qualquer sem cabeçalho')).toEqual([])
     expect(() => parseTasksFromMarkdown('')).not.toThrow()
   })
+
+  it('tarefa sem corpo (cabeçalho seguido de outro cabeçalho) tem description null', () => {
+    const tasks = parseTasksFromMarkdown('### T1 — Primeira\n### T2 — Segunda\ncorpo da T2')
+    expect(tasks[0]?.description).toBeNull()
+  })
+
+  it('corpo que começa direto com um campo em negrito (sem parágrafo descritivo) tem description null', () => {
+    const tasks = parseTasksFromMarkdown('### T1 — Título\n**Entrada esperada:** um número')
+    expect(tasks[0]?.description).toBeNull()
+    expect(tasks[0]?.expectedInput).toBe('um número')
+  })
 })
 
 describe('parseTaskTitle', () => {

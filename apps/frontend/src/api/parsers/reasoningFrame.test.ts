@@ -39,6 +39,18 @@ describe('parseReasoningFrame', () => {
     warnSpy.mockRestore()
   })
 
+  it('usa fallback para phase desconhecida, sem lançar', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const frame = parseReasoningFrame({ ...VALID_EVENT, phase: 'FASE_NOVA_DO_BACKEND' })
+    expect(frame).toMatchObject({ phase: 'B1' })
+    expect(warnSpy).toHaveBeenCalled()
+    warnSpy.mockRestore()
+  })
+
+  it('lança ContractError quando type tem valor fora do enum EventType', () => {
+    expect(() => parseReasoningFrame({ ...VALID_EVENT, type: 'tipo-inexistente' })).toThrow(ContractError)
+  })
+
   it('lança ContractError quando context_window está ausente', () => {
     const { context_window: _omitted, ...withoutContextWindow } = VALID_EVENT
     expect(() => parseReasoningFrame(withoutContextWindow)).toThrow(ContractError)

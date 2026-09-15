@@ -73,6 +73,7 @@ function buildRun(overrides: Partial<ThinkingRun> = {}): ThinkingRun {
     },
     degradations: [],
     error: null,
+    warning: null,
     ...overrides,
   }
 }

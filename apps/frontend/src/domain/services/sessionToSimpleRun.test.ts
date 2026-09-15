@@ -28,6 +28,18 @@ describe('sessionToSimpleRun', () => {
     expect(run.totals).toBeNull()
   })
 
+  it('sem model_name na própria mensagem, usa o model_name do documento', () => {
+    const withoutMessageModel: SessionDocument = {
+      ...completedDocument,
+      messages: completedDocument.messages.map((message) =>
+        message.source === 'llm_agent' ? { ...message, model_name: null } : message,
+      ),
+    }
+    const run = sessionToSimpleRun(withoutMessageModel)
+
+    expect(run.messages[1]?.stats?.modelName).toBe(completedDocument.model_name)
+  })
+
   it('não lança para nenhuma das fixtures', () => {
     expect(() => sessionToSimpleRun(completedDocument)).not.toThrow()
     expect(() => sessionToSimpleRun(failedDocument)).not.toThrow()

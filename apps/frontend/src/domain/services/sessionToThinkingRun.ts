@@ -32,6 +32,10 @@ function taskLabelFor(phase: ThinkingPhase): string {
 // A.2/C.2 — é o texto que o passo `execute` sintetizado (seção 3.2) usa como conteúdo, já que o
 // backend não persiste o evento `execute` em si.
 function renderTaskBlock(task: ParsedTask): string {
+  // `task` sempre vem de `parseTasksFromMarkdown`, cujo cabeçalho exige um título não vazio
+  // (`TASK_HEADER_RE`); o `?? ''` é defensivo contra o tipo `string | null` de `ParsedTask`,
+  // não um caso alcançável por este chamador.
+  /* v8 ignore next */
   const lines = [`### ${task.id} — ${task.title ?? ''}`.trimEnd()]
   if (task.description) lines.push('', task.description)
   if (task.expectedInput) lines.push('', `**Entrada esperada:** ${task.expectedInput}`)
@@ -105,10 +109,6 @@ class Accumulators {
     const contextSize = (this.contextTotals.get(contextId) ?? 0) + message.total_tokens
     this.contextTotals.set(contextId, contextSize)
     return { totalTokens: this.totalTokens, contextSize }
-  }
-
-  get currentTotalTokens(): number {
-    return this.totalTokens
   }
 }
 

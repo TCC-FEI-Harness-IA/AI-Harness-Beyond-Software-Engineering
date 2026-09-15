@@ -103,4 +103,10 @@ export interface ThinkingRun {
   totals: ThinkingRunTotals
   degradations: RunDegradation[]
   error: RunError | null
+  /**
+   * Aviso não fatal do frame mais recente (ex.: um frame malformado no meio do stream —
+   * FASE 08, seção 4). Nunca aparece no histórico (`sessionToThinkingRun` sempre entrega
+   * `null`); ao vivo, o stream continua normalmente depois dele.
+   */
+  warning: string | null
 }

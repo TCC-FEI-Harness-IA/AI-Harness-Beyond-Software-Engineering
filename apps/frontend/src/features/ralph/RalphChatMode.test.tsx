@@ -46,6 +46,7 @@ function buildRun(steps: ThinkingStep[], overrides: Partial<ThinkingRun> = {}): 
     },
     degradations: [],
     error: null,
+    warning: null,
     ...overrides,
   }
 }

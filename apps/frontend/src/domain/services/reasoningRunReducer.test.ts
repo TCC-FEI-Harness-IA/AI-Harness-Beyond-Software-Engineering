@@ -237,6 +237,15 @@ describe('reasoningRunReducer', () => {
     expect(run.steps).toHaveLength(1)
   })
 
+  it('robustez: store de uma tarefa desconhecida ignora o efeito, mas o passo continua em run.steps', () => {
+    const run = reduceAll(createEmptyRun('pergunta', MODEL_NAME), [
+      buildEvent({ subtype: EVENT_SUBTYPE.STORE, task: 'T9' }),
+    ])
+
+    expect(run.tasks).toHaveLength(0)
+    expect(run.steps).toHaveLength(1)
+  })
+
   it('robustez: verify_pass sem tentativa aberta não lança e cria uma tentativa fechada', () => {
     expect(() =>
       reduceAll(createEmptyRun('pergunta', MODEL_NAME), [
@@ -262,6 +271,13 @@ describe('reasoningRunReducer', () => {
     expect(run.steps).toHaveLength(1)
   })
 
+  it('uma ação de tipo desconhecido devolve o run inalterado, sem lançar', () => {
+    const started = reduceAll(createEmptyRun('pergunta', MODEL_NAME), [buildEvent({ subtype: EVENT_SUBTYPE.RESET, task: 'T1' })])
+    const run = reasoningRunReducer(started, { kind: 'nonsense' } as unknown as RunAction)
+
+    expect(run).toBe(started)
+  })
+
   it('nunca lança, mesmo diante de uma ação malformada', () => {
     const run = createEmptyRun('pergunta', MODEL_NAME)
     const malformed = { kind: 'event', event: null } as unknown as RunAction
@@ -284,5 +300,61 @@ describe('reasoningRunReducer', () => {
     expect(run.status).toBe(RUN_STATUS.FAILED)
     expect(run.error?.userMessage).toBe('payload inválido')
     expect(run.steps).toHaveLength(1)
+  })
+
+  it('reset repetido com o mesmo context_id não duplica a entrada em contextIds', () => {
+    const events = [
+      buildEvent({ subtype: EVENT_SUBTYPE.RESET, task: 'T1', context_window: { context_id: 'ctx_1', context_size: 0 } }),
+      buildEvent({ subtype: EVENT_SUBTYPE.RESET, task: 'T1', context_window: { context_id: 'ctx_1', context_size: 0 } }),
+    ]
+    const run = reduceAll(createEmptyRun('pergunta', MODEL_NAME), events)
+
+    expect(run.tasks[0]?.contextIds).toEqual(['ctx_1'])
+  })
+
+  it('execute como primeiro evento de uma tarefa nova cria a tarefa na hora (robustez)', () => {
+    const run = reduceAll(createEmptyRun('pergunta', MODEL_NAME), [
+      buildEvent({ subtype: EVENT_SUBTYPE.EXECUTE, task: 'T9', content: '### T9 — Uma tarefa\n\ncorpo' }),
+    ])
+
+    expect(run.tasks).toHaveLength(1)
+    expect(run.tasks[0]?.id).toBe('T9')
+  })
+
+  it('degraded com task global (setup/synthesis) não cria nem altera nenhuma tarefa', () => {
+    const run = reduceAll(createEmptyRun('pergunta', MODEL_NAME), [
+      buildEvent({ type: EVENT_TYPE.DEGRADED, subtype: EVENT_SUBTYPE.SETUP, task: TASK_LABEL_SETUP, content: 'limite atingido' }),
+    ])
+
+    expect(run.status).toBe(RUN_STATUS.DEGRADED)
+    expect(run.tasks).toHaveLength(0)
+    expect(run.degradations[0]?.taskId).toBeNull()
+  })
+
+  it('compile fora do type "result" não altera o status do run', () => {
+    const started = reduceAll(createEmptyRun('pergunta', MODEL_NAME), [
+      buildEvent({ subtype: EVENT_SUBTYPE.RESET, task: 'T1' }),
+    ])
+    const run = reasoningRunReducer(started, {
+      kind: 'event',
+      event: buildEvent({ type: EVENT_TYPE.THINKING, subtype: EVENT_SUBTYPE.COMPILE, phase: THINKING_PHASE.C3, task: TASK_LABEL_SYNTHESIS, content: 'rascunho' }),
+    })
+
+    expect(run.status).toBe(started.status)
+    expect(run.finalAnswer).toBe('rascunho')
+  })
+
+  it('warning registra o aviso sem alterar status nem descartar os passos (FASE 08, seção 4)', () => {
+    const started = reduceAll(createEmptyRun('pergunta', MODEL_NAME), [buildEvent({ subtype: EVENT_SUBTYPE.RESET, task: 'T1' })])
+    const warned = reasoningRunReducer(started, { kind: 'warning', message: 'frame ignorado' })
+
+    expect(warned.warning).toBe('frame ignorado')
+    expect(warned.status).toBe(started.status)
+    expect(warned.steps).toHaveLength(1)
+
+    // Um evento válido seguinte limpa o aviso — o stream se recuperou.
+    const recovered = reasoningRunReducer(warned, { kind: 'event', event: buildEvent({ subtype: EVENT_SUBTYPE.REASONING, task: 'T1' }) })
+    expect(recovered.warning).toBeNull()
+    expect(recovered.steps).toHaveLength(2)
   })
 })

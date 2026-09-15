@@ -94,6 +94,44 @@ describe('httpClient', () => {
     await assertion
   })
 
+  it('erro com corpo vazio não tenta parsear JSON e o detail vem null', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(500, ''))
+    vi.stubGlobal('fetch', fetchMock)
+    const { httpClient, HttpError } = await importHttpClient()
+
+    const error: unknown = await httpClient.get('/qualquer', (raw) => raw).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(HttpError)
+    expect(error).toMatchObject({ detail: null })
+  })
+
+  it('erro com corpo não-JSON não lança ao ler o detail, e o detail vem null', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(500, 'Internal Server Error'))
+    vi.stubGlobal('fetch', fetchMock)
+    const { httpClient, HttpError } = await importHttpClient()
+
+    const error: unknown = await httpClient.get('/qualquer', (raw) => raw).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(HttpError)
+    expect(error).toMatchObject({ detail: null })
+  })
+
+  it('erro com "detail" de tipo diferente de string vira detail null', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(500, JSON.stringify({ detail: { code: 1 } })))
+    vi.stubGlobal('fetch', fetchMock)
+    const { httpClient, HttpError } = await importHttpClient()
+
+    const error: unknown = await httpClient.get('/qualquer', (raw) => raw).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(HttpError)
+    expect(error).toMatchObject({ detail: null })
+  })
+
+  it('lança NetworkError quando o fetch rejeita por um motivo que não é abort', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
+    vi.stubGlobal('fetch', fetchMock)
+    const { httpClient, NetworkError } = await importHttpClient()
+
+    await expect(httpClient.get('/qualquer', (raw) => raw)).rejects.toBeInstanceOf(NetworkError)
+  })
+
   it('não vira erro de UI quando o próprio chamador aborta', async () => {
     const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
       return new Promise((_resolve, reject) => {

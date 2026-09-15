@@ -2,16 +2,16 @@
 // Diferente de `parseReasoningFrame`, aqui não há stream ao vivo para proteger: uma mensagem
 // inválida invalida o documento inteiro.
 
-import { isBudgetLimit } from '../../domain/enums/budgetLimit'
-import { isMessageSource } from '../../domain/enums/messageSource'
-import { isSessionStatus } from '../../domain/enums/sessionStatus'
-import { isThinkingPhase } from '../../domain/enums/thinkingPhase'
+import { isBudgetLimit } from '@/domain/enums/budgetLimit'
+import { isMessageSource } from '@/domain/enums/messageSource'
+import { isSessionStatus } from '@/domain/enums/sessionStatus'
+import { isThinkingPhase } from '@/domain/enums/thinkingPhase'
 import type {
   SessionDegradationDocument,
   SessionDocument,
   SessionMessageDocument,
   SessionTotalsDocument,
-} from '../../domain/types/sessionDocument'
+} from '@/domain/types/sessionDocument'
 import { ContractError } from '../errors/ContractError'
 import { optionalString, requireArray, requireNumber, requireObject, requireString } from './primitives'
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { DefaultOutputDTO } from '../types/defaultOutput'
 import { simpleRunFromResponse } from './buildSimpleRun'
 
@@ -40,4 +40,20 @@ describe('simpleRunFromResponse', () => {
     expect(run.messages[0]?.id).not.toBe(run.messages[1]?.id)
     expect(run.messages[0]?.id).toBeTruthy()
   })
+
+  it('sem crypto.randomUUID, cai para o gerador alternativo baseado em Date/Math.random', () => {
+    const stub = { ...globalThis.crypto }
+    // @ts-expect-error remove a chave por completo — `'randomUUID' in crypto` precisa dar `false`
+    delete stub.randomUUID
+    vi.stubGlobal('crypto', stub)
+
+    const run = simpleRunFromResponse(RESPONSE.message, RESPONSE, 'openai/gpt-4o-mini')
+
+    expect(run.messages[0]?.id).toMatch(/^msg_\d+_[a-z0-9]+$/)
+    expect(run.messages[0]?.id).not.toBe(run.messages[1]?.id)
+  })
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
 })

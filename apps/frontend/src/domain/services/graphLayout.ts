@@ -90,7 +90,9 @@ export function buildTaskLanes(run: ThinkingRun): TaskLaneView[] {
       inferenceTimeMs: task.inferenceTimeMs,
       attemptCount: task.attempts.length,
       contextIds: task.contextIds,
-      steps: task.steps.map((step, index) => ({ step, attemptIndex: attemptIndices[index] ?? 0 })),
+      // `attemptIndices` sempre tem o mesmo tamanho de `task.steps` (mesmo `.map`); o `?? 0` é
+      // só para satisfazer `noUncheckedIndexedAccess`, não um caso alcançável.
+      steps: task.steps.map((step, index) => ({ step, attemptIndex: attemptIndices[index] ?? /* v8 ignore next */ 0 })),
     }
   })
 }

@@ -2,15 +2,15 @@
 // mesma conexão: o frame de 9 campos e o frame reduzido de erro — a forma é decidida antes de
 // validar os campos.
 
-import { EVENT_SUBTYPE, isEventSubtype, type EventSubtype } from '../../domain/enums/eventSubtype'
-import { isEventType } from '../../domain/enums/eventType'
-import { isThinkingPhase, THINKING_PHASE, type ThinkingPhase } from '../../domain/enums/thinkingPhase'
+import { EVENT_SUBTYPE, isEventSubtype, type EventSubtype } from '@/domain/enums/eventSubtype'
+import { isEventType } from '@/domain/enums/eventType'
+import { isThinkingPhase, THINKING_PHASE, type ThinkingPhase } from '@/domain/enums/thinkingPhase'
 import type {
   ContextWindowDTO,
   ReasoningErrorFrame,
   ReasoningEventDTO,
   ReasoningFrame,
-} from '../../domain/types/reasoningEvent'
+} from '@/domain/types/reasoningEvent'
 import { ContractError } from '../errors/ContractError'
 import { requireNumber, requireObject, requireString } from './primitives'
 

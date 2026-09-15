@@ -54,6 +54,12 @@ describe('formatRelative', () => {
     const iso = '2026-09-11T23:18:06.000Z'
     expect(formatRelative(iso, now)).toBe('há 3 minutos')
   })
+
+  it('formata uma diferença de poucos segundos usando a unidade "second"', () => {
+    const now = new Date('2026-09-11T23:18:06.000Z')
+    const iso = '2026-09-11T23:18:06.000Z'
+    expect(formatRelative(iso, now)).toBe('agora')
+  })
 })
 
 describe('truncate', () => {
@@ -68,6 +74,10 @@ describe('truncate', () => {
 
   it('normaliza quebras de linha para espaço', () => {
     expect(truncate('linha um\nlinha dois', 100)).toBe('linha um linha dois')
+  })
+
+  it('sem espaço dentro do limite, corta no próprio limite (sem fronteira de palavra)', () => {
+    expect(truncate('abcdefghij', 5)).toBe('abcde…')
   })
 })
 

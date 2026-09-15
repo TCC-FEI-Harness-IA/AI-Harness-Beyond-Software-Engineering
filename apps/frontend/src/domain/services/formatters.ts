@@ -57,13 +57,12 @@ const RELATIVE_UNITS: Array<{ unit: Intl.RelativeTimeFormatUnit; seconds: number
 export function formatRelative(iso: string, now: Date = new Date()): string {
   const diffSeconds = (new Date(iso).getTime() - now.getTime()) / 1000
 
-  for (const { unit, seconds } of RELATIVE_UNITS) {
-    if (Math.abs(diffSeconds) >= seconds || unit === 'second') {
-      return relativeTimeFormatter.format(Math.round(diffSeconds / seconds), unit)
-    }
-  }
-
-  return relativeTimeFormatter.format(0, 'second')
+  // `RELATIVE_UNITS` sempre termina em `second`, que casa com a condição para qualquer
+  // `diffSeconds` — `find` nunca devolve `undefined` na prática; o `!` só resolve o tipo.
+  const { unit, seconds } = RELATIVE_UNITS.find(
+    (candidate) => Math.abs(diffSeconds) >= candidate.seconds || candidate.unit === 'second',
+  )!
+  return relativeTimeFormatter.format(Math.round(diffSeconds / seconds), unit)
 }
 
 export function truncate(text: string, max: number): string {

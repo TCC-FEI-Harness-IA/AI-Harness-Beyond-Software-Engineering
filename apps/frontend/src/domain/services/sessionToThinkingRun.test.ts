@@ -92,4 +92,66 @@ describe('sessionToThinkingRun', () => {
     const run = sessionToThinkingRun(failed2MsgsDocument)
     expect(run.status).toBe('failed')
   })
+
+  it('mapeia running e degraded para o RunStatus correspondente, e um status desconhecido cai em failed', () => {
+    expect(sessionToThinkingRun({ ...completedDocument, status: 'running' }).status).toBe('running')
+    expect(sessionToThinkingRun({ ...completedDocument, status: 'degraded' }).status).toBe('degraded')
+    expect(
+      sessionToThinkingRun({ ...completedDocument, status: 'algo-inesperado' as SessionDocument['status'] }).status,
+    ).toBe('failed')
+  })
+
+  it('reconstrói degradations do documento, preservando uma phase válida e caindo em A1 quando inválida', () => {
+    const withDegradation: SessionDocument = {
+      ...completedDocument,
+      degradations: [
+        {
+          limit: 'task_attempts',
+          phase: 'B2',
+          task_id: 'T1',
+          description: 'limite de tentativas atingido',
+          occurred_at: '2026-09-11T23:18:07.000Z',
+        },
+        {
+          limit: 'session_timeout',
+          phase: 'não-é-uma-fase',
+          task_id: null,
+          description: 'tempo de parede esgotado',
+          occurred_at: '2026-09-11T23:19:00.000Z',
+        },
+      ],
+    }
+    const run = sessionToThinkingRun(withDegradation)
+
+    expect(run.degradations).toHaveLength(2)
+    expect(run.degradations[0]).toMatchObject({ limit: 'task_attempts', phase: 'B2', taskId: 'T1' })
+    expect(run.degradations[1]).toMatchObject({ limit: 'session_timeout', phase: 'A1', taskId: null })
+  })
+
+  it('mensagem persistida com context_id nulo (dado inesperado) cai para janela vazia, sem lançar', () => {
+    const withNullContext: SessionDocument = {
+      ...completedDocument,
+      messages: completedDocument.messages.map((message) =>
+        message.order === 1 ? { ...message, context_id: null } : message,
+      ),
+    }
+    expect(() => sessionToThinkingRun(withNullContext)).not.toThrow()
+    const run = sessionToThinkingRun(withNullContext)
+    expect(run.steps[0]?.contextId).toBe('')
+  })
+
+  it('uma tarefa referenciada fora do markdown de A2/C2 sintetiza um bloco mínimo em vez de ficar em branco', () => {
+    const orphanMessage = completedDocument.messages.find((message) => message.phase === 'B1' && message.source === 'system')
+    if (!orphanMessage) throw new Error('fixture sem mensagem B1/system (reset)')
+
+    const withOrphanTask: SessionDocument = {
+      ...completedDocument,
+      messages: [...completedDocument.messages, { ...orphanMessage, id: 'msg_orphan', order: 999, task_id: 'T99' }],
+    }
+    const run = sessionToThinkingRun(withOrphanTask)
+    const orphanTask = run.tasks.find((task) => task.id === 'T99')
+    const executeStep = orphanTask?.steps.find((step) => step.subtype === 'execute')
+
+    expect(executeStep?.content).toBe('### T99')
+  })
 })

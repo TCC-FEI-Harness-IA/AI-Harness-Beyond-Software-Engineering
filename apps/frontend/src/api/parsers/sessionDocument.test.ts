@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import a1Completed from '../../test/fixtures/session-a1-completed-15msgs.json'
-import a1Failed1Msg from '../../test/fixtures/session-a1-failed-1msg.json'
-import a1Failed1MsgB from '../../test/fixtures/session-a1-failed-1msg-b.json'
-import a1Failed2Msgs from '../../test/fixtures/session-a1-failed-2msgs.json'
-import directCompleted from '../../test/fixtures/session-direct-completed.json'
-import directFailed1Msg from '../../test/fixtures/session-direct-failed-1msg.json'
-import directFailed1MsgB from '../../test/fixtures/session-direct-failed-1msg-b.json'
+import a1Completed from '@/test/fixtures/session-a1-completed-15msgs.json'
+import a1Failed1Msg from '@/test/fixtures/session-a1-failed-1msg.json'
+import a1Failed1MsgB from '@/test/fixtures/session-a1-failed-1msg-b.json'
+import a1Failed2Msgs from '@/test/fixtures/session-a1-failed-2msgs.json'
+import directCompleted from '@/test/fixtures/session-direct-completed.json'
+import directFailed1Msg from '@/test/fixtures/session-direct-failed-1msg.json'
+import directFailed1MsgB from '@/test/fixtures/session-direct-failed-1msg-b.json'
 import { ContractError } from '../errors/ContractError'
 import { parseSessionDocument } from './sessionDocument'
 
@@ -65,5 +65,39 @@ describe('parseSessionDocument', () => {
     if (!firstMessage) throw new Error('fixture sem mensagens')
     firstMessage.phase = 'FASE_INEXISTENTE'
     expect(() => parseSessionDocument(invalid)).toThrow(ContractError)
+  })
+
+  it('lança ContractError quando uma mensagem tem source inválida', () => {
+    const invalid = structuredClone(a1Failed1Msg)
+    const [firstMessage] = invalid.messages
+    if (!firstMessage) throw new Error('fixture sem mensagens')
+    firstMessage.source = 'fonte-inexistente'
+    expect(() => parseSessionDocument(invalid)).toThrow(ContractError)
+  })
+
+  it('lança ContractError quando flow tem valor fora do enum', () => {
+    const invalid = { ...a1Failed1Msg, flow: 'FLUXO_INEXISTENTE' }
+    expect(() => parseSessionDocument(invalid)).toThrow(ContractError)
+  })
+
+  it('lança ContractError quando status tem valor fora do enum', () => {
+    const invalid = { ...a1Failed1Msg, status: 'status-inexistente' }
+    expect(() => parseSessionDocument(invalid)).toThrow(ContractError)
+  })
+
+  it('processa uma degradação válida e lança quando o limit está fora do enum', () => {
+    const degradation = {
+      limit: 'task_attempts',
+      phase: 'B2',
+      task_id: 'T1',
+      description: 'limite de tentativas atingido',
+      occurred_at: '2026-09-11T23:19:00.000Z',
+    }
+    const withDegradation = { ...a1Completed, degradations: [degradation] }
+    const document = parseSessionDocument(withDegradation)
+    expect(document.degradations).toEqual([degradation])
+
+    const withInvalidLimit = { ...a1Completed, degradations: [{ ...degradation, limit: 'limite-inexistente' }] }
+    expect(() => parseSessionDocument(withInvalidLimit)).toThrow(ContractError)
   })
 })

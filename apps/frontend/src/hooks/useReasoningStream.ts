@@ -85,6 +85,11 @@ export function useReasoningStream(config: RunConfig): UseReasoningStream {
         if (!mountedRef.current) return
         dispatch({ kind: 'errorFrame', frame })
       },
+      onFrameWarning: (message) => {
+        if (!mountedRef.current) return
+        console.warn('[useReasoningStream] frame ignorado:', message)
+        dispatch({ kind: 'warning', message })
+      },
       onClose: (code) => {
         handleRef.current = null
         if (!mountedRef.current) return

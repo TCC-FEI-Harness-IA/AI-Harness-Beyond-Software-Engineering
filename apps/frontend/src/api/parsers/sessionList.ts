@@ -1,6 +1,6 @@
 // `unknown` → `SessionListResponse` (README, FASE 02, seção 5) — `GET /v1/sessions`.
 
-import type { SessionListResponse } from '../../domain/types/sessionListResponse'
+import type { SessionListResponse } from '@/domain/types/sessionListResponse'
 import { ContractError } from '../errors/ContractError'
 import { requireArray, requireObject } from './primitives'
 

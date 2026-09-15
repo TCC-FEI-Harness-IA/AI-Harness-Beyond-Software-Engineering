@@ -7,7 +7,7 @@ import { THINKING_PHASE, type ThinkingPhase } from '../enums/thinkingPhase'
 import type { ReasoningEventDTO } from '../types/reasoningEvent'
 import type { ThinkingRun } from '../types/thinkingRun'
 import { createEmptyRun, reasoningRunReducer } from './reasoningRunReducer'
-import { buildContextSeries, buildLoopArcs, buildMacroTrack, buildTaskLanes } from './graphLayout'
+import { buildContextSeries, buildLoopArcs, buildMacroTrack, buildTaskLanes, findActiveStep } from './graphLayout'
 
 const MODEL_NAME = 'deepseek/deepseek-v4-flash-0731'
 
@@ -160,5 +160,17 @@ describe('graphLayout', () => {
 
     expect(arcs.find((arc) => arc.id === 'replan-return')?.active).toBe(true)
     expect(arcs.find((arc) => arc.id === 'verify-retry')?.active).toBe(false)
+  })
+})
+
+describe('findActiveStep', () => {
+  it('devolve o último passo da execução', () => {
+    const run = reduceAll(createEmptyRun('pergunta', MODEL_NAME), EVENT_META.map(buildEvent))
+    expect(findActiveStep(run)?.order).toBe(run.steps.length - 1)
+  })
+
+  it('sem nenhum passo ainda, devolve null', () => {
+    const run = createEmptyRun('pergunta', MODEL_NAME)
+    expect(findActiveStep(run)).toBeNull()
   })
 })

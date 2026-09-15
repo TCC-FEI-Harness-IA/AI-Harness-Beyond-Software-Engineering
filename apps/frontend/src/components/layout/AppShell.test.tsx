@@ -34,4 +34,12 @@ describe('AppShell', () => {
     expect(screen.getByRole('complementary')).toBeInTheDocument()
     expect(screen.getByText('Menu do histórico')).toBeInTheDocument()
   })
+
+  it('o link "pular para o conteúdo" é o primeiro elemento focável e aponta para o conteúdo principal', () => {
+    renderShell(<p>Conteúdo</p>)
+
+    const skipLink = screen.getByRole('link', { name: 'Pular para o conteúdo' })
+    expect(skipLink).toHaveAttribute('href', '#main-content')
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content')
+  })
 })

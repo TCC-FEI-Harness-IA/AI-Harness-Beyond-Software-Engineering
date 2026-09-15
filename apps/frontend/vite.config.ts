@@ -28,5 +28,26 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/**/index.ts',
+        'src/main.tsx',
+        'src/vite-env.d.ts',
+        'src/test/**',
+        'src/features/dev/**',
+      ],
+      // Limiares mínimos por camada (README, FASE 08, seção 6.1) — a regressão falha o comando.
+      thresholds: {
+        'src/domain/services/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+        'src/api/**': { statements: 90, branches: 90, functions: 90, lines: 90 },
+        'src/hooks/**': { statements: 85, branches: 85, functions: 85, lines: 85 },
+        'src/components/**': { statements: 70, branches: 70, functions: 70, lines: 70 },
+        'src/features/**': { statements: 70, branches: 70, functions: 70, lines: 70 },
+      },
+    },
   },
 })

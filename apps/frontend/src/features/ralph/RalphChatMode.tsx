@@ -134,6 +134,14 @@ export function RalphChatMode({
         <TypingIndicator />
       ) : null}
 
+      {/* Aviso não fatal (frame malformado ignorado) — a execução continua normalmente
+          (README/FASE 08, seção 4), por isso não usa o tom de `ErrorState`. */}
+      {run.warning ? (
+        <p className={styles.warning} role="status" aria-live="polite">
+          {run.warning}
+        </p>
+      ) : null}
+
       {run.error ? <ErrorState error={run.error} {...(onRetry ? { onRetry } : {})} /> : null}
     </ChatScroller>
   )

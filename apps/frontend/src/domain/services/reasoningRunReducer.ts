@@ -28,6 +28,8 @@ export type RunAction =
   | { kind: 'errorFrame'; frame: ReasoningErrorFrame }
   | { kind: 'failure'; error: RunError }
   | { kind: 'closed'; code: number }
+  /** Frame isolado que não pôde ser lido — não fatal (FASE 08, seção 4): o stream continua. */
+  | { kind: 'warning'; message: string }
 
 const PHASE_NODE_ORDER: PhaseNodeId[] = ['A1', 'A2', 'B', 'C1', 'C2', 'C3']
 
@@ -57,6 +59,9 @@ function nodeForPhase(phase: ThinkingPhase): PhaseNodeId | null {
       return 'C2'
     case THINKING_PHASE.C3:
       return 'C3'
+    // Defensivo: `ThinkingPhase` já cobre os 9 valores acima na fronteira (parsers), então este
+    // ramo nunca é alcançado com dados validados — existe só para a função ser total.
+    /* v8 ignore next 2 */
     default:
       return null
   }
@@ -89,6 +94,7 @@ export function createEmptyRun(question: string, modelName: string): ThinkingRun
     },
     degradations: [],
     error: null,
+    warning: null,
   }
 }
 
@@ -345,6 +351,9 @@ function computeStepCounts(steps: ThinkingStep[]): Record<PhaseNodeId, number> {
 function recalcPhases(run: ThinkingRun): ThinkingRun {
   const counts = computeStepCounts(run.steps)
   const lastStep = run.steps[run.steps.length - 1]
+  // `recalcPhases` só é chamada por `applyEvent`, depois de anexar o passo recebido — `run.steps`
+  // nunca está vazio neste ponto. O `? :` é defensivo contra `noUncheckedIndexedAccess`.
+  /* v8 ignore next */
   const lastNode = lastStep ? nodeForPhase(lastStep.phase) : null
   const hasC3 = counts.C3 > 0
   const hasC2 = counts.C2 > 0
@@ -381,6 +390,8 @@ function applyEvent(run: ThinkingRun, event: ReasoningEventDTO): ThinkingRun {
 
   let next: ThinkingRun = {
     ...run,
+    // Um frame válido depois de um aviso confirma que o stream se recuperou.
+    warning: null,
     sessionId: run.sessionId ?? event.session_id,
     steps: [...run.steps, step],
     totals: {
@@ -457,6 +468,10 @@ function applyFailure(run: ThinkingRun, error: RunError): ThinkingRun {
   return { ...run, status: RUN_STATUS.FAILED, error }
 }
 
+function applyWarning(run: ThinkingRun, message: string): ThinkingRun {
+  return { ...run, warning: message }
+}
+
 function applyClosed(run: ThinkingRun, code: number): ThinkingRun {
   // Fechamento 1000 é sucesso (README, FASE 05, seção 6). Um fechamento com outro código já
   // vem acompanhado de um frame de erro que define `status`/`error` — nada a fazer aqui.
@@ -476,6 +491,8 @@ export function reasoningRunReducer(run: ThinkingRun, action: RunAction): Thinki
         return applyErrorFrame(run, action.frame)
       case 'failure':
         return applyFailure(run, action.error)
+      case 'warning':
+        return applyWarning(run, action.message)
       case 'closed':
         return applyClosed(run, action.code)
       default:
