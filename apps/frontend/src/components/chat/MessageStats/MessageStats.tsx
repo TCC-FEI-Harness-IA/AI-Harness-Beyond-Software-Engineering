@@ -84,6 +84,36 @@ export function MessageStats({ stats, layout = 'inline' }: MessageStatsProps): J
     })
   }
 
+  if (stats.llmCalls !== null && stats.llmCalls !== undefined) {
+    entries.push({
+      key: 'llm-calls',
+      node: <StatItem label="Chamadas" value={formatTokens(stats.llmCalls)} layout={layout} />,
+    })
+  }
+
+  if (stats.taskCount !== null && stats.taskCount !== undefined) {
+    entries.push({
+      key: 'task-count',
+      node: <StatItem label="Tarefas" value={formatTokens(stats.taskCount)} layout={layout} />,
+    })
+  }
+
+  if (stats.attemptCount !== null && stats.attemptCount !== undefined) {
+    entries.push({
+      key: 'attempt-count',
+      node: <StatItem label="Tentativas" value={formatTokens(stats.attemptCount)} layout={layout} />,
+    })
+  }
+
+  if (stats.contextCount !== null && stats.contextCount !== undefined) {
+    entries.push({
+      key: 'context-count',
+      node: (
+        <StatItem label="Janelas" value={formatTokens(stats.contextCount)} tone="context" layout={layout} />
+      ),
+    })
+  }
+
   if (stats.timestamp !== null) {
     entries.push({
       key: 'timestamp',

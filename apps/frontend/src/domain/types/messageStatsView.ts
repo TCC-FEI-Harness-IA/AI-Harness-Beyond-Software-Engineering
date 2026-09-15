@@ -16,4 +16,10 @@ export interface MessageStatsView {
    * cada envio na mesma tela abre uma sessão nova (README, FASE 04, "Continuação da
    * conversa"), então cada mensagem do assistente carrega a sua própria sessão. */
   sessionId?: string | null
+  /** Campos usados só no rodapé de `FinalAnswerCard` do Ralph (README, FASE 05, seção 9):
+   * número de chamadas ao modelo, de tarefas, de tentativas e de janelas de contexto. */
+  llmCalls?: number | null
+  taskCount?: number | null
+  attemptCount?: number | null
+  contextCount?: number | null
 }

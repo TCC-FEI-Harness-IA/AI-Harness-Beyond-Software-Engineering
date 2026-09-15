@@ -9,3 +9,28 @@
   font-size: var(--text-xs);
   white-space: nowrap;
 }
+
+.toneAccent {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.toneSuccess {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.toneWarning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.toneDanger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.toneContext {
+  background: var(--color-context-soft);
+  color: var(--color-context);
+}

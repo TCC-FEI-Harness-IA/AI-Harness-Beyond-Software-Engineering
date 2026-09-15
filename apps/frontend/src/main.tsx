@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { AppRouter } from '@/router/AppRouter'
 import { RunConfigProvider } from '@/state/RunConfigContext'
 import { ThemeProvider } from '@/state/ThemeContext'
+import { ViewModeProvider } from '@/state/ViewModeContext'
 import './styles/reset.css'
 import './styles/tokens.css'
 import './styles/animations.css'
@@ -36,7 +37,9 @@ async function bootstrap(root: HTMLElement): Promise<void> {
         <BrowserRouter>
           <ThemeProvider>
             <RunConfigProvider>
-              <AppRouter enableDevRoute={env.enableDebugPanel} />
+              <ViewModeProvider>
+                <AppRouter enableDevRoute={env.enableDebugPanel} />
+              </ViewModeProvider>
             </RunConfigProvider>
           </ThemeProvider>
         </BrowserRouter>

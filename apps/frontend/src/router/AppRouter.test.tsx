@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { RunConfigProvider } from '@/state/RunConfigContext'
 import { ThemeProvider } from '@/state/ThemeContext'
+import { ViewModeProvider } from '@/state/ViewModeContext'
 import { AppRouter } from './AppRouter'
 import { buildHistoryDetailPath } from './routes'
 
@@ -11,7 +12,9 @@ function renderAt(path: string, enableDevRoute = false): void {
     <MemoryRouter initialEntries={[path]}>
       <ThemeProvider>
         <RunConfigProvider>
-          <AppRouter enableDevRoute={enableDevRoute} />
+          <ViewModeProvider>
+            <AppRouter enableDevRoute={enableDevRoute} />
+          </ViewModeProvider>
         </RunConfigProvider>
       </ThemeProvider>
     </MemoryRouter>,
@@ -35,7 +38,7 @@ describe('AppRouter', () => {
 
   it('renderiza o Ralph Loop Adaptado em /chat/ralph', () => {
     renderAt('/chat/ralph')
-    expect(screen.getByRole('heading', { name: 'Ralph Loop Adaptado' })).toBeInTheDocument()
+    expect(screen.getByText('Faça uma pergunta para começar')).toBeInTheDocument()
   })
 
   it('renderiza o Histórico em /historico', () => {

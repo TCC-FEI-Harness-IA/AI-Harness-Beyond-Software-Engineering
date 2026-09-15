@@ -23,13 +23,15 @@ export interface MessageBubbleProps {
   role: 'user' | 'assistant' | 'system'
   content: string
   stats?: MessageStatsView
-  /** PhaseTag, no fluxo Ralph. */
+  /** PhaseTag, no fluxo Ralph; em `role="system"`, acessório exibido ao lado do rótulo. */
   header?: ReactNode
   /** Borda/realce lateral, usado por `verify_fail` e `degraded`. */
   tone?: Tone
   /** 'final' = resposta final destacada. */
   emphasis?: 'none' | 'final'
   animateIn?: boolean
+  /** Só para `role="system"`: rótulo curto no lugar do texto cru; `content` fica no `title`. */
+  label?: string
 }
 
 /**
@@ -45,11 +47,15 @@ export function MessageBubble({
   tone = 'neutral',
   emphasis = 'none',
   animateIn = false,
+  label,
 }: MessageBubbleProps): JSX.Element {
   if (role === 'system') {
     return (
       <div className={cx(styles.row, styles.rowSystem, animateIn && styles.animateIn)}>
-        <p className={styles.system}>{content}</p>
+        <div className={styles.system}>
+          <span title={label ? content : undefined}>{label ?? content}</span>
+          {header}
+        </div>
       </div>
     )
   }

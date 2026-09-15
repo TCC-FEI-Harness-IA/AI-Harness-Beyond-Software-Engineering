@@ -1,0 +1,25 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--topbar-height));
+  gap: var(--space-4);
+}
+
+.cancelBar,
+.cancelledNotice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.composer {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-4) 0;
+  background: var(--color-surface-overlay);
+  backdrop-filter: var(--blur-overlay);
+}
