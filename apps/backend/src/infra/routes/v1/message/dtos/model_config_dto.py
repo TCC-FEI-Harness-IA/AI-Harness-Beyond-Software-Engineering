@@ -1,7 +1,6 @@
-from typing import Literal
-
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.infra.routes.v1.message.dtos.provider_config_dto import ProviderConfigDTO
 
 _DEFAULT_TEMPERATURE = 0.7
@@ -12,7 +11,9 @@ class ModelConfigDTO(BaseModel):
 
     model_config = ConfigDict(protected_namespaces=())
 
-    provider: Literal["local", "open_router"]
+    # O enum é o próprio contrato: um provedor sem implementação por trás vira `422`
+    # na fronteira, em vez de falhar na hora de escolher o serviço.
+    provider: ModelProviderEnum
     provider_config: ProviderConfigDTO
     max_tokens: int = Field(gt=0)
     temperature: float = Field(default=_DEFAULT_TEMPERATURE)

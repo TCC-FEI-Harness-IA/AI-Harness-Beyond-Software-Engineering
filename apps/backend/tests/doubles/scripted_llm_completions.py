@@ -66,6 +66,7 @@ class ScriptedLLMCompletions(ILLMCompletions):
         model_name: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        provider: ModelProviderEnum | None = None,
     ) -> LLMMessage:
         """Delega o envio de uma única mensagem para o envio de conversa."""
         return await self.send_conversation(
@@ -73,6 +74,7 @@ class ScriptedLLMCompletions(ILLMCompletions):
             model_name=model_name,
             max_tokens=max_tokens,
             temperature=temperature,
+            provider=provider,
         )
 
     async def send_conversation(
@@ -81,6 +83,7 @@ class ScriptedLLMCompletions(ILLMCompletions):
         model_name: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        provider: ModelProviderEnum | None = None,
     ) -> LLMMessage:
         """Copia a conversa recebida e devolve a próxima saída programada.
 
@@ -89,7 +92,14 @@ class ScriptedLLMCompletions(ILLMCompletions):
             Exception: A exceção programada para esta chamada, quando há uma.
         """
         self.conversations.append(list(conversation))
-        self.calls.append({"model_name": model_name, "max_tokens": max_tokens, "temperature": temperature})
+        self.calls.append(
+            {
+                "model_name": model_name,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "provider": provider,
+            }
+        )
 
         if self.error is not None:
             raise self.error

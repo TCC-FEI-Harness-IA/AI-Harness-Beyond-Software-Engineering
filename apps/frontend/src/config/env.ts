@@ -2,11 +2,14 @@
 // converte, valida e expõe um objeto congelado e tipado. Nenhum outro módulo do projeto
 // pode ler import.meta.env — isso é verificado por lint (no-restricted-syntax) e por grep.
 
+import { MODEL_PROVIDER, type ModelProvider, isModelProvider } from '@/domain/enums/modelProvider'
+
 export interface AppEnv {
   readonly apiBaseUrl: string
   readonly wsBaseUrl: string
   readonly requestTimeoutMs: number
-  readonly defaultProvider: string
+  readonly defaultProvider: ModelProvider
+  readonly availableProviders: readonly ModelProvider[]
   readonly availableModels: readonly string[]
   readonly defaultModel: string
   readonly defaultMaxTokens: number
@@ -25,6 +28,7 @@ type EnvKey =
   | 'VITE_REQUEST_TIMEOUT_MS'
   | 'VITE_WS_OPEN_TIMEOUT_MS'
   | 'VITE_DEFAULT_PROVIDER'
+  | 'VITE_AVAILABLE_PROVIDERS'
   | 'VITE_AVAILABLE_MODELS'
   | 'VITE_DEFAULT_MODEL'
   | 'VITE_DEFAULT_MAX_TOKENS'
@@ -94,6 +98,23 @@ function readList(key: EnvKey, defaultValue: readonly string[] = []): readonly s
     .filter((item) => item.length > 0)
 }
 
+// O provedor viaja no payload e o backend recusa qualquer valor fora do seu enum; validar
+// aqui troca um 422 por requisição por uma falha de boot que nomeia a variável errada.
+function readProviders(defaultProvider: ModelProvider): readonly ModelProvider[] {
+  const raw = readList('VITE_AVAILABLE_PROVIDERS')
+  if (raw.length === 0) return [defaultProvider]
+
+  const invalid = raw.filter((item) => !isModelProvider(item))
+  if (invalid.length > 0) {
+    throw new ConfigError(
+      'VITE_AVAILABLE_PROVIDERS',
+      `provedor desconhecido pelo backend: ${invalid.join(', ')}`,
+    )
+  }
+
+  return raw as readonly ModelProvider[]
+}
+
 function validateHttpUrl(key: EnvKey, value: string): void {
   let url: URL
   try {
@@ -127,6 +148,19 @@ function loadEnv(): AppEnv {
   validateHttpUrl('VITE_API_BASE_URL', apiBaseUrlRaw)
   validateWsUrl('VITE_WS_BASE_URL', wsBaseUrlRaw)
 
+  const defaultProvider = readString('VITE_DEFAULT_PROVIDER', MODEL_PROVIDER.OPEN_ROUTER)
+  if (!isModelProvider(defaultProvider)) {
+    throw new ConfigError('VITE_DEFAULT_PROVIDER', 'provedor desconhecido pelo backend')
+  }
+
+  const availableProviders = readProviders(defaultProvider)
+  if (!availableProviders.includes(defaultProvider)) {
+    throw new ConfigError(
+      'VITE_DEFAULT_PROVIDER',
+      `precisa pertencer a VITE_AVAILABLE_PROVIDERS (${availableProviders.join(', ')})`,
+    )
+  }
+
   const availableModels = readList('VITE_AVAILABLE_MODELS')
   if (availableModels.length === 0) {
     throw new ConfigError('VITE_AVAILABLE_MODELS', 'precisa listar ao menos um modelo')
@@ -157,7 +191,8 @@ function loadEnv(): AppEnv {
     apiBaseUrl: joinUrl(apiBaseUrlRaw, apiPrefix),
     wsBaseUrl: joinUrl(wsBaseUrlRaw, apiPrefix),
     requestTimeoutMs: readNumber('VITE_REQUEST_TIMEOUT_MS', 60000),
-    defaultProvider: readString('VITE_DEFAULT_PROVIDER', 'open_router'),
+    defaultProvider,
+    availableProviders,
     availableModels,
     defaultModel,
     defaultMaxTokens,

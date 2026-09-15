@@ -2,6 +2,7 @@
 // 9) — `POST /v1/message/default` e o frame de abertura de `WS /v1/message/reasoning` usam
 // exatamente o mesmo corpo.
 
+import type { ModelProvider } from '../domain/enums/modelProvider'
 import type { DefaultInputDTO } from '../domain/types/defaultInput'
 import type { DefaultOutputDTO } from '../domain/types/defaultOutput'
 import { ContractError } from './errors/ContractError'
@@ -13,7 +14,7 @@ const DEFAULT_MESSAGE_PATH = '/message/default'
 
 export interface RunConfig {
   modelName: string
-  provider: string
+  provider: ModelProvider
   maxTokens: number
   temperature: number
 }

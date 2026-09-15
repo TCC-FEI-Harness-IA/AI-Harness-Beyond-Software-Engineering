@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from src.domain.entities.llm.context_window import ContextWindow
 from src.domain.entities.thinking.phase_outcome import PhaseOutcome
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 
 
@@ -19,13 +20,20 @@ class IThinkingPhase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def configure(self, model_name: str, max_tokens: int, temperature: float) -> None:
+    def configure(
+        self,
+        model_name: str,
+        max_tokens: int,
+        temperature: float,
+        provider: ModelProviderEnum,
+    ) -> None:
         """Fixa os parâmetros do modelo usados por todas as execuções da fase.
 
         Args:
             model_name: Nome do modelo a ser usado nas chamadas da fase.
             max_tokens: Limite de tokens de saída das chamadas da fase.
             temperature: Temperatura de geração das chamadas da fase.
+            provider: Provedor que atende as chamadas da fase.
         """
         raise NotImplementedError
 

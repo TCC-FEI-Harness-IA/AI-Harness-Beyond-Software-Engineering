@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { Button } from '@/components/primitives/Button'
 import { env } from '@/config/env'
+import { PROVIDER_LABELS, providerLabel } from '@/domain/enums/modelProvider'
 import { formatTemperature } from '@/domain/services/formatters'
 import { useRunConfig } from '@/state/RunConfigContext'
 import styles from './RunConfigBar.module.css'
@@ -11,16 +12,17 @@ const TEMPERATURE_STEP = 0.1
 const MAX_TOKENS_MIN = 1
 
 /**
- * Barra discreta de configuração da home (README, FASE 04, seção 5.4): modelo, teto de tokens
- * e temperatura, atrás de um popover. Quando só existe um modelo disponível, o seletor some e
- * a barra mostra o nome do modelo puro.
+ * Barra discreta de configuração da home (README, FASE 04, seção 5.4): provedor, modelo, teto
+ * de tokens e temperatura, atrás de um popover. Quando só existe uma opção de provedor ou de
+ * modelo, o seletor correspondente some e a barra mostra apenas o valor em uso.
  */
 export function RunConfigBar(): JSX.Element {
-  const { config, setModelName, setMaxTokens, setTemperature, reset } = useRunConfig()
+  const { config, setModelName, setMaxTokens, setTemperature, setProvider, reset } = useRunConfig()
   const [open, setOpen] = useState(false)
   const panelId = useId()
 
   const hasModelChoice = env.availableModels.length > 1
+  const hasProviderChoice = env.availableProviders.length > 1
   const modelSummary = hasModelChoice ? config.modelName : (env.availableModels[0] ?? config.modelName)
 
   return (
@@ -32,11 +34,25 @@ export function RunConfigBar(): JSX.Element {
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
       >
-        Modelo: {modelSummary} · {config.maxTokens} tokens · temp. {formatTemperature(config.temperature)}
+        {providerLabel(config.provider)} · {modelSummary} · {config.maxTokens} tokens · temp.{' '}
+        {formatTemperature(config.temperature)}
       </button>
 
       {open ? (
         <div id={panelId} className={styles.panel} role="group" aria-label="Configuração de execução">
+          {hasProviderChoice ? (
+            <label className={styles.field}>
+              <span>Provedor</span>
+              <select value={config.provider} onChange={(event) => setProvider(event.target.value)}>
+                {env.availableProviders.map((provider) => (
+                  <option key={provider} value={provider}>
+                    {PROVIDER_LABELS[provider]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
           {hasModelChoice ? (
             <label className={styles.field}>
               <span>Modelo</span>

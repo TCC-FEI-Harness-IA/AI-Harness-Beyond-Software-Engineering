@@ -13,7 +13,7 @@ from src.infra.mappers.session_document_mapper import SessionDocumentMapper
 from src.infra.repositories.json_file_session_repository import JsonFileSessionRepository
 from src.infra.routes.v1.message.dtos.default_input_dto import DefaultInputDTO
 from src.infra.routes.v1.message.dtos.default_output_dto import DefaultOutputDTO
-from src.infra.services.openrouter_service import OpenRouterService
+from src.infra.services.llm_service_factory import LLMServiceFactory
 
 
 class DefaultMessageStartup:
@@ -28,16 +28,13 @@ class DefaultMessageStartup:
         self.settings: ISettings = Settings()
         self.logger = self.settings.logger(module_file=__file__)
 
-        llm_service = OpenRouterService(
-            logger=self.settings.logger(module_file=getfile(OpenRouterService)),
-            settings=self.settings,
-        )
+        llm_services = LLMServiceFactory(settings=self.settings).create_all()
         model_catalog = ModelCatalogAdapter(
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(ModelCatalogAdapter)),
         )
         llm_completions_adapter = LLMCompletionsAdapter(
-            llm_service=llm_service,
+            llm_services=llm_services,
             model_catalog=model_catalog,
             logger=self.settings.logger(module_file=getfile(LLMCompletionsAdapter)),
             settings=self.settings,
@@ -80,6 +77,7 @@ class DefaultMessageStartup:
                 model_name=payload.llm_model_config.provider_config.model_name,
                 max_tokens=payload.llm_model_config.max_tokens,
                 temperature=payload.llm_model_config.temperature,
+                provider=payload.llm_model_config.provider,
             )
         )
 

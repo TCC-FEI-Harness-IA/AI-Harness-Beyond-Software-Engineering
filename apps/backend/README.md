@@ -18,6 +18,7 @@ tempo de inferência, para que sejam comparáveis nos benchmarks (MMLU, GPQA) de
 ## Sumário
 
 - [Como funciona](#como-funciona)
+  - [Provedores de LLM](#provedores-de-llm)
 - [Como rodar](#como-rodar)
 - [Endpoints HTTP](#endpoints-http)
   - [`POST /v1/message/default`](#post-v1messagedefault)
@@ -69,6 +70,24 @@ O fluxo segue exatamente `A.1 → A.2 → B.1 → B.2 → B.3 → B.4 → C.1 �
 - **C.3** — organiza os resultados armazenados no formato e idioma definidos em A.1, sem
   introduzir fatos novos.
 
+### Provedores de LLM
+
+A aplicação fala com três provedores — **OpenRouter**, **OpenAI** e **Azure AI Foundry** — e o
+`provider` do corpo da requisição decide qual atende cada chamada; `LLM_PROVIDER` é apenas o
+padrão. Os três expõem a mesma API de chat completions, então o esqueleto
+"validar → montar payload → POST → extrair texto, tokens e motivo de término" vive uma única vez
+em `BaseChatCompletionsService`. Cada implementação varia só o que é próprio dela:
+
+| Provedor | URL | Autenticação | Esforço de raciocínio |
+|---|---|---|---|
+| OpenRouter | `OPENROUTER_API_URL`, fixa | `Authorization: Bearer` | bloco `reasoning` próprio (permite desligar com `enabled: false`) |
+| OpenAI | `OPENAI_API_URL`, fixa | `Authorization: Bearer` | `reasoning_effort` |
+| Azure AI Foundry | `{endpoint}/openai/deployments/{deployment}/chat/completions?api-version=...` | `api-key` | `reasoning_effort` |
+
+`LLMServiceFactory` instancia um serviço por provedor e o `LLMCompletionsAdapter` escolhe, a
+cada chamada, aquele que atende o `provider` pedido. Um provedor fora do enum é recusado com
+`422` na fronteira; um fora de `GENAI_AVAILABLE_PROVIDERS` é recusado pelo catálogo.
+
 ### Resiliência de custo
 
 O sistema nunca aborta por estouro de limite — ele **degrada e conclui**: aceita a melhor
@@ -87,7 +106,7 @@ cd apps/backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
 
-cp .env.example .env   # preencha OPENROUTER_API_KEY, OPENROUTER_MODEL, GENAI_AVAILABLE_*
+cp .env.example .env   # preencha LLM_PROVIDER/LLM_MODEL, a credencial do provedor e GENAI_AVAILABLE_*
 
 uvicorn src.main:app --reload --port 8000
 ```
@@ -322,7 +341,7 @@ Todos os payloads são JSON. Campos sem valor default são obrigatórios.
 
 | Campo | Tipo | Regra |
 |---|---|---|
-| `provider` | `"local" \| "open_router"` | obrigatório |
+| `provider` | `"open_router" \| "azure_ai_foundry" \| "openai"` | obrigatório; decide qual adapter atende a chamada |
 | `provider_config` | [`ProviderConfigDTO`](#providerconfigdto) | obrigatório |
 | `max_tokens` | `int` | `> 0` |
 | `temperature` | `float` | `[0, 1]`; ausente ou `0`/`null` vira `0.7`; arredondada para 1 casa decimal |
@@ -402,15 +421,23 @@ equivalente aparece no código. Ver `.env.example` para o arquivo completo.
 | `APP_VERSION` | `0.1.0` | Versão exposta pelo FastAPI. |
 | `LOG_LEVEL` | `INFO` | Nível global de log. |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Origens liberadas (CSV). |
+| `LLM_PROVIDER` | `open_router` | Provedor usado quando a requisição não especifica: `open_router`, `azure_ai_foundry` ou `openai`. |
+| `LLM_MODEL` | *(vazio)* | Modelo padrão quando a requisição não especifica. |
+| `LLM_MAX_TOKENS` | `1024` | Teto de tokens de saída padrão. |
+| `LLM_TEMPERATURE` | `0.7` | Temperatura padrão. |
+| `LLM_TIMEOUT_SECONDS` | `30` | Timeout das chamadas HTTP, em qualquer provedor. |
+| `LLM_REASONING_EFFORT` | *(vazio)* | Esforço de raciocínio (`minimal`/`low`/`medium`/`high`); vazio não envia o parâmetro. Como `max_tokens` cobre raciocínio **e** resposta, limitá-lo evita que o modelo gaste o orçamento inteiro pensando e devolva conteúdo vazio. |
 | `OPENROUTER_API_URL` | `https://openrouter.ai/api/v1/chat/completions` | Endpoint de chat completions. |
-| `OPENROUTER_API_KEY` | *(vazio)* | Chave da API. Obrigatória em runtime. |
-| `OPENROUTER_MODEL` | — | Modelo padrão quando a requisição não especifica. |
-| `OPENROUTER_MAX_TOKENS` | — | Teto de tokens de saída padrão. |
-| `OPENROUTER_TEMPERATURE` | — | Temperatura padrão. |
-| `OPENROUTER_HTTP_REFERER` | *(vazio)* | Header `HTTP-Referer`. |
-| `OPENROUTER_X_TITLE` | *(vazio)* | Header `X-Title`. |
-| `OPENROUTER_TIMEOUT_SECONDS` | `30` | Timeout da chamada HTTP. |
-| `OPENROUTER_REASONING_EFFORT` | *(vazio)* | Esforço de raciocínio (`minimal`/`low`/`medium`/`high`); vazio não envia o parâmetro. Como `max_tokens` cobre raciocínio **e** resposta, limitá-lo evita que o modelo gaste o orçamento inteiro pensando e devolva conteúdo vazio. |
+| `OPENROUTER_API_KEY` | *(vazio)* | Chave da API. Obrigatória para usar o provedor. |
+| `OPENROUTER_HTTP_REFERER` | *(vazio)* | Header `HTTP-Referer`, opcional. |
+| `OPENROUTER_X_TITLE` | *(vazio)* | Header `X-Title`, opcional. |
+| `OPENAI_API_URL` | `https://api.openai.com/v1/chat/completions` | Endpoint de chat completions. |
+| `OPENAI_API_KEY` | *(vazio)* | Chave da API. Obrigatória para usar o provedor. |
+| `OPENAI_ORGANIZATION` | *(vazio)* | Header `OpenAI-Organization`, opcional. |
+| `AZURE_AI_FOUNDRY_ENDPOINT` | *(vazio)* | Origem do recurso (ex.: `https://meu-recurso.services.ai.azure.com`), sem barra final. Obrigatória para usar o provedor. |
+| `AZURE_AI_FOUNDRY_API_KEY` | *(vazio)* | Chave do recurso, enviada no header `api-key`. Obrigatória para usar o provedor. |
+| `AZURE_AI_FOUNDRY_API_VERSION` | `2024-10-21` | Versão da API passada na query string. |
+| `AZURE_AI_FOUNDRY_DEPLOYMENT` | *(vazio)* | Nome do deployment. Vazio usa o próprio `model_name` da requisição. |
 | `GENAI_AVAILABLE_MODELS` | *(vazio)* | Allowlist de modelos (JSON array ou CSV). |
 | `GENAI_AVAILABLE_PROVIDERS` | *(vazio)* | Allowlist de provedores (JSON array ou CSV). |
 | `RALPH_SESSIONS_STORAGE_PATH` | `./data/sessions` | Diretório dos JSON de sessão. |

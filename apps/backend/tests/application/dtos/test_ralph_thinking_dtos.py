@@ -4,6 +4,7 @@ import pytest
 
 from src.application.dtos.ralph_thinking_input_dto import RalphThinkingInputDTO
 from src.application.dtos.ralph_thinking_output_dto import RalphThinkingOutputDTO
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 
 
@@ -13,12 +14,14 @@ def test_dto_de_entrada_carrega_os_parametros_da_sessao() -> None:
         model_name="vendor/modelo",
         max_tokens=100,
         temperature=0.3,
+        provider=ModelProviderEnum.AZURE_AI_FOUNDRY,
     )
 
     assert dto.user_input == "pergunta"
     assert dto.model_name == "vendor/modelo"
     assert dto.max_tokens == 100
     assert dto.temperature == 0.3
+    assert dto.provider is ModelProviderEnum.AZURE_AI_FOUNDRY
 
 
 def test_dto_de_entrada_e_imutavel() -> None:
@@ -27,6 +30,7 @@ def test_dto_de_entrada_e_imutavel() -> None:
         model_name="vendor/modelo",
         max_tokens=100,
         temperature=0.3,
+        provider=ModelProviderEnum.OPEN_ROUTER,
     )
 
     with pytest.raises(dataclasses.FrozenInstanceError):

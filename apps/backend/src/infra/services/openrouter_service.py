@@ -1,217 +1,41 @@
-import logging
 from typing import Any
 
-import httpx
-
 from src.domain.entities.llm.llm_provider_request import LLMProviderRequest
-from src.domain.entities.llm.llm_provider_response import LLMProviderResponse
 from src.domain.enums.model_provider_enum import ModelProviderEnum
-from src.domain.errors.empty_completion_error import EmptyCompletionError
-from src.domain.interfaces.llm_service_interface import ILLMService
-from src.domain.interfaces.settings_interface import ISettings
+from src.infra.services.base_chat_completions_service import BaseChatCompletionsService
+
+_API_KEY_VARIABLE = "OPENROUTER_API_KEY"
+_MINIMAL_EFFORT = "minimal"
 
 
-class OpenRouterService(ILLMService):
-    """Serviço assíncrono de integração com a API de chat completions da OpenRouter."""
-
-    def __init__(
-        self,
-        logger: logging.Logger,
-        settings: ISettings,
-        transport: httpx.AsyncBaseTransport | None = None,
-    ) -> None:
-        """Inicializa o serviço.
-
-        Args:
-            logger: Logger do módulo.
-            settings: Configurações da aplicação.
-            transport: Transporte HTTP alternativo. Existe para permitir a substituição
-                da camada de rede em teste; em produção fica `None` e o `httpx` usa o
-                transporte padrão.
-        """
-        self.logger = logger
-        self.settings: ISettings = settings
-        self.transport: httpx.AsyncBaseTransport | None = transport
+class OpenRouterService(BaseChatCompletionsService):
+    """Integração com a API de chat completions da OpenRouter."""
 
     @property
     def provider(self) -> ModelProviderEnum:
         """Retorna o provedor suportado pelo serviço."""
         return ModelProviderEnum.OPEN_ROUTER
 
-    def verify_provider_settings(self) -> bool:
-        """Verifica se a API key necessária para OpenRouter está disponível."""
-        return bool(self.settings.openrouter_api_key)
+    @property
+    def provider_label(self) -> str:
+        """Nome do provedor como aparece nas mensagens de erro."""
+        return "OpenRouter"
 
-    async def generate_response(self, request: LLMProviderRequest) -> LLMProviderResponse:
-        """Envia uma completion para a OpenRouter e retorna a resposta padronizada.
+    def missing_settings(self) -> list[str]:
+        """Lista as variáveis obrigatórias da OpenRouter que estão sem valor."""
+        if self.settings.openrouter_api_key:
+            return []
+        return [_API_KEY_VARIABLE]
 
-        Args:
-            request: Payload técnico de envio da completion.
+    def completions_url(self, request: LLMProviderRequest) -> str:
+        """Devolve o endpoint configurado — o mesmo para qualquer modelo."""
+        return self.settings.openrouter_api_url
 
-        Returns:
-            LLMProviderResponse: Resposta padronizada do provedor.
+    def headers(self) -> dict[str, str]:
+        """Monta os headers da requisição, com a autenticação e a identificação do app.
 
-        Raises:
-            ValueError: Quando configurações obrigatórias ou dados do modelo são inválidos.
-            RuntimeError: Quando ocorre falha na chamada HTTP para a OpenRouter.
-            EmptyCompletionError: Quando o provedor responde sem texto utilizável.
-        """
-        self.logger.info("Iniciando chamada ao provedor OpenRouter")
-        self.__run_message_validations(request=request)
-
-        response_data = await self.__post_completion(request=request)
-
-        usage = response_data.get("usage", {})
-        if not isinstance(usage, dict):
-            usage = {}
-
-        output_text = self.__extract_output_text(response_data=response_data)
-        finish_reason = self.__extract_finish_reason(response_data=response_data)
-        self.__reject_empty_completion(output_text=output_text, finish_reason=finish_reason)
-
-        provider_response = LLMProviderResponse(
-            output_text=output_text,
-            input_tokens=int(usage.get("prompt_tokens", 0) or 0),
-            output_tokens=int(usage.get("completion_tokens", 0) or 0),
-            finish_reason=finish_reason,
-            raw_response=response_data,
-        )
-
-        self.logger.info("Resposta recebida com sucesso do OpenRouter")
-        return provider_response
-
-    def __reject_empty_completion(self, output_text: str, finish_reason: str | None) -> None:
-        """Recusa uma completion sem texto, em vez de deixá-la seguir o fluxo.
-
-        Modelos de raciocínio devolvem `content` nulo quando o teto de tokens acaba
-        durante o raciocínio interno (`finish_reason == "length"`). Sem esta recusa, o
-        fluxo baseline entregaria uma resposta em branco e o fluxo harness gastaria
-        todas as retentativas de parsing sobre um texto que nunca existiu.
-
-        Args:
-            output_text: Texto extraído da resposta do provedor.
-            finish_reason: Motivo de término informado pelo provedor, quando há.
-
-        Raises:
-            EmptyCompletionError: Quando o texto extraído está vazio ou em branco.
-        """
-        if output_text.strip():
-            return
-
-        self.logger.warning(
-            "OpenRouter devolveu completion sem conteúdo. Motivo de término: '%s'", finish_reason
-        )
-        raise EmptyCompletionError(finish_reason=finish_reason)
-
-    async def __post_completion(self, request: LLMProviderRequest) -> dict[str, Any]:
-        """Executa o POST de chat completion e devolve o corpo desserializado.
-
-        Args:
-            request: Payload técnico de envio da completion.
-
-        Returns:
-            dict[str, Any]: Corpo da resposta do provedor.
-
-        Raises:
-            RuntimeError: Quando a chamada falha ou o corpo não é um objeto JSON.
-        """
-        timeout_seconds = self.settings.openrouter_timeout_seconds
-
-        try:
-            async with httpx.AsyncClient(transport=self.transport, timeout=timeout_seconds) as client:
-                response = await client.post(
-                    url=self.settings.openrouter_api_url,
-                    headers=self.__build_headers(),
-                    json=self.__build_payload(request=request),
-                )
-                response.raise_for_status()
-                response_data = response.json()
-        except httpx.HTTPStatusError as exc:
-            self.logger.exception("OpenRouter retornou erro HTTP")
-            error_body = exc.response.text
-            detail = f" Details: {error_body}" if error_body else ""
-            raise RuntimeError(f"OpenRouter API returned HTTP {exc.response.status_code}.{detail}") from exc
-        except httpx.RequestError as exc:
-            self.logger.exception("Falha de conexão com OpenRouter")
-            raise RuntimeError("Failed to connect to OpenRouter API.") from exc
-
-        if not isinstance(response_data, dict):
-            raise RuntimeError("OpenRouter API returned an invalid payload.")
-
-        return response_data
-
-    def __run_message_validations(self, request: LLMProviderRequest) -> None:
-        """Executa as validações de entrada para envio de mensagem ao provedor.
-
-        Args:
-            request: Payload técnico de envio da completion.
-
-        Raises:
-            ValueError: Quando qualquer validação obrigatória falha.
-        """
-        if not self.verify_provider_settings():
-            raise ValueError("Missing OpenRouter settings. Set OPENROUTER_API_KEY environment variable.")
-
-        if request.llm_model.model_provider != self.provider:
-            raise ValueError(
-                "OpenRouterService only supports model_provider=OPEN_ROUTER. "
-                f"Received: {request.llm_model.model_provider}."
-            )
-
-        if not request.llm_model.model_name.strip():
-            raise ValueError("GenaiModel.model_name must be defined.")
-
-        if request.max_tokens <= 0:
-            raise ValueError("max_tokens must be greater than zero.")
-
-        if not request.messages:
-            raise ValueError("request.messages must contain at least one message.")
-
-        for message in request.messages:
-            if not message.role.strip():
-                raise ValueError("message.role must not be empty.")
-
-            if not message.content.strip():
-                raise ValueError("message.content must not be empty.")
-
-    def __build_payload(self, request: LLMProviderRequest) -> dict[str, Any]:
-        """Monta o payload compatível com a API da OpenRouter.
-
-        Args:
-            request: Payload técnico de envio da completion.
-
-        Returns:
-            dict[str, Any]: Corpo da requisição.
-        """
-        payload: dict[str, Any] = {
-            "model": request.llm_model.model_name,
-            "messages": [
-                {"role": message.role, "content": message.content}
-                for message in request.messages
-            ],
-            "max_tokens": request.max_tokens,
-            "temperature": request.temperature,
-        }
-
-        # `max_tokens` cobre raciocínio + resposta. Sem limitar o esforço, um modelo de
-        # raciocínio gasta o orçamento inteiro pensando e devolve `content` nulo.
-        reasoning_effort = self.settings.openrouter_reasoning_effort
-        if reasoning_effort == "minimal":
-            # "minimal" só é um `effort` nativo da OpenAI; em outros provedores (como o
-            # DeepSeek usado aqui) a OpenRouter ignora o valor e o modelo raciocina sem
-            # limite, consumindo todo o `max_tokens` antes de escrever a resposta. Desligar
-            # o raciocínio via `enabled: false` é o jeito que funciona em qualquer provedor.
-            payload["reasoning"] = {"enabled": False}
-        elif reasoning_effort:
-            payload["reasoning"] = {"effort": reasoning_effort}
-
-        return payload
-
-    def __build_headers(self) -> dict[str, str]:
-        """Monta os headers padrão da requisição à OpenRouter.
-
-        Returns:
-            dict[str, str]: Headers da requisição.
+        `HTTP-Referer` e `X-Title` são opcionais: a OpenRouter os usa apenas para atribuir
+        o consumo a uma aplicação nos seus rankings.
         """
         headers = {
             "Authorization": f"Bearer {self.settings.openrouter_api_key}",
@@ -228,103 +52,21 @@ class OpenRouterService(ILLMService):
 
         return headers
 
-    def __extract_output_text(self, response_data: dict[str, Any]) -> str:
-        """Extrai o texto principal da resposta do provedor.
+    def payload_extras(self, request: LLMProviderRequest) -> dict[str, Any]:
+        """Traduz o esforço de raciocínio para o bloco `reasoning` próprio da OpenRouter.
 
-        Args:
-            response_data: Corpo da resposta do provedor.
-
-        Returns:
-            str: Texto gerado, ou vazio quando a resposta não o contém.
+        A OpenRouter não usa o `reasoning_effort` das demais APIs compatíveis com a OpenAI:
+        ela expõe um bloco `reasoning` que também permite desligar o raciocínio por completo.
         """
-        message = self.__extract_message(response_data=response_data)
-        if message is None:
-            return ""
+        reasoning_effort = self.settings.llm_reasoning_effort
+        if not reasoning_effort:
+            return {}
 
-        content = message.get("content", "")
-        # `content` chega como `null` quando o modelo não escreveu resposta — sem este
-        # tratamento o `str(content)` do final viraria a string literal "None".
-        if content is None:
-            return ""
+        if reasoning_effort == _MINIMAL_EFFORT:
+            # "minimal" só é um `effort` nativo da OpenAI; em outros provedores (como o
+            # DeepSeek) a OpenRouter ignora o valor e o modelo raciocina sem limite,
+            # consumindo todo o `max_tokens` antes de escrever a resposta. Desligar o
+            # raciocínio via `enabled: false` é o jeito que funciona em qualquer provedor.
+            return {"reasoning": {"enabled": False}}
 
-        if isinstance(content, str):
-            return content
-
-        if isinstance(content, list):
-            return "".join(self.__extract_text_block(item=item) for item in content)
-
-        return str(content)
-
-    def __extract_text_block(self, item: Any) -> str:
-        """Extrai o texto de um bloco de conteúdo estruturado.
-
-        Args:
-            item: Bloco de conteúdo devolvido pelo provedor.
-
-        Returns:
-            str: Texto do bloco, ou vazio quando o bloco não carrega texto.
-        """
-        if isinstance(item, dict) and item.get("type") == "text":
-            return str(item.get("text", ""))
-
-        if isinstance(item, str):
-            return item
-
-        return ""
-
-    def __extract_finish_reason(self, response_data: dict[str, Any]) -> str | None:
-        """Extrai o motivo de término da geração, quando disponível.
-
-        Args:
-            response_data: Corpo da resposta do provedor.
-
-        Returns:
-            str | None: Motivo de término, ou `None` quando ausente.
-        """
-        first_choice = self.__extract_first_choice(response_data=response_data)
-        if first_choice is None:
-            return None
-
-        finish_reason = first_choice.get("finish_reason")
-        if finish_reason is None:
-            return None
-
-        return str(finish_reason)
-
-    def __extract_first_choice(self, response_data: dict[str, Any]) -> dict[str, Any] | None:
-        """Devolve a primeira escolha da resposta, quando ela é utilizável.
-
-        Args:
-            response_data: Corpo da resposta do provedor.
-
-        Returns:
-            dict[str, Any] | None: Primeira escolha, ou `None` quando ausente ou malformada.
-        """
-        choices = response_data.get("choices", [])
-        if not isinstance(choices, list) or not choices:
-            return None
-
-        first_choice = choices[0]
-        if not isinstance(first_choice, dict):
-            return None
-
-        return first_choice
-
-    def __extract_message(self, response_data: dict[str, Any]) -> dict[str, Any] | None:
-        """Devolve a mensagem da primeira escolha, quando ela é utilizável.
-
-        Args:
-            response_data: Corpo da resposta do provedor.
-
-        Returns:
-            dict[str, Any] | None: Mensagem, ou `None` quando ausente ou malformada.
-        """
-        first_choice = self.__extract_first_choice(response_data=response_data)
-        if first_choice is None:
-            return None
-
-        message = first_choice.get("message", {})
-        if not isinstance(message, dict):
-            return None
-
-        return message
+        return {"reasoning": {"effort": reasoning_effort}}

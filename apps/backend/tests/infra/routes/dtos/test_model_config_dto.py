@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.infra.routes.v1.message.dtos.model_config_dto import ModelConfigDTO
 
 _BASE = {
@@ -50,3 +51,16 @@ def test_max_tokens_nao_positivo_e_recusado(max_tokens: int) -> None:
 def test_provider_invalido_e_recusado() -> None:
     with pytest.raises(ValidationError):
         ModelConfigDTO.model_validate({**_BASE, "provider": "invalido"})
+
+
+@pytest.mark.parametrize("provider", list(ModelProviderEnum))
+def test_aceita_todos_os_provedores_implementados(provider: ModelProviderEnum) -> None:
+    dto = ModelConfigDTO.model_validate({**_BASE, "provider": provider.value})
+
+    assert dto.provider is provider
+
+
+def test_provider_local_deixou_de_ser_aceito() -> None:
+    """Nunca houve serviço por trás de "local": o contrato agora recusa o valor."""
+    with pytest.raises(ValidationError):
+        ModelConfigDTO.model_validate({**_BASE, "provider": "local"})

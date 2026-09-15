@@ -18,6 +18,18 @@ from tests.doubles.fake_llm_service import FakeLLMService
 from tests.doubles.scripted_llm_completions import ScriptedLLMCompletions
 
 
+class _FakeLLMServiceFactory:
+    """Dublê da fábrica que devolve um único serviço, o dublê do provedor."""
+
+    def __init__(self, settings: object, llm_service: FakeLLMService) -> None:
+        self.settings = settings
+        self.llm_service = llm_service
+
+    def create_all(self) -> list[FakeLLMService]:
+        """Devolve o dublê como único serviço registrado."""
+        return [self.llm_service]
+
+
 def _criterios() -> str:
     return json.dumps(
         {
@@ -85,7 +97,7 @@ def storage_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Isola o armazenamento de sessões e a configuração de modelo dentro do teste."""
     caminho = tmp_path / "sessions"
     monkeypatch.setenv("RALPH_SESSIONS_STORAGE_PATH", str(caminho))
-    monkeypatch.setenv("OPENROUTER_MODEL", "vendor/modelo")
+    monkeypatch.setenv("LLM_MODEL", "vendor/modelo")
     monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", "vendor/modelo")
     monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router")
@@ -95,10 +107,11 @@ def storage_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 @pytest.fixture
 def client(storage_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     """Cliente HTTP com as portas de LLM dos dois fluxos substituídas por dublês."""
+    llm_service = FakeLLMService()
     monkeypatch.setattr(
         default_startup_module,
-        "OpenRouterService",
-        lambda logger, settings: FakeLLMService(),
+        "LLMServiceFactory",
+        lambda settings: _FakeLLMServiceFactory(settings=settings, llm_service=llm_service),
     )
     scripted_completions = ScriptedLLMCompletions(responses=_roteiro_feliz())
     monkeypatch.setattr(

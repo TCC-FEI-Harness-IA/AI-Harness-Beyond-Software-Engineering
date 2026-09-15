@@ -6,6 +6,7 @@ import pytest
 from src.application.phases.general_criteria_phase import GeneralCriteriaPhase
 from src.domain.entities.llm.context_window import ContextWindow
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.errors.budget_exceeded_error import BudgetExceededError
@@ -123,10 +124,22 @@ async def test_configure_repassa_modelo_e_parametros_ao_provedor() -> None:
     llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA])
     fase = _fase(llm_completions=llm)
 
-    fase.configure(model_name="vendor/modelo", max_tokens=1200, temperature=0.3)
+    fase.configure(
+        model_name="vendor/modelo",
+        max_tokens=1200,
+        temperature=0.3,
+        provider=ModelProviderEnum.OPENAI,
+    )
     await fase.execute(context=_janela(), variables={})
 
-    assert llm.calls == [{"model_name": "vendor/modelo", "max_tokens": 1200, "temperature": 0.3}]
+    assert llm.calls == [
+        {
+            "model_name": "vendor/modelo",
+            "max_tokens": 1200,
+            "temperature": 0.3,
+            "provider": ModelProviderEnum.OPENAI,
+        }
+    ]
 
 
 async def test_falha_de_parsing_seguida_de_sucesso_reaproveita_o_contexto() -> None:

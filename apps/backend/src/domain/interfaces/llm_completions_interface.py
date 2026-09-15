@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from src.domain.entities.llm.llm_message import LLMMessage
 from src.domain.entities.llm.message import Message
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 
 
 class ILLMCompletions(ABC):
@@ -18,6 +19,7 @@ class ILLMCompletions(ABC):
         model_name: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        provider: ModelProviderEnum | None = None,
     ) -> LLMMessage:
         """Envia uma única mensagem para o provedor de LLM.
 
@@ -26,6 +28,7 @@ class ILLMCompletions(ABC):
             model_name: Nome do modelo a ser usado na chamada. Se `None`, usa o padrão da implementação.
             max_tokens: Limite de tokens de saída. Se `None`, usa o padrão da implementação.
             temperature: Temperatura da geração. Se `None`, usa o padrão da implementação.
+            provider: Provedor que atende a chamada. Se `None`, usa o padrão da implementação.
 
         Returns:
             LLMMessage: Resultado da interação com o LLM.
@@ -42,6 +45,7 @@ class ILLMCompletions(ABC):
         model_name: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        provider: ModelProviderEnum | None = None,
     ) -> LLMMessage:
         """Envia uma conversa multi-turno para o provedor de LLM.
 
@@ -50,6 +54,7 @@ class ILLMCompletions(ABC):
             model_name: Nome do modelo a ser usado na chamada. Se `None`, usa o padrão da implementação.
             max_tokens: Limite de tokens de saída. Se `None`, usa o padrão da implementação.
             temperature: Temperatura da geração. Se `None`, usa o padrão da implementação.
+            provider: Provedor que atende a chamada. Se `None`, usa o padrão da implementação.
 
         Returns:
             LLMMessage: Resultado da interação com o LLM.

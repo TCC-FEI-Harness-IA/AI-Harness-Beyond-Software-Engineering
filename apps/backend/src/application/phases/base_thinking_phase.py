@@ -7,6 +7,7 @@ from src.domain.entities.llm.message import Message
 from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.thinking.phase_outcome import PhaseOutcome
 from src.domain.enums.message_source_enum import MessageSourceEnum
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.errors.budget_exceeded_error import BudgetExceededError
 from src.domain.errors.empty_completion_error import EmptyCompletionError
 from src.domain.errors.phase_parsing_error import PhaseParsingError
@@ -68,18 +69,27 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         self.model_name: str | None = None
         self.max_tokens: int | None = None
         self.temperature: float | None = None
+        self.provider: ModelProviderEnum | None = None
 
-    def configure(self, model_name: str, max_tokens: int, temperature: float) -> None:
+    def configure(
+        self,
+        model_name: str,
+        max_tokens: int,
+        temperature: float,
+        provider: ModelProviderEnum,
+    ) -> None:
         """Fixa os parâmetros do modelo usados por todas as execuções da fase.
 
         Args:
             model_name: Nome do modelo a ser usado nas chamadas da fase.
             max_tokens: Limite de tokens de saída das chamadas da fase.
             temperature: Temperatura de geração das chamadas da fase.
+            provider: Provedor que atende as chamadas da fase.
         """
         self.model_name = model_name
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.provider = provider
 
     async def execute(self, context: ContextWindow, variables: dict[str, str]) -> PhaseOutcome:
         """Executa a fase sobre a janela de contexto informada.
@@ -196,6 +206,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             model_name=self.model_name,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
+            provider=self.provider,
         )
         elapsed_ms = self.clock.monotonic_ms() - started_at_ms
 

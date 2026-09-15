@@ -13,6 +13,7 @@ from src.application.phases.task_resolution_phase import TaskResolutionPhase
 from src.application.phases.task_verification_phase import TaskVerificationPhase
 from src.application.usecases.ralph_thinking_usecase import RalphThinkingUseCase
 from src.domain.entities.thinking.thinking_event import ThinkingEvent
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.services.learnings_memory import LearningsMemory
 from src.domain.services.task_queue import TaskQueue
 from src.infra.adapters.context_window_factory_adapter import ContextWindowFactoryAdapter
@@ -30,6 +31,7 @@ _PERGUNTA_DO_PAPER = "Qual dos seguintes números é simultaneamente primo, par 
 _MODELO = "vendor/modelo-padrao"
 _MAX_TOKENS = 1200
 _TEMPERATURA = 0.3
+_PROVEDOR = ModelProviderEnum.OPEN_ROUTER
 _PASSO_MONOTONICO_MS = 7
 _CHAMADAS_MAXIMAS = 400
 
@@ -130,6 +132,7 @@ class RalphScenario:
                 model_name=_MODELO,
                 max_tokens=_MAX_TOKENS,
                 temperature=_TEMPERATURA,
+                provider=_PROVEDOR,
             )
         )
 

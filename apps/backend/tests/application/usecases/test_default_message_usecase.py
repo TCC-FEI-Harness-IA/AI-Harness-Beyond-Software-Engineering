@@ -25,6 +25,7 @@ _ENTRADA = DefaultMessageInputDTO(
     model_name="vendor/modelo",
     max_tokens=100,
     temperature=0.3,
+    provider=ModelProviderEnum.OPEN_ROUTER,
 )
 _INSTANTE = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 _MONOTONICOS = [1000, 1100, 1912, 22008]
@@ -163,7 +164,12 @@ async def test_repassa_os_parametros_do_modelo_para_o_provedor() -> None:
 
     await _build_usecase(completions=completions).execute(user_input=_ENTRADA)
 
-    assert completions.calls[0] == {"model_name": "vendor/modelo", "max_tokens": 100, "temperature": 0.3}
+    assert completions.calls[0] == {
+        "model_name": "vendor/modelo",
+        "max_tokens": 100,
+        "temperature": 0.3,
+        "provider": ModelProviderEnum.OPEN_ROUTER,
+    }
 
 
 async def test_envia_a_pergunta_como_mensagem_do_usuario_em_utc() -> None:

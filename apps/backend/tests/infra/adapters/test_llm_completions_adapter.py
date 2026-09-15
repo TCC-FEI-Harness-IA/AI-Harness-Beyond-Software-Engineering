@@ -18,16 +18,20 @@ def _build_message(text: str = "pergunta", source: MessageSourceEnum = MessageSo
 
 
 def _build_adapter(
-    llm_service: FakeLLMService | None = None,
+    llm_services: list[FakeLLMService] | None = None,
     model_catalog: FakeModelCatalog | None = None,
     **settings_overrides: Any,
 ) -> LLMCompletionsAdapter:
     return LLMCompletionsAdapter(
-        llm_service=llm_service or FakeLLMService(),
+        llm_services=[FakeLLMService()] if llm_services is None else list(llm_services),
         model_catalog=model_catalog or FakeModelCatalog(),
         logger=logging.getLogger("teste"),
         settings=FakeSettings(**settings_overrides),
     )
+
+
+def _build_all_providers() -> dict[ModelProviderEnum, FakeLLMService]:
+    return {provider: FakeLLMService(provider=provider) for provider in ModelProviderEnum}
 
 
 # ── Defaults e sobrescritas ──────────────────────────────────────────────────
@@ -35,10 +39,10 @@ def _build_adapter(
 async def test_sem_sobrescritas_usa_os_defaults_das_configuracoes() -> None:
     service = FakeLLMService()
     adapter = _build_adapter(
-        llm_service=service,
-        openrouter_model="vendor/padrao",
-        openrouter_max_tokens=512,
-        openrouter_temperature=0.4,
+        llm_services=[service],
+        llm_model="vendor/padrao",
+        llm_max_tokens=512,
+        llm_temperature=0.4,
     )
 
     await adapter.send_message(input_message=_build_message())
@@ -51,7 +55,7 @@ async def test_sem_sobrescritas_usa_os_defaults_das_configuracoes() -> None:
 
 async def test_sobrescritas_vencem_os_defaults() -> None:
     service = FakeLLMService()
-    adapter = _build_adapter(llm_service=service, openrouter_model="vendor/padrao")
+    adapter = _build_adapter(llm_services=[service], llm_model="vendor/padrao")
 
     await adapter.send_message(
         input_message=_build_message(),
@@ -68,7 +72,7 @@ async def test_sobrescritas_vencem_os_defaults() -> None:
 
 async def test_consulta_o_catalogo_de_modelos_antes_de_chamar_o_provedor() -> None:
     catalog = FakeModelCatalog()
-    adapter = _build_adapter(model_catalog=catalog, openrouter_model="vendor/padrao")
+    adapter = _build_adapter(model_catalog=catalog, llm_model="vendor/padrao")
 
     await adapter.send_message(input_message=_build_message())
 
@@ -83,6 +87,68 @@ async def test_modelo_recusado_pelo_catalogo_propaga_o_erro() -> None:
         await adapter.send_message(input_message=_build_message())
 
 
+# ── Escolha do provedor ──────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("provider", list(ModelProviderEnum))
+async def test_a_chamada_vai_para_o_servico_do_provedor_pedido(provider: ModelProviderEnum) -> None:
+    servicos = _build_all_providers()
+    adapter = _build_adapter(llm_services=list(servicos.values()))
+
+    await adapter.send_message(input_message=_build_message(), provider=provider)
+
+    assert len(servicos[provider].requests) == 1
+    assert all(not servico.requests for outro, servico in servicos.items() if outro is not provider)
+
+
+@pytest.mark.parametrize("provider", list(ModelProviderEnum))
+async def test_sem_provedor_na_chamada_usa_o_configurado(provider: ModelProviderEnum) -> None:
+    servicos = _build_all_providers()
+    adapter = _build_adapter(llm_services=list(servicos.values()), llm_provider=provider)
+
+    await adapter.send_message(input_message=_build_message())
+
+    assert len(servicos[provider].requests) == 1
+
+
+async def test_o_provedor_escolhido_chega_ao_catalogo_e_ao_modelo() -> None:
+    catalog = FakeModelCatalog()
+    servicos = _build_all_providers()
+    adapter = _build_adapter(llm_services=list(servicos.values()), model_catalog=catalog)
+
+    await adapter.send_message(input_message=_build_message(), provider=ModelProviderEnum.OPENAI)
+
+    assert catalog.resolved[0][1] is ModelProviderEnum.OPENAI
+    assert servicos[ModelProviderEnum.OPENAI].requests[0].llm_model.model_provider is ModelProviderEnum.OPENAI
+
+
+async def test_provedor_sem_servico_registrado_e_recusado() -> None:
+    adapter = _build_adapter(llm_services=[FakeLLMService(provider=ModelProviderEnum.OPEN_ROUTER)])
+
+    with pytest.raises(ValueError, match="openai"):
+        await adapter.send_message(input_message=_build_message(), provider=ModelProviderEnum.OPENAI)
+
+
+def test_provedor_padrao_sem_servico_registrado_e_recusado_na_construcao() -> None:
+    """O erro aparece na composição, e não na primeira pergunta do usuário."""
+    with pytest.raises(ValueError, match="openai"):
+        _build_adapter(
+            llm_services=[FakeLLMService(provider=ModelProviderEnum.OPEN_ROUTER)],
+            llm_provider=ModelProviderEnum.OPENAI,
+        )
+
+
+def test_dois_servicos_para_o_mesmo_provedor_sao_recusados() -> None:
+    servicos = [FakeLLMService(), FakeLLMService()]
+
+    with pytest.raises(ValueError, match="open_router"):
+        _build_adapter(llm_services=servicos)
+
+
+def test_lista_de_servicos_vazia_e_recusada() -> None:
+    with pytest.raises(ValueError, match="llm_services"):
+        _build_adapter(llm_services=[])
+
+
 # ── Validações ───────────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("model_name", ["", "   "])
@@ -93,7 +159,7 @@ async def test_nome_de_modelo_em_branco_e_recusado(model_name: str) -> None:
 
 def test_nome_de_modelo_padrao_em_branco_e_recusado_na_construcao() -> None:
     with pytest.raises(ValueError, match="model_name"):
-        _build_adapter(openrouter_model="   ")
+        _build_adapter(llm_model="   ")
 
 
 @pytest.mark.parametrize("max_tokens", [0, -5])
@@ -111,7 +177,9 @@ async def test_temperatura_fora_do_intervalo_e_recusada(temperature: float) -> N
 async def test_temperatura_e_arredondada_para_uma_casa() -> None:
     service = FakeLLMService()
 
-    await _build_adapter(llm_service=service).send_message(input_message=_build_message(), temperature=0.66)
+    await _build_adapter(llm_services=[service]).send_message(
+        input_message=_build_message(), temperature=0.66
+    )
 
     assert service.requests[0].temperature == 0.7
 
@@ -126,7 +194,7 @@ async def test_conversa_preserva_a_ordem_e_mapeia_os_papeis() -> None:
         _build_message(text="instrucao", source=MessageSourceEnum.SYSTEM),
     ]
 
-    await _build_adapter(llm_service=service).send_conversation(conversation=conversa)
+    await _build_adapter(llm_services=[service]).send_conversation(conversation=conversa)
 
     enviadas = service.requests[0].messages
     assert [(item.role, item.content) for item in enviadas] == [
@@ -153,7 +221,7 @@ async def test_conversa_usa_a_ultima_mensagem_como_entrada_do_resultado() -> Non
 # ── Resultado ────────────────────────────────────────────────────────────────
 
 async def test_resultado_carrega_texto_tokens_e_origem_do_modelo() -> None:
-    adapter = _build_adapter(openrouter_model="vendor/padrao")
+    adapter = _build_adapter(llm_model="vendor/padrao")
 
     resultado = await adapter.send_message(input_message=_build_message())
 
@@ -169,7 +237,7 @@ async def test_resultado_carrega_texto_tokens_e_origem_do_modelo() -> None:
 async def test_envio_simples_produz_exatamente_uma_chamada_ao_servico() -> None:
     service = FakeLLMService()
 
-    await _build_adapter(llm_service=service).send_message(input_message=_build_message())
+    await _build_adapter(llm_services=[service]).send_message(input_message=_build_message())
 
     assert len(service.requests) == 1
     assert len(service.requests[0].messages) == 1

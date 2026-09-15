@@ -27,7 +27,7 @@ def test_motivo_length_explica_o_teto_de_tokens() -> None:
     erro = EmptyCompletionError(finish_reason="length")
 
     assert "max_tokens" in str(erro)
-    assert "OPENROUTER_REASONING_EFFORT" in str(erro)
+    assert "LLM_REASONING_EFFORT" in str(erro)
 
 
 @pytest.mark.parametrize("finish_reason", ["stop", None])

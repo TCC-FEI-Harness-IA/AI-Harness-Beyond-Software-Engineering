@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from src.domain.entities.llm.llm_message import LLMMessage
@@ -21,11 +22,16 @@ _PROVIDER_ROLE_BY_SOURCE = {
 
 
 class LLMCompletionsAdapter(ILLMCompletions):
-    """Adapter para obtenção de completions via um `ILLMService`."""
+    """Adapter para obtenção de completions via os `ILLMService` registrados.
+
+    Recebe um serviço por provedor suportado e escolhe, a cada chamada, aquele que
+    atende o provedor pedido — o da requisição, ou o configurado como padrão. Assim a
+    troca de provedor é uma decisão de quem chama, e não da composição da aplicação.
+    """
 
     def __init__(
         self,
-        llm_service: ILLMService,
+        llm_services: Sequence[ILLMService],
         model_catalog: IModelCatalog,
         logger: logging.Logger,
         settings: ISettings,
@@ -33,21 +39,24 @@ class LLMCompletionsAdapter(ILLMCompletions):
         """Inicializa o adapter.
 
         Args:
-            llm_service: Serviço de integração com o provedor de LLM.
+            llm_services: Serviços de integração, um por provedor suportado.
             model_catalog: Catálogo que valida modelo e provedor.
             logger: Logger do módulo.
             settings: Configurações da aplicação, fonte dos valores padrão.
 
         Raises:
-            ValueError: Quando algum valor padrão configurado é inválido.
+            ValueError: Quando a lista de serviços está vazia, tem dois serviços para o
+                mesmo provedor, ou não cobre o provedor configurado como padrão. Também
+                quando algum outro valor padrão configurado é inválido.
         """
-        self.llm_service: ILLMService = llm_service
         self.model_catalog: IModelCatalog = model_catalog
         self.logger = logger
         self.settings: ISettings = settings
-        self.__model_name = self.__validate_model_name(model_name=self.settings.openrouter_model)
-        self.__max_tokens = self.__validate_max_tokens(max_tokens=self.settings.openrouter_max_tokens)
-        self.__temperature = self.__validate_temperature(temperature=self.settings.openrouter_temperature)
+        self.__services_by_provider = self.__index_services(llm_services=llm_services)
+        self.__provider = self.__validate_provider(provider=self.settings.llm_provider)
+        self.__model_name = self.__validate_model_name(model_name=self.settings.llm_model)
+        self.__max_tokens = self.__validate_max_tokens(max_tokens=self.settings.llm_max_tokens)
+        self.__temperature = self.__validate_temperature(temperature=self.settings.llm_temperature)
 
     async def send_message(
         self,
@@ -55,6 +64,7 @@ class LLMCompletionsAdapter(ILLMCompletions):
         model_name: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        provider: ModelProviderEnum | None = None,
     ) -> LLMMessage:
         """Envia uma única mensagem, delegando para o envio de conversa.
 
@@ -63,6 +73,7 @@ class LLMCompletionsAdapter(ILLMCompletions):
             model_name: Nome do modelo para a chamada atual.
             max_tokens: Limite máximo de tokens para a chamada atual.
             temperature: Temperatura para a chamada atual.
+            provider: Provedor que atende a chamada atual.
 
         Returns:
             LLMMessage: Resultado da interação com o provedor.
@@ -72,6 +83,7 @@ class LLMCompletionsAdapter(ILLMCompletions):
             model_name=model_name,
             max_tokens=max_tokens,
             temperature=temperature,
+            provider=provider,
         )
 
     async def send_conversation(
@@ -80,17 +92,19 @@ class LLMCompletionsAdapter(ILLMCompletions):
         model_name: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        provider: ModelProviderEnum | None = None,
     ) -> LLMMessage:
         """Envia a janela de contexto inteira e devolve a completion do provedor.
 
-        Quando `model_name`, `max_tokens` ou `temperature` são informados, eles
-        sobrescrevem os valores padrão do adapter apenas nesta chamada.
+        Quando `model_name`, `max_tokens`, `temperature` ou `provider` são informados,
+        eles sobrescrevem os valores padrão do adapter apenas nesta chamada.
 
         Args:
             conversation: Mensagens da janela de contexto, em ordem cronológica.
             model_name: Nome do modelo para a chamada atual.
             max_tokens: Limite máximo de tokens para a chamada atual.
             temperature: Temperatura para a chamada atual.
+            provider: Provedor que atende a chamada atual.
 
         Returns:
             LLMMessage: Resultado da interação com o provedor.
@@ -103,12 +117,14 @@ class LLMCompletionsAdapter(ILLMCompletions):
         if not conversation:
             raise ValueError("conversation must contain at least one message.")
 
+        model_provider = self.__resolve_provider(provider=provider)
         llm_model = self.model_catalog.resolve(
             model_name=self.__resolve_model_name(model_name=model_name),
-            model_provider=ModelProviderEnum.OPEN_ROUTER,
+            model_provider=model_provider,
         )
 
-        provider_response = await self.llm_service.generate_response(
+        llm_service = self.__services_by_provider[model_provider]
+        provider_response = await llm_service.generate_response(
             request=LLMProviderRequest(
                 llm_model=llm_model,
                 messages=[self.__to_provider_message(message=message) for message in conversation],
@@ -134,9 +150,38 @@ class LLMCompletionsAdapter(ILLMCompletions):
             ),
         )
 
+    def __index_services(self, llm_services: Sequence[ILLMService]) -> dict[ModelProviderEnum, ILLMService]:
+        """Indexa os serviços pelo provedor que cada um atende.
+
+        Args:
+            llm_services: Serviços de integração informados na construção.
+
+        Returns:
+            dict[ModelProviderEnum, ILLMService]: Serviço responsável por cada provedor.
+
+        Raises:
+            ValueError: Quando a lista está vazia ou dois serviços atendem o mesmo provedor.
+        """
+        if not llm_services:
+            raise ValueError("llm_services deve conter ao menos um serviço.")
+
+        services_by_provider: dict[ModelProviderEnum, ILLMService] = {}
+        for llm_service in llm_services:
+            if llm_service.provider in services_by_provider:
+                raise ValueError(f"Há mais de um serviço para o provedor '{llm_service.provider.value}'.")
+            services_by_provider[llm_service.provider] = llm_service
+
+        return services_by_provider
+
     def __to_provider_message(self, message: Message) -> LLMProviderMessage:
         """Converte uma mensagem de domínio no formato esperado pelo provedor."""
         return LLMProviderMessage(role=_PROVIDER_ROLE_BY_SOURCE[message.source], content=message.text)
+
+    def __resolve_provider(self, provider: ModelProviderEnum | None) -> ModelProviderEnum:
+        """Devolve o provedor da chamada, ou o padrão do adapter."""
+        if provider is None:
+            return self.__provider
+        return self.__validate_provider(provider=provider)
 
     def __resolve_model_name(self, model_name: str | None) -> str:
         """Devolve o nome de modelo da chamada, ou o padrão do adapter."""
@@ -155,6 +200,19 @@ class LLMCompletionsAdapter(ILLMCompletions):
         if temperature is None:
             return self.__temperature
         return self.__validate_temperature(temperature=temperature)
+
+    def __validate_provider(self, provider: ModelProviderEnum) -> ModelProviderEnum:
+        """Valida que há um serviço registrado para o provedor.
+
+        Raises:
+            ValueError: Quando nenhum serviço atende o provedor.
+        """
+        if provider not in self.__services_by_provider:
+            registrados = sorted(item.value for item in self.__services_by_provider)
+            raise ValueError(
+                f"Não há serviço registrado para o provedor '{provider.value}'. Registrados: {registrados}."
+            )
+        return provider
 
     def __validate_model_name(self, model_name: str) -> str:
         """Valida e normaliza um nome de modelo.

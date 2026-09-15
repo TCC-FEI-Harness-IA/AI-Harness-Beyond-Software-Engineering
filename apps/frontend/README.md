@@ -45,7 +45,7 @@ parser de fronteira em `src/api/parsers/`, que devolve o tipo do domínio ou lan
 
 ```bash
 npm install
-cp .env.example .env     # ajuste VITE_AVAILABLE_MODELS e VITE_DEFAULT_MODEL
+cp .env.example .env     # ajuste VITE_AVAILABLE_MODELS, VITE_DEFAULT_MODEL e VITE_AVAILABLE_PROVIDERS
 npm run dev               # http://localhost:5173
 ```
 
@@ -54,9 +54,11 @@ O backend precisa estar rodando em `http://localhost:8000` (ou no que `VITE_API_
 incluída em `CORS_ALLOWED_ORIGINS` no `.env` do backend.
 
 **Alinhamento obrigatório entre front e backend:** os modelos listados em
-`VITE_AVAILABLE_MODELS` precisam ser um subconjunto de `GENAI_AVAILABLE_MODELS` no backend, e
-`VITE_DEFAULT_PROVIDER` precisa constar em `GENAI_AVAILABLE_PROVIDERS` — do contrário toda chamada
-volta com erro de modelo/provider indisponível.
+`VITE_AVAILABLE_MODELS` precisam ser um subconjunto de `GENAI_AVAILABLE_MODELS` no backend, e os
+de `VITE_AVAILABLE_PROVIDERS` um subconjunto de `GENAI_AVAILABLE_PROVIDERS` — do contrário toda
+chamada volta com erro de modelo/provider indisponível. O provedor escolhido na barra de
+configuração da home viaja em `llm_model_config.provider` e decide qual adapter do backend
+atende a execução.
 
 ```bash
 cd apps/backend && uvicorn src.main:app --reload --port 8000
@@ -92,7 +94,8 @@ mensagem que nomeia a variável.
 | `VITE_WS_BASE_URL` | `ws://localhost:8000` | Origem WebSocket do backend. |
 | `VITE_API_PREFIX` | `/v1` | Prefixo comum de todas as rotas. |
 | `VITE_REQUEST_TIMEOUT_MS` | `60000` | Timeout das chamadas HTTP. |
-| `VITE_DEFAULT_PROVIDER` | `open_router` | `provider` enviado no `llm_model_config`. |
+| `VITE_AVAILABLE_PROVIDERS` | *(o provedor padrão)* | Provedores oferecidos no seletor (CSV): `open_router`, `azure_ai_foundry`, `openai`. Precisa ser subconjunto de `GENAI_AVAILABLE_PROVIDERS` no backend. |
+| `VITE_DEFAULT_PROVIDER` | `open_router` | `provider` pré-selecionado, enviado no `llm_model_config`. Precisa estar em `VITE_AVAILABLE_PROVIDERS`. |
 | `VITE_AVAILABLE_MODELS` | *(CSV)* | Modelos oferecidos no seletor. Precisa ser subconjunto de `GENAI_AVAILABLE_MODELS` no backend. |
 | `VITE_DEFAULT_MODEL` | — | Modelo pré-selecionado. Precisa estar em `VITE_AVAILABLE_MODELS`. |
 | `VITE_DEFAULT_MAX_TOKENS` | `4000` | `max_tokens` padrão. Num modelo de raciocínio o teto cobre o raciocínio interno **e** a resposta — um valor apertado faz o provedor devolver conteúdo vazio. |

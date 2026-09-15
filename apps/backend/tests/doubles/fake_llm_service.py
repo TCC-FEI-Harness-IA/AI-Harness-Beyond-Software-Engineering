@@ -7,12 +7,18 @@ from src.domain.interfaces.llm_service_interface import ILLMService
 class FakeLLMService(ILLMService):
     """Dublê de `ILLMService` com resposta programável e captura das requisições."""
 
-    def __init__(self, response: LLMProviderResponse | None = None, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        response: LLMProviderResponse | None = None,
+        error: Exception | None = None,
+        provider: ModelProviderEnum = ModelProviderEnum.OPEN_ROUTER,
+    ) -> None:
         """Configura o dublê.
 
         Args:
             response: Resposta devolvida em cada chamada. Quando `None`, usa uma resposta padrão.
             error: Exceção levantada em vez de responder, quando informada.
+            provider: Provedor que o dublê declara atender.
         """
         self.response = response or LLMProviderResponse(
             output_text="resposta do modelo",
@@ -21,12 +27,13 @@ class FakeLLMService(ILLMService):
             finish_reason="stop",
         )
         self.error = error
+        self.declared_provider = provider
         self.requests: list[LLMProviderRequest] = []
 
     @property
     def provider(self) -> ModelProviderEnum:
         """Retorna o provedor atendido pelo dublê."""
-        return ModelProviderEnum.OPEN_ROUTER
+        return self.declared_provider
 
     def verify_provider_settings(self) -> bool:
         """O dublê está sempre apto a responder."""

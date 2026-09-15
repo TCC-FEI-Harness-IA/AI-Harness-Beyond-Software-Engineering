@@ -5,6 +5,7 @@ import pytest
 from src.application.dtos.ralph_thinking_input_dto import RalphThinkingInputDTO
 from src.application.usecases.ralph_thinking_usecase import RalphThinkingUseCase
 from src.domain.entities.thinking.thinking_event import ThinkingEvent
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.thinking_event_subtype_enum import ThinkingEventSubtypeEnum
 from src.domain.enums.thinking_event_type_enum import ThinkingEventTypeEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
@@ -40,10 +41,10 @@ _PHASE_ATTRIBUTES = (
 @pytest.fixture(autouse=True)
 def ambiente_de_modelo(monkeypatch: pytest.MonkeyPatch) -> None:
     """Garante configuração suficiente para o grafo do startup ser construído."""
-    monkeypatch.setenv("OPENROUTER_MODEL", "vendor/modelo")
+    monkeypatch.setenv("LLM_MODEL", "vendor/modelo")
     monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", "vendor/modelo")
-    monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router")
+    monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router,openai")
 
 
 def test_constroi_todo_o_grafo_sem_deixar_atributo_nulo() -> None:
@@ -163,8 +164,10 @@ def test_cada_instanciacao_produz_estado_de_sessao_proprio() -> None:
 _REASONING_PAYLOAD = ReasoningInputDTO.model_validate(
     {
         "message": {"user_input": "pergunta do usuario"},
+        # Um provedor diferente do default do ambiente prova que o `provider` que vale é
+        # o do frame de abertura, e não o de `LLM_PROVIDER`.
         "llm_model_config": {
-            "provider": "open_router",
+            "provider": "openai",
             "provider_config": {"model_name": "vendor/modelo"},
             "max_tokens": 1200,
             "temperature": 0.3,
@@ -215,6 +218,7 @@ async def test_run_traduz_o_payload_de_transporte_para_o_dto_de_aplicacao() -> N
         model_name="vendor/modelo",
         max_tokens=1200,
         temperature=0.3,
+        provider=ModelProviderEnum.OPENAI,
     )
 
 

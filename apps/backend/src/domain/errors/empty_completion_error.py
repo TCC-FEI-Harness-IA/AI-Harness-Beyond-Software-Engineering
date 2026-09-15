@@ -5,7 +5,7 @@ _LENGTH_HINT = (
     " O motivo de término foi 'length': o teto de tokens de saída acabou antes de o modelo "
     "escrever a resposta. Em modelos de raciocínio isso acontece quando o raciocínio interno "
     "consome todo o orçamento — aumente 'max_tokens' ou limite o esforço de raciocínio em "
-    "OPENROUTER_REASONING_EFFORT."
+    "LLM_REASONING_EFFORT."
 )
 
 

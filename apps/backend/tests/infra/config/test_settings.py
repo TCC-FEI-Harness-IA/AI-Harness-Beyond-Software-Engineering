@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.infra.config.settings import Settings
 
 _ENV_VARS = (
@@ -10,15 +11,23 @@ _ENV_VARS = (
     "APP_VERSION",
     "LOG_LEVEL",
     "CORS_ALLOWED_ORIGINS",
+    "LLM_PROVIDER",
+    "LLM_MODEL",
+    "LLM_MAX_TOKENS",
+    "LLM_TEMPERATURE",
+    "LLM_TIMEOUT_SECONDS",
+    "LLM_REASONING_EFFORT",
     "OPENROUTER_API_URL",
     "OPENROUTER_API_KEY",
-    "OPENROUTER_MODEL",
-    "OPENROUTER_MAX_TOKENS",
-    "OPENROUTER_TEMPERATURE",
     "OPENROUTER_HTTP_REFERER",
     "OPENROUTER_X_TITLE",
-    "OPENROUTER_TIMEOUT_SECONDS",
-    "OPENROUTER_REASONING_EFFORT",
+    "OPENAI_API_URL",
+    "OPENAI_API_KEY",
+    "OPENAI_ORGANIZATION",
+    "AZURE_AI_FOUNDRY_ENDPOINT",
+    "AZURE_AI_FOUNDRY_API_KEY",
+    "AZURE_AI_FOUNDRY_API_VERSION",
+    "AZURE_AI_FOUNDRY_DEPLOYMENT",
     "GENAI_AVAILABLE_MODELS",
     "GENAI_AVAILABLE_PROVIDERS",
     "RALPH_SESSIONS_STORAGE_PATH",
@@ -61,15 +70,23 @@ def test_aplica_os_defaults_documentados_quando_a_variavel_esta_ausente() -> Non
     assert settings.app_version == "0.1.0"
     assert settings.log_level == "INFO"
     assert settings.cors_allowed_origins == ["http://localhost:5173", "http://localhost:3000"]
+    assert settings.llm_provider is ModelProviderEnum.OPEN_ROUTER
+    assert settings.llm_model == ""
+    assert settings.llm_max_tokens == 1024
+    assert settings.llm_temperature == 0.7
+    assert settings.llm_timeout_seconds == 30.0
+    assert settings.llm_reasoning_effort == ""
     assert settings.openrouter_api_url == "https://openrouter.ai/api/v1/chat/completions"
     assert settings.openrouter_api_key == ""
-    assert settings.openrouter_model == ""
-    assert settings.openrouter_max_tokens == 1024
-    assert settings.openrouter_temperature == 0.7
     assert settings.openrouter_http_referer == ""
     assert settings.openrouter_x_title == ""
-    assert settings.openrouter_timeout_seconds == 30.0
-    assert settings.openrouter_reasoning_effort == ""
+    assert settings.openai_api_url == "https://api.openai.com/v1/chat/completions"
+    assert settings.openai_api_key == ""
+    assert settings.openai_organization == ""
+    assert settings.azure_ai_foundry_endpoint == ""
+    assert settings.azure_ai_foundry_api_key == ""
+    assert settings.azure_ai_foundry_api_version == "2024-10-21"
+    assert settings.azure_ai_foundry_deployment == ""
     assert settings.genai_available_models == []
     assert settings.genai_available_providers == []
     assert settings.ralph_sessions_storage_path == "./data/sessions"
@@ -87,38 +104,103 @@ def test_aplica_os_defaults_documentados_quando_a_variavel_esta_ausente() -> Non
     assert settings.ralph_websocket_max_message_bytes == 1048576
 
 
-def test_le_do_ambiente_todas_as_variaveis_de_openrouter(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPENROUTER_API_URL", "https://exemplo.test/chat")
-    monkeypatch.setenv("OPENROUTER_API_KEY", "  chave-secreta  ")
-    monkeypatch.setenv("OPENROUTER_MODEL", "  vendor/modelo  ")
-    monkeypatch.setenv("OPENROUTER_HTTP_REFERER", "  https://referer.test  ")
-    monkeypatch.setenv("OPENROUTER_X_TITLE", "  Titulo  ")
-    monkeypatch.setenv("OPENROUTER_REASONING_EFFORT", "  LOW  ")
+# ── Configuração comum a todos os provedores ─────────────────────────────────
+
+def test_le_do_ambiente_as_variaveis_unificadas_de_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LLM_MODEL", "  vendor/modelo  ")
+    monkeypatch.setenv("LLM_MAX_TOKENS", "2048")
+    monkeypatch.setenv("LLM_TEMPERATURE", "0.2")
+    monkeypatch.setenv("LLM_TIMEOUT_SECONDS", "45")
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "  LOW  ")
 
     settings = Settings()
 
-    assert settings.openrouter_api_url == "https://exemplo.test/chat"
-    assert settings.openrouter_api_key == "chave-secreta"
-    assert settings.openrouter_model == "vendor/modelo"
-    assert settings.openrouter_http_referer == "https://referer.test"
-    assert settings.openrouter_x_title == "Titulo"
-    assert settings.openrouter_reasoning_effort == "low"
+    assert settings.llm_model == "vendor/modelo"
+    assert settings.llm_max_tokens == 2048
+    assert settings.llm_temperature == 0.2
+    assert settings.llm_timeout_seconds == 45.0
+    assert settings.llm_reasoning_effort == "low"
+
+
+@pytest.mark.parametrize("provider", list(ModelProviderEnum))
+def test_aceita_todos_os_provedores_implementados(
+    monkeypatch: pytest.MonkeyPatch, provider: ModelProviderEnum
+) -> None:
+    monkeypatch.setenv("LLM_PROVIDER", f"  {provider.value.upper()}  ")
+
+    assert Settings().llm_provider is provider
+
+
+def test_provedor_desconhecido_levanta_erro_citando_a_variavel(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LLM_PROVIDER", "provedor_inexistente")
+
+    with pytest.raises(ValueError, match="LLM_PROVIDER"):
+        _ = Settings().llm_provider
 
 
 @pytest.mark.parametrize("raw_value", ["minimal", "low", "medium", "high"])
 def test_aceita_todos_os_esforcos_de_raciocinio(monkeypatch: pytest.MonkeyPatch, raw_value: str) -> None:
-    monkeypatch.setenv("OPENROUTER_REASONING_EFFORT", raw_value)
+    monkeypatch.setenv("LLM_REASONING_EFFORT", raw_value)
 
-    assert Settings().openrouter_reasoning_effort == raw_value
+    assert Settings().llm_reasoning_effort == raw_value
 
 
 def test_esforco_de_raciocinio_desconhecido_levanta_erro_citando_a_variavel(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("OPENROUTER_REASONING_EFFORT", "altissimo")
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "altissimo")
 
-    with pytest.raises(ValueError, match="OPENROUTER_REASONING_EFFORT"):
-        _ = Settings().openrouter_reasoning_effort
+    with pytest.raises(ValueError, match="LLM_REASONING_EFFORT"):
+        _ = Settings().llm_reasoning_effort
+
+
+# ── Configuração específica de cada provedor ─────────────────────────────────
+
+def test_le_do_ambiente_as_variaveis_de_openrouter(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENROUTER_API_URL", "https://exemplo.test/chat")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "  chave-secreta  ")
+    monkeypatch.setenv("OPENROUTER_HTTP_REFERER", "  https://referer.test  ")
+    monkeypatch.setenv("OPENROUTER_X_TITLE", "  Titulo  ")
+
+    settings = Settings()
+
+    assert settings.openrouter_api_url == "https://exemplo.test/chat"
+    assert settings.openrouter_api_key == "chave-secreta"
+    assert settings.openrouter_http_referer == "https://referer.test"
+    assert settings.openrouter_x_title == "Titulo"
+
+
+def test_le_do_ambiente_as_variaveis_de_openai(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_API_URL", "https://exemplo.test/v1/chat/completions")
+    monkeypatch.setenv("OPENAI_API_KEY", "  sk-chave  ")
+    monkeypatch.setenv("OPENAI_ORGANIZATION", "  org-123  ")
+
+    settings = Settings()
+
+    assert settings.openai_api_url == "https://exemplo.test/v1/chat/completions"
+    assert settings.openai_api_key == "sk-chave"
+    assert settings.openai_organization == "org-123"
+
+
+def test_le_do_ambiente_as_variaveis_de_azure_ai_foundry(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AZURE_AI_FOUNDRY_ENDPOINT", "  https://recurso.services.ai.azure.com/  ")
+    monkeypatch.setenv("AZURE_AI_FOUNDRY_API_KEY", "  chave-azure  ")
+    monkeypatch.setenv("AZURE_AI_FOUNDRY_API_VERSION", "  2025-01-01-preview  ")
+    monkeypatch.setenv("AZURE_AI_FOUNDRY_DEPLOYMENT", "  meu-deployment  ")
+
+    settings = Settings()
+
+    assert settings.azure_ai_foundry_endpoint == "https://recurso.services.ai.azure.com"
+    assert settings.azure_ai_foundry_api_key == "chave-azure"
+    assert settings.azure_ai_foundry_api_version == "2025-01-01-preview"
+    assert settings.azure_ai_foundry_deployment == "meu-deployment"
+
+
+def test_endpoint_de_azure_perde_a_barra_final(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A URL é montada concatenando caminho; uma barra final produziria `//openai/...`."""
+    monkeypatch.setenv("AZURE_AI_FOUNDRY_ENDPOINT", "https://recurso.services.ai.azure.com///")
+
+    assert Settings().azure_ai_foundry_endpoint == "https://recurso.services.ai.azure.com"
 
 
 def test_le_do_ambiente_as_variaveis_de_sessao_e_thinking(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -144,7 +226,7 @@ def test_log_level_e_normalizado_para_maiusculas(monkeypatch: pytest.MonkeyPatch
 @pytest.mark.parametrize(
     ("var_name", "attribute"),
     [
-        ("OPENROUTER_MAX_TOKENS", "openrouter_max_tokens"),
+        ("LLM_MAX_TOKENS", "llm_max_tokens"),
         ("RALPH_MAX_TASK_ATTEMPTS", "ralph_max_task_attempts"),
         ("RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS", "ralph_max_additional_planning_rounds"),
         ("RALPH_MAX_TASKS_PER_SESSION", "ralph_max_tasks_per_session"),
@@ -163,10 +245,10 @@ def test_converte_para_inteiro(monkeypatch: pytest.MonkeyPatch, var_name: str, a
 
 
 def test_valor_nao_inteiro_levanta_erro_citando_a_variavel(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPENROUTER_MAX_TOKENS", "abc")
+    monkeypatch.setenv("LLM_MAX_TOKENS", "abc")
 
-    with pytest.raises(ValueError, match="OPENROUTER_MAX_TOKENS"):
-        Settings().openrouter_max_tokens
+    with pytest.raises(ValueError, match="LLM_MAX_TOKENS"):
+        Settings().llm_max_tokens
 
 
 # ── Conversão para decimal ───────────────────────────────────────────────────
@@ -174,8 +256,8 @@ def test_valor_nao_inteiro_levanta_erro_citando_a_variavel(monkeypatch: pytest.M
 @pytest.mark.parametrize(
     ("var_name", "attribute"),
     [
-        ("OPENROUTER_TEMPERATURE", "openrouter_temperature"),
-        ("OPENROUTER_TIMEOUT_SECONDS", "openrouter_timeout_seconds"),
+        ("LLM_TEMPERATURE", "llm_temperature"),
+        ("LLM_TIMEOUT_SECONDS", "llm_timeout_seconds"),
     ],
 )
 def test_converte_para_decimal(monkeypatch: pytest.MonkeyPatch, var_name: str, attribute: str) -> None:
@@ -185,10 +267,10 @@ def test_converte_para_decimal(monkeypatch: pytest.MonkeyPatch, var_name: str, a
 
 
 def test_valor_nao_numerico_levanta_erro_citando_a_variavel(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPENROUTER_TEMPERATURE", "x")
+    monkeypatch.setenv("LLM_TEMPERATURE", "x")
 
-    with pytest.raises(ValueError, match="OPENROUTER_TEMPERATURE"):
-        Settings().openrouter_temperature
+    with pytest.raises(ValueError, match="LLM_TEMPERATURE"):
+        Settings().llm_temperature
 
 
 # ── Conversão para booleano ──────────────────────────────────────────────────

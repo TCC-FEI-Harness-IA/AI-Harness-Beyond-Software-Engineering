@@ -2,13 +2,21 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { env } from '@/config/env'
+import { MODEL_PROVIDER } from '@/domain/enums/modelProvider'
 import { RunConfigProvider, useRunConfig } from './RunConfigContext'
 
 function ConfigProbe(): JSX.Element {
-  const { config, setModelName, setMaxTokens, setTemperature, reset } = useRunConfig()
+  const { config, setModelName, setMaxTokens, setTemperature, setProvider, reset } = useRunConfig()
   return (
     <div>
       <span data-testid="model">{config.modelName}</span>
+      <span data-testid="provider">{config.provider}</span>
+      <button type="button" onClick={() => setProvider(MODEL_PROVIDER.OPENAI)}>
+        Trocar provedor
+      </button>
+      <button type="button" onClick={() => setProvider('provedor-invalido')}>
+        Provedor inválido
+      </button>
       <span data-testid="max-tokens">{config.maxTokens}</span>
       <span data-testid="temperature">{config.temperature}</span>
       <button type="button" onClick={() => setModelName('modelo-invalido')}>
@@ -46,6 +54,57 @@ describe('RunConfigContext', () => {
     expect(screen.getByTestId('model')).toHaveTextContent(env.defaultModel)
     expect(screen.getByTestId('max-tokens')).toHaveTextContent(String(env.defaultMaxTokens))
     expect(screen.getByTestId('temperature')).toHaveTextContent(String(env.defaultTemperature))
+    expect(screen.getByTestId('provider')).toHaveTextContent(env.defaultProvider)
+  })
+
+  it('setProvider troca o provedor enviado ao backend', async () => {
+    const user = userEvent.setup()
+    renderProbe()
+
+    await user.click(screen.getByRole('button', { name: 'Trocar provedor' }))
+
+    expect(screen.getByTestId('provider')).toHaveTextContent(MODEL_PROVIDER.OPENAI)
+  })
+
+  it('um provedor fora de availableProviders é ignorado', async () => {
+    const user = userEvent.setup()
+    renderProbe()
+
+    await user.click(screen.getByRole('button', { name: 'Provedor inválido' }))
+
+    expect(screen.getByTestId('provider')).toHaveTextContent(env.defaultProvider)
+  })
+
+  it('um provedor salvo fora de availableProviders cai para o default na leitura', () => {
+    window.localStorage.setItem(
+      'tcc.runConfig',
+      JSON.stringify({
+        modelName: env.defaultModel,
+        maxTokens: 900,
+        temperature: 0.5,
+        provider: 'provedor-que-saiu-da-lista',
+      }),
+    )
+
+    renderProbe()
+
+    expect(screen.getByTestId('provider')).toHaveTextContent(env.defaultProvider)
+  })
+
+  it('o provedor escolhido sobrevive a uma remontagem', () => {
+    window.localStorage.setItem(
+      'tcc.runConfig',
+      JSON.stringify({
+        modelName: env.defaultModel,
+        maxTokens: 900,
+        temperature: 0.5,
+        provider: MODEL_PROVIDER.OPENAI,
+      }),
+    )
+
+    renderProbe()
+
+    expect(screen.getByTestId('provider')).toHaveTextContent(MODEL_PROVIDER.OPENAI)
   })
 
   it('um modelo salvo fora de availableModels cai para o default na leitura', () => {

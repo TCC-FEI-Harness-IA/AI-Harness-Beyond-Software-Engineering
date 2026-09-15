@@ -31,7 +31,7 @@ from src.infra.repositories.json_file_session_repository import JsonFileSessionR
 from src.infra.routes.v1.message.dtos.context_window_dto import ContextWindowDTO
 from src.infra.routes.v1.message.dtos.reasoning_event_dto import ReasoningEventDTO
 from src.infra.routes.v1.message.dtos.reasoning_input_dto import ReasoningInputDTO
-from src.infra.services.openrouter_service import OpenRouterService
+from src.infra.services.llm_service_factory import LLMServiceFactory
 
 
 class RalphThinkingStartup:
@@ -88,16 +88,13 @@ class RalphThinkingStartup:
         )
         self.context_window_factory = ContextWindowFactoryAdapter(id_generator=self.id_generator)
 
-        llm_service = OpenRouterService(
-            logger=self.settings.logger(module_file=getfile(OpenRouterService)),
-            settings=self.settings,
-        )
+        llm_services = LLMServiceFactory(settings=self.settings).create_all()
         model_catalog = ModelCatalogAdapter(
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(ModelCatalogAdapter)),
         )
         self.llm_completions = LLMCompletionsAdapter(
-            llm_service=llm_service,
+            llm_services=llm_services,
             model_catalog=model_catalog,
             logger=self.settings.logger(module_file=getfile(LLMCompletionsAdapter)),
             settings=self.settings,
@@ -156,6 +153,7 @@ class RalphThinkingStartup:
             model_name=payload.llm_model_config.provider_config.model_name,
             max_tokens=payload.llm_model_config.max_tokens,
             temperature=payload.llm_model_config.temperature,
+            provider=payload.llm_model_config.provider,
         )
         async for event in self.ralph_thinking_use_case.execute(input_dto=input_dto):
             yield self.__to_event_dto(event=event)

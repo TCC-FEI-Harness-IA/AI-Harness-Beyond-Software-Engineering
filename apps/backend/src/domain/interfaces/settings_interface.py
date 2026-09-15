@@ -1,6 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
 
+from src.domain.enums.model_provider_enum import ModelProviderEnum
+
 
 class ISettings(ABC):
     """Contrato de acesso às configurações da aplicação.
@@ -35,6 +37,44 @@ class ISettings(ABC):
         """Origens liberadas no middleware de CORS."""
         raise NotImplementedError
 
+    # ── LLM (comum a todos os provedores) ────────────────────────────────────
+
+    @property
+    @abstractmethod
+    def llm_provider(self) -> ModelProviderEnum:
+        """Provedor usado quando a requisição não especifica um."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def llm_model(self) -> str:
+        """Modelo padrão usado quando a requisição não especifica um."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def llm_max_tokens(self) -> int:
+        """Teto padrão de tokens de saída."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def llm_temperature(self) -> float:
+        """Temperatura padrão de geração."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def llm_timeout_seconds(self) -> float:
+        """Timeout, em segundos, das chamadas HTTP a qualquer provedor."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def llm_reasoning_effort(self) -> str:
+        """Esforço de raciocínio pedido ao modelo. Vazio quando não configurado."""
+        raise NotImplementedError
+
     # ── OpenRouter ───────────────────────────────────────────────────────────
 
     @property
@@ -51,24 +91,6 @@ class ISettings(ABC):
 
     @property
     @abstractmethod
-    def openrouter_model(self) -> str:
-        """Modelo padrão usado quando a requisição não especifica um."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def openrouter_max_tokens(self) -> int:
-        """Teto padrão de tokens de saída."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def openrouter_temperature(self) -> float:
-        """Temperatura padrão de geração."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
     def openrouter_http_referer(self) -> str:
         """Valor do header `HTTP-Referer`. Vazio quando não configurado."""
         raise NotImplementedError
@@ -79,16 +101,50 @@ class ISettings(ABC):
         """Valor do header `X-Title`. Vazio quando não configurado."""
         raise NotImplementedError
 
+    # ── OpenAI ───────────────────────────────────────────────────────────────
+
     @property
     @abstractmethod
-    def openrouter_timeout_seconds(self) -> float:
-        """Timeout, em segundos, das chamadas HTTP à OpenRouter."""
+    def openai_api_url(self) -> str:
+        """Endpoint de chat completions da OpenAI."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def openrouter_reasoning_effort(self) -> str:
-        """Esforço de raciocínio pedido à OpenRouter. Vazio quando não configurado."""
+    def openai_api_key(self) -> str:
+        """Chave de API da OpenAI."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def openai_organization(self) -> str:
+        """Valor do header `OpenAI-Organization`. Vazio quando não configurado."""
+        raise NotImplementedError
+
+    # ── Azure AI Foundry ─────────────────────────────────────────────────────
+
+    @property
+    @abstractmethod
+    def azure_ai_foundry_endpoint(self) -> str:
+        """Origem do recurso no Azure AI Foundry, sem barra final."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def azure_ai_foundry_api_key(self) -> str:
+        """Chave de API do recurso no Azure AI Foundry."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def azure_ai_foundry_api_version(self) -> str:
+        """Versão da API de chat completions passada na query string."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def azure_ai_foundry_deployment(self) -> str:
+        """Nome do deployment. Vazio quando o nome do modelo já é o do deployment."""
         raise NotImplementedError
 
     # ── Catálogo GenAI ───────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import pytest
 from src.application.dtos.default_message_input_dto import DefaultMessageInputDTO
 from src.application.dtos.default_message_output_dto import DefaultMessageOutputDTO
 from src.application.usecases.default_message_usecase import DefaultMessageUseCase
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.interfaces.clock_interface import IClock
 from src.domain.interfaces.llm_completions_interface import ILLMCompletions
 from src.domain.interfaces.session_recorder_interface import ISessionRecorder
@@ -36,8 +37,10 @@ class _SpyUseCase:
 
 
 def _build_payload(temperature: float | None = 0.3) -> DefaultInputDTO:
+    # Um provedor diferente do default do ambiente prova que o `provider` que vale é o
+    # do corpo da requisição, e não o de `LLM_PROVIDER`.
     llm_model_config: dict[str, Any] = {
-        "provider": "open_router",
+        "provider": "openai",
         "provider_config": {"model_name": "vendor/modelo"},
         "max_tokens": 100,
     }
@@ -59,10 +62,10 @@ def _build_startup_com_spy() -> tuple[DefaultMessageStartup, _SpyUseCase]:
 @pytest.fixture(autouse=True)
 def ambiente_de_modelo(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Garante configuração suficiente para o grafo do startup ser construído."""
-    monkeypatch.setenv("OPENROUTER_MODEL", "vendor/modelo")
+    monkeypatch.setenv("LLM_MODEL", "vendor/modelo")
     monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", "vendor/modelo")
-    monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router")
+    monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router,openai")
     monkeypatch.setenv("RALPH_SESSIONS_STORAGE_PATH", str(tmp_path / "sessions"))
 
 
@@ -98,6 +101,7 @@ async def test_traduz_o_dto_de_transporte_para_o_dto_de_aplicacao() -> None:
         model_name="vendor/modelo",
         max_tokens=100,
         temperature=0.3,
+        provider=ModelProviderEnum.OPENAI,
     )
 
 

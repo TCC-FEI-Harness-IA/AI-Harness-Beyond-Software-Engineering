@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.interfaces.settings_interface import ISettings
 
 _DEFAULTS: dict[str, Any] = {
@@ -8,17 +9,25 @@ _DEFAULTS: dict[str, Any] = {
     "app_version": "0.1.0",
     "log_level": "INFO",
     "cors_allowed_origins": ["http://localhost:5173"],
+    "llm_provider": ModelProviderEnum.OPEN_ROUTER,
+    "llm_model": "vendor/modelo-padrao",
+    "llm_max_tokens": 1024,
+    "llm_temperature": 0.7,
+    "llm_timeout_seconds": 30.0,
+    "llm_reasoning_effort": "",
     "openrouter_api_url": "https://openrouter.test/chat/completions",
     "openrouter_api_key": "chave-de-teste",
-    "openrouter_model": "vendor/modelo-padrao",
-    "openrouter_max_tokens": 1024,
-    "openrouter_temperature": 0.7,
     "openrouter_http_referer": "",
     "openrouter_x_title": "",
-    "openrouter_timeout_seconds": 30.0,
-    "openrouter_reasoning_effort": "",
+    "openai_api_url": "https://openai.test/v1/chat/completions",
+    "openai_api_key": "chave-de-teste",
+    "openai_organization": "",
+    "azure_ai_foundry_endpoint": "https://recurso.azure.test",
+    "azure_ai_foundry_api_key": "chave-de-teste",
+    "azure_ai_foundry_api_version": "2024-10-21",
+    "azure_ai_foundry_deployment": "",
     "genai_available_models": ["vendor/modelo-padrao"],
-    "genai_available_providers": ["open_router"],
+    "genai_available_providers": ["open_router", "azure_ai_foundry", "openai"],
     "ralph_sessions_storage_path": "./data/sessions",
     "ralph_session_flush_every_message": True,
     "ralph_session_id_prefix": "sess",
@@ -68,24 +77,36 @@ class FakeSettings(ISettings):
         return self.values["cors_allowed_origins"]
 
     @property
+    def llm_provider(self) -> ModelProviderEnum:
+        return self.values["llm_provider"]
+
+    @property
+    def llm_model(self) -> str:
+        return self.values["llm_model"]
+
+    @property
+    def llm_max_tokens(self) -> int:
+        return self.values["llm_max_tokens"]
+
+    @property
+    def llm_temperature(self) -> float:
+        return self.values["llm_temperature"]
+
+    @property
+    def llm_timeout_seconds(self) -> float:
+        return self.values["llm_timeout_seconds"]
+
+    @property
+    def llm_reasoning_effort(self) -> str:
+        return self.values["llm_reasoning_effort"]
+
+    @property
     def openrouter_api_url(self) -> str:
         return self.values["openrouter_api_url"]
 
     @property
     def openrouter_api_key(self) -> str:
         return self.values["openrouter_api_key"]
-
-    @property
-    def openrouter_model(self) -> str:
-        return self.values["openrouter_model"]
-
-    @property
-    def openrouter_max_tokens(self) -> int:
-        return self.values["openrouter_max_tokens"]
-
-    @property
-    def openrouter_temperature(self) -> float:
-        return self.values["openrouter_temperature"]
 
     @property
     def openrouter_http_referer(self) -> str:
@@ -96,12 +117,32 @@ class FakeSettings(ISettings):
         return self.values["openrouter_x_title"]
 
     @property
-    def openrouter_timeout_seconds(self) -> float:
-        return self.values["openrouter_timeout_seconds"]
+    def openai_api_url(self) -> str:
+        return self.values["openai_api_url"]
 
     @property
-    def openrouter_reasoning_effort(self) -> str:
-        return self.values["openrouter_reasoning_effort"]
+    def openai_api_key(self) -> str:
+        return self.values["openai_api_key"]
+
+    @property
+    def openai_organization(self) -> str:
+        return self.values["openai_organization"]
+
+    @property
+    def azure_ai_foundry_endpoint(self) -> str:
+        return self.values["azure_ai_foundry_endpoint"]
+
+    @property
+    def azure_ai_foundry_api_key(self) -> str:
+        return self.values["azure_ai_foundry_api_key"]
+
+    @property
+    def azure_ai_foundry_api_version(self) -> str:
+        return self.values["azure_ai_foundry_api_version"]
+
+    @property
+    def azure_ai_foundry_deployment(self) -> str:
+        return self.values["azure_ai_foundry_deployment"]
 
     @property
     def genai_available_models(self) -> list[str]:

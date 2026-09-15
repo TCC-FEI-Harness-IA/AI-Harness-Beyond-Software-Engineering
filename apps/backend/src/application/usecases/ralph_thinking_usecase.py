@@ -648,6 +648,7 @@ class RalphThinkingUseCase:
                 model_name=input_dto.model_name,
                 max_tokens=input_dto.max_tokens,
                 temperature=input_dto.temperature,
+                provider=input_dto.provider,
             )
 
     def __loop_budget_limit(self) -> BudgetLimitEnum | None:

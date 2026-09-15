@@ -3,6 +3,7 @@ import logging
 import os
 from pathlib import Path
 
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.interfaces.settings_interface import ISettings
 
 _TRUTHY_VALUES = frozenset({"true", "1", "yes", "y", "on"})
@@ -40,18 +41,26 @@ class Settings(ISettings):
                 "CORS_ALLOWED_ORIGINS",
                 "http://localhost:5173,http://localhost:3000",
             ),
+            "LLM_PROVIDER": os.getenv("LLM_PROVIDER", ModelProviderEnum.OPEN_ROUTER.value),
+            "LLM_MODEL": os.getenv("LLM_MODEL", ""),
+            "LLM_MAX_TOKENS": os.getenv("LLM_MAX_TOKENS", "1024"),
+            "LLM_TEMPERATURE": os.getenv("LLM_TEMPERATURE", "0.7"),
+            "LLM_TIMEOUT_SECONDS": os.getenv("LLM_TIMEOUT_SECONDS", "30"),
+            "LLM_REASONING_EFFORT": os.getenv("LLM_REASONING_EFFORT", ""),
             "OPENROUTER_API_URL": os.getenv(
                 "OPENROUTER_API_URL",
                 "https://openrouter.ai/api/v1/chat/completions",
             ),
             "OPENROUTER_API_KEY": os.getenv("OPENROUTER_API_KEY", ""),
-            "OPENROUTER_MODEL": os.getenv("OPENROUTER_MODEL", ""),
-            "OPENROUTER_MAX_TOKENS": os.getenv("OPENROUTER_MAX_TOKENS", "1024"),
-            "OPENROUTER_TEMPERATURE": os.getenv("OPENROUTER_TEMPERATURE", "0.7"),
             "OPENROUTER_HTTP_REFERER": os.getenv("OPENROUTER_HTTP_REFERER", ""),
             "OPENROUTER_X_TITLE": os.getenv("OPENROUTER_X_TITLE", ""),
-            "OPENROUTER_TIMEOUT_SECONDS": os.getenv("OPENROUTER_TIMEOUT_SECONDS", "30"),
-            "OPENROUTER_REASONING_EFFORT": os.getenv("OPENROUTER_REASONING_EFFORT", ""),
+            "OPENAI_API_URL": os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions"),
+            "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", ""),
+            "OPENAI_ORGANIZATION": os.getenv("OPENAI_ORGANIZATION", ""),
+            "AZURE_AI_FOUNDRY_ENDPOINT": os.getenv("AZURE_AI_FOUNDRY_ENDPOINT", ""),
+            "AZURE_AI_FOUNDRY_API_KEY": os.getenv("AZURE_AI_FOUNDRY_API_KEY", ""),
+            "AZURE_AI_FOUNDRY_API_VERSION": os.getenv("AZURE_AI_FOUNDRY_API_VERSION", "2024-10-21"),
+            "AZURE_AI_FOUNDRY_DEPLOYMENT": os.getenv("AZURE_AI_FOUNDRY_DEPLOYMENT", ""),
             "GENAI_AVAILABLE_MODELS": os.getenv("GENAI_AVAILABLE_MODELS", ""),
             "GENAI_AVAILABLE_PROVIDERS": os.getenv("GENAI_AVAILABLE_PROVIDERS", ""),
             "RALPH_SESSIONS_STORAGE_PATH": os.getenv("RALPH_SESSIONS_STORAGE_PATH", "./data/sessions"),
@@ -167,6 +176,61 @@ class Settings(ISettings):
             return []
         return [item.strip() for item in raw_value.split(",") if item.strip()]
 
+    # ── LLM (comum a todos os provedores) ────────────────────────────────────
+
+    @property
+    def llm_provider(self) -> ModelProviderEnum:
+        """Provedor usado quando a requisição não especifica um.
+
+        Raises:
+            ValueError: Quando o valor configurado não é um provedor implementado.
+        """
+        raw_value = self.__get_str("LLM_PROVIDER").strip().lower()
+        try:
+            return ModelProviderEnum(raw_value)
+        except ValueError as exc:
+            suportados = sorted(member.value for member in ModelProviderEnum)
+            raise ValueError(
+                f"Variável de ambiente 'LLM_PROVIDER' deve ser um de {suportados}. Valor: '{raw_value}'."
+            ) from exc
+
+    @property
+    def llm_model(self) -> str:
+        """Modelo padrão usado quando a requisição não especifica um."""
+        return self.__get_str("LLM_MODEL").strip()
+
+    @property
+    def llm_max_tokens(self) -> int:
+        """Teto padrão de tokens de saída."""
+        return self.__get_int("LLM_MAX_TOKENS")
+
+    @property
+    def llm_temperature(self) -> float:
+        """Temperatura padrão de geração."""
+        return self.__get_float("LLM_TEMPERATURE")
+
+    @property
+    def llm_timeout_seconds(self) -> float:
+        """Timeout, em segundos, das chamadas HTTP a qualquer provedor."""
+        return self.__get_float("LLM_TIMEOUT_SECONDS")
+
+    @property
+    def llm_reasoning_effort(self) -> str:
+        """Esforço de raciocínio pedido ao modelo. Vazio quando não configurado.
+
+        Raises:
+            ValueError: Quando o valor configurado não é um esforço conhecido.
+        """
+        raw_value = self.__get_str("LLM_REASONING_EFFORT").strip().lower()
+        if not raw_value:
+            return ""
+        if raw_value not in _REASONING_EFFORTS:
+            raise ValueError(
+                f"Variável de ambiente 'LLM_REASONING_EFFORT' deve ser um de "
+                f"{sorted(_REASONING_EFFORTS)}, ou vazia. Valor: '{raw_value}'."
+            )
+        return raw_value
+
     # ── OpenRouter ───────────────────────────────────────────────────────────
 
     @property
@@ -180,21 +244,6 @@ class Settings(ISettings):
         return self.__get_str("OPENROUTER_API_KEY").strip()
 
     @property
-    def openrouter_model(self) -> str:
-        """Modelo padrão usado quando a requisição não especifica um."""
-        return self.__get_str("OPENROUTER_MODEL").strip()
-
-    @property
-    def openrouter_max_tokens(self) -> int:
-        """Teto padrão de tokens de saída."""
-        return self.__get_int("OPENROUTER_MAX_TOKENS")
-
-    @property
-    def openrouter_temperature(self) -> float:
-        """Temperatura padrão de geração."""
-        return self.__get_float("OPENROUTER_TEMPERATURE")
-
-    @property
     def openrouter_http_referer(self) -> str:
         """Valor do header `HTTP-Referer`. Vazio quando não configurado."""
         return self.__get_str("OPENROUTER_HTTP_REFERER").strip()
@@ -204,27 +253,48 @@ class Settings(ISettings):
         """Valor do header `X-Title`. Vazio quando não configurado."""
         return self.__get_str("OPENROUTER_X_TITLE").strip()
 
-    @property
-    def openrouter_timeout_seconds(self) -> float:
-        """Timeout, em segundos, das chamadas HTTP à OpenRouter."""
-        return self.__get_float("OPENROUTER_TIMEOUT_SECONDS")
+    # ── OpenAI ───────────────────────────────────────────────────────────────
 
     @property
-    def openrouter_reasoning_effort(self) -> str:
-        """Esforço de raciocínio pedido à OpenRouter. Vazio quando não configurado.
+    def openai_api_url(self) -> str:
+        """Endpoint de chat completions da OpenAI."""
+        return self.__get_str("OPENAI_API_URL")
 
-        Raises:
-            ValueError: Quando o valor configurado não é um esforço conhecido.
+    @property
+    def openai_api_key(self) -> str:
+        """Chave de API da OpenAI."""
+        return self.__get_str("OPENAI_API_KEY").strip()
+
+    @property
+    def openai_organization(self) -> str:
+        """Valor do header `OpenAI-Organization`. Vazio quando não configurado."""
+        return self.__get_str("OPENAI_ORGANIZATION").strip()
+
+    # ── Azure AI Foundry ─────────────────────────────────────────────────────
+
+    @property
+    def azure_ai_foundry_endpoint(self) -> str:
+        """Origem do recurso no Azure AI Foundry, sem barra final.
+
+        A barra é removida aqui porque a URL da chamada é montada concatenando o
+        caminho do deployment — mantê-la produziria `//openai/deployments/...`.
         """
-        raw_value = self.__get_str("OPENROUTER_REASONING_EFFORT").strip().lower()
-        if not raw_value:
-            return ""
-        if raw_value not in _REASONING_EFFORTS:
-            raise ValueError(
-                f"Variável de ambiente 'OPENROUTER_REASONING_EFFORT' deve ser um de "
-                f"{sorted(_REASONING_EFFORTS)}, ou vazia. Valor: '{raw_value}'."
-            )
-        return raw_value
+        return self.__get_str("AZURE_AI_FOUNDRY_ENDPOINT").strip().rstrip("/")
+
+    @property
+    def azure_ai_foundry_api_key(self) -> str:
+        """Chave de API do recurso no Azure AI Foundry."""
+        return self.__get_str("AZURE_AI_FOUNDRY_API_KEY").strip()
+
+    @property
+    def azure_ai_foundry_api_version(self) -> str:
+        """Versão da API de chat completions passada na query string."""
+        return self.__get_str("AZURE_AI_FOUNDRY_API_VERSION").strip()
+
+    @property
+    def azure_ai_foundry_deployment(self) -> str:
+        """Nome do deployment. Vazio quando o nome do modelo já é o do deployment."""
+        return self.__get_str("AZURE_AI_FOUNDRY_DEPLOYMENT").strip()
 
     # ── Catálogo GenAI ───────────────────────────────────────────────────────
 

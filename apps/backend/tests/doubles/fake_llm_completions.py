@@ -1,5 +1,6 @@
 from src.domain.entities.llm.llm_message import LLMMessage
 from src.domain.entities.llm.message import Message
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.interfaces.llm_completions_interface import ILLMCompletions
 
 
@@ -24,6 +25,7 @@ class FakeLLMCompletions(ILLMCompletions):
         model_name: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        provider: ModelProviderEnum | None = None,
     ) -> LLMMessage:
         """Registra o envio de uma única mensagem e devolve o resultado programado."""
         return await self.send_conversation(
@@ -31,6 +33,7 @@ class FakeLLMCompletions(ILLMCompletions):
             model_name=model_name,
             max_tokens=max_tokens,
             temperature=temperature,
+            provider=provider,
         )
 
     async def send_conversation(
@@ -39,11 +42,17 @@ class FakeLLMCompletions(ILLMCompletions):
         model_name: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        provider: ModelProviderEnum | None = None,
     ) -> LLMMessage:
         """Registra a conversa e devolve o resultado programado."""
         self.conversations.append(conversation)
         self.calls.append(
-            {"model_name": model_name, "max_tokens": max_tokens, "temperature": temperature}
+            {
+                "model_name": model_name,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "provider": provider,
+            }
         )
 
         if self.error is not None:

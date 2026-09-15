@@ -10,6 +10,7 @@ const BASE_ENV: Record<string, string> = {
   VITE_REQUEST_TIMEOUT_MS: '60000',
   VITE_WS_OPEN_TIMEOUT_MS: '15000',
   VITE_DEFAULT_PROVIDER: 'open_router',
+  VITE_AVAILABLE_PROVIDERS: 'open_router,openai',
   VITE_AVAILABLE_MODELS: 'openai/gpt-4o-mini,openai/gpt-4o',
   VITE_DEFAULT_MODEL: 'openai/gpt-4o-mini',
   VITE_DEFAULT_MAX_TOKENS: '1200',
@@ -44,6 +45,8 @@ describe('config/env', () => {
     expect(env.apiBaseUrl).toBe('http://localhost:8000/v1')
     expect(env.wsBaseUrl).toBe('ws://localhost:8000/v1')
     expect(env.availableModels).toEqual(['openai/gpt-4o-mini', 'openai/gpt-4o'])
+    expect(env.availableProviders).toEqual(['open_router', 'openai'])
+    expect(env.defaultProvider).toBe('open_router')
     expect(env.defaultModel).toBe('openai/gpt-4o-mini')
     expect(env.defaultMaxTokens).toBe(1200)
     expect(env.defaultTemperature).toBeCloseTo(0.3)
@@ -70,5 +73,26 @@ describe('config/env', () => {
     stubEnv({ VITE_API_BASE_URL: 'http://localhost:8000/' })
     const { env } = await importEnv()
     expect(env.apiBaseUrl).toBe('http://localhost:8000/v1')
+  })
+
+  it('sem VITE_AVAILABLE_PROVIDERS, o provedor padrão é a única opção', async () => {
+    stubEnv({ VITE_AVAILABLE_PROVIDERS: '', VITE_DEFAULT_PROVIDER: 'openai' })
+    const { env } = await importEnv()
+    expect(env.availableProviders).toEqual(['openai'])
+  })
+
+  it('lança nomeando a variável quando um provedor listado não existe no backend', async () => {
+    stubEnv({ VITE_AVAILABLE_PROVIDERS: 'open_router,provedor-inexistente' })
+    await expect(importEnv()).rejects.toThrow(/VITE_AVAILABLE_PROVIDERS/)
+  })
+
+  it('lança nomeando a variável quando o provedor padrão não existe no backend', async () => {
+    stubEnv({ VITE_DEFAULT_PROVIDER: 'local', VITE_AVAILABLE_PROVIDERS: '' })
+    await expect(importEnv()).rejects.toThrow(/VITE_DEFAULT_PROVIDER/)
+  })
+
+  it('lança nomeando a variável quando o provedor padrão está fora da lista', async () => {
+    stubEnv({ VITE_DEFAULT_PROVIDER: 'openai', VITE_AVAILABLE_PROVIDERS: 'open_router' })
+    await expect(importEnv()).rejects.toThrow(/VITE_DEFAULT_PROVIDER/)
   })
 })

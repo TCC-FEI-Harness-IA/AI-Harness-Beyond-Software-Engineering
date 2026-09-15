@@ -7,7 +7,6 @@ from src.domain.entities.llm.llm_message import LLMMessage
 from src.domain.entities.llm.message import Message
 from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.enums.message_source_enum import MessageSourceEnum
-from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.interfaces.clock_interface import IClock
@@ -77,7 +76,7 @@ class DefaultMessageUseCase:
             raise
 
         response_text = self.__extract_output_text(llm_response=llm_response)
-        tokens = self.__resolve_tokens(llm_response=llm_response, model_name=user_input.model_name)
+        tokens = self.__resolve_tokens(llm_response=llm_response, user_input=user_input)
 
         await self.session_recorder.record_llm_message(
             phase=ThinkingPhaseEnum.DIRECT_INFERENCE,
@@ -125,6 +124,7 @@ class DefaultMessageUseCase:
             model_name=user_input.model_name,
             max_tokens=user_input.max_tokens,
             temperature=user_input.temperature,
+            provider=user_input.provider,
         )
         inference_time_ms = self.clock.monotonic_ms() - started_at_ms
 
@@ -146,12 +146,12 @@ class DefaultMessageUseCase:
             return ""
         return llm_response.output_message.text
 
-    def __resolve_tokens(self, llm_response: LLMMessage, model_name: str) -> TokensUsage:
+    def __resolve_tokens(self, llm_response: LLMMessage, user_input: DefaultMessageInputDTO) -> TokensUsage:
         """Devolve o consumo da chamada, ou um consumo zerado quando o provedor o omite.
 
         Args:
             llm_response: Resultado devolvido pela porta de completions.
-            model_name: Modelo pedido na requisição, usado no consumo zerado.
+            user_input: Parâmetros pedidos na requisição, usados no consumo zerado.
 
         Returns:
             TokensUsage: Consumo de tokens a ser contabilizado na sessão.
@@ -162,5 +162,8 @@ class DefaultMessageUseCase:
         return TokensUsage(
             tokens_input=_NO_TOKENS,
             tokens_output=_NO_TOKENS,
-            llm_model=GenaiModel(model_name=model_name, model_provider=ModelProviderEnum.OPEN_ROUTER),
+            llm_model=GenaiModel(
+                model_name=user_input.model_name,
+                model_provider=user_input.provider,
+            ),
         )

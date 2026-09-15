@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import type { RunConfig } from '@/api/messageApi'
 import { env } from '@/config/env'
+import { type ModelProvider, isModelProvider } from '@/domain/enums/modelProvider'
 
 const STORAGE_KEY = 'tcc.runConfig'
 
@@ -13,6 +14,7 @@ interface StoredRunConfig {
   modelName: string
   maxTokens: number
   temperature: number
+  provider?: string
 }
 
 interface RunConfigState {
@@ -20,6 +22,7 @@ interface RunConfigState {
   setModelName: (model: string) => void
   setMaxTokens: (value: number) => void
   setTemperature: (value: number) => void
+  setProvider: (value: string) => void
   reset: () => void
 }
 
@@ -42,6 +45,15 @@ function clampTemperature(value: number): number {
 function clampMaxTokens(value: number): number {
   if (!Number.isFinite(value)) return env.defaultMaxTokens
   return Math.max(1, Math.trunc(value))
+}
+
+// Um provedor que o backend não conhece — ou que saiu de VITE_AVAILABLE_PROVIDERS — volta
+// para o default em vez de produzir um payload que o backend recusaria com 422.
+function normalizeProvider(value: unknown): ModelProvider {
+  if (!isModelProvider(value) || !env.availableProviders.includes(value)) {
+    return env.defaultProvider
+  }
+  return value
 }
 
 function isStoredRunConfig(value: unknown): value is StoredRunConfig {
@@ -71,6 +83,7 @@ function readStoredConfig(): RunConfig {
       modelName: env.availableModels.includes(parsed.modelName) ? parsed.modelName : base.modelName,
       maxTokens: clampMaxTokens(parsed.maxTokens),
       temperature: clampTemperature(parsed.temperature),
+      provider: normalizeProvider(parsed.provider),
     }
   } catch {
     return base
@@ -83,6 +96,7 @@ function persistConfig(config: RunConfig): void {
       modelName: config.modelName,
       maxTokens: config.maxTokens,
       temperature: config.temperature,
+      provider: config.provider,
     }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore))
   } catch {
@@ -122,6 +136,14 @@ export function RunConfigProvider({ children }: RunConfigProviderProps): JSX.Ele
     })
   }, [])
 
+  const setProvider = useCallback((value: string) => {
+    setConfig((prev) => {
+      const next = { ...prev, provider: normalizeProvider(value) }
+      persistConfig(next)
+      return next
+    })
+  }, [])
+
   const reset = useCallback(() => {
     const base = defaultConfig()
     setConfig(base)
@@ -129,8 +151,8 @@ export function RunConfigProvider({ children }: RunConfigProviderProps): JSX.Ele
   }, [])
 
   const value = useMemo<RunConfigState>(
-    () => ({ config, setModelName, setMaxTokens, setTemperature, reset }),
-    [config, setModelName, setMaxTokens, setTemperature, reset],
+    () => ({ config, setModelName, setMaxTokens, setTemperature, setProvider, reset }),
+    [config, setModelName, setMaxTokens, setTemperature, setProvider, reset],
   )
 
   return <RunConfigContext.Provider value={value}>{children}</RunConfigContext.Provider>
