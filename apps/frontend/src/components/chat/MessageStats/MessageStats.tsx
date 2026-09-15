@@ -73,6 +73,17 @@ export function MessageStats({ stats, layout = 'inline' }: MessageStatsProps): J
     })
   }
 
+  if (stats.sessionId !== null && stats.sessionId !== undefined) {
+    entries.push({
+      key: 'session-id',
+      node: (
+        <Tag title={`Sessão completa: ${stats.sessionId}`}>
+          {stats.sessionId.slice(0, CONTEXT_ID_VISIBLE_CHARS)}
+        </Tag>
+      ),
+    })
+  }
+
   if (stats.timestamp !== null) {
     entries.push({
       key: 'timestamp',

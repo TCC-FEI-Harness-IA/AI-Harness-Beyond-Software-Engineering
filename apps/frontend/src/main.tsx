@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { AppRouter } from '@/router/AppRouter'
+import { RunConfigProvider } from '@/state/RunConfigContext'
 import { ThemeProvider } from '@/state/ThemeContext'
 import './styles/reset.css'
 import './styles/tokens.css'
@@ -34,7 +35,9 @@ async function bootstrap(root: HTMLElement): Promise<void> {
       <StrictMode>
         <BrowserRouter>
           <ThemeProvider>
-            <AppRouter enableDevRoute={env.enableDebugPanel} />
+            <RunConfigProvider>
+              <AppRouter enableDevRoute={env.enableDebugPanel} />
+            </RunConfigProvider>
           </ThemeProvider>
         </BrowserRouter>
       </StrictMode>,

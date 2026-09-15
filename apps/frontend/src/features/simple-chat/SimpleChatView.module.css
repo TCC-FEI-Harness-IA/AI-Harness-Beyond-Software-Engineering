@@ -1,0 +1,19 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--topbar-height));
+  gap: var(--space-4);
+}
+
+.summary {
+  padding: var(--space-3) 0;
+  border-top: 0.5px solid var(--color-hairline);
+}
+
+.composer {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-4) 0;
+  background: var(--color-surface-overlay);
+  backdrop-filter: var(--blur-overlay);
+}

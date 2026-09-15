@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { RunConfigProvider } from '@/state/RunConfigContext'
 import { ThemeProvider } from '@/state/ThemeContext'
 import { AppRouter } from './AppRouter'
 import { buildHistoryDetailPath } from './routes'
@@ -9,21 +10,27 @@ function renderAt(path: string, enableDevRoute = false): void {
   render(
     <MemoryRouter initialEntries={[path]}>
       <ThemeProvider>
-        <AppRouter enableDevRoute={enableDevRoute} />
+        <RunConfigProvider>
+          <AppRouter enableDevRoute={enableDevRoute} />
+        </RunConfigProvider>
       </ThemeProvider>
     </MemoryRouter>,
   )
 }
 
+beforeEach(() => {
+  window.localStorage.clear()
+})
+
 describe('AppRouter', () => {
   it('renderiza a Home em /', () => {
     renderAt('/')
-    expect(screen.getByRole('heading', { name: 'Home' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Harness de IA' })).toBeInTheDocument()
   })
 
   it('renderiza a Inferência Simples em /chat/simples', () => {
     renderAt('/chat/simples')
-    expect(screen.getByRole('heading', { name: 'Inferência Simples' })).toBeInTheDocument()
+    expect(screen.getByText('Faça uma pergunta para começar')).toBeInTheDocument()
   })
 
   it('renderiza o Ralph Loop Adaptado em /chat/ralph', () => {

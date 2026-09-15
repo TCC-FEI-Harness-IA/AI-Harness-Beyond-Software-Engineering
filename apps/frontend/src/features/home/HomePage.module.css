@@ -1,0 +1,40 @@
+.hero {
+  padding-top: 18vh;
+  text-align: center;
+}
+
+.title {
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text);
+  margin: 0 0 var(--space-2);
+}
+
+.subtitle {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.composer {
+  max-width: var(--content-max);
+  margin: var(--space-8) auto 0;
+}
+
+.modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  max-width: var(--content-max);
+  margin: var(--space-6) auto 0;
+}
+
+.configBar {
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .modes {
+    grid-template-columns: 1fr;
+  }
+}

@@ -12,4 +12,8 @@ export interface MessageStatsView {
   contextId: string | null
   contextSize: number | null
   timestamp: string | null
+  /** Id da sessão que produziu esta mensagem. Opcional: só o fluxo simples precisa dele —
+   * cada envio na mesma tela abre uma sessão nova (README, FASE 04, "Continuação da
+   * conversa"), então cada mensagem do assistente carrega a sua própria sessão. */
+  sessionId?: string | null
 }
