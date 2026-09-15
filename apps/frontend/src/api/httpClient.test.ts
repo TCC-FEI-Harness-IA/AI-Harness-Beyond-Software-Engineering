@@ -132,21 +132,27 @@ describe('httpClient', () => {
     await expect(httpClient.get('/qualquer', (raw) => raw)).rejects.toBeInstanceOf(NetworkError)
   })
 
-  it('não vira erro de UI quando o próprio chamador aborta', async () => {
+  // Regressão: o `AbortError` cru vazava para a tela como "Violação de contrato: AbortError:
+  // signal is aborted without reason" — a camada `api/` só pode rejeitar com `AppError`, e um
+  // cancelamento pedido pelo próprio app não é resposta malformada do servidor.
+  it('cancelamento do chamador vira CanceledError, não o AbortError cru', async () => {
     const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
       return new Promise((_resolve, reject) => {
         init?.signal?.addEventListener('abort', () => {
-          reject(new DOMException('A operação foi abortada.', 'AbortError'))
+          reject(new DOMException('signal is aborted without reason', 'AbortError'))
         })
       })
     })
     vi.stubGlobal('fetch', fetchMock)
-    const { httpClient } = await importHttpClient()
+    const { httpClient, CanceledError, AppError } = await importHttpClient()
 
     const controller = new AbortController()
     const promise = httpClient.get('/qualquer', (raw) => raw, controller.signal)
     controller.abort()
 
-    await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
+    const error: unknown = await promise.catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(CanceledError)
+    expect(error).toBeInstanceOf(AppError)
+    expect(error).not.toBeInstanceOf(DOMException)
   })
 })

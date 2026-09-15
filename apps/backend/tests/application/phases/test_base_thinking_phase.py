@@ -9,6 +9,7 @@ from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.errors.budget_exceeded_error import BudgetExceededError
+from src.domain.errors.empty_completion_error import EmptyCompletionError
 from src.domain.errors.phase_parsing_error import PhaseParsingError
 from src.domain.interfaces.structured_response_parser_interface import IStructuredResponseParser
 from src.infra.adapters.structured_response_parser_adapter import StructuredResponseParserAdapter
@@ -192,6 +193,60 @@ async def test_sem_retentativa_configurada_a_primeira_falha_ja_e_fatal() -> None
         ).execute(context=_janela(), variables={})
 
     assert llm.call_count == 1
+
+
+# ── Completion vazia ─────────────────────────────────────────────────────────
+#
+# Modelos de raciocínio às vezes gastam todo o `max_tokens` pensando e devolvem `content`
+# nulo — de forma intermitente, na mesma pergunta. Como não há saída para corrigir, a fase
+# só repete a chamada; o que não pode é a sessão inteira morrer numa falha passageira.
+
+async def test_completion_vazia_seguida_de_sucesso_e_recuperada() -> None:
+    llm = ScriptedLLMCompletions(
+        responses=[EmptyCompletionError(finish_reason="length"), _SAIDA_VALIDA],
+        tokens_input=10,
+        tokens_output=4,
+    )
+    clock = FakeClock(monotonic_values=[100, 912])
+
+    resultado = await _fase(llm_completions=llm, clock=clock).execute(context=_janela(), variables={})
+
+    assert llm.call_count == 2
+    assert resultado.parsed["general_acceptance_criteria"][0]["id"] == "AC1"
+
+
+async def test_completion_vazia_nao_soma_tokens_nem_suja_a_janela() -> None:
+    """A chamada sem conteúdo não produziu mensagem: a retentativa vê o contexto original."""
+    llm = ScriptedLLMCompletions(
+        responses=[EmptyCompletionError(finish_reason="length"), _SAIDA_VALIDA],
+        tokens_input=10,
+        tokens_output=4,
+    )
+    janela = _janela()
+    provider = FakePromptTemplateProvider(templates={_FASE: "prompt da fase"})
+    clock = FakeClock(monotonic_values=[100, 912])
+
+    resultado = await _fase(llm_completions=llm, template_provider=provider, clock=clock).execute(
+        context=janela, variables={}
+    )
+
+    assert llm.texts_of(1) == ["prompt da fase"]
+    assert resultado.tokens.tokens_input == 10
+    assert resultado.tokens.tokens_output == 4
+
+
+async def test_completion_vazia_alem_do_limite_repropaga_o_erro() -> None:
+    llm = ScriptedLLMCompletions(
+        responses=[EmptyCompletionError(finish_reason="length") for _ in range(3)]
+    )
+
+    with pytest.raises(EmptyCompletionError):
+        await _fase(
+            llm_completions=llm,
+            settings=FakeSettings(ralph_json_parse_max_retries=2),
+        ).execute(context=_janela(), variables={})
+
+    assert llm.call_count == 3
 
 
 async def test_a_retentativa_tambem_pede_autorizacao_e_contabiliza_o_custo() -> None:

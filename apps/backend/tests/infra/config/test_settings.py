@@ -18,6 +18,7 @@ _ENV_VARS = (
     "OPENROUTER_HTTP_REFERER",
     "OPENROUTER_X_TITLE",
     "OPENROUTER_TIMEOUT_SECONDS",
+    "OPENROUTER_REASONING_EFFORT",
     "GENAI_AVAILABLE_MODELS",
     "GENAI_AVAILABLE_PROVIDERS",
     "RALPH_SESSIONS_STORAGE_PATH",
@@ -68,6 +69,7 @@ def test_aplica_os_defaults_documentados_quando_a_variavel_esta_ausente() -> Non
     assert settings.openrouter_http_referer == ""
     assert settings.openrouter_x_title == ""
     assert settings.openrouter_timeout_seconds == 30.0
+    assert settings.openrouter_reasoning_effort == ""
     assert settings.genai_available_models == []
     assert settings.genai_available_providers == []
     assert settings.ralph_sessions_storage_path == "./data/sessions"
@@ -91,6 +93,7 @@ def test_le_do_ambiente_todas_as_variaveis_de_openrouter(monkeypatch: pytest.Mon
     monkeypatch.setenv("OPENROUTER_MODEL", "  vendor/modelo  ")
     monkeypatch.setenv("OPENROUTER_HTTP_REFERER", "  https://referer.test  ")
     monkeypatch.setenv("OPENROUTER_X_TITLE", "  Titulo  ")
+    monkeypatch.setenv("OPENROUTER_REASONING_EFFORT", "  LOW  ")
 
     settings = Settings()
 
@@ -99,6 +102,23 @@ def test_le_do_ambiente_todas_as_variaveis_de_openrouter(monkeypatch: pytest.Mon
     assert settings.openrouter_model == "vendor/modelo"
     assert settings.openrouter_http_referer == "https://referer.test"
     assert settings.openrouter_x_title == "Titulo"
+    assert settings.openrouter_reasoning_effort == "low"
+
+
+@pytest.mark.parametrize("raw_value", ["minimal", "low", "medium", "high"])
+def test_aceita_todos_os_esforcos_de_raciocinio(monkeypatch: pytest.MonkeyPatch, raw_value: str) -> None:
+    monkeypatch.setenv("OPENROUTER_REASONING_EFFORT", raw_value)
+
+    assert Settings().openrouter_reasoning_effort == raw_value
+
+
+def test_esforco_de_raciocinio_desconhecido_levanta_erro_citando_a_variavel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENROUTER_REASONING_EFFORT", "altissimo")
+
+    with pytest.raises(ValueError, match="OPENROUTER_REASONING_EFFORT"):
+        _ = Settings().openrouter_reasoning_effort
 
 
 def test_le_do_ambiente_as_variaveis_de_sessao_e_thinking(monkeypatch: pytest.MonkeyPatch) -> None:

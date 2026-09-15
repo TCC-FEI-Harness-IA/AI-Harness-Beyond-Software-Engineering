@@ -6,6 +6,7 @@ import httpx
 from src.domain.entities.llm.llm_provider_request import LLMProviderRequest
 from src.domain.entities.llm.llm_provider_response import LLMProviderResponse
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.errors.empty_completion_error import EmptyCompletionError
 from src.domain.interfaces.llm_service_interface import ILLMService
 from src.domain.interfaces.settings_interface import ISettings
 
@@ -53,6 +54,7 @@ class OpenRouterService(ILLMService):
         Raises:
             ValueError: Quando configurações obrigatórias ou dados do modelo são inválidos.
             RuntimeError: Quando ocorre falha na chamada HTTP para a OpenRouter.
+            EmptyCompletionError: Quando o provedor responde sem texto utilizável.
         """
         self.logger.info("Iniciando chamada ao provedor OpenRouter")
         self.__run_message_validations(request=request)
@@ -63,16 +65,43 @@ class OpenRouterService(ILLMService):
         if not isinstance(usage, dict):
             usage = {}
 
+        output_text = self.__extract_output_text(response_data=response_data)
+        finish_reason = self.__extract_finish_reason(response_data=response_data)
+        self.__reject_empty_completion(output_text=output_text, finish_reason=finish_reason)
+
         provider_response = LLMProviderResponse(
-            output_text=self.__extract_output_text(response_data=response_data),
+            output_text=output_text,
             input_tokens=int(usage.get("prompt_tokens", 0) or 0),
             output_tokens=int(usage.get("completion_tokens", 0) or 0),
-            finish_reason=self.__extract_finish_reason(response_data=response_data),
+            finish_reason=finish_reason,
             raw_response=response_data,
         )
 
         self.logger.info("Resposta recebida com sucesso do OpenRouter")
         return provider_response
+
+    def __reject_empty_completion(self, output_text: str, finish_reason: str | None) -> None:
+        """Recusa uma completion sem texto, em vez de deixá-la seguir o fluxo.
+
+        Modelos de raciocínio devolvem `content` nulo quando o teto de tokens acaba
+        durante o raciocínio interno (`finish_reason == "length"`). Sem esta recusa, o
+        fluxo baseline entregaria uma resposta em branco e o fluxo harness gastaria
+        todas as retentativas de parsing sobre um texto que nunca existiu.
+
+        Args:
+            output_text: Texto extraído da resposta do provedor.
+            finish_reason: Motivo de término informado pelo provedor, quando há.
+
+        Raises:
+            EmptyCompletionError: Quando o texto extraído está vazio ou em branco.
+        """
+        if output_text.strip():
+            return
+
+        self.logger.warning(
+            "OpenRouter devolveu completion sem conteúdo. Motivo de término: '%s'", finish_reason
+        )
+        raise EmptyCompletionError(finish_reason=finish_reason)
 
     async def __post_completion(self, request: LLMProviderRequest) -> dict[str, Any]:
         """Executa o POST de chat completion e devolve o corpo desserializado.
@@ -154,7 +183,7 @@ class OpenRouterService(ILLMService):
         Returns:
             dict[str, Any]: Corpo da requisição.
         """
-        return {
+        payload: dict[str, Any] = {
             "model": request.llm_model.model_name,
             "messages": [
                 {"role": message.role, "content": message.content}
@@ -163,6 +192,14 @@ class OpenRouterService(ILLMService):
             "max_tokens": request.max_tokens,
             "temperature": request.temperature,
         }
+
+        # `max_tokens` cobre raciocínio + resposta. Sem limitar o esforço, um modelo de
+        # raciocínio gasta o orçamento inteiro pensando e devolve `content` nulo.
+        reasoning_effort = self.settings.openrouter_reasoning_effort
+        if reasoning_effort:
+            payload["reasoning"] = {"effort": reasoning_effort}
+
+        return payload
 
     def __build_headers(self) -> dict[str, str]:
         """Monta os headers padrão da requisição à OpenRouter.
@@ -199,6 +236,11 @@ class OpenRouterService(ILLMService):
             return ""
 
         content = message.get("content", "")
+        # `content` chega como `null` quando o modelo não escreveu resposta — sem este
+        # tratamento o `str(content)` do final viraria a string literal "None".
+        if content is None:
+            return ""
+
         if isinstance(content, str):
             return content
 

@@ -8,7 +8,9 @@ from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.thinking.phase_outcome import PhaseOutcome
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.errors.budget_exceeded_error import BudgetExceededError
+from src.domain.errors.empty_completion_error import EmptyCompletionError
 from src.domain.errors.phase_parsing_error import PhaseParsingError
+from src.domain.errors.ralph_error import RalphError
 from src.domain.interfaces.cost_guard_interface import ICostGuard
 from src.domain.interfaces.clock_interface import IClock
 from src.domain.interfaces.llm_completions_interface import ILLMCompletions
@@ -24,6 +26,7 @@ _CORRECTION_TEMPLATE = (
 )
 _NO_TOKENS = 0
 _NO_ELAPSED_MS = 0
+_NO_RETRIES_LEFT = 0
 
 
 class BaseThinkingPhase(IThinkingPhase, ABC):
@@ -82,9 +85,11 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         """Executa a fase sobre a janela de contexto informada.
 
         O prompt entra na janela, o modelo responde, o custo é contabilizado e a
-        saída é parseada. Quando o parsing falha, a janela recebe uma mensagem de
-        correção e a chamada é repetida até o limite de retentativas configurado —
-        o custo de cada retentativa é somado ao resultado, porque é custo real.
+        saída é parseada. Duas falhas são retentáveis até o limite configurado, porque
+        ambas são não determinísticas: o modelo devolver algo que não é o JSON da fase
+        (aí a janela recebe uma mensagem de correção) e o provedor devolver uma resposta
+        sem conteúdo nenhum (aí não há o que corrigir, só o que repetir). O custo de cada
+        retentativa é somado ao resultado, porque é custo real.
 
         Args:
             context: Janela de contexto em que a fase é executada.
@@ -96,6 +101,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         Raises:
             BudgetExceededError: Quando o guardião de custo nega a chamada.
             PhaseParsingError: Quando o limite de retentativas de parsing se esgota.
+            EmptyCompletionError: Quando o provedor insiste em responder sem conteúdo.
         """
         context.append(
             message=Message(
@@ -111,7 +117,14 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         inference_time_ms = _NO_ELAPSED_MS
 
         while True:
-            llm_message, elapsed_ms = await self.__call_model(context=context)
+            try:
+                llm_message, elapsed_ms = await self.__call_model(context=context)
+            except EmptyCompletionError as error:
+                # Sem conteúdo não há tokens a somar nem mensagem a acrescentar à janela: a
+                # única correção possível é pedir de novo, com o mesmo contexto.
+                retries_left = self.__consume_retry(retries_left=retries_left, error=error)
+                continue
+
             tokens = llm_message.tokens
             tokens_input += tokens.tokens_input
             tokens_output += tokens.tokens_output
@@ -121,10 +134,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             try:
                 parsed = self.parser.parse(raw_output=raw_output, phase=self.phase)
             except PhaseParsingError as error:
-                if retries_left <= _NO_TOKENS:
-                    self.logger.warning("Fase '%s' esgotou as retentativas de parsing", self.phase.value)
-                    raise
-                retries_left -= 1
+                retries_left = self.__consume_retry(retries_left=retries_left, error=error)
                 context.append(
                     message=Message(
                         creation_timestamp=self.clock.now(),
@@ -145,6 +155,24 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                 inference_time_ms=inference_time_ms,
                 context_id=context.context_id,
             )
+
+    def __consume_retry(self, retries_left: int, error: RalphError) -> int:
+        """Gasta uma retentativa de saída inválida, ou deixa a falha subir.
+
+        Args:
+            retries_left: Retentativas ainda disponíveis nesta execução da fase.
+            error: Falha que motivou a retentativa.
+
+        Returns:
+            int: Retentativas restantes depois de gastar uma.
+
+        Raises:
+            RalphError: A própria falha recebida, quando não há mais retentativa.
+        """
+        if retries_left <= _NO_RETRIES_LEFT:
+            self.logger.warning("Fase '%s' esgotou as retentativas de saída inválida", self.phase.value)
+            raise error
+        return retries_left - 1
 
     async def __call_model(self, context: ContextWindow) -> tuple[LLMMessage, int]:
         """Autoriza, chama o modelo cronometrando e contabiliza o consumo.

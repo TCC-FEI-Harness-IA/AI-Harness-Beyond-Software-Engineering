@@ -29,4 +29,5 @@ export function wsCloseCodeMessage(code: number): string {
 export const NETWORK_ERROR_MESSAGE = 'Não foi possível falar com o servidor.'
 export const TIMEOUT_ERROR_MESSAGE = 'O servidor demorou demais para responder.'
 export const CONTRACT_ERROR_MESSAGE = 'O servidor respondeu em um formato inesperado.'
+export const CANCELED_ERROR_MESSAGE = 'A execução foi cancelada.'
 export const WS_OPEN_TIMEOUT_MESSAGE = 'Não foi possível abrir a conexão com o servidor a tempo.'

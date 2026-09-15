@@ -22,7 +22,7 @@ class ScriptedLLMCompletions(ILLMCompletions):
 
     def __init__(
         self,
-        responses: list[str] | None = None,
+        responses: list[str | Exception] | None = None,
         tokens_input: int = _DEFAULT_TOKENS_INPUT,
         tokens_output: int = _DEFAULT_TOKENS_OUTPUT,
         error: Exception | None = None,
@@ -30,12 +30,14 @@ class ScriptedLLMCompletions(ILLMCompletions):
         """Configura o dublê.
 
         Args:
-            responses: Fila de saídas brutas devolvidas, uma por chamada.
+            responses: Fila de saídas devolvidas, uma por chamada. Uma exceção na fila é
+                levantada naquela chamada, o que permite roteirizar falhas intermitentes
+                do provedor (uma completion vazia seguida de uma boa, por exemplo).
             tokens_input: Tokens de entrada contabilizados em cada chamada.
             tokens_output: Tokens de saída contabilizados em cada chamada.
-            error: Exceção levantada em vez de responder, quando informada.
+            error: Exceção levantada em vez de responder, em todas as chamadas.
         """
-        self.responses = list(responses) if responses else []
+        self.responses: list[str | Exception] = list(responses) if responses else []
         self.tokens_input = tokens_input
         self.tokens_output = tokens_output
         self.error = error
@@ -84,6 +86,7 @@ class ScriptedLLMCompletions(ILLMCompletions):
 
         Raises:
             AssertionError: Quando a fila de saídas programadas se esgota.
+            Exception: A exceção programada para esta chamada, quando há uma.
         """
         self.conversations.append(list(conversation))
         self.calls.append({"model_name": model_name, "max_tokens": max_tokens, "temperature": temperature})
@@ -94,7 +97,11 @@ class ScriptedLLMCompletions(ILLMCompletions):
         if not self.responses:
             raise AssertionError(f"Chamada ao modelo nº {self.call_count} sem saída programada.")
 
-        return self.__to_llm_message(conversation=conversation, output_text=self.responses.pop(0))
+        response = self.responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+
+        return self.__to_llm_message(conversation=conversation, output_text=response)
 
     def __to_llm_message(self, conversation: list[Message], output_text: str) -> LLMMessage:
         """Monta o resultado de domínio equivalente à saída programada."""

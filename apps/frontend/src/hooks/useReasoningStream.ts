@@ -9,6 +9,7 @@ import type { ReasoningStreamHandle } from '../api/websocketClient'
 import { RUN_STATUS } from '../domain/enums/runStatus'
 import { createEmptyRun, reasoningRunReducer, type RunAction } from '../domain/services/reasoningRunReducer'
 import type { ThinkingRun } from '../domain/types/thinkingRun'
+import { useDeferredTeardown } from './useDeferredTeardown'
 
 export interface UseReasoningStream {
   run: ThinkingRun
@@ -56,10 +57,16 @@ export function useReasoningStream(config: RunConfig): UseReasoningStream {
     mountedRef.current = true
     return () => {
       mountedRef.current = false
-      handleRef.current?.close()
-      handleRef.current = null
     }
   }, [])
+
+  // Fechar direto na limpeza derrubava, na passagem simulada do StrictMode, o socket que o
+  // auto-start de `RalphPage` tinha acabado de abrir — e `autoStartedRef` já impedia a
+  // remontagem de abrir outro, deixando a execução morta antes do primeiro evento.
+  useDeferredTeardown(() => {
+    handleRef.current?.close()
+    handleRef.current = null
+  })
 
   const start = useCallback((question: string) => {
     // Nunca abre duas conexões (README, FASE 05, seção 6, requisito 5).

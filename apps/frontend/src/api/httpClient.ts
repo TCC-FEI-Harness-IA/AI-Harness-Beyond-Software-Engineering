@@ -2,6 +2,7 @@
 // `unknown` e só sai tipada depois de passar por um parser de fronteira.
 
 import { env } from '../config/env'
+import { CanceledError } from './errors/CanceledError'
 import { ContractError } from './errors/ContractError'
 import { HttpError } from './errors/HttpError'
 import { NetworkError } from './errors/NetworkError'
@@ -77,7 +78,10 @@ async function request<T>(
 
     if (controller.signal.aborted) {
       if (timedOut) throw new TimeoutError(env.requestTimeoutMs)
-      throw error
+      // Cancelamento vindo do `signal` do chamador. Repassar o `AbortError` cru violaria o
+      // contrato da camada `api/` (só rejeita com `AppError`) e a tela o exibiria como
+      // "Violação de contrato" — que é exatamente o que ele não é.
+      throw new CanceledError()
     }
 
     throw new NetworkError(error)

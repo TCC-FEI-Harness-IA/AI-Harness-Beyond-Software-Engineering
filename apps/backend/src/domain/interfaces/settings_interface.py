@@ -85,6 +85,12 @@ class ISettings(ABC):
         """Timeout, em segundos, das chamadas HTTP à OpenRouter."""
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def openrouter_reasoning_effort(self) -> str:
+        """Esforço de raciocínio pedido à OpenRouter. Vazio quando não configurado."""
+        raise NotImplementedError
+
     # ── Catálogo GenAI ───────────────────────────────────────────────────────
 
     @property

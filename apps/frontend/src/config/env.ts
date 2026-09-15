@@ -140,7 +140,10 @@ function loadEnv(): AppEnv {
     )
   }
 
-  const defaultMaxTokens = readNumber('VITE_DEFAULT_MAX_TOKENS', 1200)
+  // Num modelo de raciocínio, `max_tokens` cobre o raciocínio interno e a resposta. Neste
+  // projeto o raciocínio sozinho já passou de 1000 tokens numa pergunta curta, então um teto
+  // apertado sobra zero para a resposta e o provedor devolve conteúdo vazio.
+  const defaultMaxTokens = readNumber('VITE_DEFAULT_MAX_TOKENS', 4000)
   if (!Number.isInteger(defaultMaxTokens) || defaultMaxTokens <= 0) {
     throw new ConfigError('VITE_DEFAULT_MAX_TOKENS', 'precisa ser um número inteiro positivo')
   }

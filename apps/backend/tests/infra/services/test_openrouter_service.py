@@ -8,6 +8,7 @@ from src.domain.entities.llm.genai_model import GenaiModel
 from src.domain.entities.llm.llm_provider_message import LLMProviderMessage
 from src.domain.entities.llm.llm_provider_request import LLMProviderRequest
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.errors.empty_completion_error import EmptyCompletionError
 from src.infra.services.openrouter_service import OpenRouterService
 from tests.doubles.fake_settings import FakeSettings
 
@@ -161,6 +162,12 @@ async def test_conteudo_de_tipo_inesperado_e_convertido_para_texto() -> None:
     assert resposta.output_text == "42"
 
 
+# ── Completion sem conteúdo ──────────────────────────────────────────────────
+#
+# Uma resposta em branco não pode seguir o fluxo: no baseline ela chegaria ao usuário como
+# resposta vazia e no harness gastaria todas as retentativas de parsing sobre um texto que
+# nunca existiu ("Nenhum objeto JSON válido foi encontrado na saída").
+
 @pytest.mark.parametrize(
     "body",
     [
@@ -170,13 +177,46 @@ async def test_conteudo_de_tipo_inesperado_e_convertido_para_texto() -> None:
         {"choices": ["nao-e-dict"]},
         {"choices": [{}]},
         {"choices": [{"message": "nao-e-dict"}]},
+        {"choices": [{"message": {"content": ""}}]},
+        {"choices": [{"message": {"content": "   \n  "}}]},
+        {"choices": [{"message": {"content": []}}]},
     ],
 )
-async def test_respostas_sem_conteudo_utilizavel_devolvem_texto_vazio(body: dict[str, Any]) -> None:
-    resposta = await _build_service(body=body).generate_response(request=_build_request())
+async def test_respostas_sem_conteudo_utilizavel_sao_recusadas(body: dict[str, Any]) -> None:
+    with pytest.raises(EmptyCompletionError):
+        await _build_service(body=body).generate_response(request=_build_request())
 
-    assert resposta.output_text == ""
-    assert resposta.finish_reason is None
+
+async def test_content_nulo_nao_vira_a_string_none() -> None:
+    """Regressão: `str(None)` entregava a string literal "None" como resposta do modelo."""
+    body = {"choices": [{"message": {"content": None, "reasoning": "pensou e não escreveu"}}]}
+
+    with pytest.raises(EmptyCompletionError) as excinfo:
+        await _build_service(body=body).generate_response(request=_build_request())
+
+    assert "None" not in str(excinfo.value).replace("'None'", "")
+
+
+async def test_completion_truncada_por_teto_de_tokens_explica_a_causa() -> None:
+    """Modelo de raciocínio que gasta todo o `max_tokens` pensando: `content` nulo e 'length'."""
+    body = {
+        "choices": [{"message": {"content": None, "reasoning": "..."}, "finish_reason": "length"}],
+        "usage": {"prompt_tokens": 114, "completion_tokens": 1200},
+    }
+
+    with pytest.raises(EmptyCompletionError) as excinfo:
+        await _build_service(body=body).generate_response(request=_build_request())
+
+    assert excinfo.value.finish_reason == "length"
+    assert "max_tokens" in str(excinfo.value)
+    assert "OPENROUTER_REASONING_EFFORT" in str(excinfo.value)
+
+
+async def test_apenas_blocos_sem_texto_sao_recusados() -> None:
+    body = {"choices": [{"message": {"content": [{"type": "image", "text": "ignorado"}]}}]}
+
+    with pytest.raises(EmptyCompletionError):
+        await _build_service(body=body).generate_response(request=_build_request())
 
 
 async def test_usage_ausente_zera_os_tokens() -> None:
@@ -277,3 +317,26 @@ async def test_envia_o_payload_esperado_para_o_endpoint_configurado() -> None:
     assert payload["messages"] == [{"role": "user", "content": "pergunta"}]
     assert payload["max_tokens"] == 100
     assert payload["temperature"] == 0.3
+
+
+async def test_limita_o_esforco_de_raciocinio_quando_configurado() -> None:
+    """`max_tokens` cobre raciocínio + resposta: sem limite, sobra zero para a resposta."""
+    import json
+
+    capturadas: list[httpx.Request] = []
+    service = _build_service(capturadas=capturadas, openrouter_reasoning_effort="low")
+
+    await service.generate_response(request=_build_request())
+
+    assert json.loads(capturadas[0].content)["reasoning"] == {"effort": "low"}
+
+
+async def test_omite_o_bloco_de_raciocinio_quando_nao_configurado() -> None:
+    import json
+
+    capturadas: list[httpx.Request] = []
+    service = _build_service(capturadas=capturadas, openrouter_reasoning_effort="")
+
+    await service.generate_response(request=_build_request())
+
+    assert "reasoning" not in json.loads(capturadas[0].content)

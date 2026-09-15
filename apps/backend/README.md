@@ -410,6 +410,7 @@ equivalente aparece no código. Ver `.env.example` para o arquivo completo.
 | `OPENROUTER_HTTP_REFERER` | *(vazio)* | Header `HTTP-Referer`. |
 | `OPENROUTER_X_TITLE` | *(vazio)* | Header `X-Title`. |
 | `OPENROUTER_TIMEOUT_SECONDS` | `30` | Timeout da chamada HTTP. |
+| `OPENROUTER_REASONING_EFFORT` | *(vazio)* | Esforço de raciocínio (`minimal`/`low`/`medium`/`high`); vazio não envia o parâmetro. Como `max_tokens` cobre raciocínio **e** resposta, limitá-lo evita que o modelo gaste o orçamento inteiro pensando e devolva conteúdo vazio. |
 | `GENAI_AVAILABLE_MODELS` | *(vazio)* | Allowlist de modelos (JSON array ou CSV). |
 | `GENAI_AVAILABLE_PROVIDERS` | *(vazio)* | Allowlist de provedores (JSON array ou CSV). |
 | `RALPH_SESSIONS_STORAGE_PATH` | `./data/sessions` | Diretório dos JSON de sessão. |

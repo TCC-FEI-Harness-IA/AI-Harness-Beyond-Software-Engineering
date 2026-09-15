@@ -3,11 +3,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppError } from '../api/errors/AppError'
+import { CanceledError } from '../api/errors/CanceledError'
 import { ContractError } from '../api/errors/ContractError'
 import { buildInferencePayload, sendDefaultMessage, type RunConfig } from '../api/messageApi'
 import { RUN_STATUS } from '../domain/enums/runStatus'
 import { simpleRunFromResponse } from '../domain/services/buildSimpleRun'
 import type { SimpleMessage, SimpleRun } from '../domain/types/simpleRun'
+import { useDeferredTeardown } from './useDeferredTeardown'
 
 export interface UseSimpleInference {
   run: SimpleRun
@@ -51,14 +53,17 @@ export function useSimpleInference(config: RunConfig): UseSimpleInference {
     // Redefine para `true` a cada execução do efeito — não só no `useRef(true)` inicial.
     // Em desenvolvimento, o StrictMode roda montagem → limpeza → montagem de novo para
     // detectar efeitos impuros; sem isto, a limpeza simulada deixaria `mountedRef.current`
-    // travado em `false` para sempre, mesmo com o componente genuinamente montado, e a
-    // requisição em andamento (iniciada na primeira passagem) seria abortada por engano.
+    // travado em `false` para sempre, mesmo com o componente genuinamente montado.
     mountedRef.current = true
     return () => {
       mountedRef.current = false
-      abortControllerRef.current?.abort()
     }
   }, [])
+
+  // Abortar direto na limpeza cancelava, na passagem simulada do StrictMode, a requisição
+  // que a montagem anterior tinha acabado de disparar — o auto-start de `SimpleChatPage`
+  // morria assim, e o `AbortError` chegava à tela como "formato inesperado".
+  useDeferredTeardown(() => abortControllerRef.current?.abort())
 
   const runInference = useCallback((question: string) => {
     const controller = new AbortController()
@@ -89,11 +94,9 @@ export function useSimpleInference(config: RunConfig): UseSimpleInference {
         }))
       })
       .catch((error: unknown) => {
-        // Não há como distinguir, de dentro do componente, um cancelamento por desmontagem
-        // real de um pelo ciclo de montagem dupla do StrictMode (`mountedRef` acima só volta
-        // a `true` numa remontagem real, nunca na simulada) — então um abort com o componente
-        // ainda montado aparece como falha comum, recuperável pelo botão "Tentar de novo".
-        if (!mountedRef.current) return
+        // Cancelamento é decisão do próprio app (`reset()`, desmontagem): quem cancelou já
+        // sabe o que aconteceu e o estado que ele quis deixar na tela não pode virar "falhou".
+        if (!mountedRef.current || error instanceof CanceledError) return
         setRun((prev) => ({ ...prev, status: RUN_STATUS.FAILED, error: toDisplayableError(error) }))
       })
       .finally(() => {

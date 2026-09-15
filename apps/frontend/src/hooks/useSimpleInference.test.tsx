@@ -1,6 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
+import { CanceledError } from '../api/errors/CanceledError'
 import { HttpError } from '../api/errors/HttpError'
 import * as messageApi from '../api/messageApi'
 import type * as MessageApiModule from '../api/messageApi'
@@ -103,6 +105,56 @@ describe('useSimpleInference', () => {
     const [firstPayload] = sendDefaultMessageMock.mock.calls[0] as [unknown]
     const [secondPayload] = sendDefaultMessageMock.mock.calls[1] as [unknown]
     expect(secondPayload).toEqual(firstPayload)
+  })
+
+  // Regressão do erro de produção "Violação de contrato: AbortError: signal is aborted without
+  // reason": o StrictMode roda montagem → limpeza → montagem, a limpeza abortava a requisição
+  // que a montagem anterior tinha disparado (o auto-start de `SimpleChatPage`), e a remontagem
+  // devolvia `mountedRef` a `true` — o cancelamento chegava à tela como falha do servidor.
+  it('o ciclo de montagem dupla do StrictMode não aborta a chamada em andamento', async () => {
+    const signals: AbortSignal[] = []
+    sendDefaultMessageMock.mockImplementation((_payload: unknown, signal?: AbortSignal) => {
+      if (signal) signals.push(signal)
+      return new Promise<DefaultOutputDTO>((resolve) => {
+        signal?.addEventListener('abort', () => {
+          throw new Error('a requisição não deveria ter sido abortada')
+        })
+        setTimeout(() => resolve(RESPONSE), 0)
+      })
+    })
+
+    const { result } = renderHook(() => useSimpleInference(CONFIG), { wrapper: StrictMode })
+
+    act(() => {
+      result.current.send(RESPONSE.message)
+    })
+
+    await waitFor(() => expect(result.current.run.status).toBe('completed'))
+    expect(signals.every((signal) => !signal.aborted)).toBe(true)
+    expect(result.current.run.error).toBeNull()
+    expect(result.current.run.messages).toHaveLength(2)
+  })
+
+  it('cancelar pelo reset não deixa a tela em estado de falha', async () => {
+    sendDefaultMessageMock.mockImplementation(
+      (_payload: unknown, signal?: AbortSignal) =>
+        new Promise<DefaultOutputDTO>((_resolve, reject) => {
+          signal?.addEventListener('abort', () => reject(new CanceledError()))
+        }),
+    )
+
+    const { result } = renderHook(() => useSimpleInference(CONFIG))
+
+    act(() => {
+      result.current.send(RESPONSE.message)
+    })
+    act(() => {
+      result.current.reset()
+    })
+
+    await waitFor(() => expect(result.current.isBusy).toBe(false))
+    expect(result.current.run.status).toBe('idle')
+    expect(result.current.run.error).toBeNull()
   })
 
   it('desmontar durante a chamada não gera aviso de setState após unmount', async () => {

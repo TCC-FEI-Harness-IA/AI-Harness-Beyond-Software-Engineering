@@ -95,7 +95,7 @@ mensagem que nomeia a variável.
 | `VITE_DEFAULT_PROVIDER` | `open_router` | `provider` enviado no `llm_model_config`. |
 | `VITE_AVAILABLE_MODELS` | *(CSV)* | Modelos oferecidos no seletor. Precisa ser subconjunto de `GENAI_AVAILABLE_MODELS` no backend. |
 | `VITE_DEFAULT_MODEL` | — | Modelo pré-selecionado. Precisa estar em `VITE_AVAILABLE_MODELS`. |
-| `VITE_DEFAULT_MAX_TOKENS` | `1200` | `max_tokens` padrão. |
+| `VITE_DEFAULT_MAX_TOKENS` | `4000` | `max_tokens` padrão. Num modelo de raciocínio o teto cobre o raciocínio interno **e** a resposta — um valor apertado faz o provedor devolver conteúdo vazio. |
 | `VITE_DEFAULT_TEMPERATURE` | `0.3` | `temperature` padrão. Backend exige `[0, 1]`. |
 | `VITE_HISTORY_FETCH_CONCURRENCY` | `6` | Requisições simultâneas ao hidratar a lista de histórico. |
 | `VITE_HISTORY_SUMMARY_MAX_CHARS` | `120` | Limite de caracteres do resumo no card de histórico. |

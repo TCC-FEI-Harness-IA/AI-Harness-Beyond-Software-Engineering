@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RunConfig } from '@/api/messageApi'
 import { FakeWebSocket } from '@/test/doubles/FakeWebSocket'
@@ -127,7 +128,10 @@ describe('useReasoningStream', () => {
     expect(result.current.run.steps).toHaveLength(1)
   })
 
-  it('desmontar fecha o socket', () => {
+  // O fechamento é adiado por um macrotask (`useDeferredTeardown`) para sobreviver ao ciclo
+  // montagem → limpeza → montagem do StrictMode; numa desmontagem real nada remonta, então
+  // ele acontece de fato no tick seguinte.
+  it('desmontar fecha o socket', async () => {
     const { result, unmount } = renderHook(() => useReasoningStream(CONFIG))
 
     act(() => {
@@ -139,8 +143,29 @@ describe('useReasoningStream', () => {
     })
 
     unmount()
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(socket.closeCalls).toEqual([1000])
+  })
+
+  // Regressão: a limpeza simulada do StrictMode fechava o socket que a montagem anterior
+  // tinha acabado de abrir, e o guard de auto-start de `RalphPage` impedia a remontagem de
+  // abrir outro — a execução morria antes do primeiro evento.
+  it('o ciclo de montagem dupla do StrictMode não fecha o socket em andamento', () => {
+    const { result } = renderHook(() => useReasoningStream(CONFIG), { wrapper: StrictMode })
+
+    act(() => {
+      result.current.start('pergunta')
+    })
+    const socket = FakeWebSocket.latest()
+    act(() => {
+      socket.emitOpen()
+      socket.emitMessage(VALID_EVENT)
+    })
+
+    expect(socket.closeCalls).toEqual([])
+    expect(result.current.run.steps).toHaveLength(1)
+    expect(result.current.isStreaming).toBe(true)
   })
 
   it('frame malformado no meio do stream gera um aviso não fatal e os frames seguintes continuam sendo processados', () => {

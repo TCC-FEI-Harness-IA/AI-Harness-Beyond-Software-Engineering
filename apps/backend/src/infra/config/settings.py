@@ -7,6 +7,7 @@ from src.domain.interfaces.settings_interface import ISettings
 
 _TRUTHY_VALUES = frozenset({"true", "1", "yes", "y", "on"})
 _FALSY_VALUES = frozenset({"false", "0", "no", "n", "off"})
+_REASONING_EFFORTS = frozenset({"minimal", "low", "medium", "high"})
 _SRC_PACKAGE_NAME = "src"
 
 
@@ -50,6 +51,7 @@ class Settings(ISettings):
             "OPENROUTER_HTTP_REFERER": os.getenv("OPENROUTER_HTTP_REFERER", ""),
             "OPENROUTER_X_TITLE": os.getenv("OPENROUTER_X_TITLE", ""),
             "OPENROUTER_TIMEOUT_SECONDS": os.getenv("OPENROUTER_TIMEOUT_SECONDS", "30"),
+            "OPENROUTER_REASONING_EFFORT": os.getenv("OPENROUTER_REASONING_EFFORT", ""),
             "GENAI_AVAILABLE_MODELS": os.getenv("GENAI_AVAILABLE_MODELS", ""),
             "GENAI_AVAILABLE_PROVIDERS": os.getenv("GENAI_AVAILABLE_PROVIDERS", ""),
             "RALPH_SESSIONS_STORAGE_PATH": os.getenv("RALPH_SESSIONS_STORAGE_PATH", "./data/sessions"),
@@ -206,6 +208,23 @@ class Settings(ISettings):
     def openrouter_timeout_seconds(self) -> float:
         """Timeout, em segundos, das chamadas HTTP à OpenRouter."""
         return self.__get_float("OPENROUTER_TIMEOUT_SECONDS")
+
+    @property
+    def openrouter_reasoning_effort(self) -> str:
+        """Esforço de raciocínio pedido à OpenRouter. Vazio quando não configurado.
+
+        Raises:
+            ValueError: Quando o valor configurado não é um esforço conhecido.
+        """
+        raw_value = self.__get_str("OPENROUTER_REASONING_EFFORT").strip().lower()
+        if not raw_value:
+            return ""
+        if raw_value not in _REASONING_EFFORTS:
+            raise ValueError(
+                f"Variável de ambiente 'OPENROUTER_REASONING_EFFORT' deve ser um de "
+                f"{sorted(_REASONING_EFFORTS)}, ou vazia. Valor: '{raw_value}'."
+            )
+        return raw_value
 
     # ── Catálogo GenAI ───────────────────────────────────────────────────────
 

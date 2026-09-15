@@ -16,6 +16,7 @@ _DEFAULTS: dict[str, Any] = {
     "openrouter_http_referer": "",
     "openrouter_x_title": "",
     "openrouter_timeout_seconds": 30.0,
+    "openrouter_reasoning_effort": "",
     "genai_available_models": ["vendor/modelo-padrao"],
     "genai_available_providers": ["open_router"],
     "ralph_sessions_storage_path": "./data/sessions",
@@ -97,6 +98,10 @@ class FakeSettings(ISettings):
     @property
     def openrouter_timeout_seconds(self) -> float:
         return self.values["openrouter_timeout_seconds"]
+
+    @property
+    def openrouter_reasoning_effort(self) -> str:
+        return self.values["openrouter_reasoning_effort"]
 
     @property
     def genai_available_models(self) -> list[str]:
