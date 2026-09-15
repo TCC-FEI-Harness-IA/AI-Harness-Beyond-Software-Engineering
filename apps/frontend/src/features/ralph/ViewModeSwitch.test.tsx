@@ -36,11 +36,11 @@ describe('ViewModeSwitch', () => {
     const user = userEvent.setup()
     renderPage()
 
-    expect(screen.getByText('Modo Gráfico chega na próxima fase.')).toBeInTheDocument()
+    expect(screen.getByText('Nenhum passo ainda')).toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: /Chat/ }))
 
-    expect(screen.queryByText('Modo Gráfico chega na próxima fase.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Nenhum passo ainda')).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Mensagem do usuário' })).toHaveTextContent('pergunta')
   })
 

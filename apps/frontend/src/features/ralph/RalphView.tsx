@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Composer } from '@/components/chat/Composer'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { Button } from '@/components/primitives/Button'
@@ -6,8 +6,8 @@ import { EmptyState } from '@/components/primitives/EmptyState'
 import { RUN_STATUS } from '@/domain/enums/runStatus'
 import type { ThinkingRun } from '@/domain/types/thinkingRun'
 import { useViewMode } from '@/state/ViewModeContext'
+import { RalphGraphMode } from './graph/RalphGraphMode'
 import { RalphChatMode } from './RalphChatMode'
-import { RalphGraphMode } from './RalphGraphMode'
 import { ViewModeSwitch } from './ViewModeSwitch'
 import styles from './RalphView.module.css'
 
@@ -53,6 +53,9 @@ export function RalphView({
   onRetry,
 }: RalphViewProps): JSX.Element {
   const { viewMode } = useViewMode()
+  // Alvo de rolagem do Modo Chat, acionado por "Ver no Modo Chat" no painel de detalhe do Modo
+  // Gráfico (README, FASE 06, seção 7) — vive aqui porque os dois modos precisam compartilhá-lo.
+  const [scrollTargetStepId, setScrollTargetStepId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isLive || run.question === '') return
@@ -74,7 +77,7 @@ export function RalphView({
   const isEmpty = run.steps.length === 0 && run.status === RUN_STATUS.IDLE
 
   return (
-    <PageContainer width="content">
+    <PageContainer width={viewMode === 'graph' && !isEmpty ? 'wide' : 'content'}>
       <div className={styles.layout}>
         {isEmpty ? (
           <EmptyState icon={EMPTY_ICON} title="Faça uma pergunta para começar" />
@@ -87,10 +90,12 @@ export function RalphView({
                 run={run}
                 isLive={isLive}
                 isStreaming={isStreaming}
+                scrollToStepId={scrollTargetStepId}
+                onScrolledToStep={() => setScrollTargetStepId(null)}
                 {...(onRetry ? { onRetry } : {})}
               />
             ) : (
-              <RalphGraphMode run={run} isLive={isLive} />
+              <RalphGraphMode run={run} isLive={isLive} onViewStepInChat={setScrollTargetStepId} />
             )}
 
             {isLive && isStreaming ? (

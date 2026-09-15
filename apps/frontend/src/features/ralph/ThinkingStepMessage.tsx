@@ -20,6 +20,12 @@ export interface ThinkingStepMessageProps {
 
 const CONTEXT_ID_VISIBLE_CHARS = 7
 
+/** Âncora de DOM usada por "Ver no Modo Chat" do Modo Gráfico (README, FASE 06, seção 7) —
+ * o id determinístico do passo é o que torna essa navegação possível. */
+export function thinkingStepAnchorId(stepId: string): string {
+  return `ralph-step-${stepId}`
+}
+
 const SEPARATOR_SUBTYPES: ReadonlySet<string> = new Set([
   EVENT_SUBTYPE.RESET,
   EVENT_SUBTYPE.STORE,
@@ -60,34 +66,44 @@ export const ThinkingStepMessage = memo(function ThinkingStepMessage({
   modelName,
   animateIn = false,
 }: ThinkingStepMessageProps): JSX.Element {
+  const anchorId = thinkingStepAnchorId(step.id)
+
   if (SEPARATOR_SUBTYPES.has(step.subtype)) {
     if (step.subtype === EVENT_SUBTYPE.RESET) {
       return (
-        <MessageBubble
-          role="system"
-          content={step.content}
-          label={`Contexto reinicializado · ${step.taskId}`}
-          header={<Tag tone="context">{step.contextId.slice(0, CONTEXT_ID_VISIBLE_CHARS)}</Tag>}
-          animateIn={animateIn}
-        />
+        <div id={anchorId}>
+          <MessageBubble
+            role="system"
+            content={step.content}
+            label={`Contexto reinicializado · ${step.taskId}`}
+            header={<Tag tone="context">{step.contextId.slice(0, CONTEXT_ID_VISIBLE_CHARS)}</Tag>}
+            animateIn={animateIn}
+          />
+        </div>
       )
     }
-    return <MessageBubble role="system" content={step.content} animateIn={animateIn} />
+    return (
+      <div id={anchorId}>
+        <MessageBubble role="system" content={step.content} animateIn={animateIn} />
+      </div>
+    )
   }
 
   return (
-    <MessageBubble
-      role="assistant"
-      content={step.content}
-      tone={toneForStep(step)}
-      header={
-        <span className={styles.header}>
-          <PhaseTag phase={step.phase} subtype={step.subtype} taskId={displayTaskId(step.taskId)} />
-          {step.type === EVENT_TYPE.DEGRADED ? <Badge tone="warning">Degradação</Badge> : null}
-        </span>
-      }
-      stats={buildStats(step, modelName)}
-      animateIn={animateIn}
-    />
+    <div id={anchorId}>
+      <MessageBubble
+        role="assistant"
+        content={step.content}
+        tone={toneForStep(step)}
+        header={
+          <span className={styles.header}>
+            <PhaseTag phase={step.phase} subtype={step.subtype} taskId={displayTaskId(step.taskId)} />
+            {step.type === EVENT_TYPE.DEGRADED ? <Badge tone="warning">Degradação</Badge> : null}
+          </span>
+        }
+        stats={buildStats(step, modelName)}
+        animateIn={animateIn}
+      />
+    </div>
   )
 })

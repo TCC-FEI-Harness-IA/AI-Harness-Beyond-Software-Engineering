@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { ChatScroller } from '@/components/chat/ChatScroller'
 import { FinalAnswerCard } from '@/components/chat/FinalAnswerCard'
 import { MessageBubble } from '@/components/chat/MessageBubble'
@@ -9,7 +10,7 @@ import { TASK_LABEL_SETUP, TASK_LABEL_SYNTHESIS } from '@/domain/enums/taskLabel
 import { THINKING_PHASE } from '@/domain/enums/thinkingPhase'
 import type { MessageStatsView } from '@/domain/types/messageStatsView'
 import type { ThinkingRun, ThinkingStep } from '@/domain/types/thinkingRun'
-import { ThinkingStepMessage } from './ThinkingStepMessage'
+import { ThinkingStepMessage, thinkingStepAnchorId } from './ThinkingStepMessage'
 import styles from './RalphChatMode.module.css'
 
 export interface RalphChatModeProps {
@@ -17,6 +18,10 @@ export interface RalphChatModeProps {
   isLive: boolean
   isStreaming?: boolean
   onRetry?: () => void
+  /** Id do passo para o qual rolar — aciona a "âncora" que o Modo Gráfico pede em "Ver no Modo
+   * Chat" (README, FASE 06, seção 7). `null`/ausente não rola nada. */
+  scrollToStepId?: string | null
+  onScrolledToStep?: () => void
 }
 
 interface StepGroup {
@@ -73,11 +78,26 @@ function runTotalsAsStats(run: ThinkingRun): MessageStatsView {
  * mensagem no estilo do chat comum, agrupada por tarefa, com a resposta final destacada no
  * fim. Apresentação pura — recebe o `ThinkingRun` já pronto, não conhece rede nem reducer.
  */
-export function RalphChatMode({ run, isLive, isStreaming = false, onRetry }: RalphChatModeProps): JSX.Element {
+export function RalphChatMode({
+  run,
+  isLive,
+  isStreaming = false,
+  onRetry,
+  scrollToStepId = null,
+  onScrolledToStep,
+}: RalphChatModeProps): JSX.Element {
   const timelineSteps = run.steps.filter((step) => !isFinalAnswerStep(step))
   const groups = groupSteps(timelineSteps)
   const lastStepId = timelineSteps[timelineSteps.length - 1]?.id
   const isConnecting = isStreaming && timelineSteps.length === 0
+
+  useEffect(() => {
+    if (!scrollToStepId) return
+    const element = document.getElementById(thinkingStepAnchorId(scrollToStepId))
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    onScrolledToStep?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollToStepId])
 
   return (
     <ChatScroller contentKey={run.steps.length} isLive={isLive}>
