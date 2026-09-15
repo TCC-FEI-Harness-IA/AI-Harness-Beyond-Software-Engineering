@@ -340,3 +340,18 @@ async def test_omite_o_bloco_de_raciocinio_quando_nao_configurado() -> None:
     await service.generate_response(request=_build_request())
 
     assert "reasoning" not in json.loads(capturadas[0].content)
+
+
+async def test_desliga_o_raciocinio_quando_esforco_e_minimal() -> None:
+    """"minimal" não é um `effort` nativo de todo provedor (ex.: DeepSeek); a OpenRouter
+    ignora o valor nesse caso e o modelo raciocina sem limite. `enabled: false` é o jeito
+    que funciona em qualquer provedor para pedir zero raciocínio.
+    """
+    import json
+
+    capturadas: list[httpx.Request] = []
+    service = _build_service(capturadas=capturadas, openrouter_reasoning_effort="minimal")
+
+    await service.generate_response(request=_build_request())
+
+    assert json.loads(capturadas[0].content)["reasoning"] == {"enabled": False}

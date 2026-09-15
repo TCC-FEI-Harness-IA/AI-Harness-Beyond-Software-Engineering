@@ -196,7 +196,13 @@ class OpenRouterService(ILLMService):
         # `max_tokens` cobre raciocínio + resposta. Sem limitar o esforço, um modelo de
         # raciocínio gasta o orçamento inteiro pensando e devolve `content` nulo.
         reasoning_effort = self.settings.openrouter_reasoning_effort
-        if reasoning_effort:
+        if reasoning_effort == "minimal":
+            # "minimal" só é um `effort` nativo da OpenAI; em outros provedores (como o
+            # DeepSeek usado aqui) a OpenRouter ignora o valor e o modelo raciocina sem
+            # limite, consumindo todo o `max_tokens` antes de escrever a resposta. Desligar
+            # o raciocínio via `enabled: false` é o jeito que funciona em qualquer provedor.
+            payload["reasoning"] = {"enabled": False}
+        elif reasoning_effort:
             payload["reasoning"] = {"effort": reasoning_effort}
 
         return payload
