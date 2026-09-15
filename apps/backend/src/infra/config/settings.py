@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.session_storage_backend_enum import SessionStorageBackendEnum
 from src.domain.interfaces.settings_interface import ISettings
 
 _TRUTHY_VALUES = frozenset({"true", "1", "yes", "y", "on"})
@@ -63,7 +64,13 @@ class Settings(ISettings):
             "AZURE_AI_FOUNDRY_DEPLOYMENT": os.getenv("AZURE_AI_FOUNDRY_DEPLOYMENT", ""),
             "GENAI_AVAILABLE_MODELS": os.getenv("GENAI_AVAILABLE_MODELS", ""),
             "GENAI_AVAILABLE_PROVIDERS": os.getenv("GENAI_AVAILABLE_PROVIDERS", ""),
+            "RALPH_SESSION_STORAGE_BACKEND": os.getenv(
+                "RALPH_SESSION_STORAGE_BACKEND", SessionStorageBackendEnum.JSON_FILE.value
+            ),
             "RALPH_SESSIONS_STORAGE_PATH": os.getenv("RALPH_SESSIONS_STORAGE_PATH", "./data/sessions"),
+            "MONGODB_URI": os.getenv("MONGODB_URI", "mongodb://localhost:27017"),
+            "MONGODB_DATABASE": os.getenv("MONGODB_DATABASE", "tcc"),
+            "MONGODB_SESSIONS_COLLECTION": os.getenv("MONGODB_SESSIONS_COLLECTION", "sessions"),
             "RALPH_SESSION_FLUSH_EVERY_MESSAGE": os.getenv("RALPH_SESSION_FLUSH_EVERY_MESSAGE", "true"),
             "RALPH_SESSION_ID_PREFIX": os.getenv("RALPH_SESSION_ID_PREFIX", "sess"),
             "RALPH_MAX_TASK_ATTEMPTS": os.getenv("RALPH_MAX_TASK_ATTEMPTS", "3"),
@@ -311,9 +318,41 @@ class Settings(ISettings):
     # ── Sessão e persistência ────────────────────────────────────────────────
 
     @property
+    def ralph_session_storage_backend(self) -> SessionStorageBackendEnum:
+        """Backend usado para persistir sessões: `json_file` ou `mongodb`.
+
+        Raises:
+            ValueError: Quando o valor configurado não é um backend implementado.
+        """
+        raw_value = self.__get_str("RALPH_SESSION_STORAGE_BACKEND").strip().lower()
+        try:
+            return SessionStorageBackendEnum(raw_value)
+        except ValueError as exc:
+            suportados = sorted(member.value for member in SessionStorageBackendEnum)
+            raise ValueError(
+                f"Variável de ambiente 'RALPH_SESSION_STORAGE_BACKEND' deve ser um de "
+                f"{suportados}. Valor: '{raw_value}'."
+            ) from exc
+
+    @property
     def ralph_sessions_storage_path(self) -> str:
-        """Diretório onde os JSON de sessão são gravados."""
+        """Diretório onde os JSON de sessão são gravados, quando o backend é `json_file`."""
         return self.__get_str("RALPH_SESSIONS_STORAGE_PATH")
+
+    @property
+    def mongodb_uri(self) -> str:
+        """URI de conexão do MongoDB, quando o backend é `mongodb`."""
+        return self.__get_str("MONGODB_URI").strip()
+
+    @property
+    def mongodb_database(self) -> str:
+        """Nome do banco de dados usado no MongoDB."""
+        return self.__get_str("MONGODB_DATABASE").strip()
+
+    @property
+    def mongodb_sessions_collection(self) -> str:
+        """Nome da coleção que guarda os documentos de sessão no MongoDB."""
+        return self.__get_str("MONGODB_SESSIONS_COLLECTION").strip()
 
     @property
     def ralph_session_flush_every_message(self) -> bool:

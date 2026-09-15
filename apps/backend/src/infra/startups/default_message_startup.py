@@ -10,7 +10,7 @@ from src.infra.adapters.model_catalog_adapter import ModelCatalogAdapter
 from src.infra.adapters.session_recorder_adapter import SessionRecorderAdapter
 from src.infra.config.settings import Settings
 from src.infra.mappers.session_document_mapper import SessionDocumentMapper
-from src.infra.repositories.json_file_session_repository import JsonFileSessionRepository
+from src.infra.repositories.session_repository_factory import SessionRepositoryFactory
 from src.infra.routes.v1.message.dtos.default_input_dto import DefaultInputDTO
 from src.infra.routes.v1.message.dtos.default_output_dto import DefaultOutputDTO
 from src.infra.services.llm_service_factory import LLMServiceFactory
@@ -40,11 +40,10 @@ class DefaultMessageStartup:
             settings=self.settings,
         )
         clock = ClockAdapter()
-        session_repository = JsonFileSessionRepository(
-            mapper=SessionDocumentMapper(),
+        session_repository = SessionRepositoryFactory(
             settings=self.settings,
-            logger=self.settings.logger(module_file=getfile(JsonFileSessionRepository)),
-        )
+            mapper=SessionDocumentMapper(),
+        ).create()
         session_recorder = SessionRecorderAdapter(
             repository=session_repository,
             clock=clock,

@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.session_storage_backend_enum import SessionStorageBackendEnum
 from src.domain.interfaces.settings_interface import ISettings
 
 _DEFAULTS: dict[str, Any] = {
@@ -28,7 +29,11 @@ _DEFAULTS: dict[str, Any] = {
     "azure_ai_foundry_deployment": "",
     "genai_available_models": ["vendor/modelo-padrao"],
     "genai_available_providers": ["open_router", "azure_ai_foundry", "openai"],
+    "ralph_session_storage_backend": SessionStorageBackendEnum.JSON_FILE,
     "ralph_sessions_storage_path": "./data/sessions",
+    "mongodb_uri": "mongodb://localhost:27017",
+    "mongodb_database": "tcc",
+    "mongodb_sessions_collection": "sessions",
     "ralph_session_flush_every_message": True,
     "ralph_session_id_prefix": "sess",
     "ralph_max_task_attempts": 3,
@@ -153,8 +158,24 @@ class FakeSettings(ISettings):
         return self.values["genai_available_providers"]
 
     @property
+    def ralph_session_storage_backend(self) -> SessionStorageBackendEnum:
+        return self.values["ralph_session_storage_backend"]
+
+    @property
     def ralph_sessions_storage_path(self) -> str:
         return self.values["ralph_sessions_storage_path"]
+
+    @property
+    def mongodb_uri(self) -> str:
+        return self.values["mongodb_uri"]
+
+    @property
+    def mongodb_database(self) -> str:
+        return self.values["mongodb_database"]
+
+    @property
+    def mongodb_sessions_collection(self) -> str:
+        return self.values["mongodb_sessions_collection"]
 
     @property
     def ralph_session_flush_every_message(self) -> bool:

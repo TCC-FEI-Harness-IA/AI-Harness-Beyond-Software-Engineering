@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.session_storage_backend_enum import SessionStorageBackendEnum
 
 
 class ISettings(ABC):
@@ -165,8 +166,32 @@ class ISettings(ABC):
 
     @property
     @abstractmethod
+    def ralph_session_storage_backend(self) -> SessionStorageBackendEnum:
+        """Backend usado para persistir sessões: `json_file` ou `mongodb`."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def ralph_sessions_storage_path(self) -> str:
-        """Diretório onde os JSON de sessão são gravados."""
+        """Diretório onde os JSON de sessão são gravados, quando o backend é `json_file`."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def mongodb_uri(self) -> str:
+        """URI de conexão do MongoDB, quando o backend é `mongodb`."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def mongodb_database(self) -> str:
+        """Nome do banco de dados usado no MongoDB."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def mongodb_sessions_collection(self) -> str:
+        """Nome da coleção que guarda os documentos de sessão no MongoDB."""
         raise NotImplementedError
 
     @property

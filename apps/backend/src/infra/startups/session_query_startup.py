@@ -5,7 +5,7 @@ from src.application.usecases.get_session_usecase import GetSessionUseCase
 from src.domain.interfaces.settings_interface import ISettings
 from src.infra.config.settings import Settings
 from src.infra.mappers.session_document_mapper import SessionDocumentMapper
-from src.infra.repositories.json_file_session_repository import JsonFileSessionRepository
+from src.infra.repositories.session_repository_factory import SessionRepositoryFactory
 
 
 class SessionQueryStartup:
@@ -17,11 +17,10 @@ class SessionQueryStartup:
         self.logger = self.settings.logger(module_file=__file__)
 
         self.session_document_mapper = SessionDocumentMapper()
-        self.session_repository = JsonFileSessionRepository(
-            mapper=self.session_document_mapper,
+        self.session_repository = SessionRepositoryFactory(
             settings=self.settings,
-            logger=self.settings.logger(module_file=getfile(JsonFileSessionRepository)),
-        )
+            mapper=self.session_document_mapper,
+        ).create()
         self.get_session_use_case = GetSessionUseCase(
             repository=self.session_repository,
             logger=self.settings.logger(module_file=getfile(GetSessionUseCase)),

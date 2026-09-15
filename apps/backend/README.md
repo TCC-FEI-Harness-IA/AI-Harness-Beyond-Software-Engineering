@@ -440,7 +440,11 @@ equivalente aparece no código. Ver `.env.example` para o arquivo completo.
 | `AZURE_AI_FOUNDRY_DEPLOYMENT` | *(vazio)* | Nome do deployment. Vazio usa o próprio `model_name` da requisição. |
 | `GENAI_AVAILABLE_MODELS` | *(vazio)* | Allowlist de modelos (JSON array ou CSV). |
 | `GENAI_AVAILABLE_PROVIDERS` | *(vazio)* | Allowlist de provedores (JSON array ou CSV). |
-| `RALPH_SESSIONS_STORAGE_PATH` | `./data/sessions` | Diretório dos JSON de sessão. |
+| `RALPH_SESSION_STORAGE_BACKEND` | `json_file` | Backend de persistência de sessões: `json_file` ou `mongodb`. |
+| `RALPH_SESSIONS_STORAGE_PATH` | `./data/sessions` | Diretório dos JSON de sessão, quando o backend é `json_file`. |
+| `MONGODB_URI` | `mongodb://localhost:27017` | URI de conexão, quando o backend é `mongodb`. |
+| `MONGODB_DATABASE` | `tcc` | Banco de dados usado no MongoDB. |
+| `MONGODB_SESSIONS_COLLECTION` | `sessions` | Coleção que guarda os documentos de sessão no MongoDB. |
 | `RALPH_SESSION_FLUSH_EVERY_MESSAGE` | `true` | Persiste a sessão após cada mensagem registrada. |
 | `RALPH_SESSION_ID_PREFIX` | `sess` | Prefixo do identificador de sessão. |
 | `RALPH_MAX_TASK_ATTEMPTS` | `3` | Tentativas máximas de B.1/B.2 para a mesma tarefa. |

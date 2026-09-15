@@ -27,7 +27,7 @@ from src.infra.adapters.structured_response_parser_adapter import StructuredResp
 from src.infra.config.settings import Settings
 from src.infra.mappers.session_document_mapper import SessionDocumentMapper
 from src.infra.providers.file_prompt_template_provider import FilePromptTemplateProvider
-from src.infra.repositories.json_file_session_repository import JsonFileSessionRepository
+from src.infra.repositories.session_repository_factory import SessionRepositoryFactory
 from src.infra.routes.v1.message.dtos.context_window_dto import ContextWindowDTO
 from src.infra.routes.v1.message.dtos.reasoning_event_dto import ReasoningEventDTO
 from src.infra.routes.v1.message.dtos.reasoning_input_dto import ReasoningInputDTO
@@ -51,11 +51,10 @@ class RalphThinkingStartup:
         self.id_generator = IdGeneratorAdapter(settings=self.settings)
 
         self.session_document_mapper = SessionDocumentMapper()
-        self.session_repository = JsonFileSessionRepository(
-            mapper=self.session_document_mapper,
+        self.session_repository = SessionRepositoryFactory(
             settings=self.settings,
-            logger=self.settings.logger(module_file=getfile(JsonFileSessionRepository)),
-        )
+            mapper=self.session_document_mapper,
+        ).create()
         self.session_recorder = SessionRecorderAdapter(
             repository=self.session_repository,
             clock=self.clock,

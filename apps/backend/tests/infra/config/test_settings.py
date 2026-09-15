@@ -4,6 +4,7 @@ from typing import Any
 import pytest
 
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.session_storage_backend_enum import SessionStorageBackendEnum
 from src.infra.config.settings import Settings
 
 _ENV_VARS = (
@@ -30,7 +31,11 @@ _ENV_VARS = (
     "AZURE_AI_FOUNDRY_DEPLOYMENT",
     "GENAI_AVAILABLE_MODELS",
     "GENAI_AVAILABLE_PROVIDERS",
+    "RALPH_SESSION_STORAGE_BACKEND",
     "RALPH_SESSIONS_STORAGE_PATH",
+    "MONGODB_URI",
+    "MONGODB_DATABASE",
+    "MONGODB_SESSIONS_COLLECTION",
     "RALPH_SESSION_FLUSH_EVERY_MESSAGE",
     "RALPH_SESSION_ID_PREFIX",
     "RALPH_MAX_TASK_ATTEMPTS",
@@ -89,7 +94,11 @@ def test_aplica_os_defaults_documentados_quando_a_variavel_esta_ausente() -> Non
     assert settings.azure_ai_foundry_deployment == ""
     assert settings.genai_available_models == []
     assert settings.genai_available_providers == []
+    assert settings.ralph_session_storage_backend is SessionStorageBackendEnum.JSON_FILE
     assert settings.ralph_sessions_storage_path == "./data/sessions"
+    assert settings.mongodb_uri == "mongodb://localhost:27017"
+    assert settings.mongodb_database == "tcc"
+    assert settings.mongodb_sessions_collection == "sessions"
     assert settings.ralph_session_flush_every_message is True
     assert settings.ralph_session_id_prefix == "sess"
     assert settings.ralph_max_task_attempts == 3
@@ -213,6 +222,34 @@ def test_le_do_ambiente_as_variaveis_de_sessao_e_thinking(monkeypatch: pytest.Mo
     assert settings.ralph_sessions_storage_path == "/tmp/sessoes"
     assert settings.ralph_session_id_prefix == "run"
     assert settings.ralph_prompt_templates_path == "outro/caminho"
+
+
+@pytest.mark.parametrize("backend", list(SessionStorageBackendEnum))
+def test_aceita_todos_os_backends_de_sessao_implementados(
+    monkeypatch: pytest.MonkeyPatch, backend: SessionStorageBackendEnum
+) -> None:
+    monkeypatch.setenv("RALPH_SESSION_STORAGE_BACKEND", f"  {backend.value.upper()}  ")
+
+    assert Settings().ralph_session_storage_backend is backend
+
+
+def test_backend_de_sessao_desconhecido_levanta_erro_citando_a_variavel(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RALPH_SESSION_STORAGE_BACKEND", "backend_inexistente")
+
+    with pytest.raises(ValueError, match="RALPH_SESSION_STORAGE_BACKEND"):
+        _ = Settings().ralph_session_storage_backend
+
+
+def test_le_do_ambiente_as_variaveis_de_mongodb(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MONGODB_URI", "  mongodb://mongo:27017  ")
+    monkeypatch.setenv("MONGODB_DATABASE", "  banco_de_teste  ")
+    monkeypatch.setenv("MONGODB_SESSIONS_COLLECTION", "  colecao_de_teste  ")
+
+    settings = Settings()
+
+    assert settings.mongodb_uri == "mongodb://mongo:27017"
+    assert settings.mongodb_database == "banco_de_teste"
+    assert settings.mongodb_sessions_collection == "colecao_de_teste"
 
 
 def test_log_level_e_normalizado_para_maiusculas(monkeypatch: pytest.MonkeyPatch) -> None:
