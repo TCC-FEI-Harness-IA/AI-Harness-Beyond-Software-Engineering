@@ -68,6 +68,7 @@ docs/analises/vitor/local
 
 node_modules
 feature_ralph
+feature_front
 
 # Backend secrets (o .env.example versionado documenta as variaveis)
 apps/backend/.env
