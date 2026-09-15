@@ -1,0 +1,148 @@
+.content {
+  line-height: var(--leading-body);
+  color: var(--color-text);
+}
+
+.content > :first-child {
+  margin-top: 0;
+}
+
+.content > :last-child {
+  margin-bottom: 0;
+}
+
+.content h1,
+.content h2,
+.content h3,
+.content h4 {
+  letter-spacing: var(--tracking-tight);
+  font-weight: 600;
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-2);
+}
+
+.content h1 {
+  font-size: var(--text-lg);
+}
+
+.content h2 {
+  font-size: var(--text-base);
+}
+
+.content h3,
+.content h4 {
+  font-size: var(--text-sm);
+}
+
+.content p {
+  margin: var(--space-3) 0;
+}
+
+.content ul,
+.content ol {
+  padding-left: var(--space-5);
+  margin: var(--space-3) 0;
+}
+
+.content li + li {
+  margin-top: var(--space-1);
+}
+
+.content code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}
+
+.content pre {
+  background: var(--color-surface-sunken);
+  box-shadow: 0 0 0 0.5px var(--color-hairline);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  overflow-x: auto;
+  margin: var(--space-3) 0;
+}
+
+.content pre code {
+  background: none;
+  padding: 0;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  margin: var(--space-3) 0;
+}
+
+.content table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.content th,
+.content td {
+  border: 0.5px solid var(--color-hairline);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+}
+
+.content th {
+  background: var(--color-surface-sunken);
+  font-weight: 600;
+}
+
+.content blockquote {
+  border-left: 3px solid var(--color-hairline);
+  padding-left: var(--space-3);
+  margin: var(--space-3) 0;
+  color: var(--color-text-secondary);
+}
+
+.content a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.content a:hover {
+  text-decoration: underline;
+}
+
+.content hr {
+  border: none;
+  border-top: 1px solid var(--color-separator);
+  margin: var(--space-6) 0;
+}
+
+/* Variante 'bubble': sobre a bolha azul do usuário — herda a cor do texto branco. */
+.bubble {
+  color: inherit;
+}
+
+.bubble code {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.bubble pre {
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+}
+
+.bubble blockquote {
+  border-left-color: rgba(255, 255, 255, 0.4);
+  color: inherit;
+}
+
+.bubble a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.bubble th {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.bubble th,
+.bubble td {
+  border-color: rgba(255, 255, 255, 0.24);
+}

@@ -1,0 +1,98 @@
+.row {
+  display: flex;
+  margin: var(--space-2) 0;
+}
+
+.rowUser {
+  justify-content: flex-end;
+}
+
+.rowAssistant {
+  justify-content: flex-start;
+}
+
+.rowSystem {
+  justify-content: center;
+}
+
+.bubble {
+  max-width: var(--measure);
+  padding: var(--space-3) var(--space-4);
+  position: relative;
+}
+
+.header {
+  margin-bottom: var(--space-2);
+}
+
+.user {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-xl) var(--radius-xl) var(--radius-sm) var(--radius-xl);
+}
+
+.assistant {
+  background: var(--color-surface);
+  box-shadow: 0 0 0 0.5px var(--color-hairline);
+  border-radius: var(--radius-xl) var(--radius-xl) var(--radius-xl) var(--radius-sm);
+}
+
+.system {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: var(--content-max);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.system::before,
+.system::after {
+  content: '';
+  flex: 1;
+  border-top: 0.5px solid var(--color-hairline);
+}
+
+.toneAccent,
+.toneSuccess,
+.toneWarning,
+.toneDanger,
+.toneContext {
+  border-left: 2px solid transparent;
+  padding-left: calc(var(--space-4) - 2px);
+}
+
+.toneAccent {
+  border-left-color: var(--color-accent);
+}
+
+.toneSuccess {
+  border-left-color: var(--color-success);
+}
+
+.toneWarning {
+  border-left-color: var(--color-warning);
+}
+
+.toneDanger {
+  border-left-color: var(--color-danger);
+}
+
+.toneContext {
+  border-left-color: var(--color-context);
+}
+
+.stats {
+  margin-top: var(--space-2);
+}
+
+.emphasisFinal {
+  font-size: var(--text-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.animateIn {
+  animation: fadeInUp var(--duration-base) var(--ease-out);
+}

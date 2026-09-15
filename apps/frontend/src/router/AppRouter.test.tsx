@@ -5,11 +5,11 @@ import { ThemeProvider } from '@/state/ThemeContext'
 import { AppRouter } from './AppRouter'
 import { buildHistoryDetailPath } from './routes'
 
-function renderAt(path: string): void {
+function renderAt(path: string, enableDevRoute = false): void {
   render(
     <MemoryRouter initialEntries={[path]}>
       <ThemeProvider>
-        <AppRouter />
+        <AppRouter enableDevRoute={enableDevRoute} />
       </ThemeProvider>
     </MemoryRouter>,
   )
@@ -44,6 +44,16 @@ describe('AppRouter', () => {
   it('cai na tela de não encontrado para uma rota desconhecida', () => {
     renderAt('/rota/que/nao/existe')
     expect(screen.getByRole('heading', { name: 'Página não encontrada' })).toBeInTheDocument()
+  })
+
+  it('sem enableDevRoute, /dev/componentes cai em não encontrado', () => {
+    renderAt('/dev/componentes')
+    expect(screen.getByRole('heading', { name: 'Página não encontrada' })).toBeInTheDocument()
+  })
+
+  it('com enableDevRoute, /dev/componentes mostra o catálogo', () => {
+    renderAt('/dev/componentes', true)
+    expect(screen.getByRole('heading', { name: 'Catálogo de componentes' })).toBeInTheDocument()
   })
 })
 

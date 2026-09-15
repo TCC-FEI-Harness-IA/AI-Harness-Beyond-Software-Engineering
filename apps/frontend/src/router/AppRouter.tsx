@@ -6,11 +6,19 @@ import { RalphPage } from '@/features/ralph/RalphPage'
 import { HistoryListPage } from '@/features/history/HistoryListPage'
 import { HistoryDetailPage } from '@/features/history/HistoryDetailPage'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
+import { ComponentsGalleryPage } from '@/features/dev/ComponentsGalleryPage'
 import { ROUTES } from './routes'
 import styles from './AppRouter.module.css'
 
+export interface AppRouterProps {
+  /** Registra `/dev/componentes` — decidido em `main.tsx` a partir de `env.enableDebugPanel`,
+   * para que este módulo não precise importar `src/config/env` (evita puxar aquele módulo
+   * para o chunk estático do router, já que `main.tsx` o importa dinamicamente no boot). */
+  enableDevRoute?: boolean
+}
+
 /** Monta a casca de layout e as rotas do app. Espera ser renderizado dentro de um Router. */
-export function AppRouter(): JSX.Element {
+export function AppRouter({ enableDevRoute = false }: AppRouterProps): JSX.Element {
   // Chaveado pelo pathname para reiniciar a animação de entrada a cada troca de rota.
   const location = useLocation()
 
@@ -23,6 +31,9 @@ export function AppRouter(): JSX.Element {
           <Route path={ROUTES.ralphChat} element={<RalphPage />} />
           <Route path={ROUTES.history} element={<HistoryListPage />} />
           <Route path={ROUTES.historyDetail} element={<HistoryDetailPage />} />
+          {enableDevRoute ? (
+            <Route path={ROUTES.devComponents} element={<ComponentsGalleryPage />} />
+          ) : null}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>

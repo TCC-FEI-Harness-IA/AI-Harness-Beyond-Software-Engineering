@@ -1,0 +1,24 @@
+.spinner {
+  display: inline-block;
+  animation: spin 700ms linear infinite;
+  color: currentColor;
+}
+
+.sm {
+  width: 14px;
+  height: 14px;
+}
+
+.md {
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

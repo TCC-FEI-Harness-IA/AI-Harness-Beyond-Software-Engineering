@@ -6,6 +6,7 @@ export const ROUTES = {
   ralphChat: '/chat/ralph',
   history: '/historico',
   historyDetail: '/historico/:sessionId',
+  devComponents: '/dev/componentes',
 } as const
 
 export function buildHistoryDetailPath(sessionId: string): string {

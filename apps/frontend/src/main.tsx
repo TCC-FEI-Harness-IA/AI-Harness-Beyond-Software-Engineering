@@ -25,14 +25,16 @@ function renderConfigError(message: string, root: HTMLElement): void {
 
 async function bootstrap(root: HTMLElement): Promise<void> {
   try {
-    // Import dinâmico: se loadEnv() lançar, cai no catch antes de qualquer render.
-    await import('@/config/env')
+    // Import dinâmico: se loadEnv() lançar, cai no catch antes de qualquer render. Mantido
+    // dinâmico (em vez de um import estático em AppRouter) para que src/config/env não entre
+    // no grafo estático do router — só o boot precisa decidir a rota de depuração.
+    const { env } = await import('@/config/env')
 
     createRoot(root).render(
       <StrictMode>
         <BrowserRouter>
           <ThemeProvider>
-            <AppRouter />
+            <AppRouter enableDevRoute={env.enableDebugPanel} />
           </ThemeProvider>
         </BrowserRouter>
       </StrictMode>,

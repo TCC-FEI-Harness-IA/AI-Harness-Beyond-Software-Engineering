@@ -1,0 +1,12 @@
+.horizontal {
+  border: none;
+  border-top: 0.5px solid var(--color-hairline);
+  margin: var(--space-4) 0;
+}
+
+.vertical {
+  border: none;
+  border-left: 0.5px solid var(--color-hairline);
+  align-self: stretch;
+  margin: 0 var(--space-2);
+}

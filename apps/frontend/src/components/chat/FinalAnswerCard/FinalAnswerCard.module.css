@@ -1,0 +1,44 @@
+.card {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-accent);
+}
+
+.header {
+  margin-bottom: var(--space-3);
+}
+
+.body {
+  font-size: var(--text-lg);
+}
+
+.footer {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 0.5px solid var(--color-hairline);
+}
+
+.appear {
+  animation:
+    fadeInUp var(--duration-slow) var(--ease-out),
+    glowDecay var(--duration-slow) var(--ease-out);
+}
+
+@keyframes glowDecay {
+  from {
+    box-shadow: var(--shadow-lg);
+  }
+  to {
+    box-shadow: var(--shadow-md);
+  }
+}

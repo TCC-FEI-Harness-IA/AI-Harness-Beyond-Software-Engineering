@@ -1,6 +1,6 @@
 # Prompt padrão de execução de fase
 
-Copie o bloco abaixo, **troque `02` pelo número da fase** (`01` a `08`) e envie ao modelo com CLI
+Copie o bloco abaixo, **troque `03` pelo número da fase** (`01` a `08`) e envie ao modelo com CLI
 (Claude Code, Codex, Devin, etc.) a partir da raiz do repositório.
 
 ---
@@ -8,7 +8,7 @@ Copie o bloco abaixo, **troque `02` pelo número da fase** (`01` a `08`) e envie
 ## O prompt
 
 ```
-Você vai implementar UMA ÚNICA fase do frontend deste projeto: a FASE 02.
+Você vai implementar UMA ÚNICA fase do frontend deste projeto: a FASE 03.
 
 ═══════════════════════════════════════════════════════════════════════════
 PASSO 1 — LEITURA OBRIGATÓRIA (antes de escrever qualquer linha de código)
@@ -17,7 +17,7 @@ PASSO 1 — LEITURA OBRIGATÓRIA (antes de escrever qualquer linha de código)
 Leia, por completo e nesta ordem, estes dois arquivos:
 
   1. feature_front/README.md          ← LEIA INTEIRO. Não pule seções.
-  2. feature_front/FASE_02_*.md       ← a fase que você vai implementar
+  2. feature_front/FASE_03_*.md       ← a fase que você vai implementar
 
 O README é obrigatório mesmo que você ache que já entendeu a tarefa pelo nome da fase.
 Ele contém, e nenhum outro arquivo contém:
@@ -44,22 +44,22 @@ Os dois arquivos juntos são AUTOSSUFICIENTES. Não leia mais nada:
     pedir explicitamente, e copie para src/test/fixtures/ os que você usar.
 
 ═══════════════════════════════════════════════════════════════════════════
-PASSO 2 — IMPLEMENTE SOMENTE A FASE 02
+PASSO 2 — IMPLEMENTE SOMENTE A FASE 03
 ═══════════════════════════════════════════════════════════════════════════
 
 Trabalhe em apps/frontend/.
 
-O ESCOPO É FECHADO. Implemente o que está na seção "Escopo" da FASE 02, e nada além:
+O ESCOPO É FECHADO. Implemente o que está na seção "Escopo" da FASE 03, e nada além:
 
   ✗ NÃO antecipe trabalho de fases seguintes, nem "só o comecinho", nem
     "já que estou aqui", nem deixando arquivo vazio preparado.
-  ✗ NÃO refatore código de fases anteriores que a FASE 02 não mandou tocar.
+  ✗ NÃO refatore código de fases anteriores que a FASE 03 não mandou tocar.
   ✗ NÃO adicione funcionalidade que não foi pedida, por melhor que pareça.
   ✗ NÃO adicione nenhuma dependência de runtime além das quatro declaradas na
     seção 4 do README (react, react-dom, react-router-dom, react-markdown +
     remark-gfm).
 
-  ✓ A FASE 02 tem uma seção "Não entra" — ela é tão obrigatória quanto o escopo.
+  ✓ A FASE 03 tem uma seção "Não entra" — ela é tão obrigatória quanto o escopo.
   ✓ Se a fase mandar generalizar um componente de fase anterior por prop, faça —
     isso está no escopo, e os testes das fases anteriores precisam continuar verdes.
 
@@ -87,7 +87,7 @@ Rode e me mostre a saída completa de:
     npm test
     npm run build
 
-Depois, percorra a lista de CRITÉRIOS DE ACEITE da FASE 02, item por item,
+Depois, percorra a lista de CRITÉRIOS DE ACEITE da FASE 03, item por item,
 numerado, dizendo para cada um se foi atendido e como você verificou.
 NÃO marque como concluído o que não está. Se algum item não foi atendido,
 diga qual, por quê, e o que falta.
@@ -108,7 +108,7 @@ os documentos não especificam: PARE e me pergunte. Não invente comportamento.
 
 ## Como usar
 
-1. Substitua `02` pelo número da fase nos **três** lugares em que ele aparece no bloco.
+1. Substitua `03` pelo número da fase nos **três** lugares em que ele aparece no bloco.
 2. Rode uma fase por sessão do modelo. Não peça duas fases no mesmo prompt — o escopo fechado é o
    que mantém cada entrega verificável.
 3. Ao terminar, revise o relatório de critérios de aceite antes de seguir para a próxima fase.
