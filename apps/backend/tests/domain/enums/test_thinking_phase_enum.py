@@ -3,6 +3,7 @@ from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 _ESPERADOS = {
     "A1": "A1",
     "A2": "A2",
+    "A3": "A3",
     "B1": "B1",
     "B2": "B2",
     "B3": "B3",
@@ -21,6 +22,7 @@ def test_declara_exatamente_as_fases_do_paper() -> None:
 def test_valores_de_cada_membro() -> None:
     assert ThinkingPhaseEnum.A1_GENERAL_CRITERIA == "A1"
     assert ThinkingPhaseEnum.A2_TASK_DECOMPOSITION == "A2"
+    assert ThinkingPhaseEnum.A3_PLANNING_LEARNINGS == "A3"
     assert ThinkingPhaseEnum.B1_TASK_RESOLUTION == "B1"
     assert ThinkingPhaseEnum.B2_TASK_VERIFICATION == "B2"
     assert ThinkingPhaseEnum.B3_RESULT_STORAGE == "B3"

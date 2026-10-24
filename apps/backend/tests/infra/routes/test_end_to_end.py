@@ -94,6 +94,7 @@ def _roteiro_feliz() -> list[str]:
     return [
         _criterios(),
         _tarefas("T1"),
+        _aprendizados("Alternativas: A) 2; B) 4; C) 6; D) Nenhuma das anteriores."),
         _resolucao("2 é primo, par e maior que 2 não existe; a resposta correta é D"),
         _aprovado(),
         _aprendizados("O único primo par é o 2."),
@@ -192,7 +193,7 @@ def test_harness_completo_grava_pergunta_fases_resposta_tokens_e_tempos(
     assert documento["totals"]["wall_time_ms"] >= 0
 
     fases_percorridas = {mensagem["phase"] for mensagem in documento["messages"]}
-    assert {"A1", "A2", "B1", "B2", "B3", "B4", "C1", "C3"} <= fases_percorridas
+    assert {"A1", "A2", "A3", "B1", "B2", "B3", "B4", "C1", "C3"} <= fases_percorridas
 
 
 def test_harness_completo_grava_uma_invocacao_por_chamada_sem_falha_e_com_o_provedor(
@@ -201,7 +202,7 @@ def test_harness_completo_grava_uma_invocacao_por_chamada_sem_falha_e_com_o_prov
     frames, _ = _run_harness(client)
 
     documento = json.loads((storage_path / f"{frames[-1]['session_id']}.json").read_text(encoding="utf-8"))
-    assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 7
+    assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 8
     assert {invocacao["outcome"] for invocacao in documento["invocations"]} == {"success"}
     assert sum(i["tokens_input"] + i["tokens_output"] for i in documento["invocations"]) == (
         documento["totals"]["total_tokens"]
@@ -219,7 +220,7 @@ def test_harness_interrompido_por_limite_encerra_com_um_unico_frame_de_erro_e_pe
     monkeypatch.setenv("RALPH_MAX_TASK_ATTEMPTS", "1")
     client = _build_client(
         monkeypatch=monkeypatch,
-        responses=[_criterios(), _tarefas("T1"), _resolucao("resolucao ruim"), _reprovado()],
+        responses=[_criterios(), _tarefas("T1"), _aprendizados(), _resolucao("resolucao ruim"), _reprovado()],
     )
 
     frames, close_code = _run_harness(client)
@@ -237,7 +238,7 @@ def test_harness_interrompido_por_limite_encerra_com_um_unico_frame_de_erro_e_pe
     assert documento["failure"]["reason"] == "resource_limit"
     assert documento["failure"]["limit"] == "task_attempts"
     assert documento["failure"]["task_id"] == "T1"
-    assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 4
+    assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 5
     assert client.get(f"/v1/sessions/{frames[-1]['session_id']}").json() == documento
 
 

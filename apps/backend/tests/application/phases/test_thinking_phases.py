@@ -9,6 +9,7 @@ from src.application.phases.final_answer_phase import FinalAnswerPhase
 from src.application.phases.general_criteria_phase import GeneralCriteriaPhase
 from src.application.phases.global_verification_phase import GlobalVerificationPhase
 from src.application.phases.learnings_extraction_phase import LearningsExtractionPhase
+from src.application.phases.planning_learnings_phase import PlanningLearningsPhase
 from src.application.phases.task_decomposition_phase import TaskDecompositionPhase
 from src.application.phases.task_resolution_phase import TaskResolutionPhase
 from src.application.phases.task_verification_phase import TaskVerificationPhase
@@ -50,6 +51,12 @@ _CASOS = [
         TaskDecompositionPhase,
         ThinkingPhaseEnum.A2_TASK_DECOMPOSITION,
         json.dumps({"tasks": [_TAREFA]}),
+        {"user_question": "pergunta"},
+    ),
+    (
+        PlanningLearningsPhase,
+        ThinkingPhaseEnum.A3_PLANNING_LEARNINGS,
+        json.dumps({"learnings": ["Alternativas: A) 2; B) 4"]}),
         {"user_question": "pergunta"},
     ),
     (

@@ -9,7 +9,7 @@ class ILearningsMemory(ABC):
 
     @abstractmethod
     def append(self, learnings: Sequence[Learning]) -> None:
-        """Acumula novos aprendizados extraídos por B.4.
+        """Acumula novos aprendizados extraídos por A.3 ou B.4.
 
         Args:
             learnings: Aprendizados a acumular.

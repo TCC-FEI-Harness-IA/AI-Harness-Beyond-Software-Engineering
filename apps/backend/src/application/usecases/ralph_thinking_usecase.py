@@ -48,6 +48,7 @@ _CRITERIA_HEADING = "## Critérios de aceite gerais"
 _TASKS_HEADING = "## Tarefas planejadas"
 _LEARNINGS_HEADING = "## Aprendizados extraídos"
 _NO_LEARNINGS_CONTENT = "Nenhum aprendizado foi extraído desta tarefa."
+_NO_PLANNING_LEARNINGS_CONTENT = "Nenhum aprendizado foi extraído do enunciado."
 _RESET_CONTENT = "Contexto reinicializado para a tarefa `{task_id}`. Nova janela: `{context_id}`."
 _TASK_CONTENT = (
     "### {task_id} — {title}\n\n{description}\n\n"
@@ -103,6 +104,7 @@ class RalphThinkingUseCase:
         self,
         general_criteria_phase: IThinkingPhase,
         task_decomposition_phase: IThinkingPhase,
+        planning_learnings_phase: IThinkingPhase,
         task_resolution_phase: IThinkingPhase,
         task_verification_phase: IThinkingPhase,
         learnings_extraction_phase: IThinkingPhase,
@@ -123,6 +125,7 @@ class RalphThinkingUseCase:
         Args:
             general_criteria_phase: Fase A.1.
             task_decomposition_phase: Fase A.2.
+            planning_learnings_phase: Fase A.3.
             task_resolution_phase: Fase B.1.
             task_verification_phase: Fase B.2.
             learnings_extraction_phase: Fase B.4.
@@ -140,6 +143,7 @@ class RalphThinkingUseCase:
         """
         self.general_criteria_phase: IThinkingPhase = general_criteria_phase
         self.task_decomposition_phase: IThinkingPhase = task_decomposition_phase
+        self.planning_learnings_phase: IThinkingPhase = planning_learnings_phase
         self.task_resolution_phase: IThinkingPhase = task_resolution_phase
         self.task_verification_phase: IThinkingPhase = task_verification_phase
         self.learnings_extraction_phase: IThinkingPhase = learnings_extraction_phase
@@ -201,13 +205,13 @@ class RalphThinkingUseCase:
             raise
 
     async def __run_planning(self) -> AsyncGenerator[ThinkingEvent, None]:
-        """Executa A.1 e A.2, produzindo os critérios gerais e a fila inicial.
+        """Executa A.1, A.2 e A.3, produzindo os critérios gerais, a fila inicial e as anotações do enunciado.
 
         O plano inicial é validado contra o espaço de tarefas da sessão antes de tocar a
         fila: um lote acima do teto é devolvido ao planejador para correção, e nunca truncado.
 
         Yields:
-            ThinkingEvent: Eventos `setup` (A.1) e `tasks` (A.2).
+            ThinkingEvent: Eventos `setup` (A.1), `tasks` (A.2) e `learn` (A.3).
         """
         context = self.__new_context(phase=ThinkingPhaseEnum.A1_GENERAL_CRITERIA)
         outcome = await self.__execute_phase(
@@ -240,6 +244,37 @@ class RalphThinkingUseCase:
             phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION,
             task=_SETUP_TASK_LABEL,
             content=f"{_TASKS_HEADING}\n\n{self.__render_tasks(tasks=tasks)}",
+            context=context,
+            outcome=outcome,
+            task_id=None,
+        )
+
+        async for event in self.__extract_planning_learnings():
+            yield event
+
+    async def __extract_planning_learnings(self) -> AsyncGenerator[ThinkingEvent, None]:
+        """Extrai os aprendizados pontuais do enunciado (A.3).
+
+        São as anotações dos pontos que chamam a atenção na pergunta — valores com unidades,
+        alternativas, fórmulas, condições. A fase enxerga só o enunciado, numa janela própria, e o
+        que ela extrai entra na memória antes de qualquer tarefa: assim as alternativas e os dados
+        fornecidos chegam ao contexto novo de todas as tarefas, mesmo àquelas cuja descrição não os
+        repetiu. Como os demais aprendizados, têm escopo restrito ao loop e não chegam a C.1 nem a C.3.
+
+        Yields:
+            ThinkingEvent: Evento `learn`.
+        """
+        context = self.__new_context(phase=ThinkingPhaseEnum.A3_PLANNING_LEARNINGS)
+        outcome = await self.__execute_phase(
+            runner=self.planning_learnings_phase, context=context, variables={"user_question": self.__user_question}
+        )
+        learnings = self.__to_learnings(parsed=outcome.parsed, task_id=None)
+        self.learnings_memory.append(learnings=learnings)
+        yield await self.__record_and_build(
+            subtype=ThinkingEventSubtypeEnum.LEARN,
+            phase=ThinkingPhaseEnum.A3_PLANNING_LEARNINGS,
+            task=_SETUP_TASK_LABEL,
+            content=self.__render_learnings(learnings=learnings, empty_content=_NO_PLANNING_LEARNINGS_CONTENT),
             context=context,
             outcome=outcome,
             task_id=None,
@@ -772,6 +807,7 @@ class RalphThinkingUseCase:
         for phase in (
             self.general_criteria_phase,
             self.task_decomposition_phase,
+            self.planning_learnings_phase,
             self.task_resolution_phase,
             self.task_verification_phase,
             self.learnings_extraction_phase,
@@ -1026,12 +1062,12 @@ class RalphThinkingUseCase:
             unmet_criteria_ids=tuple(parsed["unmet_criteria_ids"]),
         )
 
-    def __to_learnings(self, parsed: dict[str, Any], task_id: str) -> list[Learning]:
-        """Converte a saída de B.4 em aprendizados pontuais.
+    def __to_learnings(self, parsed: dict[str, Any], task_id: str | None) -> list[Learning]:
+        """Converte a saída de A.3 ou B.4 em aprendizados pontuais.
 
         Args:
-            parsed: Saída já validada de B.4.
-            task_id: Tarefa que originou os aprendizados.
+            parsed: Saída já validada de A.3 ou B.4.
+            task_id: Tarefa que originou os aprendizados, ou `None` quando vêm do enunciado.
 
         Returns:
             list[Learning]: Aprendizados extraídos, possivelmente nenhum.
@@ -1122,17 +1158,18 @@ class RalphThinkingUseCase:
         )
         return _REPORT_CONTENT.format(decision=report.decision.value, evaluations=evaluations)
 
-    def __render_learnings(self, learnings: Sequence[Learning]) -> str:
-        """Renderiza os aprendizados extraídos de uma tarefa.
+    def __render_learnings(self, learnings: Sequence[Learning], empty_content: str = _NO_LEARNINGS_CONTENT) -> str:
+        """Renderiza os aprendizados extraídos de uma tarefa ou do enunciado.
 
         Args:
             learnings: Aprendizados a renderizar.
+            empty_content: Aviso exibido quando nada foi extraído.
 
         Returns:
             str: Bloco markdown, ou o aviso de que nada foi extraído.
         """
         if not learnings:
-            return _NO_LEARNINGS_CONTENT
+            return empty_content
         items = _ITEM_SEPARATOR.join(f"- {learning.content}" for learning in learnings)
         return f"{_LEARNINGS_HEADING}\n\n{items}"
 

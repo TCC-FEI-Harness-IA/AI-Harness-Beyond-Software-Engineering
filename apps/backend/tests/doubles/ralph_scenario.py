@@ -8,6 +8,7 @@ from src.application.phases.final_answer_phase import FinalAnswerPhase
 from src.application.phases.general_criteria_phase import GeneralCriteriaPhase
 from src.application.phases.global_verification_phase import GlobalVerificationPhase
 from src.application.phases.learnings_extraction_phase import LearningsExtractionPhase
+from src.application.phases.planning_learnings_phase import PlanningLearningsPhase
 from src.application.phases.task_decomposition_phase import TaskDecompositionPhase
 from src.application.phases.task_resolution_phase import TaskResolutionPhase
 from src.application.phases.task_verification_phase import TaskVerificationPhase
@@ -116,6 +117,7 @@ class RalphScenario:
         self.use_case = RalphThinkingUseCase(
             general_criteria_phase=self.__phase(GeneralCriteriaPhase),
             task_decomposition_phase=self.__phase(TaskDecompositionPhase),
+            planning_learnings_phase=self.__phase(PlanningLearningsPhase),
             task_resolution_phase=self.__phase(TaskResolutionPhase),
             task_verification_phase=self.__phase(TaskVerificationPhase),
             learnings_extraction_phase=self.__phase(LearningsExtractionPhase),

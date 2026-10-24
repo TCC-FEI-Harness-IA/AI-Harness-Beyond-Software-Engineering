@@ -503,8 +503,8 @@ Cada frame emitido por `WS /v1/message/reasoning`. **Exatamente estes 9 campos, 
 | Campo | Tipo | Descrição |
 |---|---|---|
 | `type` | `string` | `thinking` \| `result` \| `degraded` \| `error`. `degraded` é legado: o fluxo atual não o emite. |
-| `subtype` | `string` | `setup`, `tasks`, `execute`, `reasoning`, `verify_pass`, `verify_fail`, `store`, `learn`, `reset`, `compile`, `replan`. |
-| `phase` | `string` | `A1`, `A2`, `B1`, `B2`, `B3`, `B4`, `C1`, `C2`, `C3`. |
+| `subtype` | `string` | `setup`, `tasks`, `execute`, `reasoning`, `verify_pass`, `verify_fail`, `store`, `learn`, `reset`, `compile`, `replan`. `learn` é emitido em A.3 (aprendizados do enunciado, `task = setup`) e em B.4 (aprendizados de cada tarefa). |
+| `phase` | `string` | `A1`, `A2`, `A3`, `B1`, `B2`, `B3`, `B4`, `C1`, `C2`, `C3`. |
 | `task` | `string` | Id da tarefa (`T1`, `T2`, ...), ou `setup` / `synthesis` para etapas globais. |
 | `session_id` | `string` | Sessão em execução. |
 | `content` | `string` | Markdown pronto para renderização. |
@@ -531,6 +531,7 @@ persistida antes do evento `result`.
 
 | Situação | Comportamento |
 |---|---|
+| A.2 conclui o plano inicial | A.3 anota os pontos de atenção do enunciado (valores com unidades, alternativas, fórmulas, condições) numa janela própria; as anotações entram na memória de aprendizados antes de qualquer tarefa e são injetadas no contexto novo de todas as tarefas. Não chegam a C.1 nem a C.3. Lista vazia é válida. |
 | B.2 aprova | B.3 armazena só essa resposta; B.4 roda sobre o histórico completo da tarefa. |
 | B.2 reprova e há tentativas | O veredito e a instrução de refazer entram na mesma janela da tarefa; B.1 repete. |
 | B.2 reprova e as tentativas acabam | Nada é armazenado, B.4 não roda, a execução é interrompida. |

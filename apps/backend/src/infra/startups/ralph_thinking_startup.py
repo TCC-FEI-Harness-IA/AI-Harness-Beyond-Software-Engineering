@@ -7,6 +7,7 @@ from src.application.phases.final_answer_phase import FinalAnswerPhase
 from src.application.phases.general_criteria_phase import GeneralCriteriaPhase
 from src.application.phases.global_verification_phase import GlobalVerificationPhase
 from src.application.phases.learnings_extraction_phase import LearningsExtractionPhase
+from src.application.phases.planning_learnings_phase import PlanningLearningsPhase
 from src.application.phases.task_decomposition_phase import TaskDecompositionPhase
 from src.application.phases.task_resolution_phase import TaskResolutionPhase
 from src.application.phases.task_verification_phase import TaskVerificationPhase
@@ -101,6 +102,9 @@ class RalphThinkingStartup:
 
         self.general_criteria_phase = GeneralCriteriaPhase(**self.__phase_dependencies(GeneralCriteriaPhase))
         self.task_decomposition_phase = TaskDecompositionPhase(**self.__phase_dependencies(TaskDecompositionPhase))
+        self.planning_learnings_phase = PlanningLearningsPhase(
+            **self.__phase_dependencies(PlanningLearningsPhase)
+        )
         self.task_resolution_phase = TaskResolutionPhase(**self.__phase_dependencies(TaskResolutionPhase))
         self.task_verification_phase = TaskVerificationPhase(**self.__phase_dependencies(TaskVerificationPhase))
         self.learnings_extraction_phase = LearningsExtractionPhase(
@@ -120,6 +124,7 @@ class RalphThinkingStartup:
         self.ralph_thinking_use_case = RalphThinkingUseCase(
             general_criteria_phase=self.general_criteria_phase,
             task_decomposition_phase=self.task_decomposition_phase,
+            planning_learnings_phase=self.planning_learnings_phase,
             task_resolution_phase=self.task_resolution_phase,
             task_verification_phase=self.task_verification_phase,
             learnings_extraction_phase=self.learnings_extraction_phase,

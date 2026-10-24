@@ -74,6 +74,11 @@ def aprendizados(*fatos: str) -> str:
     return json.dumps({"learnings": list(fatos)})
 
 
+def anotacoes_do_enunciado(*fatos: str) -> str:
+    """Saída de A.3: os pontos de atenção do enunciado. Sem fatos, o enunciado não tinha nada a anotar."""
+    return aprendizados(*fatos)
+
+
 def resposta_final(texto: str = "D) Nenhuma das anteriores") -> str:
     return json.dumps({"final_answer": texto})
 
@@ -82,10 +87,11 @@ def tarefa_aprovada(task_id: str, resultado: str, *fatos: str) -> list[str]:
     return [resolucao(resultado), aprovado(task_id), aprendizados(*fatos)]
 
 
-def roteiro_feliz() -> list[str]:
+def roteiro_feliz(*anotacoes: str) -> list[str]:
     return [
         criterios(),
         tarefas("T1", "T2", "T3"),
+        anotacoes_do_enunciado(*anotacoes),
         *tarefa_aprovada("T1", "2 e primo", "Um numero primo so e divisivel por 1 e por ele mesmo."),
         *tarefa_aprovada("T2", "2, 4 e 6 sao pares", "Todo numero par e divisivel por 2."),
         *tarefa_aprovada("T3", "apenas 4 e 6 sao maiores que 2", "O unico primo par e o 2."),

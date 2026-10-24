@@ -29,6 +29,7 @@ from src.infra.startups.ralph_thinking_startup import RalphThinkingStartup
 _PHASE_ATTRIBUTES = (
     "general_criteria_phase",
     "task_decomposition_phase",
+    "planning_learnings_phase",
     "task_resolution_phase",
     "task_verification_phase",
     "learnings_extraction_phase",
@@ -54,7 +55,7 @@ def test_constroi_todo_o_grafo_sem_deixar_atributo_nulo() -> None:
     assert all(valor is not None for valor in vars(startup).values())
 
 
-def test_injeta_as_oito_fases_pela_interface() -> None:
+def test_injeta_as_nove_fases_pela_interface() -> None:
     startup = RalphThinkingStartup()
 
     for atributo in _PHASE_ATTRIBUTES:

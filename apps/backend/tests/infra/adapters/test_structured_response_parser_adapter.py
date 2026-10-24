@@ -12,6 +12,7 @@ from src.infra.adapters.structured_response_parser_adapter import StructuredResp
 
 _FASE_A1 = ThinkingPhaseEnum.A1_GENERAL_CRITERIA
 _FASE_B4 = ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION
+_FASE_A3 = ThinkingPhaseEnum.A3_PLANNING_LEARNINGS
 
 _CRITERIOS_VALIDOS: dict[str, Any] = {
     "general_acceptance_criteria": [{"id": "AC1", "description": "responder em portugues"}]
@@ -441,6 +442,29 @@ def test_b4_aceita_lista_de_aprendizados_vazia() -> None:
 def test_b4_invalido_e_recusado(payload: dict[str, Any]) -> None:
     with pytest.raises(PhaseParsingError):
         _parser().parse(raw_output=json.dumps(payload), phase=_FASE_B4)
+
+
+# ── Schema A.3 ───────────────────────────────────────────────────────────────
+
+
+def test_a3_valido() -> None:
+    payload = {"learnings": ["Alternativas: A) 2; B) 4", "Velocidade: 20 m/s"]}
+
+    assert _parser().parse(raw_output=json.dumps(payload), phase=_FASE_A3) == payload
+
+
+def test_a3_aceita_lista_de_aprendizados_vazia() -> None:
+    payload: dict[str, Any] = {"learnings": []}
+
+    assert _parser().parse(raw_output=json.dumps(payload), phase=_FASE_A3) == payload
+
+
+@pytest.mark.parametrize("payload", [{}, {"learnings": "fato"}, {"learnings": [{"content": "fato"}]}])
+def test_a3_invalido_e_recusado(payload: dict[str, Any]) -> None:
+    with pytest.raises(PhaseParsingError) as erro:
+        _parser().parse(raw_output=json.dumps(payload), phase=_FASE_A3)
+
+    assert erro.value.phase is _FASE_A3
 
 
 # ── Schema C.3 ───────────────────────────────────────────────────────────────

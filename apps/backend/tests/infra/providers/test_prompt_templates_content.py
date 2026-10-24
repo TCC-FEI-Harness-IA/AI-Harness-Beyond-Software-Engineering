@@ -7,6 +7,7 @@ from src.infra.providers.file_prompt_template_provider import FilePromptTemplate
 _PLACEHOLDERS_POR_FASE = {
     ThinkingPhaseEnum.A1_GENERAL_CRITERIA: {"user_question"},
     ThinkingPhaseEnum.A2_TASK_DECOMPOSITION: {"user_question", "max_tasks"},
+    ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: {"user_question"},
     ThinkingPhaseEnum.B1_TASK_RESOLUTION: {"task_description", "task_acceptance_criteria"},
     ThinkingPhaseEnum.B2_TASK_VERIFICATION: {"preliminary_result", "task_acceptance_criteria"},
     ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: set(),
@@ -20,7 +21,7 @@ def _provider() -> FilePromptTemplateProvider:
     return FilePromptTemplateProvider(settings=Settings(), logger=logging.getLogger("teste.templates"))
 
 
-def test_os_oito_templates_existem_no_diretorio_configurado() -> None:
+def test_os_nove_templates_existem_no_diretorio_configurado() -> None:
     provider = _provider()
 
     for fase in _PLACEHOLDERS_POR_FASE:
@@ -90,3 +91,27 @@ def test_templates_de_planejamento_informam_o_teto_de_tarefas_do_lote() -> None:
         )
         assert "no máximo 7 tarefas" in renderizado
         assert "não funda" in renderizado
+
+
+def test_template_de_aprendizados_do_planejamento_manda_preservar_o_que_chama_a_atencao() -> None:
+    template = _provider().get(phase=ThinkingPhaseEnum.A3_PLANNING_LEARNINGS).lower()
+
+    assert "valores" in template and "unidades de medida" in template
+    assert "alternativas" in template
+    assert "fórmulas" in template
+    assert "restrições" in template
+    assert "literalmente" in template
+
+
+def test_template_de_aprendizados_do_planejamento_proibe_resolver_a_pergunta() -> None:
+    template = _provider().get(phase=ThinkingPhaseEnum.A3_PLANNING_LEARNINGS).lower()
+
+    assert "não resolva" in template
+    assert "nenhuma conclusão" in template
+
+
+def test_template_de_aprendizados_do_planejamento_devolve_lista_vazia_quando_nada_se_aplica() -> None:
+    template = _provider().get(phase=ThinkingPhaseEnum.A3_PLANNING_LEARNINGS)
+
+    assert "lista vazia" in template
+    assert '{"learnings": [' in template

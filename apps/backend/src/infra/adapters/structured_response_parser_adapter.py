@@ -87,6 +87,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             ThinkingPhaseEnum.B1_TASK_RESOLUTION: self.__validate_task_result,
             ThinkingPhaseEnum.B2_TASK_VERIFICATION: self.__validate_verification,
             ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: self.__validate_verification,
+            ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: self.__validate_learnings,
             ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: self.__validate_learnings,
             ThinkingPhaseEnum.C3_FINAL_ANSWER: self.__validate_final_answer,
         }
@@ -430,7 +431,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         raw_output: str,
         validation: ValidationContext | None,
     ) -> None:
-        """Valida o schema de B.4, onde a lista vazia é legítima.
+        """Valida o schema de A.3 e B.4, onde a lista vazia é legítima.
 
         Raises:
             PhaseParsingError: Quando 'learnings' não é uma lista de strings.

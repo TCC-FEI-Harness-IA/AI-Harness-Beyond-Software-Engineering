@@ -2,7 +2,7 @@
 
 ## Resumo
 
-Este documento contextualiza uma adaptação do **Ralph Wiggum Loop**, originalmente empregado em engenharia de software, para responder perguntas gerais em linguagem natural, incluindo questões de múltipla escolha. A arquitetura utiliza planejamento, decomposição em tarefas atômicas, execução e validação iterativas, reinicialização de contexto entre tarefas (*Fresh Context*) e síntese final sujeita a critérios de aceite globais. A seção **Metodologia original** abaixo é uma transcrição literal do trecho fornecido no paper, sem correções ou reformulações.
+Este documento contextualiza uma adaptação do **Ralph Wiggum Loop**, originalmente empregado em engenharia de software, para responder perguntas gerais em linguagem natural, incluindo questões de múltipla escolha. A arquitetura utiliza planejamento, decomposição em tarefas atômicas, execução e validação iterativas, reinicialização de contexto entre tarefas (*Fresh Context*) e síntese final sujeita a critérios de aceite globais. A seção **Metodologia original** abaixo é uma transcrição literal do trecho fornecido no paper, sem correções ou reformulações. Depois da transcrição do paper, o fluxo implementado recebeu uma extensão, a etapa **A.3 — Aprendizados pontuais do enunciado**, descrita na seção **Extensões ao método do paper** e detalhada em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
 
 ## O que é o Ralph Wiggum Loop?
 
@@ -12,22 +12,46 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 
 ## Guia de implementação para agentes de desenvolvimento CLI
 
-> **Nota de procedência:** esta seção é uma orientação operacional derivada da Metodologia, não faz parte da transcrição literal. Em caso de divergência, prevalece a Metodologia original abaixo.
+> **Nota de procedência:** esta seção é uma orientação operacional derivada da Metodologia, não faz parte da transcrição literal. Em caso de divergência, prevalece a Metodologia original abaixo, com uma única exceção: a etapa **A.3** (item 3), que é uma extensão posterior ao paper e está registrada em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
 
 1. **A.1 — Critérios gerais:** receber a pergunta original e executar um prompt fixo `Template A.1` para definir idioma, formato, restrições e condições da resposta final; persistir esses critérios.
 2. **A.2 — Planejamento:** executar `Template A.2` sobre a pergunta original para criar uma lista ordenada de tarefas de objetivo único, cada uma com descrição, escopo, entradas/saídas esperadas e critérios individuais de aceite; persistir a lista.
-3. **B.1 — Seleção e resolução:** selecionar programaticamente a próxima tarefa; iniciar um contexto novo com os aprendizados compactos acumulados (se houver), a tarefa e `Template B.1`. Não antecipar a solução global.
-4. **B.2 — Validação:** avaliar a resposta preliminar contra todos os critérios individuais usando `Template B.2`. Se reprovar, reenviar o feedback e repetir **no mesmo contexto da tarefa**, preservando tentativas anteriores.
-5. **B.3 — Resultado aprovado:** persistir somente a resposta aprovada, indexada pelo identificador da tarefa. Não enviar tentativas reprovadas para a síntese final.
-6. **B.4 — Aprendizados pontuais:** executar `Template B.4` sobre o histórico completo da tarefa e extrair fatos compactos úteis para tarefas seguintes. **Não** incluir esses aprendizados na construção da resposta final.
-7. **Fresh Context:** ao avançar para outra tarefa, descartar o histórico da tarefa anterior; criar uma nova chamada/contexto e injetar os aprendizados compactos antes da tarefa seguinte. A checagem de existência de tarefas pendentes é programática.
-8. **C.1 — Validação global:** reunir apenas os resultados aprovados e os critérios gerais de A.1; executar `Template C.1` para verificar a suficiência do conjunto.
-9. **Planejamento adicional:** se a validação global reprovar, identificar critérios pendentes, gerar novas tarefas específicas e retornar ao loop de execução.
-10. **Resposta final:** após aprovação global, sintetizar a resposta a partir dos resultados aprovados, obedecendo idioma, formato e restrições gerais.
+3. **A.3 — Aprendizados pontuais do enunciado (extensão):** executar `Template A.3` sobre a pergunta original, em janela própria, para anotar os pontos que chamam a atenção no enunciado: valores com unidades de medida, alternativas, fórmulas, condições e restrições. Acrescentar essas anotações à memória de aprendizados **antes** de qualquer tarefa; uma lista vazia é válida. Não resolver a pergunta.
+4. **B.1 — Seleção e resolução:** selecionar programaticamente a próxima tarefa; iniciar um contexto novo com os aprendizados compactos acumulados (as anotações de A.3 e os aprendizados de B.4 das tarefas anteriores, se houver), a tarefa e `Template B.1`. Não antecipar a solução global.
+5. **B.2 — Validação:** avaliar a resposta preliminar contra todos os critérios individuais usando `Template B.2`. Se reprovar, reenviar o feedback e repetir **no mesmo contexto da tarefa**, preservando tentativas anteriores.
+6. **B.3 — Resultado aprovado:** persistir somente a resposta aprovada, indexada pelo identificador da tarefa. Não enviar tentativas reprovadas para a síntese final.
+7. **B.4 — Aprendizados pontuais:** executar `Template B.4` sobre o histórico completo da tarefa e extrair fatos compactos úteis para tarefas seguintes. **Não** incluir esses aprendizados na construção da resposta final.
+8. **Fresh Context:** ao avançar para outra tarefa, descartar o histórico da tarefa anterior; criar uma nova chamada/contexto e injetar os aprendizados compactos (inclusive as anotações de A.3) antes da tarefa seguinte. A checagem de existência de tarefas pendentes é programática.
+9. **C.1 — Validação global:** reunir apenas os resultados aprovados e os critérios gerais de A.1; executar `Template C.1` para verificar a suficiência do conjunto.
+10. **Planejamento adicional:** se a validação global reprovar, identificar critérios pendentes, gerar novas tarefas específicas e retornar ao loop de execução.
+11. **Resposta final:** após aprovação global, sintetizar a resposta a partir dos resultados aprovados, obedecendo idioma, formato e restrições gerais.
 
-**Separação de estados:** mantenha, no mínimo, `original_question`, `general_acceptance_criteria`, `task_queue`, `approved_task_results`, `accumulated_learnings` e `current_task_context`. Os nomes são sugestões de implementação, não nomes exigidos pelo paper. O texto acadêmico define o comportamento conceitual dos templates, mas não fornece seus prompts completos; eles precisam ser implementados de acordo com as responsabilidades descritas, sem alegar que são transcrições do trabalho.
+**Separação de estados:** mantenha, no mínimo, `original_question`, `general_acceptance_criteria`, `task_queue`, `approved_task_results`, `accumulated_learnings` e `current_task_context`. `accumulated_learnings` recebe primeiro as anotações de A.3 e depois os aprendizados de B.4, na ordem em que surgem. Os nomes são sugestões de implementação, não nomes exigidos pelo paper. O texto acadêmico define o comportamento conceitual dos templates, mas não fornece seus prompts completos; eles precisam ser implementados de acordo com as responsabilidades descritas, sem alegar que são transcrições do trabalho.
+
+## Extensões ao método do paper
+
+> **Nota de procedência:** as regras desta seção **não constam** da transcrição literal da Metodologia. Elas foram introduzidas depois de testes com o fluxo implementado e, por isso, aparecem separadas do texto do paper. O relatório completo, com exemplos, está em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+### A.3 — Aprendizados pontuais do enunciado
+
+**Problema observado.** Cada tarefa roda em contexto novo (*Fresh Context*) e só enxerga a própria descrição e os aprendizados acumulados. Na versão do paper, o primeiro aprendizado só nasce em B.4, depois da primeira tarefa. Se o decompositor (A.2) não repetir na descrição de uma tarefa um dado importante do enunciado, como as alternativas de uma questão de múltipla escolha, um valor com sua unidade ou uma fórmula, esse dado se perde para a tarefa.
+
+**Regra.** A terceira etapa do Planejamento, executada logo depois de A.2, salva os aprendizados pontuais do enunciado:
+
+> *Pergunta do usuário* + *Template A.3* → *Aprendizados Pontuais do Enunciado*
+
+- A entrada é **somente a pergunta original**, em janela de contexto própria. A etapa não vê os critérios de A.1 nem as tarefas de A.2.
+- A saída é uma lista de fatos secos e atômicos, copiados como aparecem no enunciado: valores **com unidades de medida**, **alternativas** (com sua letra ou número, sem omitir nenhuma), **fórmulas**, **condições e restrições** (inclusive as simultâneas) e qualquer outro dado que chamaria a atenção de quem não leu a pergunta.
+- A etapa **não resolve** a pergunta: conclusões, cálculos e palpites de resposta são proibidos.
+- Uma lista vazia é válida (enunciado sem nada a anotar); nesse caso nenhum bloco é injetado.
+- Os fatos entram na mesma memória de aprendizados de B.4, **antes** de qualquer tarefa. Portanto são injetados no início do contexto novo de **toda** tarefa, inclusive a primeira e as criadas pelo Planejamento Adicional (C.2), antes dos aprendizados que B.4 for acrescentando.
+- Valem para A.3 as mesmas separações dos demais aprendizados: o validador de tarefa (B.2) não os recebe e eles **não** participam da validação global (C.1) nem da resposta final (C.3).
+
+**Consequência na primeira tarefa.** Na versão do paper, "na primeira tarefa do ciclo não há aprendizados acumulados". Com A.3, a primeira tarefa já recebe as anotações do enunciado, quando A.3 as produz.
 
 ## Metodologia original — transcrição literal
+
+> **Atenção:** o bloco abaixo descreve o Planejamento em duas etapas (A.1 e A.2) e afirma que a primeira tarefa não tem aprendizados acumulados. Ambas as afirmações valem para o paper, mas **não** para o fluxo implementado, que inclui a etapa A.3 (ver **Extensões ao método do paper**). O texto abaixo permanece inalterado de propósito.
 
 O bloco abaixo preserva exatamente os caracteres do trecho original enviado, inclusive marcação LaTeX/Markdown, fórmulas, exemplos, referências a figuras e eventuais erros tipográficos. Referências a imagens permanecem como caminhos do documento de origem; os arquivos das figuras não foram fornecidos. A seção separada **“Métodologia de avaliação”** não foi incluída, pois não faz parte da seção intitulada **“Metodologia”** no arquivo original.
 

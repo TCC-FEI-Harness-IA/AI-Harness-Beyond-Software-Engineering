@@ -18,6 +18,7 @@ from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.in_memory_session_repository import InMemorySessionRepository
 from tests.doubles.ralph_scenario import RalphScenario
 from tests.doubles.ralph_scripts import (
+    anotacoes_do_enunciado as _anotacoes_do_enunciado,
     aprendizados as _aprendizados,
     aprovado as _aprovado,
     criterios as _criterios,
@@ -65,6 +66,7 @@ async def test_emite_os_eventos_do_fluxo_na_ordem_do_paper() -> None:
     assert _assinaturas(eventos) == [
         ("thinking", "setup"),
         ("thinking", "tasks"),
+        ("thinking", "learn"),
         *por_tarefa * 3,
         ("thinking", "compile"),
         ("thinking", "compile"),
@@ -78,8 +80,10 @@ async def test_as_fases_sao_chamadas_na_sequencia_do_paper() -> None:
     eventos = await cenario.run()
 
     fases_com_modelo = [evento.phase.value for evento in eventos if evento.inference_time_ms > 0]
-    assert fases_com_modelo == ["A1", "A2", "B1", "B2", "B4", "B1", "B2", "B4", "B1", "B2", "B4", "C1", "C3", "C3"]
-    assert cenario.llm.call_count == 13
+    assert fases_com_modelo == [
+        "A1", "A2", "A3", "B1", "B2", "B4", "B1", "B2", "B4", "B1", "B2", "B4", "C1", "C3", "C3"
+    ]
+    assert cenario.llm.call_count == 14
 
 
 async def test_o_ultimo_evento_traz_a_resposta_final() -> None:
@@ -106,7 +110,7 @@ async def test_a_sessao_persistida_registra_o_pensamento_completo() -> None:
     assert sessao.status is SessionStatusEnum.COMPLETED
     assert sessao.final_answer == "D) Nenhuma das anteriores"
     assert [mensagem.phase.value for mensagem in sessao.messages] == [
-        "A1", "A1", "A2",
+        "A1", "A1", "A2", "A3",
         *["B1", "B1", "B2", "B3", "B4"] * 3,
         "C1", "C3",
     ]
@@ -164,7 +168,7 @@ async def test_invariante_i1_a_janela_da_tarefa_seguinte_nao_carrega_a_conversa_
 
     await cenario.run()
 
-    conversa_da_segunda_tarefa = cenario.llm.texts_of(5)
+    conversa_da_segunda_tarefa = cenario.llm.texts_of(6)
     assert all("2 e primo" not in texto for texto in conversa_da_segunda_tarefa)
 
 
@@ -176,7 +180,7 @@ async def test_invariante_i2_a_primeira_tarefa_nao_recebe_aprendizados() -> None
 
     await cenario.run()
 
-    primeira_conversa = cenario.llm.texts_of(2)
+    primeira_conversa = cenario.llm.texts_of(3)
     assert len(primeira_conversa) == 1
     assert "Aprendizados acumulados" not in primeira_conversa[0]
 
@@ -186,8 +190,8 @@ async def test_invariante_i2_as_tarefas_seguintes_recebem_os_aprendizados_no_ini
 
     await cenario.run()
 
-    segunda_conversa = cenario.llm.texts_of(5)
-    terceira_conversa = cenario.llm.texts_of(8)
+    segunda_conversa = cenario.llm.texts_of(6)
+    terceira_conversa = cenario.llm.texts_of(9)
     assert segunda_conversa[0].startswith("## Aprendizados acumulados")
     assert "Um numero primo so e divisivel por 1 e por ele mesmo." in segunda_conversa[0]
     assert segunda_conversa[1].startswith("TEMPLATE B1")
@@ -202,6 +206,7 @@ def _roteiro_com_reprovacao() -> list[str]:
     return [
         _criterios(),
         _tarefas("T1", "T2"),
+        _anotacoes_do_enunciado(),
         *_tarefa_aprovada("T1", "2 e primo", "Um numero primo so e divisivel por 1 e por ele mesmo."),
         _resolucao("primeira tentativa incompleta"),
         _reprovado("T2"),
@@ -226,7 +231,7 @@ async def test_invariante_i3_a_segunda_tentativa_enxerga_a_reprovacao_da_primeir
 
     await cenario.run()
 
-    segunda_tentativa = cenario.llm.texts_of(7)
+    segunda_tentativa = cenario.llm.texts_of(8)
     assert any("primeira tentativa incompleta" in texto for texto in segunda_tentativa)
     assert any("T2-AC1" in texto for texto in segunda_tentativa)
 
@@ -260,7 +265,7 @@ async def test_invariante_i4_a_conversa_da_verificacao_traz_apenas_o_proprio_pro
 
     await cenario.run()
 
-    conversa_da_verificacao = cenario.llm.texts_of(6)
+    conversa_da_verificacao = cenario.llm.texts_of(7)
     assert len(conversa_da_verificacao) == 1
     assert conversa_da_verificacao[0].startswith("TEMPLATE B2")
     assert "Aprendizados acumulados" not in conversa_da_verificacao[0]
@@ -321,7 +326,7 @@ async def test_invariante_i6_o_loop_b_nao_enxerga_nenhum_resultado_armazenado() 
 
     await cenario.run()
 
-    conversa_da_terceira_tarefa = " ".join(cenario.llm.texts_of(8))
+    conversa_da_terceira_tarefa = " ".join(cenario.llm.texts_of(9))
     assert "Aprendizados acumulados" in conversa_da_terceira_tarefa
     assert "2 e primo" not in conversa_da_terceira_tarefa
     assert "2, 4 e 6 sao pares" not in conversa_da_terceira_tarefa
@@ -330,10 +335,11 @@ async def test_invariante_i6_o_loop_b_nao_enxerga_nenhum_resultado_armazenado() 
 # ── I7 — C.2 insere no topo e a seleção é programática ──────────────────────
 
 
-def _roteiro_com_replanejamento() -> list[str]:
+def _roteiro_com_replanejamento(*anotacoes: str) -> list[str]:
     return [
         _criterios(),
         _tarefas("T1"),
+        _anotacoes_do_enunciado(*anotacoes),
         *_tarefa_aprovada("T1", "2 e primo", "Um numero primo so e divisivel por 1 e por ele mesmo."),
         _global_reprovado("AC2"),
         _tarefas("T4", "T5"),
@@ -390,6 +396,7 @@ async def test_duas_rodadas_de_planejamento_adicional() -> None:
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             *_tarefa_aprovada("T1", "2 e primo", "fato um"),
             _global_reprovado("AC2"),
             _tarefas("T4"),
@@ -422,8 +429,8 @@ async def test_as_tarefas_de_c2_recebem_os_aprendizados_acumulados_de_todas_as_a
 
     await cenario.run()
 
-    # chamadas: 0 A1, 1 A2, 2-4 T1, 5 C1, 6 C2, 7 B1 de T4
-    primeira_conversa_da_t4 = cenario.llm.texts_of(7)
+    # chamadas: 0 A1, 1 A2, 2 A3, 3-5 T1, 6 C1, 7 C2, 8 B1 de T4
+    primeira_conversa_da_t4 = cenario.llm.texts_of(8)
     assert primeira_conversa_da_t4[0].startswith("## Aprendizados acumulados")
     assert "Um numero primo so e divisivel por 1 e por ele mesmo." in primeira_conversa_da_t4[0]
 
@@ -449,6 +456,7 @@ async def test_relatorio_local_vazio_e_corrigido_pelo_verificador_sem_gastar_ten
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             _resolucao("2 e primo"),
             relatorio_vazio,
             _aprovado("T1"),
@@ -464,7 +472,7 @@ async def test_relatorio_local_vazio_e_corrigido_pelo_verificador_sem_gastar_ten
     assert len([e for e in eventos if e.subtype is _SUB.VERIFY_PASS]) == 1
     assert eventos[-1].type is _TIPO.RESULT
     # a segunda conversa do verificador mostra a correção pedida, na mesma janela
-    assert any("T1-AC1" in texto and "Faltam avaliações" in texto for texto in cenario.llm.texts_of(4))
+    assert any("T1-AC1" in texto and "Faltam avaliações" in texto for texto in cenario.llm.texts_of(5))
 
 
 async def test_relatorio_local_com_id_inexistente_marcado_como_nao_atendido_nao_aprova() -> None:
@@ -479,6 +487,7 @@ async def test_relatorio_local_com_id_inexistente_marcado_como_nao_atendido_nao_
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             _resolucao("2 e primo"),
             contraditorio,
             _aprovado("T1"),
@@ -490,7 +499,7 @@ async def test_relatorio_local_com_id_inexistente_marcado_como_nao_atendido_nao_
 
     await cenario.run()
 
-    assert cenario.llm.call_count == 8
+    assert cenario.llm.call_count == 9
 
 
 async def test_relatorio_global_incompleto_e_corrigido_antes_de_decidir_pela_sintese() -> None:
@@ -499,6 +508,7 @@ async def test_relatorio_global_incompleto_e_corrigido_antes_de_decidir_pela_sin
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             *_tarefa_aprovada("T1", "2 e primo", "fato"),
             incompleto,
             _global_aprovado(),
@@ -510,7 +520,7 @@ async def test_relatorio_global_incompleto_e_corrigido_antes_de_decidir_pela_sin
 
     assert eventos[-1].type is _TIPO.RESULT
     assert len([e for e in eventos if e.phase is _FASE.C1_GLOBAL_VERIFICATION]) == 1
-    assert cenario.llm.call_count == 8
+    assert cenario.llm.call_count == 9
 
 
 async def test_relatorio_global_que_reprova_um_id_desconhecido_e_corrigido_e_nao_zera_as_pendencias_do_c2() -> None:
@@ -519,6 +529,7 @@ async def test_relatorio_global_que_reprova_um_id_desconhecido_e_corrigido_e_nao
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             *_tarefa_aprovada("T1", "2 e primo", "fato um"),
             desconhecido,
             _global_reprovado("AC2"),
@@ -539,7 +550,9 @@ async def test_relatorio_global_que_reprova_um_id_desconhecido_e_corrigido_e_nao
 async def test_verificador_que_nunca_corrige_o_relatorio_encerra_sem_armazenar_nem_sintetizar() -> None:
     vazio = json.dumps({"decision": "approved", "criteria_evaluation": [], "unmet_criteria_ids": []})
     cenario = RalphScenario(
-        responses=[_criterios(), _tarefas("T1"), _resolucao("2 e primo"), vazio, vazio, vazio],
+        responses=[
+            _criterios(), _tarefas("T1"), _anotacoes_do_enunciado(), _resolucao("2 e primo"), vazio, vazio, vazio
+        ],
         settings=FakeSettings(ralph_json_parse_max_retries=2),
     )
 
@@ -560,6 +573,7 @@ def _roteiro_com_tarefa_reprovada_em_todas_as_tentativas() -> list[str]:
     return [
         _criterios(),
         _tarefas("T1", "T2"),
+        _anotacoes_do_enunciado(),
         _resolucao("primeira tentativa ruim"),
         _reprovado("T1"),
         _resolucao("RESULTADO_REPROVADO"),
@@ -594,7 +608,7 @@ async def test_resultado_reprovado_nunca_e_armazenado_nem_chega_a_sintese() -> N
     assert not cenario.template_provider.variables_of(_FASE.C1_GLOBAL_VERIFICATION)
     assert not cenario.template_provider.variables_of(_FASE.C3_FINAL_ANSWER)
     assert not [e for e in eventos if e.type is _TIPO.RESULT]
-    assert cenario.llm.call_count == 6
+    assert cenario.llm.call_count == 7
 
 
 async def test_tarefa_reprovada_em_todas_as_tentativas_nao_extrai_aprendizados_nem_segue_o_loop() -> None:
@@ -605,7 +619,7 @@ async def test_tarefa_reprovada_em_todas_as_tentativas_nao_extrai_aprendizados_n
 
     eventos = await _executar_ate_falhar(cenario, ExecutionInterruptedError)
 
-    assert not [e for e in eventos if e.subtype is _SUB.LEARN]
+    assert not [e for e in eventos if e.phase is _FASE.B4_LEARNINGS_EXTRACTION]
     assert cenario.learnings_memory.is_empty()
     assert cenario.task_queue.is_empty()
 
@@ -660,6 +674,7 @@ def _roteiro_ate_a_primeira_reprovacao_global() -> list[str]:
     return [
         _criterios(),
         _tarefas("T1"),
+        _anotacoes_do_enunciado(),
         *_tarefa_aprovada("T1", "2 e primo", "fato um"),
         _global_reprovado("AC2"),
     ]
@@ -677,7 +692,7 @@ async def test_reprovacao_global_sem_recursos_para_replanejar_nao_chama_a_sintes
     assert not [e for e in eventos if e.type is _TIPO.RESULT]
     assert eventos[-1].type is _TIPO.ERROR
     assert eventos[-1].phase is _FASE.C2_ADDITIONAL_PLANNING
-    assert cenario.llm.call_count == 6
+    assert cenario.llm.call_count == 7
 
 
 @pytest.mark.parametrize(
@@ -726,6 +741,7 @@ async def test_duas_reprovacoes_globais_seguidas_nunca_conduzem_a_c3() -> None:
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             *_tarefa_aprovada("T1", "2 e primo", "fato um"),
             _global_reprovado("AC2"),
             _tarefas("T4"),
@@ -756,6 +772,7 @@ async def test_aprovacao_global_seguida_de_falha_na_sintese_nao_gera_sucesso() -
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             *_tarefa_aprovada("T1", "2 e primo", "fato"),
             _global_aprovado(),
             "isto nao e json",
@@ -795,6 +812,7 @@ def _roteiro_interrompido() -> list[str]:
     return [
         _criterios(),
         _tarefas("T1", "T2", "T3"),
+        _anotacoes_do_enunciado(),
         *_tarefa_aprovada("T1", "2 e primo", "fato um"),
     ]
 
@@ -807,7 +825,7 @@ async def test_orcamento_esgotado_no_loop_interrompe_descartando_as_tarefas_rest
     with pytest.raises(ExecutionInterruptedError):
         async for evento in cenario.stream():
             eventos.append(evento)
-            if evento.subtype is _SUB.LEARN:
+            if evento.phase is _FASE.B4_LEARNINGS_EXTRACTION:
                 guardiao.authorized = False
 
     assert eventos[-1].type is _TIPO.ERROR
@@ -827,7 +845,7 @@ async def test_o_limite_registrado_e_o_do_veredito_que_negou_o_loop() -> None:
 
     with pytest.raises(ExecutionInterruptedError):
         async for evento in cenario.stream():
-            if evento.subtype is _SUB.LEARN:
+            if evento.phase is _FASE.B4_LEARNINGS_EXTRACTION:
                 guardiao.authorized = False
 
     assert cenario.session.failure.limit is BudgetLimitEnum.SESSION_TIMEOUT
@@ -839,7 +857,7 @@ async def test_tarefas_descartadas_pela_interrupcao_saem_da_fila() -> None:
 
     with pytest.raises(ExecutionInterruptedError):
         async for evento in cenario.stream():
-            if evento.subtype is _SUB.LEARN:
+            if evento.phase is _FASE.B4_LEARNINGS_EXTRACTION:
                 guardiao.authorized = False
 
     assert cenario.task_queue.is_empty() is True
@@ -905,7 +923,7 @@ async def test_o_diagnostico_da_interrupcao_traz_o_consumo_conhecido_da_sessao()
     await _executar_ate_falhar(cenario, ExecutionInterruptedError)
 
     totais = cenario.session.totals
-    assert totais.total_llm_calls == 6
+    assert totais.total_llm_calls == 7
     assert f"{totais.total_tokens} tokens em {totais.total_llm_calls} chamadas" in cenario.session.failure.description
 
 
@@ -918,6 +936,7 @@ async def test_plano_inicial_acima_do_teto_e_devolvido_ao_planejador_e_nunca_tru
             _criterios(),
             _tarefas("T1", "T2"),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             *_tarefa_aprovada("T1", "2 e primo", "fato"),
             _global_aprovado(),
             _resposta_final(),
@@ -959,6 +978,7 @@ async def test_c2_acima_do_teto_e_devolvido_ao_planejador_e_nao_e_truncado() -> 
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             *_tarefa_aprovada("T1", "2 e primo", "fato um"),
             _global_reprovado("AC2"),
             _tarefas("T4", "T5", "T6", "T7", "T8"),
@@ -982,6 +1002,7 @@ async def test_c2_que_reutiliza_o_id_de_uma_tarefa_ja_criada_e_devolvido_para_co
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             *_tarefa_aprovada("T1", "2 e primo", "fato um"),
             _global_reprovado("AC2"),
             _tarefas("T1"),
@@ -1072,6 +1093,7 @@ async def test_uma_unica_tarefa_percorre_o_fluxo_completo() -> None:
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             *_tarefa_aprovada("T1", "2 e primo", "fato um"),
             _global_aprovado(),
             _resposta_final(),
@@ -1083,6 +1105,7 @@ async def test_uma_unica_tarefa_percorre_o_fluxo_completo() -> None:
     assert _assinaturas(eventos) == [
         ("thinking", "setup"),
         ("thinking", "tasks"),
+        ("thinking", "learn"),
         ("thinking", "reset"),
         ("thinking", "execute"),
         ("thinking", "reasoning"),
@@ -1101,6 +1124,7 @@ async def test_tarefa_sem_aprendizado_nao_injeta_bloco_na_tarefa_seguinte() -> N
         responses=[
             _criterios(),
             _tarefas("T1", "T2"),
+            _anotacoes_do_enunciado(),
             *_tarefa_aprovada("T1", "2 e primo"),
             *_tarefa_aprovada("T2", "4 e par"),
             _global_aprovado(),
@@ -1110,10 +1134,11 @@ async def test_tarefa_sem_aprendizado_nao_injeta_bloco_na_tarefa_seguinte() -> N
 
     eventos = await cenario.run()
 
-    segunda_conversa = cenario.llm.texts_of(5)
+    segunda_conversa = cenario.llm.texts_of(6)
     assert len(segunda_conversa) == 1
     assert segunda_conversa[0].startswith("TEMPLATE B1")
-    assert [e.content for e in eventos if e.subtype is _SUB.LEARN][0] == "Nenhum aprendizado foi extraído desta tarefa."
+    extraidos_por_tarefa = [e.content for e in eventos if e.phase is _FASE.B4_LEARNINGS_EXTRACTION]
+    assert extraidos_por_tarefa[0] == "Nenhum aprendizado foi extraído desta tarefa."
 
 
 # ── I3/I4 — Veredito do validador e histórico completo da tarefa (B.4) ───────
@@ -1124,7 +1149,7 @@ async def test_invariante_i3_a_segunda_tentativa_enxerga_o_veredito_do_validador
 
     await cenario.run()
 
-    segunda_tentativa = " ".join(cenario.llm.texts_of(7))
+    segunda_tentativa = " ".join(cenario.llm.texts_of(8))
     assert "nao atende" in segunda_tentativa
     assert "reproved" in segunda_tentativa
 
@@ -1134,9 +1159,9 @@ async def test_a_instrucao_de_refazer_so_aparece_quando_ha_nova_tentativa() -> N
 
     await cenario.run()
 
-    segunda_tentativa = cenario.llm.texts_of(7)
+    segunda_tentativa = cenario.llm.texts_of(8)
     assert sum("Refaça a resolução da tarefa" in texto for texto in segunda_tentativa) == 1
-    historico_de_b4 = cenario.llm.texts_of(9)
+    historico_de_b4 = cenario.llm.texts_of(10)
     assert sum("Refaça a resolução da tarefa" in texto for texto in historico_de_b4) == 1
 
 
@@ -1145,7 +1170,7 @@ async def test_a_resposta_reprovada_nao_e_duplicada_na_mensagem_de_correcao() ->
 
     await cenario.run()
 
-    segunda_tentativa = cenario.llm.texts_of(7)
+    segunda_tentativa = cenario.llm.texts_of(8)
     assert sum("primeira tentativa incompleta" in texto for texto in segunda_tentativa) == 1
 
 
@@ -1154,7 +1179,7 @@ async def test_b4_recebe_o_veredito_de_aprovacao_mesmo_quando_aprovado_de_primei
 
     await cenario.run()
 
-    contexto_de_b4 = " ".join(cenario.llm.texts_of(4))
+    contexto_de_b4 = " ".join(cenario.llm.texts_of(5))
     assert "Veredito do validador (tentativa 1)" in contexto_de_b4
     assert "`approved`" in contexto_de_b4
     assert "atende" in contexto_de_b4
@@ -1165,7 +1190,7 @@ async def test_b4_recebe_a_reprovacao_e_tambem_a_aprovacao_de_uma_tarefa_com_ret
 
     await cenario.run()
 
-    contexto_de_b4 = cenario.llm.texts_of(9)
+    contexto_de_b4 = cenario.llm.texts_of(10)
     vereditos = [texto for texto in contexto_de_b4 if texto.startswith("## Veredito do validador")]
     assert len(vereditos) == 2
     assert "tentativa 1" in vereditos[0] and "`reproved`" in vereditos[0]
@@ -1180,6 +1205,7 @@ async def test_b4_recebe_a_correcao_de_saida_estruturada_do_validador_identifica
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             _resolucao("2 e primo"),
             saida_invalida_do_validador,
             _aprovado("T1"),
@@ -1191,7 +1217,7 @@ async def test_b4_recebe_a_correcao_de_saida_estruturada_do_validador_identifica
 
     await cenario.run()
 
-    contexto_de_b4 = cenario.llm.texts_of(5)
+    contexto_de_b4 = cenario.llm.texts_of(6)
     indice_da_invalida = next(i for i, texto in enumerate(contexto_de_b4) if "saída inválida" in texto)
     indice_do_veredito = next(i for i, texto in enumerate(contexto_de_b4) if texto.startswith("## Veredito"))
     assert indice_da_invalida < indice_do_veredito
@@ -1203,7 +1229,7 @@ async def test_a_janela_do_validador_continua_isolada_da_da_tarefa() -> None:
 
     await cenario.run()
 
-    conversa_do_validador = cenario.llm.texts_of(8)
+    conversa_do_validador = cenario.llm.texts_of(9)
     assert len(conversa_do_validador) == 1
     assert "Veredito do validador" not in conversa_do_validador[0]
     assert "primeira tentativa incompleta" not in conversa_do_validador[0]
@@ -1214,7 +1240,7 @@ async def test_a_tarefa_seguinte_recebe_so_os_aprendizados_e_nao_o_historico_amp
 
     await cenario.run()
 
-    primeira_conversa_da_t2 = " ".join(cenario.llm.texts_of(5))
+    primeira_conversa_da_t2 = " ".join(cenario.llm.texts_of(6))
     assert "Veredito do validador" not in primeira_conversa_da_t2
     assert "Aprendizados acumulados" in primeira_conversa_da_t2
 
@@ -1240,9 +1266,9 @@ async def test_a_sessao_registra_uma_invocacao_por_chamada_ao_modelo() -> None:
     await cenario.run()
 
     sessao = cenario.session
-    assert len(sessao.invocations) == cenario.llm.call_count == 13
-    assert sessao.totals.total_llm_calls == 13
-    assert sessao.totals.total_tokens == 13 * 15
+    assert len(sessao.invocations) == cenario.llm.call_count == 14
+    assert sessao.totals.total_llm_calls == 14
+    assert sessao.totals.total_tokens == 14 * 15
     assert all(i.outcome is InvocationOutcomeEnum.SUCCESS for i in sessao.invocations)
 
 
@@ -1254,8 +1280,8 @@ async def test_chamadas_de_correcao_de_saida_contam_como_chamadas_da_sessao() ->
 
     await cenario.run()
 
-    assert cenario.session.totals.total_llm_calls == 14 == cenario.llm.call_count
-    assert cenario.session.totals.total_tokens == 14 * 15
+    assert cenario.session.totals.total_llm_calls == 15 == cenario.llm.call_count
+    assert cenario.session.totals.total_tokens == 15 * 15
 
 
 async def test_o_total_de_tokens_dos_eventos_acompanha_as_invocacoes_e_nunca_decresce() -> None:
@@ -1268,7 +1294,7 @@ async def test_o_total_de_tokens_dos_eventos_acompanha_as_invocacoes_e_nunca_dec
 
     totais = [evento.total_tokens for evento in eventos]
     assert totais == sorted(totais)
-    assert totais[-1] == 14 * 15
+    assert totais[-1] == 15 * 15
 
 
 async def test_falha_de_fase_preserva_chamadas_e_tokens_na_sessao_falha() -> None:
@@ -1337,7 +1363,10 @@ async def test_falha_persistente_ao_encerrar_propaga_a_falha_de_gravacao_e_nao_o
 
 async def test_erro_tecnico_na_verificacao_da_tarefa_e_atribuido_a_b2() -> None:
     cenario = RalphScenario(
-        responses=[_criterios(), _tarefas("T1"), _resolucao("2 e primo"), RuntimeError("provedor caiu")]
+        responses=[
+            _criterios(), _tarefas("T1"), _anotacoes_do_enunciado(), _resolucao("2 e primo"),
+            RuntimeError("provedor caiu"),
+        ]
     )
     eventos = []
 
@@ -1358,6 +1387,7 @@ async def test_erro_tecnico_na_extracao_de_aprendizados_e_atribuido_a_b4() -> No
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             _resolucao("2 e primo"),
             _aprovado("T1"),
             RuntimeError("provedor caiu"),
@@ -1379,6 +1409,7 @@ async def test_erro_tecnico_na_verificacao_global_e_atribuido_a_c1() -> None:
         responses=[
             _criterios(),
             _tarefas("T1"),
+            _anotacoes_do_enunciado(),
             *_tarefa_aprovada("T1", "2 e primo", "fato"),
             RuntimeError("provedor caiu"),
         ]
@@ -1393,7 +1424,10 @@ async def test_erro_tecnico_na_verificacao_global_e_atribuido_a_c1() -> None:
 
 async def test_saidas_invalidas_do_verificador_ficam_na_sessao_quando_as_correcoes_se_esgotam() -> None:
     cenario = RalphScenario(
-        responses=[_criterios(), _tarefas("T1"), _resolucao("2 e primo"), "invalida 1", "invalida 2", "invalida 3"],
+        responses=[
+            _criterios(), _tarefas("T1"), _anotacoes_do_enunciado(), _resolucao("2 e primo"),
+            "invalida 1", "invalida 2", "invalida 3",
+        ],
         settings=FakeSettings(ralph_json_parse_max_retries=2),
     )
 
@@ -1406,7 +1440,7 @@ async def test_saidas_invalidas_do_verificador_ficam_na_sessao_quando_as_correco
     ]
     assert len(auditorias) == 3
     assert all(f"invalida {indice}" in auditorias[indice - 1] for indice in (1, 2, 3))
-    assert cenario.session.totals.total_llm_calls == 6
+    assert cenario.session.totals.total_llm_calls == 7
     assert cenario.session.failure.phase is _FASE.B2_TASK_VERIFICATION
 
 
@@ -1424,3 +1458,185 @@ async def test_falha_ao_gravar_a_pergunta_do_usuario_encerra_a_sessao_como_falha
     assert cenario.session.failure.reason is SessionFailureReasonEnum.TECHNICAL_ERROR
     assert cenario.session.invocations == []
     assert cenario.llm.call_count == 0
+
+
+# ── A.3 — Aprendizados pontuais do enunciado ────────────────────────────────
+
+_ANOTACOES_DO_PAPER = (
+    "Alternativas: A) 2; B) 4; C) 6; D) Nenhuma das anteriores.",
+    "Condições simultâneas exigidas: primo, par e maior que 2.",
+)
+
+
+def _cenario_com_anotacoes() -> RalphScenario:
+    return RalphScenario(responses=_roteiro_feliz(*_ANOTACOES_DO_PAPER))
+
+
+async def test_a3_roda_depois_de_a2_em_janela_propria_e_so_com_a_pergunta_do_usuario() -> None:
+    cenario = _cenario_com_anotacoes()
+
+    await cenario.run()
+
+    assert [fase for fase, _ in cenario.template_provider.rendered[:3]] == [
+        _FASE.A1_GENERAL_CRITERIA,
+        _FASE.A2_TASK_DECOMPOSITION,
+        _FASE.A3_PLANNING_LEARNINGS,
+    ]
+    assert cenario.template_provider.variables_of(_FASE.A3_PLANNING_LEARNINGS) == [
+        {"user_question": cenario.template_provider.variables_of(_FASE.A1_GENERAL_CRITERIA)[0]["user_question"]}
+    ]
+    conversa_de_a3 = cenario.llm.texts_of(2)
+    assert conversa_de_a3 == ["TEMPLATE A3"]
+
+
+async def test_a3_emite_um_evento_learn_com_os_aprendizados_do_enunciado() -> None:
+    eventos = await _cenario_com_anotacoes().run()
+
+    evento = eventos[2]
+    assert (evento.type.value, evento.subtype.value, evento.phase) == ("thinking", "learn", _FASE.A3_PLANNING_LEARNINGS)
+    assert evento.task == "setup"
+    assert evento.inference_time_ms > 0
+    for anotacao in _ANOTACOES_DO_PAPER:
+        assert f"- {anotacao}" in evento.content
+
+
+async def test_a3_sem_nada_a_anotar_emite_o_aviso_e_nao_injeta_bloco_nas_tarefas() -> None:
+    cenario = _cenario_feliz()
+
+    eventos = await cenario.run()
+
+    assert eventos[2].content == "Nenhum aprendizado foi extraído do enunciado."
+    assert "Aprendizados acumulados" not in " ".join(cenario.llm.texts_of(3))
+
+
+async def test_a3_registra_a_mensagem_na_sessao_sem_tarefa_e_com_contexto_proprio() -> None:
+    cenario = _cenario_com_anotacoes()
+
+    await cenario.run()
+
+    mensagem = next(m for m in cenario.session.messages if m.phase is _FASE.A3_PLANNING_LEARNINGS)
+    assert mensagem.task_id is None
+    assert mensagem.context_id
+    assert mensagem.total_tokens
+    fases_anteriores = (_FASE.A1_GENERAL_CRITERIA, _FASE.A2_TASK_DECOMPOSITION)
+    contextos_de_a1_e_a2 = {m.context_id for m in cenario.session.messages if m.phase in fases_anteriores}
+    assert mensagem.context_id not in contextos_de_a1_e_a2
+    assert cenario.session.invocations[2].phase is _FASE.A3_PLANNING_LEARNINGS
+
+
+async def test_a3_acumula_na_memoria_sem_tarefa_de_origem_antes_dos_aprendizados_de_b4() -> None:
+    cenario = _cenario_com_anotacoes()
+
+    await cenario.run()
+
+    memoria = cenario.learnings_memory.all()
+    assert [aprendizado.content for aprendizado in memoria[:2]] == list(_ANOTACOES_DO_PAPER)
+    assert [aprendizado.source_task_id for aprendizado in memoria[:2]] == [None, None]
+    assert memoria[2].source_task_id == "T1"
+
+
+async def test_a3_a_primeira_tarefa_ja_recebe_as_anotacoes_do_enunciado_no_inicio_do_contexto() -> None:
+    cenario = _cenario_com_anotacoes()
+
+    await cenario.run()
+
+    primeira_conversa = cenario.llm.texts_of(3)
+    assert primeira_conversa[0].startswith("## Aprendizados acumulados")
+    for anotacao in _ANOTACOES_DO_PAPER:
+        assert f"- {anotacao}" in primeira_conversa[0]
+    assert primeira_conversa[1].startswith("TEMPLATE B1")
+
+
+async def test_a3_toda_tarefa_seguinte_continua_recebendo_as_anotacoes_do_enunciado() -> None:
+    cenario = _cenario_com_anotacoes()
+
+    await cenario.run()
+
+    for indice_da_resolucao, aprendizado_anterior in ((6, "Um numero primo"), (9, "Todo numero par")):
+        conversa = cenario.llm.texts_of(indice_da_resolucao)
+        assert conversa[0].startswith("## Aprendizados acumulados")
+        for anotacao in _ANOTACOES_DO_PAPER:
+            assert f"- {anotacao}" in conversa[0]
+        assert aprendizado_anterior in conversa[0]
+
+
+async def test_a3_as_anotacoes_do_enunciado_vem_antes_dos_aprendizados_das_tarefas() -> None:
+    cenario = _cenario_com_anotacoes()
+
+    await cenario.run()
+
+    bloco = cenario.llm.texts_of(6)[0]
+    assert bloco.index(_ANOTACOES_DO_PAPER[0]) < bloco.index(_ANOTACOES_DO_PAPER[1]) < bloco.index("Um numero primo")
+
+
+async def test_a3_o_validador_de_tarefa_nao_recebe_as_anotacoes() -> None:
+    cenario = _cenario_com_anotacoes()
+
+    await cenario.run()
+
+    conversa_do_validador = " ".join(cenario.llm.texts_of(4))
+    assert "Aprendizados acumulados" not in conversa_do_validador
+    assert _ANOTACOES_DO_PAPER[0] not in conversa_do_validador
+
+
+async def test_a3_as_fases_c_nao_enxergam_as_anotacoes_do_enunciado() -> None:
+    cenario = _cenario_com_anotacoes()
+
+    await cenario.run()
+
+    for fase in (_FASE.C1_GLOBAL_VERIFICATION, _FASE.C3_FINAL_ANSWER):
+        variaveis = " ".join(cenario.template_provider.variables_of(fase)[0].values())
+        assert _ANOTACOES_DO_PAPER[0] not in variaveis
+        assert "Aprendizados acumulados" not in variaveis
+
+
+async def test_a3_as_tarefas_de_c2_tambem_recebem_as_anotacoes_do_enunciado() -> None:
+    cenario = RalphScenario(responses=_roteiro_com_replanejamento(*_ANOTACOES_DO_PAPER))
+
+    await cenario.run()
+
+    primeira_conversa_da_t4 = cenario.llm.texts_of(8)
+    assert primeira_conversa_da_t4[0].startswith("## Aprendizados acumulados")
+    assert _ANOTACOES_DO_PAPER[0] in primeira_conversa_da_t4[0]
+
+
+async def test_a3_nao_cria_tarefas_nem_consome_o_espaco_de_tarefas_da_sessao() -> None:
+    cenario = _cenario_com_anotacoes()
+
+    await cenario.run()
+
+    assert cenario.task_queue.total_created() == 3
+
+
+async def test_a3_saida_invalida_e_reenviada_ao_modelo_ate_ser_valida() -> None:
+    cenario = RalphScenario(
+        responses=[
+            _criterios(),
+            _tarefas("T1"),
+            "isso nao e json",
+            _anotacoes_do_enunciado("Velocidade: 20 m/s"),
+            *_tarefa_aprovada("T1", "2 e primo", "fato"),
+            _global_aprovado(),
+            _resposta_final(),
+        ]
+    )
+
+    await cenario.run()
+
+    assert cenario.learnings_memory.all()[0].content == "Velocidade: 20 m/s"
+    assert len([i for i in cenario.session.invocations if i.phase is _FASE.A3_PLANNING_LEARNINGS]) == 2
+
+
+async def test_a3_erro_tecnico_e_atribuido_a_a3_e_encerra_a_sessao_sem_resposta() -> None:
+    cenario = RalphScenario(
+        responses=[_criterios(), _tarefas("T1"), RuntimeError("provedor caiu")]
+    )
+
+    eventos = await _executar_ate_falhar(cenario, RuntimeError)
+
+    assert eventos[-1].type is _TIPO.ERROR
+    assert eventos[-1].phase is _FASE.A3_PLANNING_LEARNINGS
+    assert cenario.session.status is SessionStatusEnum.FAILED
+    assert cenario.session.failure.phase is _FASE.A3_PLANNING_LEARNINGS
+    assert cenario.session.final_answer is None
+    assert cenario.learnings_memory.is_empty()
