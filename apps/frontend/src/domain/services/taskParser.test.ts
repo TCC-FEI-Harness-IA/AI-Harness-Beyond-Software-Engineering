@@ -67,6 +67,17 @@ describe('parseTaskTitle', () => {
   })
 })
 
+describe('parseTaskTitle e parseTasksFromMarkdown na mesma execução', () => {
+  it('ler o título de uma tarefa não faz a leitura seguinte das tarefas devolver vazio', () => {
+    // Regressão: `parseTaskTitle` usava `exec` numa regex global e deixava `lastIndex` sujo, o que
+    // fazia o `matchAll` seguinte começar no meio do texto — e perder as tarefas de um replan.
+    expect(parseTaskTitle(TASKS_MARKDOWN)).not.toBeNull()
+
+    expect(parseTasksFromMarkdown(TASKS_MARKDOWN).length).toBeGreaterThan(0)
+    expect(parseTasksFromMarkdown(TASKS_MARKDOWN)[0]?.id).toBe('T1')
+  })
+})
+
 describe('parseDecision', () => {
   it('reconhece approved e reproved', () => {
     expect(parseDecision(VERIFICATION_MARKDOWN)).toBe('approved')

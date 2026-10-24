@@ -358,3 +358,73 @@ describe('reasoningRunReducer', () => {
     expect(recovered.steps).toHaveLength(2)
   })
 })
+
+describe('reasoningRunReducer — A.3, aprendizados pontuais do enunciado', () => {
+  function planningEvents(): ReasoningEventDTO[] {
+    return [
+      buildEvent({ subtype: EVENT_SUBTYPE.SETUP, phase: THINKING_PHASE.A1, task: TASK_LABEL_SETUP, context_window: { context_id: 'ctx_a1', context_size: 10 } }),
+      buildEvent({ subtype: EVENT_SUBTYPE.TASKS, phase: THINKING_PHASE.A2, task: TASK_LABEL_SETUP, content: '### T1 — Tarefa inicial\n\ncorpo', context_window: { context_id: 'ctx_a2', context_size: 10 } }),
+      buildEvent({
+        subtype: EVENT_SUBTYPE.LEARN,
+        phase: THINKING_PHASE.A3,
+        task: TASK_LABEL_SETUP,
+        content: '## Aprendizados extraídos\n\n- Alternativas: A) 2; B) 4',
+        context_window: { context_id: 'ctx_a3', context_size: 10 },
+      }),
+    ]
+  }
+
+  function phaseStatus(run: ThinkingRun, id: string): string | undefined {
+    return run.phases.find((phase) => phase.id === id)?.status
+  }
+
+  it('a trilha macro nasce com A.3 entre A.2 e a execução em loop', () => {
+    const run = createEmptyRun('pergunta', MODEL_NAME)
+
+    expect(run.phases.map((phase) => phase.id)).toEqual(['A1', 'A2', 'A3', 'B', 'C1', 'C2', 'C3'])
+    expect(run.phases.find((phase) => phase.id === 'A3')?.label).toBe('Aprendizados do enunciado')
+  })
+
+  it('o evento learn de A.3 entra como passo, mas não cria uma tarefa chamada "setup"', () => {
+    const run = reduceAll(createEmptyRun('pergunta', MODEL_NAME), planningEvents())
+
+    expect(run.steps.map((step) => step.phase)).toEqual(['A1', 'A2', 'A3'])
+    expect(run.tasks.map((task) => task.id)).toEqual(['T1'])
+    expect(run.totals.taskCount).toBe(1)
+  })
+
+  it('A.3 fica ativa quando é o passo mais recente e concluída quando o loop começa', () => {
+    const planned = reduceAll(createEmptyRun('pergunta', MODEL_NAME), planningEvents())
+    expect(phaseStatus(planned, 'A2')).toBe('done')
+    expect(phaseStatus(planned, 'A3')).toBe('active')
+    expect(planned.phases.find((phase) => phase.id === 'A3')?.stepCount).toBe(1)
+
+    const running = reduceAll(planned, [buildEvent({ subtype: EVENT_SUBTYPE.RESET, phase: THINKING_PHASE.B1, task: 'T1' })])
+    expect(phaseStatus(running, 'A3')).toBe('done')
+    expect(phaseStatus(running, 'B')).toBe('active')
+  })
+
+  it('A.3 aguardando: só A.1 e A.2 aconteceram', () => {
+    const run = reduceAll(createEmptyRun('pergunta', MODEL_NAME), planningEvents().slice(0, 2))
+
+    expect(phaseStatus(run, 'A3')).toBe('pending')
+  })
+
+  it('sessão anterior à A.3 (sem passo A.3, mas com o loop em andamento) mostra A.3 como não necessária', () => {
+    const legacy = [
+      ...planningEvents().slice(0, 2),
+      buildEvent({ subtype: EVENT_SUBTYPE.RESET, phase: THINKING_PHASE.B1, task: 'T1' }),
+    ]
+    const run = reduceAll(createEmptyRun('pergunta', MODEL_NAME), legacy)
+
+    expect(phaseStatus(run, 'A3')).toBe('skipped')
+    expect(phaseStatus(run, 'B')).toBe('active')
+  })
+
+  it('o evento de A.3 conta como chamada ao modelo e abre a própria janela de contexto', () => {
+    const run = reduceAll(createEmptyRun('pergunta', MODEL_NAME), planningEvents())
+
+    expect(run.totals.llmCalls).toBe(3)
+    expect(run.totals.contextCount).toBe(3)
+  })
+})

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import a1Completed from '@/test/fixtures/session-a1-completed-15msgs.json'
+import a1CompletedWithA3 from '@/test/fixtures/session-a1-completed-with-a3.json'
 import a1Failed1Msg from '@/test/fixtures/session-a1-failed-1msg.json'
 import a1Failed1MsgB from '@/test/fixtures/session-a1-failed-1msg-b.json'
 import a1Failed2Msgs from '@/test/fixtures/session-a1-failed-2msgs.json'
@@ -11,6 +12,7 @@ import { parseSessionDocument } from './sessionDocument'
 
 const ALL_FIXTURES = [
   a1Completed,
+  a1CompletedWithA3,
   a1Failed1Msg,
   a1Failed1MsgB,
   a1Failed2Msgs,
@@ -33,6 +35,14 @@ describe('parseSessionDocument', () => {
     expect(document.messages).toHaveLength(15)
     expect(document.messages[0]?.source).toBe('user')
     expect(document.final_answer).toContain('primos')
+  })
+
+  it('aceita uma sessão com a mensagem da fase A3, sem ContractError', () => {
+    const document = parseSessionDocument(a1CompletedWithA3)
+
+    expect(document.messages).toHaveLength(16)
+    const a3 = document.messages.find((message) => message.phase === 'A3')
+    expect(a3).toMatchObject({ source: 'llm_agent', task_id: null })
   })
 
   it('aceita sessões failed com uma única mensagem', () => {

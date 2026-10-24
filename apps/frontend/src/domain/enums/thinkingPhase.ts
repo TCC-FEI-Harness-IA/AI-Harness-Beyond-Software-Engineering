@@ -5,6 +5,7 @@
 export const THINKING_PHASE = {
   A1: 'A1',
   A2: 'A2',
+  A3: 'A3',
   B1: 'B1',
   B2: 'B2',
   B3: 'B3',
@@ -23,6 +24,7 @@ export const isThinkingPhase = (value: unknown): value is ThinkingPhase =>
 export const PHASE_LABEL: Record<ThinkingPhase, string> = {
   A1: 'Critérios de aceite gerais',
   A2: 'Quebra em tarefas',
+  A3: 'Aprendizados do enunciado',
   B1: 'Resolução da tarefa',
   B2: 'Verificação dos critérios',
   B3: 'Armazenamento do resultado',
@@ -36,6 +38,7 @@ export const PHASE_LABEL: Record<ThinkingPhase, string> = {
 export const PHASE_SHORT_LABEL: Record<ThinkingPhase, string> = {
   A1: 'A.1',
   A2: 'A.2',
+  A3: 'A.3',
   B1: 'B.1',
   B2: 'B.2',
   B3: 'B.3',

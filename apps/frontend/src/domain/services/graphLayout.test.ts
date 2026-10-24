@@ -80,6 +80,8 @@ describe('graphLayout', () => {
 
       expect(byId.A1?.status).toBe('done')
       expect(byId.A2?.status).toBe('done')
+      // Sessão anterior à etapa A.3: o loop rodou sem ela, então o nó fica como "não foi necessária".
+      expect(byId.A3?.status).toBe('skipped')
       expect(byId.B?.status).toBe('done')
       expect(byId.C1?.status).toBe('done')
       expect(byId.C2?.status).toBe('skipped')
@@ -172,5 +174,39 @@ describe('findActiveStep', () => {
   it('sem nenhum passo ainda, devolve null', () => {
     const run = createEmptyRun('pergunta', MODEL_NAME)
     expect(findActiveStep(run)).toBeNull()
+  })
+})
+
+describe('buildMacroTrack — A.3', () => {
+  const planning = [
+    buildEvent({ subtype: EVENT_SUBTYPE.SETUP, phase: THINKING_PHASE.A1, task: TASK_LABEL_SETUP }),
+    buildEvent({ subtype: EVENT_SUBTYPE.TASKS, phase: THINKING_PHASE.A2, task: TASK_LABEL_SETUP, content: '### T1 — Tarefa\n\ncorpo' }),
+    buildEvent({ subtype: EVENT_SUBTYPE.LEARN, phase: THINKING_PHASE.A3, task: TASK_LABEL_SETUP }),
+    buildEvent({ subtype: EVENT_SUBTYPE.RESET, phase: THINKING_PHASE.B1, task: 'T1' }),
+  ]
+
+  it('a trilha tem sete nós, com A.3 entre A.2 e a execução em loop', () => {
+    const track = buildMacroTrack(reduceAll(createEmptyRun('pergunta', MODEL_NAME), planning))
+
+    expect(track.map((node) => node.id)).toEqual(['A1', 'A2', 'A3', 'B', 'C1', 'C2', 'C3'])
+  })
+
+  it('o nó A.3 usa o rótulo curto e o título do domínio, sem progresso de tarefas', () => {
+    const track = buildMacroTrack(reduceAll(createEmptyRun('pergunta', MODEL_NAME), planning))
+    const node = track.find((candidate) => candidate.id === 'A3')
+
+    expect(node).toEqual({
+      id: 'A3',
+      shortLabel: 'A.3',
+      subtitle: 'Aprendizados do enunciado',
+      status: 'done',
+      progress: null,
+    })
+  })
+
+  it('A.3 não gera faixa de tarefa', () => {
+    const run = reduceAll(createEmptyRun('pergunta', MODEL_NAME), planning)
+
+    expect(buildTaskLanes(run).map((lane) => lane.id)).toEqual(['T1'])
   })
 })

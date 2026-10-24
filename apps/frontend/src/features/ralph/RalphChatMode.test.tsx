@@ -77,6 +77,28 @@ describe('RalphChatMode', () => {
     expect(screen.getAllByRole('group')).toHaveLength(1)
   })
 
+  it('o passo A.3 é uma mensagem global do planejamento, com etiqueta própria e sem rótulo de tarefa', () => {
+    const steps = [
+      buildStep({ id: 'a2', order: 0, subtype: EVENT_SUBTYPE.TASKS, phase: THINKING_PHASE.A2, taskId: 'setup', content: 'plano' }),
+      buildStep({
+        id: 'a3',
+        order: 1,
+        subtype: EVENT_SUBTYPE.LEARN,
+        phase: THINKING_PHASE.A3,
+        taskId: 'setup',
+        content: '## Aprendizados extraídos\n\n- Alternativas: A) 2; B) 4',
+      }),
+      buildStep({ id: 'reset', order: 2, subtype: EVENT_SUBTYPE.RESET, phase: THINKING_PHASE.B1, taskId: 'T1', inferenceTimeMs: 0 }),
+    ]
+    render(<RalphChatMode run={buildRun(steps)} isLive={false} />)
+
+    expect(screen.getByText('A.3 · Aprendizados do enunciado')).toBeInTheDocument()
+    expect(screen.getByText('Alternativas: A) 2; B) 4')).toBeInTheDocument()
+    // A.2 e A.3 ficam no mesmo grupo global; só a tarefa T1 ganha rótulo de grupo.
+    expect(screen.queryByText('setup')).not.toBeInTheDocument()
+    expect(screen.getAllByText('T1')).toHaveLength(1)
+  })
+
   it('a resposta final aparece destacada no FinalAnswerCard', () => {
     const steps = [
       buildStep({

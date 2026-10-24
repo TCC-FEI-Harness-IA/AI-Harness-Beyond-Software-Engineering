@@ -31,11 +31,12 @@ export type RunAction =
   /** Frame isolado que não pôde ser lido — não fatal (FASE 08, seção 4): o stream continua. */
   | { kind: 'warning'; message: string }
 
-const PHASE_NODE_ORDER: PhaseNodeId[] = ['A1', 'A2', 'B', 'C1', 'C2', 'C3']
+const PHASE_NODE_ORDER: PhaseNodeId[] = ['A1', 'A2', 'A3', 'B', 'C1', 'C2', 'C3']
 
 const PHASE_NODE_LABEL: Record<PhaseNodeId, string> = {
   A1: 'Critérios de aceite gerais',
   A2: 'Quebra em tarefas',
+  A3: 'Aprendizados do enunciado',
   B: 'Execução em loop',
   C1: 'Verificação global',
   C2: 'Planejamento adicional',
@@ -48,6 +49,8 @@ function nodeForPhase(phase: ThinkingPhase): PhaseNodeId | null {
       return 'A1'
     case THINKING_PHASE.A2:
       return 'A2'
+    case THINKING_PHASE.A3:
+      return 'A3'
     case THINKING_PHASE.B1:
     case THINKING_PHASE.B2:
     case THINKING_PHASE.B3:
@@ -59,7 +62,7 @@ function nodeForPhase(phase: ThinkingPhase): PhaseNodeId | null {
       return 'C2'
     case THINKING_PHASE.C3:
       return 'C3'
-    // Defensivo: `ThinkingPhase` já cobre os 9 valores acima na fronteira (parsers), então este
+    // Defensivo: `ThinkingPhase` já cobre os 10 valores acima na fronteira (parsers), então este
     // ramo nunca é alcançado com dados validados — existe só para a função ser total.
     /* v8 ignore next 2 */
     default:
@@ -277,6 +280,10 @@ function applyStore(run: ThinkingRun, event: ReasoningEventDTO, step: ThinkingSt
 
 function applyLearn(run: ThinkingRun, event: ReasoningEventDTO, step: ThinkingStep, marginalTokens: number): ThinkingRun {
   const taskId = event.task
+  // `learn` também é emitido por A.3, com o rótulo global `setup`: são os aprendizados do
+  // enunciado, que não pertencem a nenhuma tarefa. O passo já está em `run.steps`; não há
+  // tarefa a criar nem a atualizar.
+  if (isNonTask(taskId)) return run
   let tasks = ensureTask(run.tasks, taskId, 'A2')
   tasks = updateTask(tasks, taskId, (task) => appendStepToTask(task, step, marginalTokens))
   return { ...run, tasks }
@@ -337,7 +344,7 @@ function recalcAggregates(run: ThinkingRun): ThinkingRun {
 }
 
 function computeStepCounts(steps: ThinkingStep[]): Record<PhaseNodeId, number> {
-  const counts: Record<PhaseNodeId, number> = { A1: 0, A2: 0, B: 0, C1: 0, C2: 0, C3: 0 }
+  const counts: Record<PhaseNodeId, number> = { A1: 0, A2: 0, A3: 0, B: 0, C1: 0, C2: 0, C3: 0 }
   for (const step of steps) {
     const node = nodeForPhase(step.phase)
     if (node) counts[node] += 1
@@ -357,6 +364,7 @@ function recalcPhases(run: ThinkingRun): ThinkingRun {
   const lastNode = lastStep ? nodeForPhase(lastStep.phase) : null
   const hasC3 = counts.C3 > 0
   const hasC2 = counts.C2 > 0
+  const hasLoopStarted = counts.B + counts.C1 + counts.C2 + counts.C3 > 0
 
   const phases: PhaseProgress[] = PHASE_NODE_ORDER.map((id) => {
     const stepCount = counts[id]
@@ -365,6 +373,10 @@ function recalcPhases(run: ThinkingRun): ThinkingRun {
     if (id === 'C2' && hasC3 && !hasC2) {
       // Caminho feliz do paper: C2 existia no fluxo e não foi necessário — mostrado como
       // "pulado", nunca escondido (FASE 05, seção 4.3).
+      status = 'skipped'
+    } else if (id === 'A3' && stepCount === 0 && hasLoopStarted) {
+      // Sessão anterior à etapa A.3: o loop já rodou sem ela. Aparece como "não necessária" em
+      // vez de ficar eternamente pendente. Em execuções atuais A.3 sempre precede o loop.
       status = 'skipped'
     } else if (stepCount === 0) {
       status = 'pending'

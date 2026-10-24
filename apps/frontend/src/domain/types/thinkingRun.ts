@@ -55,7 +55,7 @@ export interface TaskTimeline {
 }
 
 // Nó da trilha macro A → B → C. 'B' agrega B1–B4 (README, seção 6.3).
-export type PhaseNodeId = 'A1' | 'A2' | 'B' | 'C1' | 'C2' | 'C3'
+export type PhaseNodeId = 'A1' | 'A2' | 'A3' | 'B' | 'C1' | 'C2' | 'C3'
 
 export interface PhaseProgress {
   id: PhaseNodeId
@@ -97,7 +97,7 @@ export interface ThinkingRun {
   steps: ThinkingStep[]
   /** Agregação por tarefa — o Modo Gráfico renderiza isto. */
   tasks: TaskTimeline[]
-  /** A1, A2, B, C1, C2, C3 com estado — a trilha macro. */
+  /** A1, A2, A3, B, C1, C2, C3 com estado — a trilha macro. */
   phases: PhaseProgress[]
   finalAnswer: string | null
   totals: ThinkingRunTotals

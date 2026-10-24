@@ -1,7 +1,7 @@
 import type { ThinkingPhase } from '@/domain/enums/thinkingPhase'
 import { PHASE_SHORT_LABEL } from '@/domain/enums/thinkingPhase'
 import type { EventSubtype } from '@/domain/enums/eventSubtype'
-import { SUBTYPE_LABEL, SUBTYPE_TONE } from '@/domain/enums/eventSubtype'
+import { getStepLabel, SUBTYPE_TONE } from '@/domain/enums/eventSubtype'
 import { Badge } from '@/components/primitives/Badge'
 import { Tag } from '@/components/primitives/Tag'
 import { cx } from '@/components/cx'
@@ -28,7 +28,7 @@ export function PhaseTag({ phase, subtype, taskId, size = 'md' }: PhaseTagProps)
             <path d={SUBTYPE_ICON_PATH[subtype]} />
           </svg>
         </span>
-        {PHASE_SHORT_LABEL[phase]} · {SUBTYPE_LABEL[subtype]}
+        {PHASE_SHORT_LABEL[phase]} · {getStepLabel(phase, subtype)}
       </Badge>
       {taskId ? <Tag>{taskId}</Tag> : null}
     </span>

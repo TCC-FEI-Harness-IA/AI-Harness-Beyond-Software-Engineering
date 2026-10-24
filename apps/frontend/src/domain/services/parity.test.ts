@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from 'vitest'
 import fixture from '@/test/fixtures/session-a1-completed-15msgs.json'
+import withA3Fixture from '@/test/fixtures/session-a1-completed-with-a3.json'
 import { TASK_LABEL_SETUP, TASK_LABEL_SYNTHESIS } from '../enums/taskLabels'
 import type { EventSubtype } from '../enums/eventSubtype'
 import type { EventType } from '../enums/eventType'
@@ -33,7 +34,8 @@ function renderTaskBlock(task: ParsedTask): string {
   return lines.join('\n')
 }
 
-const document = fixture as unknown as SessionDocument
+const legacyDocument = fixture as unknown as SessionDocument
+const withA3Document = withA3Fixture as unknown as SessionDocument
 
 interface EventMeta {
   order: number
@@ -43,7 +45,7 @@ interface EventMeta {
   synthesizeExecute?: boolean
 }
 
-const EVENT_META: EventMeta[] = [
+const LEGACY_EVENT_META: EventMeta[] = [
   { order: 1, subtype: 'setup', type: 'thinking', task: TASK_LABEL_SETUP },
   { order: 2, subtype: 'tasks', type: 'thinking', task: TASK_LABEL_SETUP },
   { order: 3, subtype: 'reset', type: 'thinking', task: 'T1', synthesizeExecute: true },
@@ -60,10 +62,18 @@ const EVENT_META: EventMeta[] = [
   { order: 14, subtype: 'compile', type: 'result', task: TASK_LABEL_SYNTHESIS },
 ]
 
+// Mesma sessão com a etapa A.3: a mensagem de aprendizados do enunciado (order 3) entra entre A.2 e a
+// primeira tarefa, e todas as seguintes avançam uma posição.
+const A3_EVENT_META: EventMeta[] = [
+  ...LEGACY_EVENT_META.slice(0, 2),
+  { order: 3, subtype: 'learn', type: 'thinking', task: TASK_LABEL_SETUP },
+  ...LEGACY_EVENT_META.slice(2).map((meta) => ({ ...meta, order: meta.order + 1 })),
+]
+
 // Reproduz, de forma independente, a sequência de eventos ao vivo que este documento persistido
 // representa — inclusive o passo `execute` sintetizado logo após cada `reset` (o único, junto do
 // `error`, que não é persistido). `context_size` acumula por `context_id`, como o README manda.
-function buildLiveLikeEvents(): ReasoningEventDTO[] {
+function buildLiveLikeEvents(document: SessionDocument, eventMeta: EventMeta[]): ReasoningEventDTO[] {
   let cumulativeTokens = 0
   const contextTotals = new Map<string, number>()
   const events: ReasoningEventDTO[] = []
@@ -74,7 +84,7 @@ function buildLiveLikeEvents(): ReasoningEventDTO[] {
     return next
   }
 
-  for (const meta of EVENT_META) {
+  for (const meta of eventMeta) {
     const message = document.messages.find((candidate) => candidate.order === meta.order)
     if (!message) throw new Error(`fixture sem mensagem de order ${meta.order}`)
 
@@ -140,9 +150,12 @@ function stripVolatile(run: ThinkingRun): unknown {
   }
 }
 
-describe('parity: histórico vs. execução ao vivo', () => {
+describe.each([
+  ['sessão sem A.3 (anterior à etapa)', legacyDocument, LEGACY_EVENT_META],
+  ['sessão com A.3', withA3Document, A3_EVENT_META],
+] as const)('parity: histórico vs. execução ao vivo — %s', (_name, document, eventMeta) => {
   it('sessionToThinkingRun produz o mesmo ThinkingRun, estruturalmente, que a execução ao vivo equivalente', () => {
-    const liveEvents = buildLiveLikeEvents()
+    const liveEvents = buildLiveLikeEvents(document, [...eventMeta])
     let liveRun = createEmptyRun(document.user_question, document.model_name)
     for (const event of liveEvents) {
       liveRun = reasoningRunReducer(liveRun, { kind: 'event', event })

@@ -34,6 +34,7 @@ describe('deriveStepKind', () => {
   it.each([
     ['A1', 'setup'],
     ['A2', 'tasks'],
+    ['A3', 'learn'],
     ['B3', 'store'],
     ['B4', 'learn'],
     ['C1', 'compile'],

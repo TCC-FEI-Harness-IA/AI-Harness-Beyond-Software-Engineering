@@ -17,6 +17,8 @@ function nodeIdForPhase(phase: ThinkingStep['phase']): PhaseNodeId | null {
       return 'A1'
     case 'A2':
       return 'A2'
+    case 'A3':
+      return 'A3'
     case 'B1':
     case 'B2':
     case 'B3':
@@ -44,7 +46,7 @@ function representativeStep(run: ThinkingRun, nodeId: PhaseNodeId): ThinkingStep
 }
 
 /**
- * ① Trilha macro — o "caminho" pedido no requisito (README, FASE 06, seção 4): os seis nós do
+ * ① Trilha macro — o "caminho" pedido no requisito (README, FASE 06, seção 4): os sete nós do
  * paper ligados por conectores desenhados, com os dois arcos de loop que mostram que o fluxo
  * volta. Cálculo de estado vem inteiramente de `graphLayout.ts` — este componente só posiciona.
  */

@@ -160,6 +160,14 @@ nada além disso pode diferir entre a tela ao vivo e a de histórico. A mesma re
 fluxo simples: `<SimpleChatView />` recebe um `SimpleRun`, vindo da resposta do `POST` ou da
 reconstrução de uma sessão `DIRECT`.
 
+A etapa **A.3 — aprendizados do enunciado** segue a mesma regra: o evento ao vivo (`phase = A3`,
+`subtype = learn`, `task = setup`) e a mensagem persistida (`phase = A3`) viram o mesmo passo no
+`ThinkingRun`. Por ser global, ela não cria faixa de tarefa; aparece como o nó **A.3** da trilha
+macro (entre A.2 e a execução em loop) e como uma mensagem no Modo Chat, com a etiqueta
+"A.3 · Aprendizados do enunciado" (`getStepLabel` em `domain/enums/eventSubtype.ts` diferencia o
+`learn` de A.3 do `learn` de B.4). Sessões gravadas antes dessa etapa continuam abrindo, com o nó
+A.3 marcado como "não foi necessária".
+
 Uma consequência prática: a mensagem persistida no backend **não tem `subtype`** — só o evento do
 WebSocket tem. `domain/services/deriveSubtype.ts` deriva o `subtype` a partir de
 `(phase, source, content)`, numa tabela única reusada por toda reconstrução de histórico.

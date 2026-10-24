@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { EVENT_SUBTYPE } from '@/domain/enums/eventSubtype'
 import { EVENT_TYPE } from '@/domain/enums/eventType'
@@ -29,6 +30,7 @@ function buildStep(overrides: Partial<ThinkingStep>): ThinkingStep {
 const PHASES: PhaseProgress[] = [
   { id: 'A1', label: 'Critérios de aceite gerais', status: 'done', stepCount: 1 },
   { id: 'A2', label: 'Quebra em tarefas', status: 'done', stepCount: 1 },
+  { id: 'A3', label: 'Aprendizados do enunciado', status: 'done', stepCount: 1 },
   { id: 'B', label: 'Execução em loop', status: 'active', stepCount: 2 },
   { id: 'C1', label: 'Verificação global', status: 'pending', stepCount: 0 },
   { id: 'C2', label: 'Planejamento adicional', status: 'pending', stepCount: 0 },
@@ -115,5 +117,45 @@ describe('RalphGraphMode', () => {
     renderGraph(buildRun({ finalAnswer: 'A resposta é 2, 3, 5, 7.' }))
     expect(screen.getAllByText('Resposta final').length).toBeGreaterThan(0)
     expect(screen.getByText('A resposta é 2, 3, 5, 7.')).toBeInTheDocument()
+  })
+
+  it('a trilha macro mostra o nó A.3 entre A.2 e a execução em loop', () => {
+    renderGraph(buildRun())
+
+    const track = screen.getByRole('region', { name: 'Trilha macro das fases' })
+    const labels = Array.from(track.querySelectorAll('button')).map((button) => button.getAttribute('aria-label'))
+    expect(labels.slice(0, 4)).toEqual([
+      'Critérios de aceite gerais — etapa concluída',
+      'Quebra em tarefas — etapa concluída',
+      'Aprendizados do enunciado — etapa concluída',
+      'Execução em Loop — etapa atual',
+    ])
+  })
+
+  it('clicar no nó A.3 abre o detalhe do passo de aprendizados do enunciado', async () => {
+    const a3Step = buildStep({
+      id: 'a3',
+      order: 0,
+      subtype: EVENT_SUBTYPE.LEARN,
+      phase: THINKING_PHASE.A3,
+      taskId: 'setup',
+      content: '## Aprendizados extraídos\n\n- Velocidade: 72 km/h',
+    })
+    const run = buildRun({ steps: [a3Step, ...buildRun().steps] })
+    renderGraph(run)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Aprendizados do enunciado — etapa concluída' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Detalhe do passo' })
+    expect(dialog).toHaveTextContent('A.3 · Aprendizados do enunciado')
+    expect(dialog).toHaveTextContent('Velocidade: 72 km/h')
+  })
+
+  it('o passo A.3 não cria faixa de tarefa nem etiqueta "setup"', () => {
+    const a3Step = buildStep({ id: 'a3', order: 0, subtype: EVENT_SUBTYPE.LEARN, phase: THINKING_PHASE.A3, taskId: 'setup' })
+    renderGraph(buildRun({ steps: [a3Step, ...buildRun().steps] }))
+
+    expect(screen.getAllByRole('listitem', { name: '' }).length).toBeGreaterThan(0)
+    expect(screen.queryByText('setup')).not.toBeInTheDocument()
   })
 })

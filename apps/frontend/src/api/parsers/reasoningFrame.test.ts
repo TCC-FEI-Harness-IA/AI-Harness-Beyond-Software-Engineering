@@ -39,6 +39,15 @@ describe('parseReasoningFrame', () => {
     warnSpy.mockRestore()
   })
 
+  it('reconhece a fase A3 sem usar o fallback nem registrar aviso', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const frame = parseReasoningFrame({ ...VALID_EVENT, phase: 'A3', subtype: 'learn', task: 'setup' })
+
+    expect(frame).toMatchObject({ phase: 'A3', subtype: 'learn', task: 'setup' })
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
   it('usa fallback para phase desconhecida, sem lançar', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const frame = parseReasoningFrame({ ...VALID_EVENT, phase: 'FASE_NOVA_DO_BACKEND' })

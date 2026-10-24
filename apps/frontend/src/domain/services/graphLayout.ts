@@ -28,7 +28,7 @@ export function describeTaskProgress(run: ThinkingRun): { done: number; total: n
   return { done, total }
 }
 
-/** A trilha macro A→B→C — os seis nós do "caminho" pedido no requisito (FASE 06, seção 4). */
+/** A trilha macro A→B→C — os sete nós do "caminho" pedido no requisito (FASE 06, seção 4). */
 export function buildMacroTrack(run: ThinkingRun): MacroNodeView[] {
   const progress = describeTaskProgress(run)
   return run.phases.map((phase) => ({

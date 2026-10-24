@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import a1Completed from '@/test/fixtures/session-a1-completed-15msgs.json'
+import a1CompletedWithA3 from '@/test/fixtures/session-a1-completed-with-a3.json'
 import directCompleted from '@/test/fixtures/session-direct-completed.json'
 import { FakeWebSocket } from '@/test/doubles/FakeWebSocket'
 import { AppRouter } from '@/router/AppRouter'
@@ -55,10 +56,20 @@ const EVENT_META: Array<{ order: number; subtype: EventSubtype; type: EventType;
   { order: 14, subtype: EVENT_SUBTYPE.COMPILE, type: EVENT_TYPE.RESULT, task: TASK_LABEL_SYNTHESIS },
 ]
 
-function buildFixtureEvents(): unknown[] {
+// A mesma execução com a etapa A.3 (aprendizados do enunciado) entre A.2 e a primeira tarefa.
+const A3_EVENT_META: typeof EVENT_META = [
+  ...EVENT_META.slice(0, 2),
+  { order: 3, subtype: EVENT_SUBTYPE.LEARN, type: EVENT_TYPE.THINKING, task: TASK_LABEL_SETUP },
+  ...EVENT_META.slice(2).map((meta) => ({ ...meta, order: meta.order + 1 })),
+]
+
+function buildFixtureEvents(
+  fixture: typeof a1Completed = a1Completed,
+  eventMeta: typeof EVENT_META = EVENT_META,
+): unknown[] {
   let cumulative = 0
-  return EVENT_META.map(({ order, subtype, type, task }) => {
-    const message = a1Completed.messages.find((candidate) => candidate.order === order)
+  return eventMeta.map(({ order, subtype, type, task }) => {
+    const message = fixture.messages.find((candidate) => candidate.order === order)
     if (!message) throw new Error(`fixture sem mensagem de order ${order}`)
     cumulative += message.total_tokens
     return {
@@ -66,7 +77,7 @@ function buildFixtureEvents(): unknown[] {
       subtype,
       phase: message.phase as ThinkingPhase,
       task,
-      session_id: a1Completed.id,
+      session_id: fixture.id,
       content: message.content,
       total_tokens: cumulative,
       context_window: { context_id: message.context_id ?? '', context_size: message.total_tokens },
@@ -138,6 +149,70 @@ describe('Fluxo Ralph completo (home → Ralph → Modo Chat → Modo Gráfico)'
     await user.click(screen.getByRole('radio', { name: 'Gráfico' }))
     expect(await screen.findByText('T1')).toBeInTheDocument()
     expect(screen.getByText('T2')).toBeInTheDocument()
+  })
+})
+
+describe('Fluxo Ralph com a etapa A.3 (aprendizados do enunciado)', () => {
+  beforeEach(() => {
+    FakeWebSocket.reset()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('ao vivo: o evento A.3 aparece no Modo Chat e como nó concluído no Modo Gráfico', async () => {
+    vi.stubGlobal('WebSocket', FakeWebSocket)
+    const user = userEvent.setup()
+    renderApp('/')
+
+    await user.type(screen.getByRole('textbox'), a1CompletedWithA3.user_question)
+    await user.click(screen.getByRole('radio', { name: /Ralph Loop Adaptado/ }))
+
+    const socket = await waitFor(() => FakeWebSocket.latest())
+    act(() => {
+      socket.emitOpen()
+      for (const event of buildFixtureEvents(a1CompletedWithA3, A3_EVENT_META)) {
+        socket.emitMessage(event)
+      }
+      socket.emitClose(1000)
+    })
+
+    // Modo Chat: a mensagem de A.3 tem etiqueta própria e o conteúdo anotado do enunciado. O modo
+    // escolhido persiste em localStorage entre testes, então é selecionado explicitamente.
+    await user.click(await screen.findByRole('radio', { name: 'Chat' }))
+    expect(await screen.findByText(/A\.3 · Aprendizados do enunciado/)).toBeInTheDocument()
+    expect(screen.getByText(/Intervalo pedido: entre 0 e 20/)).toBeInTheDocument()
+
+    // Modo Gráfico: trilha macro com o nó A.3 concluído, sem virar uma faixa de tarefa.
+    await user.click(screen.getByRole('radio', { name: 'Gráfico' }))
+    expect(await screen.findByRole('button', { name: 'Aprendizados do enunciado — etapa concluída' })).toBeInTheDocument()
+    expect(screen.queryByText('setup')).not.toBeInTheDocument()
+  })
+
+  it('histórico: a sessão persistida com A.3 abre e mostra a etapa nos dois modos', async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith('/sessions')) {
+        return Promise.resolve(jsonResponse(200, { session_ids: [a1CompletedWithA3.id] }))
+      }
+      if (url.includes(a1CompletedWithA3.id)) {
+        return Promise.resolve(jsonResponse(200, a1CompletedWithA3))
+      }
+      throw new Error(`URL inesperada no duplo de fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const user = userEvent.setup()
+    renderApp(`/historico/${a1CompletedWithA3.id}`)
+
+    // O parser não rejeita mais a fase A3 (antes: ContractError e tela de erro).
+    await user.click(await screen.findByRole('radio', { name: 'Chat' }))
+    expect(await screen.findByText(new RegExp(a1CompletedWithA3.final_answer!.slice(0, 20)))).toBeInTheDocument()
+    expect(screen.getByText(/A\.3 · Aprendizados do enunciado/)).toBeInTheDocument()
+    expect(screen.getByText(/Intervalo pedido: entre 0 e 20/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Gráfico' }))
+    expect(await screen.findByRole('button', { name: 'Aprendizados do enunciado — etapa concluída' })).toBeInTheDocument()
   })
 })
 

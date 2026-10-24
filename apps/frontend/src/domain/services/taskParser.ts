@@ -87,8 +87,9 @@ export function parseTasksFromMarkdown(markdown: string): ParsedTask[] {
 
 /** Título da primeira tarefa encontrada — usado para rotular o passo sintético `execute`. */
 export function parseTaskTitle(markdown: string): string | null {
-  TASK_HEADER_RE.lastIndex = 0
-  const match = TASK_HEADER_RE.exec(markdown)
+  // `matchAll` trabalha numa cópia da regex: `exec` aqui deixaria o `lastIndex` da regex global
+  // compartilhada sujo e faria a próxima leitura das tarefas começar no meio do texto.
+  const match = markdown.matchAll(TASK_HEADER_RE).next().value as RegExpMatchArray | undefined
   return match?.[2]?.trim() ?? null
 }
 

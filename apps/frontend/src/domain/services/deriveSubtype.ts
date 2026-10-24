@@ -27,6 +27,7 @@ export interface DeriveStepKindContext {
 const PHASE_SUBTYPE: Partial<Record<ThinkingPhase, EventSubtype>> = {
   A1: EVENT_SUBTYPE.SETUP,
   A2: EVENT_SUBTYPE.TASKS,
+  A3: EVENT_SUBTYPE.LEARN,
   B3: EVENT_SUBTYPE.STORE,
   B4: EVENT_SUBTYPE.LEARN,
   C1: EVENT_SUBTYPE.COMPILE,
