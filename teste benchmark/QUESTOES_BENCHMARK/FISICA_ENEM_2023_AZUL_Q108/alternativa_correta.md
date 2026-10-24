@@ -1,0 +1,1 @@
+D) campo magnético variável.

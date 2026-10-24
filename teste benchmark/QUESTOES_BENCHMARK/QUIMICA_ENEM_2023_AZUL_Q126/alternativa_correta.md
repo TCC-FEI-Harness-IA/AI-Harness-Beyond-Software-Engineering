@@ -1,0 +1,1 @@
+C) caráter iônico.
