@@ -60,3 +60,12 @@ class ITaskQueue(ABC):
             int: Total de tarefas criadas na sessão.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def known_task_ids(self) -> frozenset[str]:
+        """Identificadores de todas as tarefas já enfileiradas na sessão, inclusive as consumidas.
+
+        Returns:
+            frozenset[str]: Identificadores que um novo lote de tarefas não pode repetir.
+        """
+        raise NotImplementedError

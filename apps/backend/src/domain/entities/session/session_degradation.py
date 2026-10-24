@@ -9,6 +9,10 @@ from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 class SessionDegradation:
     """Registra uma degradação ocorrida durante a sessão.
 
+    Legado: versões anteriores do fluxo aceitavam o resultado da última tentativa ou sintetizavam sem
+    aprovação global ao atingir um limite. O fluxo atual não gera degradações; a entidade existe para
+    que as sessões já gravadas continuem legíveis, sem reclassificação.
+
     Attributes:
         limit: Limite de orçamento que disparou a degradação.
         phase: Fase de thinking em que a degradação ocorreu.

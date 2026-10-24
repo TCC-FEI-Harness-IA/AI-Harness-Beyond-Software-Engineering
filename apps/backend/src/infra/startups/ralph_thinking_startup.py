@@ -192,6 +192,7 @@ class RalphThinkingStartup:
             "template_provider": self.template_provider,
             "parser": self.parser,
             "cost_guard": self.cost_guard,
+            "session_recorder": self.session_recorder,
             "clock": self.clock,
             "settings": self.settings,
             "logger": self.settings.logger(module_file=getfile(phase_class)),

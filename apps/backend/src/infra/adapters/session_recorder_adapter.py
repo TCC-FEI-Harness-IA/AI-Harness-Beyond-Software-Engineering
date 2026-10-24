@@ -2,9 +2,12 @@ import logging
 
 from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.session.session import Session
-from src.domain.entities.session.session_degradation import SessionDegradation
+from src.domain.entities.session.llm_invocation import LLMInvocation
+from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
+from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.interfaces.clock_interface import IClock
@@ -53,6 +56,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         model_name: str,
         max_tokens: int,
         temperature: float,
+        provider: ModelProviderEnum | None = None,
     ) -> Session:
         """Inicia e persiste uma nova sessão.
 
@@ -62,6 +66,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             model_name: Nome do modelo usado na sessão.
             max_tokens: Limite de tokens de saída configurado para a sessão.
             temperature: Temperatura de geração configurada para a sessão.
+            provider: Provedor efetivo das chamadas da sessão, quando conhecido.
 
         Returns:
             Session: Sessão recém-criada.
@@ -83,6 +88,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             status=SessionStatusEnum.RUNNING,
             created_at=created_at,
             updated_at=created_at,
+            provider=provider,
         )
         self.__wall_time_start_ms = self.clock.monotonic_ms()
 
@@ -184,38 +190,114 @@ class SessionRecorderAdapter(ISessionRecorder):
             model_name=None,
         )
 
-    async def record_degradation(self, degradation: SessionDegradation) -> None:
-        """Registra uma degradação ocorrida durante a sessão.
+    async def start_invocation(
+        self,
+        phase: ThinkingPhaseEnum,
+        task_id: str | None,
+        context_id: str | None,
+        model_name: str,
+        provider: ModelProviderEnum,
+    ) -> str:
+        """Registra o envio de uma chamada ao modelo, que já conta nos totais da sessão.
 
         Args:
-            degradation: Degradação a ser registrada.
+            phase: Fase de thinking que faz a chamada.
+            task_id: Tarefa associada, quando houver.
+            context_id: Janela de contexto associada, quando houver.
+            model_name: Modelo solicitado.
+            provider: Provedor que atende a chamada.
+
+        Returns:
+            str: Identificador da invocação, para `complete_invocation`.
 
         Raises:
             ValueError: Quando a sessão ainda não foi iniciada.
         """
         session = self.session
-        session.register_degradation(degradation=degradation)
-        self.logger.info("Degradação '%s' registrada na sessão '%s'", degradation.limit.value, session.id)
-        await self.repository.save(session=session)
+        invocation = LLMInvocation(
+            id=self.id_generator.new_invocation_id(),
+            phase=phase,
+            task_id=task_id,
+            context_id=context_id,
+            model_name=model_name,
+            provider=provider,
+            started_at=self.clock.now(),
+        )
+        session.start_invocation(invocation=invocation)
+        await self.__flush(session=session)
+        return invocation.id
 
-    async def finish(self, status: SessionStatusEnum, final_answer: str | None) -> Session:
+    async def complete_invocation(
+        self,
+        invocation_id: str,
+        outcome: InvocationOutcomeEnum,
+        duration_ms: int,
+        tokens_input: int | None,
+        tokens_output: int | None,
+        finish_reason: str | None = None,
+        provider_response_id: str | None = None,
+    ) -> None:
+        """Conclui uma invocação registrada, acumulando o seu consumo conhecido nos totais.
+
+        Args:
+            invocation_id: Identificador devolvido por `start_invocation`.
+            outcome: Desfecho da chamada.
+            duration_ms: Duração da chamada, em milissegundos.
+            tokens_input: Tokens de entrada informados, ou `None` se desconhecidos.
+            tokens_output: Tokens de saída informados, ou `None` se desconhecidos.
+            finish_reason: Motivo de término informado pelo provedor, quando há.
+            provider_response_id: Identificador da resposta no provedor, quando há.
+
+        Raises:
+            ValueError: Quando a sessão não foi iniciada ou a invocação não pode ser concluída.
+        """
+        session = self.session
+        session.complete_invocation(
+            invocation_id=invocation_id,
+            outcome=outcome,
+            duration_ms=duration_ms,
+            tokens_input=tokens_input,
+            tokens_output=tokens_output,
+            finish_reason=finish_reason,
+            provider_response_id=provider_response_id,
+        )
+        await self.__flush(session=session)
+
+    async def finish(
+        self,
+        status: SessionStatusEnum,
+        final_answer: str | None,
+        failure: SessionFailure | None = None,
+    ) -> Session:
         """Encerra e persiste a sessão com o status e a resposta final informados.
 
         Args:
             status: Estado final da sessão.
             final_answer: Resposta final entregue ao usuário, quando houver.
+            failure: Motivo estruturado do encerramento sem conclusão, quando houver.
 
         Returns:
             Session: Sessão encerrada.
 
         Raises:
             ValueError: Quando a sessão ainda não foi iniciada ou já foi encerrada.
+            Exception: A falha do repositório, quando a gravação do encerramento não conclui. A sessão
+                volta a ficar em execução, porque só vale como encerrada o que foi persistido; assim o
+                chamador ainda pode encerrá-la por outro caminho.
         """
         session = self.session
+        previous_updated_at = session.updated_at
+        previous_wall_time_ms = session.totals.wall_time_ms
+        session.finish(status=status, final_answer=final_answer, failure=failure)
         session.totals.wall_time_ms = self.clock.monotonic_ms() - self.__wall_time_start_ms
-        session.finish(status=status, final_answer=final_answer)
 
-        await self.repository.save(session=session)
+        try:
+            await self.repository.save(session=session)
+        except Exception:
+            session.reopen(updated_at=previous_updated_at)
+            session.totals.wall_time_ms = previous_wall_time_ms
+            self.logger.exception("Falha ao persistir o encerramento da sessão '%s'", session.id)
+            raise
         self.logger.info("Sessão '%s' encerrada com status '%s'", session.id, status.value)
         return session
 
@@ -273,8 +355,15 @@ class SessionRecorderAdapter(ISessionRecorder):
             model_name=model_name,
         )
         session.add_message(message=message)
-
-        if self.settings.ralph_session_flush_every_message:
-            await self.repository.save(session=session)
+        await self.__flush(session=session)
 
         return message
+
+    async def __flush(self, session: Session) -> None:
+        """Persiste a sessão quando `RALPH_SESSION_FLUSH_EVERY_MESSAGE` está ligado.
+
+        Args:
+            session: Sessão em andamento.
+        """
+        if self.settings.ralph_session_flush_every_message:
+            await self.repository.save(session=session)

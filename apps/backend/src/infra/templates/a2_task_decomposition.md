@@ -26,6 +26,10 @@ escrito nela.
 Em conjunto, as tarefas precisam gerar insumos suficientes para sustentar a resposta final ao
 enunciado.
 
+**Limite do lote:** a sessão comporta no máximo {{max_tasks}} tarefas. Não ultrapasse esse número
+e não funda tarefas independentes em uma só apenas para caber: mantenha cada uma autônoma e de
+objetivo único. Um lote acima do limite é recusado e devolvido a você para correção.
+
 Numere as tarefas a partir de `T1`.
 
 ## Formato de saída

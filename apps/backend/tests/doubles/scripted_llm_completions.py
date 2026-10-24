@@ -23,9 +23,11 @@ class ScriptedLLMCompletions(ILLMCompletions):
     def __init__(
         self,
         responses: list[str | Exception] | None = None,
-        tokens_input: int = _DEFAULT_TOKENS_INPUT,
-        tokens_output: int = _DEFAULT_TOKENS_OUTPUT,
+        tokens_input: int | None = _DEFAULT_TOKENS_INPUT,
+        tokens_output: int | None = _DEFAULT_TOKENS_OUTPUT,
         error: Exception | None = None,
+        finish_reason: str | None = "stop",
+        validation_error: Exception | None = None,
     ) -> None:
         """Configura o dublê.
 
@@ -33,14 +35,19 @@ class ScriptedLLMCompletions(ILLMCompletions):
             responses: Fila de saídas devolvidas, uma por chamada. Uma exceção na fila é
                 levantada naquela chamada, o que permite roteirizar falhas intermitentes
                 do provedor (uma completion vazia seguida de uma boa, por exemplo).
-            tokens_input: Tokens de entrada contabilizados em cada chamada.
-            tokens_output: Tokens de saída contabilizados em cada chamada.
+            tokens_input: Tokens de entrada contabilizados em cada chamada; `None` se o provedor não informa.
+            tokens_output: Tokens de saída contabilizados em cada chamada; `None` se o provedor não informa.
             error: Exceção levantada em vez de responder, em todas as chamadas.
+            finish_reason: Motivo de término informado em cada resposta.
+            validation_error: Exceção levantada pela validação local, antes de qualquer envio.
         """
         self.responses: list[str | Exception] = list(responses) if responses else []
         self.tokens_input = tokens_input
         self.tokens_output = tokens_output
         self.error = error
+        self.finish_reason = finish_reason
+        self.validation_error = validation_error
+        self.validations: list[dict[str, object]] = []
         self.conversations: list[list[Message]] = []
         self.calls: list[dict[str, object]] = []
 
@@ -59,6 +66,28 @@ class ScriptedLLMCompletions(ILLMCompletions):
             list[str]: Textos das mensagens enviadas naquela chamada, em ordem.
         """
         return [message.text for message in self.conversations[call_index]]
+
+    def validate_conversation(
+        self,
+        conversation: list[Message],
+        model_name: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        provider: ModelProviderEnum | None = None,
+    ) -> None:
+        """Registra a validação local e levanta o erro programado, quando há."""
+        self.validations.append(
+            {
+                "texts": [message.text for message in conversation],
+                "model_name": model_name,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "provider": provider,
+            }
+        )
+
+        if self.validation_error is not None:
+            raise self.validation_error
 
     async def send_message(
         self,
@@ -122,7 +151,7 @@ class ScriptedLLMCompletions(ILLMCompletions):
                 text=output_text,
                 source=MessageSourceEnum.LLM_AGENT,
             ),
-            tokens=TokensUsage(
+            tokens=TokensUsage.from_reported(
                 tokens_input=self.tokens_input,
                 tokens_output=self.tokens_output,
                 llm_model=GenaiModel(
@@ -130,4 +159,5 @@ class ScriptedLLMCompletions(ILLMCompletions):
                     model_provider=ModelProviderEnum.OPEN_ROUTER,
                 ),
             ),
+            finish_reason=self.finish_reason,
         )

@@ -33,3 +33,19 @@ def test_motivo_length_explica_o_teto_de_tokens() -> None:
 @pytest.mark.parametrize("finish_reason", ["stop", None])
 def test_outros_motivos_nao_recebem_a_explicacao_de_teto(finish_reason: str | None) -> None:
     assert "max_tokens" not in str(EmptyCompletionError(finish_reason=finish_reason))
+
+
+def test_nao_carrega_consumo_nem_identificador_por_padrao() -> None:
+    erro = EmptyCompletionError(finish_reason="stop")
+
+    assert erro.tokens_input is None
+    assert erro.tokens_output is None
+    assert erro.response_id is None
+
+
+def test_preserva_o_consumo_e_o_identificador_informados_pelo_provedor() -> None:
+    erro = EmptyCompletionError(finish_reason="length", tokens_input=100, tokens_output=40, response_id="resp-9")
+
+    assert erro.tokens_input == 100
+    assert erro.tokens_output == 40
+    assert erro.response_id == "resp-9"

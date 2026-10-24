@@ -1,5 +1,6 @@
 from typing import Any
 
+from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.interfaces.structured_response_parser_interface import IStructuredResponseParser
 
@@ -19,8 +20,14 @@ class FakeStructuredParser(IStructuredResponseParser):
         """
         self.outcomes = list(outcomes) if outcomes else []
         self.parsed: list[tuple[str, ThinkingPhaseEnum]] = []
+        self.validations: list[ValidationContext | None] = []
 
-    def parse(self, raw_output: str, phase: ThinkingPhaseEnum) -> dict[str, Any]:
+    def parse(
+        self,
+        raw_output: str,
+        phase: ThinkingPhaseEnum,
+        validation: ValidationContext | None = None,
+    ) -> dict[str, Any]:
         """Registra a chamada e devolve, ou levanta, o próximo resultado programado.
 
         Raises:
@@ -28,6 +35,7 @@ class FakeStructuredParser(IStructuredResponseParser):
             AssertionError: Quando a fila de resultados programados se esgota.
         """
         self.parsed.append((raw_output, phase))
+        self.validations.append(validation)
 
         if not self.outcomes:
             raise AssertionError(f"Parsing nº {len(self.parsed)} sem resultado programado.")

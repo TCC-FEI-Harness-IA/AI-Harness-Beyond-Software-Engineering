@@ -9,10 +9,12 @@ from src.domain.entities.llm.genai_model import GenaiModel
 from src.domain.entities.llm.llm_message import LLMMessage
 from src.domain.entities.llm.message import Message
 from src.domain.entities.llm.tokens_usage import TokensUsage
+from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
+from src.domain.errors.empty_completion_error import EmptyCompletionError
 from src.infra.adapters.session_recorder_adapter import SessionRecorderAdapter
 from tests.doubles.fake_clock import FakeClock
 from tests.doubles.fake_id_generator import FakeIdGenerator
@@ -128,6 +130,26 @@ async def test_sessao_registra_a_configuracao_do_modelo() -> None:
     assert sessao.model_name == "vendor/modelo"
     assert sessao.max_tokens == 100
     assert sessao.temperature == 0.3
+    assert sessao.provider is ModelProviderEnum.OPEN_ROUTER
+
+
+async def test_temperatura_zero_e_registrada_e_enviada_como_pedida() -> None:
+    repositorio = InMemorySessionRepository()
+    completions = FakeLLMCompletions(result=_build_llm_message(output_message=_build_output_message()))
+    entrada = DefaultMessageInputDTO(
+        user_input="pergunta do usuario",
+        model_name="vendor/modelo",
+        max_tokens=100,
+        temperature=0.0,
+        provider=ModelProviderEnum.OPEN_ROUTER,
+    )
+
+    await _build_usecase(completions=completions, repository=repositorio).execute(user_input=entrada)
+
+    sessao = await repositorio.find_by_id(session_id="sess_1")
+    assert sessao is not None
+    assert sessao.temperature == 0.0
+    assert completions.calls[0]["temperature"] == 0.0
 
 
 async def test_totais_da_sessao_batem_com_o_consumo_da_chamada() -> None:
@@ -145,6 +167,30 @@ async def test_totais_da_sessao_batem_com_o_consumo_da_chamada() -> None:
     assert sessao.totals.total_tokens == 33
     assert sessao.totals.inference_time_ms == 812
     assert sessao.totals.wall_time_ms == 21008
+
+
+async def test_a_chamada_unica_vira_uma_invocacao_registrada() -> None:
+    repositorio = InMemorySessionRepository()
+    resultado = _build_llm_message(output_message=_build_output_message())
+    resultado.finish_reason = "stop"
+    resultado.provider_response_id = "resp-1"
+    completions = FakeLLMCompletions(result=resultado)
+
+    await _build_usecase(completions=completions, repository=repositorio).execute(user_input=_ENTRADA)
+
+    sessao = await repositorio.find_by_id(session_id="sess_1")
+    assert sessao is not None
+    (invocacao,) = sessao.invocations
+    assert invocacao.phase is ThinkingPhaseEnum.DIRECT_INFERENCE
+    assert invocacao.task_id is None
+    assert invocacao.context_id is None
+    assert invocacao.model_name == "vendor/modelo"
+    assert invocacao.provider is ModelProviderEnum.OPEN_ROUTER
+    assert invocacao.outcome is InvocationOutcomeEnum.SUCCESS
+    assert (invocacao.tokens_input, invocacao.tokens_output) == (11, 22)
+    assert invocacao.duration_ms == 812
+    assert invocacao.finish_reason == "stop"
+    assert invocacao.provider_response_id == "resp-1"
 
 
 async def test_tempo_de_inferencia_e_medido_por_mensagem() -> None:
@@ -216,8 +262,51 @@ async def test_resposta_sem_tokens_zera_as_metricas() -> None:
     sessao = await repositorio.find_by_id(session_id="sess_1")
     assert sessao is not None
     assert sessao.totals.total_tokens == 0
-    assert sessao.totals.total_llm_calls == 0
+    assert sessao.totals.total_llm_calls == 1
+    assert sessao.invocations[0].usage_known is False
     assert sessao.messages[1].model_name == "vendor/modelo"
+
+
+async def test_resposta_com_consumo_desconhecido_conta_a_chamada_sem_inventar_custo() -> None:
+    repositorio = InMemorySessionRepository()
+    resultado = _build_llm_message(output_message=_build_output_message())
+    resultado.tokens = TokensUsage(
+        tokens_input=0,
+        tokens_output=0,
+        llm_model=GenaiModel(model_name="vendor/modelo", model_provider=ModelProviderEnum.OPEN_ROUTER),
+        input_known=False,
+        output_known=False,
+    )
+
+    await _build_usecase(completions=FakeLLMCompletions(result=resultado), repository=repositorio).execute(
+        user_input=_ENTRADA
+    )
+
+    sessao = await repositorio.find_by_id(session_id="sess_1")
+    assert sessao is not None
+    assert (sessao.invocations[0].tokens_input, sessao.invocations[0].tokens_output) == (None, None)
+    assert sessao.totals.total_llm_calls == 1
+
+
+async def test_resposta_com_consumo_parcial_preserva_o_contador_ausente_como_desconhecido() -> None:
+    repositorio = InMemorySessionRepository()
+    resultado = _build_llm_message(output_message=_build_output_message())
+    resultado.tokens = TokensUsage(
+        tokens_input=10,
+        tokens_output=0,
+        llm_model=GenaiModel(model_name="vendor/modelo", model_provider=ModelProviderEnum.OPEN_ROUTER),
+        output_known=False,
+    )
+
+    await _build_usecase(completions=FakeLLMCompletions(result=resultado), repository=repositorio).execute(
+        user_input=_ENTRADA
+    )
+
+    sessao = await repositorio.find_by_id(session_id="sess_1")
+    assert sessao is not None
+    assert (sessao.invocations[0].tokens_input, sessao.invocations[0].tokens_output) == (10, None)
+    assert sessao.totals.tokens_input == 10
+    assert sessao.totals.tokens_output == 0
 
 
 async def test_falha_do_provedor_encerra_a_sessao_como_falha_e_propaga(
@@ -236,3 +325,109 @@ async def test_falha_do_provedor_encerra_a_sessao_como_falha_e_propaga(
     assert sessao.status is SessionStatusEnum.FAILED
     assert sessao.final_answer is None
     assert len(sessao.messages) == 1
+    assert sessao.invocations[0].outcome is InvocationOutcomeEnum.PROVIDER_ERROR
+    assert sessao.invocations[0].usage_known is False
+    assert sessao.totals.total_llm_calls == 1
+
+
+async def test_completion_vazia_falha_sem_retry_e_preserva_o_consumo_conhecido() -> None:
+    repositorio = InMemorySessionRepository()
+    completions = FakeLLMCompletions(
+        error=EmptyCompletionError(finish_reason="length", tokens_input=100, tokens_output=40, response_id="gen-1")
+    )
+
+    with pytest.raises(EmptyCompletionError):
+        await _build_usecase(completions=completions, repository=repositorio).execute(user_input=_ENTRADA)
+
+    assert len(completions.conversations) == 1
+    sessao = await repositorio.find_by_id(session_id="sess_1")
+    assert sessao is not None
+    assert sessao.status is SessionStatusEnum.FAILED
+    assert sessao.invocations[0].outcome is InvocationOutcomeEnum.EMPTY_COMPLETION
+    assert sessao.invocations[0].finish_reason == "length"
+    assert sessao.invocations[0].provider_response_id == "gen-1"
+    assert sessao.totals.total_llm_calls == 1
+    assert sessao.totals.total_tokens == 140
+
+
+async def test_resultado_nulo_do_provedor_conta_a_chamada_como_erro() -> None:
+    repositorio = InMemorySessionRepository()
+
+    with pytest.raises(ValueError):
+        await _build_usecase(completions=FakeLLMCompletions(result=None), repository=repositorio).execute(
+            user_input=_ENTRADA
+        )
+
+    sessao = await repositorio.find_by_id(session_id="sess_1")
+    assert sessao is not None
+    assert sessao.invocations[0].outcome is InvocationOutcomeEnum.PROVIDER_ERROR
+    assert sessao.totals.total_llm_calls == 1
+
+
+async def test_recusa_local_da_requisicao_nao_gera_invocacao_nem_conta_chamada() -> None:
+    repositorio = InMemorySessionRepository()
+    completions = FakeLLMCompletions(validation_error=ValueError("Missing OpenRouter settings."))
+
+    with pytest.raises(ValueError, match="Missing OpenRouter settings"):
+        await _build_usecase(completions=completions, repository=repositorio).execute(user_input=_ENTRADA)
+
+    assert completions.conversations == []
+    sessao = await repositorio.find_by_id(session_id="sess_1")
+    assert sessao is not None
+    assert sessao.status is SessionStatusEnum.FAILED
+    assert sessao.invocations == []
+    assert sessao.totals.total_llm_calls == 0
+
+
+async def test_falha_ao_gravar_a_resposta_encerra_a_sessao_como_falha_e_propaga_a_falha_original() -> None:
+    repositorio = InMemorySessionRepository(failing_save_calls={5})
+    completions = FakeLLMCompletions(result=_build_llm_message(output_message=_build_output_message()))
+
+    with pytest.raises(OSError, match=r"gravação 5"):
+        await _build_usecase(completions=completions, repository=repositorio).execute(user_input=_ENTRADA)
+
+    sessao = await repositorio.find_by_id(session_id="sess_1")
+    assert sessao is not None
+    assert sessao.status is SessionStatusEnum.FAILED
+    assert sessao.final_answer is None
+    assert sessao.totals.total_llm_calls == 1
+    assert sessao.invocations[0].outcome is InvocationOutcomeEnum.SUCCESS
+
+
+async def test_falha_ao_gravar_a_conclusao_encerra_a_sessao_como_falha() -> None:
+    repositorio = InMemorySessionRepository(failing_saves={SessionStatusEnum.COMPLETED: 1})
+    completions = FakeLLMCompletions(result=_build_llm_message(output_message=_build_output_message()))
+
+    with pytest.raises(OSError, match="persistência indisponível"):
+        await _build_usecase(completions=completions, repository=repositorio).execute(user_input=_ENTRADA)
+
+    sessao = await repositorio.find_by_id(session_id="sess_1")
+    assert sessao is not None
+    assert sessao.status is SessionStatusEnum.FAILED
+    assert sessao.final_answer is None
+
+
+async def test_falha_ao_gravar_a_pergunta_do_usuario_encerra_a_sessao_como_falha() -> None:
+    repositorio = InMemorySessionRepository(failing_save_calls={2})
+    completions = FakeLLMCompletions(result=_build_llm_message(output_message=_build_output_message()))
+
+    with pytest.raises(OSError, match=r"gravação 2"):
+        await _build_usecase(completions=completions, repository=repositorio).execute(user_input=_ENTRADA)
+
+    sessao = await repositorio.find_by_id(session_id="sess_1")
+    assert sessao is not None
+    assert sessao.status is SessionStatusEnum.FAILED
+    assert completions.conversations == []
+
+
+async def test_persistencia_indisponivel_tambem_no_encerramento_preserva_a_falha_original(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    repositorio = InMemorySessionRepository(failing_save_calls={5, 6})
+    completions = FakeLLMCompletions(result=_build_llm_message(output_message=_build_output_message()))
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(OSError, match=r"gravação 5"):
+            await _build_usecase(completions=completions, repository=repositorio).execute(user_input=_ENTRADA)
+
+    assert "Não foi possível encerrar a sessão" in caplog.text

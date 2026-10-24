@@ -7,5 +7,5 @@ class TaskStatusEnum(StrEnum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     APPROVED = "approved"
-    DEGRADED = "degraded"
+    FAILED = "failed"
     DISCARDED = "discarded"

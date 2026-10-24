@@ -14,6 +14,7 @@ class FakeIdGenerator(IIdGenerator):
         self.session_ids: list[str] = []
         self.message_ids: list[str] = []
         self.context_ids: list[str] = []
+        self.invocation_ids: list[str] = []
 
     def new_session_id(self) -> str:
         """Devolve o próximo identificador de sessão da sequência."""
@@ -29,3 +30,8 @@ class FakeIdGenerator(IIdGenerator):
         """Devolve o próximo identificador de janela de contexto da sequência."""
         self.context_ids.append(f"ctx_{len(self.context_ids) + 1}")
         return self.context_ids[-1]
+
+    def new_invocation_id(self) -> str:
+        """Devolve o próximo identificador de invocação da sequência."""
+        self.invocation_ids.append(f"inv_{len(self.invocation_ids) + 1}")
+        return self.invocation_ids[-1]

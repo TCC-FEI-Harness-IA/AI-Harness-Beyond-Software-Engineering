@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from src.domain.entities.llm.context_window import ContextWindow
 from src.domain.entities.thinking.phase_outcome import PhaseOutcome
+from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 
@@ -38,12 +39,19 @@ class IThinkingPhase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def execute(self, context: ContextWindow, variables: dict[str, str]) -> PhaseOutcome:
+    async def execute(
+        self,
+        context: ContextWindow,
+        variables: dict[str, str],
+        validation: ValidationContext | None = None,
+    ) -> PhaseOutcome:
         """Executa a fase sobre a janela de contexto informada.
 
         Args:
             context: Janela de contexto em que a fase é executada.
             variables: Placeholders a substituir no template da fase.
+            validation: Dados esperados pela chamada, usados para validar a saída estruturada.
+                É obrigatório nas fases de verificação.
 
         Returns:
             PhaseOutcome: Resultado da execução da fase.

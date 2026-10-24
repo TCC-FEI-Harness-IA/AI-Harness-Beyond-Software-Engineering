@@ -4,23 +4,30 @@ from typing import Any, AsyncGenerator, Sequence
 from src.application.dtos.ralph_thinking_input_dto import RalphThinkingInputDTO
 from src.domain.entities.llm.context_window import ContextWindow
 from src.domain.entities.llm.message import Message
-from src.domain.entities.session.session_degradation import SessionDegradation
+from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.thinking.acceptance_criterion import AcceptanceCriterion
 from src.domain.entities.thinking.criterion_evaluation import CriterionEvaluation
+from src.domain.entities.thinking.global_approval import GlobalApproval
+from src.domain.entities.thinking.invalid_output import InvalidOutput
+from src.domain.entities.thinking.phase_outcome import PhaseOutcome
 from src.domain.entities.thinking.learning import Learning
 from src.domain.entities.thinking.task import Task
 from src.domain.entities.thinking.task_attempt import TaskAttempt
 from src.domain.entities.thinking.task_result import TaskResult
 from src.domain.entities.thinking.thinking_event import ThinkingEvent
+from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.entities.thinking.verification_report import VerificationReport
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
+from src.domain.enums.session_failure_reason_enum import SessionFailureReasonEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.task_status_enum import TaskStatusEnum
 from src.domain.enums.thinking_event_subtype_enum import ThinkingEventSubtypeEnum
 from src.domain.enums.thinking_event_type_enum import ThinkingEventTypeEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.enums.verification_decision_enum import VerificationDecisionEnum
+from src.domain.errors.execution_interrupted_error import ExecutionInterruptedError
+from src.domain.errors.phase_parsing_error import PhaseParsingError
 from src.domain.errors.ralph_error import RalphError
 from src.domain.interfaces.clock_interface import IClock
 from src.domain.interfaces.context_window_factory_interface import IContextWindowFactory
@@ -35,9 +42,7 @@ _RALPH_FLOW = ThinkingPhaseEnum.A1_GENERAL_CRITERIA
 _SETUP_TASK_LABEL = "setup"
 _SYNTHESIS_TASK_LABEL = "synthesis"
 _NO_INFERENCE_TIME_MS = 0
-_NO_REMAINING = 0
 _FIRST_TASK_NUMBER = 1
-_LAST_ATTEMPT = -1
 
 _CRITERIA_HEADING = "## Critérios de aceite gerais"
 _TASKS_HEADING = "## Tarefas planejadas"
@@ -55,24 +60,30 @@ _REPORT_CONTENT = "**Decisão:** `{decision}`\n\n{evaluations}"
 _EVALUATION_ITEM = "- `{criterion_id}` — {status}: {justification}"
 _MET_LABEL = "atendido"
 _UNMET_LABEL = "não atendido"
-_REPROVED_ATTEMPT_CONTENT = (
-    "A tentativa anterior foi reprovada.\n\n"
-    "**Resultado reprovado:**\n\n{preliminary}\n\n"
-    "**Critérios não satisfeitos:** {unmet}\n\n"
-    "**Veredito do validador:**\n\n{report}\n\n"
+_VALIDATOR_REPORT_CONTENT = "## Veredito do validador (tentativa {attempt})\n\n{report}"
+_INVALID_VERIFIER_OUTPUT_CONTENT = (
+    "O validador devolveu uma saída inválida e foi instruído a corrigi-la.\n\n"
+    "**Saída inválida:**\n\n{raw_output}\n\n**Motivo da recusa:** {reason}"
+)
+_RETRY_INSTRUCTION_CONTENT = (
+    "A tentativa anterior foi reprovada. Critérios não satisfeitos: {unmet}.\n\n"
     "Refaça a resolução da tarefa corrigindo exatamente esses pontos."
 )
 _RESULT_BLOCK = "## {task_id} — {title}\n\n{content}"
-_DEGRADATION_CONTENT = "**Degradação:** limite `{limit}` atingido. {detail}"
-_ATTEMPTS_DETAIL = "A última tentativa da tarefa `{task_id}` foi aceita como está."
-_BUDGET_DETAIL = "O loop de execução foi interrompido e as tarefas restantes foram descartadas: {tasks}."
-_PLANNING_DETAIL = "Nenhum planejamento adicional será executado; a resposta final usa os resultados existentes."
 _ERROR_CONTENT = "**Erro:** {reason}"
+_CONSUMPTION_DETAIL = "Consumo conhecido: {tokens} tokens em {calls} chamadas ao modelo."
+_DISCARDED_DETAIL = "Tarefas descartadas: {tasks}."
+_PENDING_CRITERIA_DETAIL = "Critérios gerais pendentes: {criteria}."
+_ATTEMPTS_DETAIL = (
+    "A tarefa `{task_id}` foi reprovada nas {attempts} tentativas permitidas; nenhum resultado foi "
+    "armazenado e a execução foi encerrada sem resposta final."
+)
+_PLANNING_DETAIL = "{reason} Critérios gerais ainda não atendidos: {criteria}."
 _ITEM_SEPARATOR = "\n"
 _BLOCK_SEPARATOR = "\n\n"
+_SENTENCE_SEPARATOR = " "
 _LIST_SEPARATOR = ", "
 _CRITERION_ITEM = "- `{criterion_id}`: {description}"
-_EMPTY_LIST_CONTENT = "—"
 
 
 class RalphThinkingUseCase:
@@ -80,6 +91,12 @@ class RalphThinkingUseCase:
 
     Executa Planejamento → Execução em Loop → Criação da Resposta Final,
     conforme o pseudocódigo canônico do orquestrador descrito no paper.
+
+    A única saída com resposta é a síntese (C.3) depois de uma aprovação global (C.1)
+    sobre resultados aprovados individualmente (B.2/B.3). Quando um limite operacional
+    impede o fluxo de continuar sem violar essas condições, a sessão termina sem conclusão
+    (`failed`, sem resposta final, com o motivo estruturado). O paper não define limites de
+    recursos nem esse encerramento: ele é um tratamento operacional adicional.
     """
 
     def __init__(
@@ -138,10 +155,13 @@ class RalphThinkingUseCase:
         self.settings: ISettings = settings
         self.logger = logger
         self.__user_question: str = ""
+        self.__max_tokens: int = 0
         self.__general_criteria: tuple[AcceptanceCriterion, ...] = ()
         self.__results: dict[str, TaskResult] = {}
-        self.__degraded: bool = False
+        self.__active_task_id: str | None = None
+        self.__pending_criteria_ids: tuple[str, ...] = ()
         self.__context: ContextWindow = ContextWindow(context_id="", phase=_RALPH_FLOW)
+        self.__running_phase: ThinkingPhaseEnum = _RALPH_FLOW
 
     async def execute(self, input_dto: RalphThinkingInputDTO) -> AsyncGenerator[ThinkingEvent, None]:
         """Executa o fluxo completo de thinking, emitindo um evento por etapa.
@@ -153,21 +173,24 @@ class RalphThinkingUseCase:
             ThinkingEvent: Evento correspondente a cada etapa do fluxo.
 
         Raises:
-            Exception: Toda falha é registrada, emitida como evento `error`,
-                encerra a sessão como falha e é repropagada ao chamador.
+            Exception: Toda falha ou interrupção depois da criação da sessão, inclusive na gravação
+                da pergunta do usuário, é registrada, emitida como um único evento `error`, encerra a
+                sessão como `failed` e é repropagada ao chamador.
         """
         self.__user_question = input_dto.user_input
+        self.__max_tokens = input_dto.max_tokens
         await self.session_recorder.start(
             user_question=input_dto.user_input,
             flow=_RALPH_FLOW,
             model_name=input_dto.model_name,
             max_tokens=input_dto.max_tokens,
             temperature=input_dto.temperature,
+            provider=input_dto.provider,
         )
-        await self.session_recorder.record_user_input(content=input_dto.user_input)
-        self.__configure_phases(input_dto=input_dto)
 
         try:
+            await self.session_recorder.record_user_input(content=input_dto.user_input)
+            self.__configure_phases(input_dto=input_dto)
             async for event in self.__run_planning():
                 yield event
             async for event in self.__run_synthesis():
@@ -180,12 +203,15 @@ class RalphThinkingUseCase:
     async def __run_planning(self) -> AsyncGenerator[ThinkingEvent, None]:
         """Executa A.1 e A.2, produzindo os critérios gerais e a fila inicial.
 
+        O plano inicial é validado contra o espaço de tarefas da sessão antes de tocar a
+        fila: um lote acima do teto é devolvido ao planejador para correção, e nunca truncado.
+
         Yields:
             ThinkingEvent: Eventos `setup` (A.1) e `tasks` (A.2).
         """
         context = self.__new_context(phase=ThinkingPhaseEnum.A1_GENERAL_CRITERIA)
-        outcome = await self.general_criteria_phase.execute(
-            context=context, variables={"user_question": self.__user_question}
+        outcome = await self.__execute_phase(
+            runner=self.general_criteria_phase, context=context, variables={"user_question": self.__user_question}
         )
         self.__general_criteria = self.__to_criteria(parsed=outcome.parsed)
         content = f"{_CRITERIA_HEADING}\n\n{self.__render_criteria(criteria=self.__general_criteria)}"
@@ -200,8 +226,11 @@ class RalphThinkingUseCase:
         )
 
         context = self.__new_context(phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION)
-        outcome = await self.task_decomposition_phase.execute(
-            context=context, variables={"user_question": self.__user_question}
+        outcome = await self.__execute_phase(
+            runner=self.task_decomposition_phase,
+            context=context,
+            variables={"user_question": self.__user_question, **self.__planning_limits()},
+            validation=self.__planning_validation(),
         )
         tasks = self.__to_tasks(parsed=outcome.parsed, origin_phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION)
         self.task_queue.push_back(tasks=tasks)
@@ -220,25 +249,13 @@ class RalphThinkingUseCase:
         """Executa o loop de execução até a fila de tarefas se esvaziar.
 
         Yields:
-            ThinkingEvent: Eventos de cada tarefa executada e da eventual degradação
-            por esgotamento do orçamento, que descarta as tarefas restantes.
+            ThinkingEvent: Eventos de cada tarefa executada.
+
+        Raises:
+            ExecutionInterruptedError: Quando um limite impede de iniciar a próxima tarefa.
         """
         while not self.task_queue.is_empty():
-            limit = self.__loop_budget_limit()
-            if limit is not None:
-                discarded = self.task_queue.discard_all()
-                detail = _BUDGET_DETAIL.format(tasks=self.__render_task_ids(tasks=discarded))
-                async for event in self.__degrade(
-                    limit=limit,
-                    phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION,
-                    subtype=ThinkingEventSubtypeEnum.EXECUTE,
-                    detail=detail,
-                    context=self.__context,
-                    task_id=None,
-                ):
-                    yield event
-                return
-
+            self.__ensure_next_task_can_start()
             async for event in self.__run_task(task=self.task_queue.pop_next()):
                 yield event
 
@@ -252,6 +269,7 @@ class RalphThinkingUseCase:
             ThinkingEvent: Eventos `reset`, `execute`, `reasoning`, `verify_*`,
             `store` e `learn` daquela tarefa.
         """
+        self.__active_task_id = task.id
         context = self.__new_context(phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION, task_id=task.id)
         reset_content = _RESET_CONTENT.format(task_id=task.id, context_id=context.context_id)
         await self.session_recorder.record_programmatic_step(
@@ -295,27 +313,34 @@ class RalphThinkingUseCase:
             yield event
         async for event in self.__extract_learnings(task=task, context=context):
             yield event
+        self.__active_task_id = None
 
     async def __resolve_task(self, task: Task, context: ContextWindow) -> AsyncGenerator[ThinkingEvent, None]:
         """Executa o ciclo de tentativas de B.1 e B.2 para uma tarefa.
 
-        A janela da tarefa é a mesma em toda retentativa: a tentativa reprovada,
-        os critérios não satisfeitos e o veredito do validador permanecem no
-        contexto e guiam a correção. É esse mesmo contexto completo — tentativas
-        reprovadas e interações com o validador — que B.4 recebe ao final.
+        A janela da tarefa é a mesma em toda retentativa: a tentativa reprovada e o veredito do
+        validador permanecem no contexto e guiam a correção. Cada veredito é anexado a essa
+        janela assim que existe, antes de qualquer decisão — inclusive o da aprovação e o da
+        última reprovação —, porque B.4 recebe o contexto completo da tarefa. A janela do
+        validador continua isolada: só o seu relatório volta para cá.
+
+        A função só retorna quando a última tentativa foi aprovada. Se as tentativas se esgotam,
+        a tarefa não é aprovada, nada é armazenado e a execução é interrompida.
 
         Args:
             task: Tarefa em execução.
             context: Janela de contexto da tarefa.
 
         Yields:
-            ThinkingEvent: Eventos `reasoning`, `verify_pass`/`verify_fail` e a
-            eventual degradação por esgotamento das tentativas.
+            ThinkingEvent: Eventos `reasoning` e `verify_pass`/`verify_fail`.
+
+        Raises:
+            ExecutionInterruptedError: Quando as tentativas se esgotam sem aprovação.
         """
         while True:
             attempt = self.cost_guard.register_task_attempt(task_id=task.id)
-            outcome = await self.task_resolution_phase.execute(
-                context=context, variables=self.__resolution_variables(task=task)
+            outcome = await self.__execute_phase(
+                runner=self.task_resolution_phase, context=context, variables=self.__resolution_variables(task=task)
             )
             preliminary = outcome.parsed["result"]
             yield await self.__record_and_build(
@@ -331,12 +356,19 @@ class RalphThinkingUseCase:
             verification_context = self.context_window_factory.create(
                 phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION, task_id=task.id
             )
-            outcome = await self.task_verification_phase.execute(
+            outcome = await self.__execute_phase(
+                runner=self.task_verification_phase,
                 context=verification_context,
                 variables=self.__verification_variables(task=task, preliminary=preliminary),
+                validation=ValidationContext(
+                    expected_criteria_ids=tuple(criterion.id for criterion in task.acceptance_criteria)
+                ),
             )
             report = self.__to_report(parsed=outcome.parsed)
             task.attempts.append(TaskAttempt(number=attempt, output=preliminary, report=report))
+            self.__record_verification_in_task_context(
+                context=context, attempt=attempt, report=report, invalid_outputs=outcome.invalid_outputs
+            )
             yield await self.__record_and_build(
                 subtype=(
                     ThinkingEventSubtypeEnum.VERIFY_PASS if report.approved else ThinkingEventSubtypeEnum.VERIFY_FAIL
@@ -354,46 +386,73 @@ class RalphThinkingUseCase:
                 return
 
             if not self.cost_guard.can_retry_task(task_id=task.id):
-                task.status = TaskStatusEnum.DEGRADED
-                async for event in self.__degrade(
+                task.status = TaskStatusEnum.FAILED
+                raise ExecutionInterruptedError(
                     limit=BudgetLimitEnum.TASK_ATTEMPTS,
                     phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION,
-                    subtype=ThinkingEventSubtypeEnum.VERIFY_FAIL,
-                    detail=_ATTEMPTS_DETAIL.format(task_id=task.id),
-                    context=context,
+                    detail=_ATTEMPTS_DETAIL.format(task_id=task.id, attempts=attempt),
                     task_id=task.id,
-                ):
-                    yield event
-                return
+                )
 
             context.append(
                 message=Message(
                     creation_timestamp=self.clock.now(),
-                    text=_REPROVED_ATTEMPT_CONTENT.format(
-                        preliminary=preliminary,
-                        unmet=self.__render_ids(ids=report.unmet_criteria_ids),
-                        report=self.__render_report(report=report),
-                    ),
+                    text=_RETRY_INSTRUCTION_CONTENT.format(unmet=self.__render_ids(ids=report.unmet_criteria_ids)),
                     source=MessageSourceEnum.USER,
                 )
             )
 
+    def __record_verification_in_task_context(
+        self,
+        context: ContextWindow,
+        attempt: int,
+        report: VerificationReport,
+        invalid_outputs: Sequence[InvalidOutput],
+    ) -> None:
+        """Acrescenta ao histórico da tarefa a interação com o validador.
+
+        Primeiro as saídas inválidas que o validador teve de corrigir, claramente identificadas
+        como tais; depois o relatório validado, o único com efeito de controle.
+
+        Args:
+            context: Janela de contexto da tarefa.
+            attempt: Número da tentativa verificada.
+            report: Relatório validado da verificação.
+            invalid_outputs: Saídas recusadas pelo parser e corrigidas pelo validador.
+        """
+        for invalid_output in invalid_outputs:
+            context.append(
+                message=Message(
+                    creation_timestamp=self.clock.now(),
+                    text=_INVALID_VERIFIER_OUTPUT_CONTENT.format(
+                        raw_output=invalid_output.raw_output, reason=invalid_output.reason
+                    ),
+                    source=MessageSourceEnum.USER,
+                )
+            )
+        context.append(
+            message=Message(
+                creation_timestamp=self.clock.now(),
+                text=_VALIDATOR_REPORT_CONTENT.format(attempt=attempt, report=self.__render_report(report=report)),
+                source=MessageSourceEnum.USER,
+            )
+        )
+
     async def __store_result(self, task: Task, context: ContextWindow) -> AsyncGenerator[ThinkingEvent, None]:
         """Armazena o resultado aprovado de uma tarefa (B.3), sem chamar o modelo.
 
+        Só uma tarefa aprovada, cuja última tentativa tem relatório aprovado, tem resultado a
+        armazenar; a própria tarefa garante isso ao entregá-lo.
+
         Args:
-            task: Tarefa recém-concluída.
+            task: Tarefa recém-aprovada.
             context: Janela de contexto da tarefa.
 
         Yields:
             ThinkingEvent: Evento `store`, sempre com tempo de inferência zero.
         """
-        self.__results[task.id] = TaskResult(
-            task_id=task.id,
-            task_title=task.title,
-            content=task.attempts[_LAST_ATTEMPT].output,
-            degraded=task.status is TaskStatusEnum.DEGRADED,
-        )
+        self.__running_phase = ThinkingPhaseEnum.B3_RESULT_STORAGE
+        self.__results[task.id] = task.approved_result()
         content = _STORE_CONTENT.format(task_id=task.id)
         await self.session_recorder.record_programmatic_step(
             phase=ThinkingPhaseEnum.B3_RESULT_STORAGE,
@@ -414,8 +473,8 @@ class RalphThinkingUseCase:
     async def __extract_learnings(self, task: Task, context: ContextWindow) -> AsyncGenerator[ThinkingEvent, None]:
         """Extrai os aprendizados pontuais de uma tarefa (B.4).
 
-        Usa a janela completa da tarefa, que contém todas as tentativas, inclusive
-        as reprovadas — é lá que fatos úteis podem ter emergido.
+        Usa a janela completa da tarefa, que contém todas as tentativas e todos os vereditos do
+        validador — é lá que fatos úteis podem ter emergido.
 
         Args:
             task: Tarefa recém-concluída.
@@ -424,7 +483,7 @@ class RalphThinkingUseCase:
         Yields:
             ThinkingEvent: Evento `learn`.
         """
-        outcome = await self.learnings_extraction_phase.execute(context=context, variables={})
+        outcome = await self.__execute_phase(runner=self.learnings_extraction_phase, context=context, variables={})
         learnings = self.__to_learnings(parsed=outcome.parsed, task_id=task.id)
         self.learnings_memory.append(learnings=learnings)
         yield await self.__record_and_build(
@@ -440,19 +499,33 @@ class RalphThinkingUseCase:
     async def __run_synthesis(self) -> AsyncGenerator[ThinkingEvent, None]:
         """Executa o loop de tarefas, C.1, C.2 (quando necessário) e C.3.
 
+        C.3 só é alcançada com uma aprovação global em mãos. Enquanto C.1 reprova, o fluxo
+        volta ao loop pela C.2; se C.2 não puder rodar, a execução é interrompida.
+
         Yields:
             ThinkingEvent: Eventos do loop, `compile` (C.1), `replan` (C.2),
             `compile` (C.3) e, por último, o evento `result`.
+
+        Raises:
+            ExecutionInterruptedError: Quando C.1 reprova e não há como planejar mais.
         """
-        while True:
+        approval: GlobalApproval | None = None
+        while approval is None:
             async for event in self.__run_loop():
                 yield event
 
             context = self.__new_context(phase=ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION)
-            outcome = await self.global_verification_phase.execute(
-                context=context, variables=self.__synthesis_variables()
+            stored_results = self.__render_results()
+            outcome = await self.__execute_phase(
+                runner=self.global_verification_phase,
+                context=context,
+                variables=self.__synthesis_variables(stored_results=stored_results),
+                validation=ValidationContext(
+                    expected_criteria_ids=tuple(criterion.id for criterion in self.__general_criteria)
+                ),
             )
             report = self.__to_report(parsed=outcome.parsed)
+            self.__pending_criteria_ids = report.unmet_criteria_ids
             yield await self.__record_and_build(
                 subtype=ThinkingEventSubtypeEnum.COMPILE,
                 phase=ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION,
@@ -464,28 +537,32 @@ class RalphThinkingUseCase:
             )
 
             if report.approved:
-                break
+                approval = GlobalApproval(
+                    report=report, stored_results=stored_results, task_ids=tuple(self.__results)
+                )
+                continue
 
-            if not self.cost_guard.can_run_additional_planning():
-                async for event in self.__degrade(
-                    limit=self.__planning_limit(),
+            verdict = self.cost_guard.authorize_additional_planning(reserved_output_tokens=self.__max_tokens)
+            if not verdict.authorized:
+                raise ExecutionInterruptedError(
+                    limit=verdict.limit,
                     phase=ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING,
-                    subtype=ThinkingEventSubtypeEnum.REPLAN,
-                    detail=_PLANNING_DETAIL,
-                    context=context,
-                    task_id=None,
-                ):
-                    yield event
-                break
+                    detail=_PLANNING_DETAIL.format(
+                        reason=verdict.reason, criteria=self.__render_ids(ids=report.unmet_criteria_ids)
+                    ),
+                )
 
             async for event in self.__run_additional_planning(report=report):
                 yield event
 
-        async for event in self.__run_final_answer():
+        async for event in self.__run_final_answer(approval=approval):
             yield event
 
     async def __run_additional_planning(self, report: VerificationReport) -> AsyncGenerator[ThinkingEvent, None]:
         """Executa C.2, inserindo as novas tarefas no topo da fila.
+
+        O lote é validado contra os espaços que a sessão ainda tem antes de entrar na fila; um
+        lote acima do teto volta ao planejador para correção, e nunca é truncado.
 
         Args:
             report: Relatório de C.1 com os critérios gerais não atendidos.
@@ -494,11 +571,13 @@ class RalphThinkingUseCase:
             ThinkingEvent: Evento `replan`.
         """
         context = self.__new_context(phase=ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING)
-        outcome = await self.additional_planning_phase.execute(
-            context=context, variables=self.__planning_variables(report=report)
+        outcome = await self.__execute_phase(
+            runner=self.additional_planning_phase,
+            context=context,
+            variables={**self.__planning_variables(report=report), **self.__planning_limits()},
+            validation=self.__planning_validation(),
         )
         tasks = self.__to_tasks(parsed=outcome.parsed, origin_phase=ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING)
-        tasks = tasks[: self.cost_guard.remaining_task_slots()]
         self.task_queue.push_front(tasks=tasks)
         self.cost_guard.register_task_created(quantity=len(tasks))
         self.cost_guard.register_additional_planning_round()
@@ -512,14 +591,24 @@ class RalphThinkingUseCase:
             task_id=None,
         )
 
-    async def __run_final_answer(self) -> AsyncGenerator[ThinkingEvent, None]:
-        """Executa C.3 e encerra a sessão.
+    async def __run_final_answer(self, approval: GlobalApproval) -> AsyncGenerator[ThinkingEvent, None]:
+        """Executa C.3 sobre o conjunto de resultados que C.1 aprovou e encerra a sessão.
+
+        A sessão só é concluída depois que a síntese válida foi produzida e persistida; o evento
+        terminal é emitido por último.
+
+        Args:
+            approval: Aprovação global, de onde vêm os resultados que C.3 pode usar.
 
         Yields:
             ThinkingEvent: Evento `compile` de C.3 e o evento final `result`.
         """
         context = self.__new_context(phase=ThinkingPhaseEnum.C3_FINAL_ANSWER)
-        outcome = await self.final_answer_phase.execute(context=context, variables=self.__synthesis_variables())
+        outcome = await self.__execute_phase(
+            runner=self.final_answer_phase,
+            context=context,
+            variables=self.__synthesis_variables(stored_results=approval.stored_results),
+        )
         final_answer = outcome.parsed["final_answer"]
         yield await self.__record_and_build(
             subtype=ThinkingEventSubtypeEnum.COMPILE,
@@ -531,10 +620,7 @@ class RalphThinkingUseCase:
             task_id=None,
         )
 
-        await self.session_recorder.finish(
-            status=SessionStatusEnum.DEGRADED if self.__degraded else SessionStatusEnum.COMPLETED,
-            final_answer=final_answer,
-        )
+        await self.session_recorder.finish(status=SessionStatusEnum.COMPLETED, final_answer=final_answer)
         yield self.__build_event(
             event_type=ThinkingEventTypeEnum.RESULT,
             subtype=ThinkingEventSubtypeEnum.COMPILE,
@@ -545,58 +631,15 @@ class RalphThinkingUseCase:
             inference_time_ms=outcome.inference_time_ms,
         )
 
-    async def __degrade(
-        self,
-        limit: BudgetLimitEnum,
-        phase: ThinkingPhaseEnum,
-        subtype: ThinkingEventSubtypeEnum,
-        detail: str,
-        context: ContextWindow,
-        task_id: str | None,
-    ) -> AsyncGenerator[ThinkingEvent, None]:
-        """Aplica a política de degradação quando um limite de orçamento é atingido.
-
-        A sessão nunca é abortada: a degradação é registrada, emitida e o fluxo
-        segue até entregar uma resposta ao usuário.
-
-        Args:
-            limit: Limite de orçamento responsável pela degradação.
-            phase: Fase de thinking em que a degradação ocorreu.
-            subtype: Subtipo do evento emitido.
-            detail: Descrição do efeito prático da degradação.
-            context: Janela de contexto vigente no momento da degradação.
-            task_id: Tarefa afetada, quando a degradação é de uma tarefa.
-
-        Yields:
-            ThinkingEvent: Evento `degraded`.
-        """
-        self.__degraded = True
-        content = _DEGRADATION_CONTENT.format(limit=limit.value, detail=detail)
-        self.logger.warning("Degradação por '%s' na fase '%s'", limit.value, phase.value)
-        await self.session_recorder.record_degradation(
-            degradation=SessionDegradation(
-                limit=limit,
-                phase=phase,
-                task_id=task_id,
-                description=content,
-                occurred_at=self.clock.now(),
-            )
-        )
-        yield self.__build_event(
-            event_type=ThinkingEventTypeEnum.DEGRADED,
-            subtype=subtype,
-            phase=phase,
-            task=task_id or _SYNTHESIS_TASK_LABEL,
-            content=content,
-            context=context,
-            inference_time_ms=_NO_INFERENCE_TIME_MS,
-        )
-
     async def __fail(self, error: Exception) -> AsyncGenerator[ThinkingEvent, None]:
-        """Encerra a sessão como falha e emite o evento de erro.
+        """Encerra a sessão sem conclusão e só então emite o único evento terminal de erro.
+
+        Uma interrupção por limite de recursos e um erro técnico terminam do mesmo jeito — sem
+        resposta final —, mas ficam registrados com motivos estruturados diferentes. As tarefas que
+        sobraram na fila são descartadas e citadas no diagnóstico.
 
         Args:
-            error: Falha ocorrida durante o fluxo.
+            error: Falha ou interrupção ocorrida durante o fluxo.
 
         Yields:
             ThinkingEvent: Evento `error`.
@@ -604,16 +647,83 @@ class RalphThinkingUseCase:
         if not isinstance(error, RalphError):
             self.logger.exception("Falha inesperada no fluxo de thinking")
 
+        failure = self.__to_failure(error=error)
+        await self.session_recorder.finish(status=SessionStatusEnum.FAILED, final_answer=None, failure=failure)
         yield self.__build_event(
             event_type=ThinkingEventTypeEnum.ERROR,
             subtype=ThinkingEventSubtypeEnum.COMPILE,
-            phase=self.__context.phase,
+            phase=failure.phase,
             task=_SYNTHESIS_TASK_LABEL,
-            content=_ERROR_CONTENT.format(reason=str(error)),
+            content=_ERROR_CONTENT.format(reason=failure.description),
             context=self.__context,
             inference_time_ms=_NO_INFERENCE_TIME_MS,
         )
-        await self.session_recorder.finish(status=SessionStatusEnum.FAILED, final_answer=None)
+
+    def __to_failure(self, error: Exception) -> SessionFailure:
+        """Classifica o encerramento e monta o motivo estruturado, com o diagnóstico disponível.
+
+        Args:
+            error: Falha ou interrupção ocorrida durante o fluxo.
+
+        Returns:
+            SessionFailure: Limite de recursos, quando o erro aponta um limite; erro técnico no demais.
+        """
+        discarded = self.task_queue.discard_all()
+        details = [
+            _CONSUMPTION_DETAIL.format(
+                tokens=self.session_recorder.session.totals.total_tokens,
+                calls=self.session_recorder.session.totals.total_llm_calls,
+            )
+        ]
+        if discarded:
+            details.append(_DISCARDED_DETAIL.format(tasks=self.__render_task_ids(tasks=discarded)))
+        if self.__pending_criteria_ids:
+            details.append(_PENDING_CRITERIA_DETAIL.format(criteria=self.__render_ids(ids=self.__pending_criteria_ids)))
+        description = _SENTENCE_SEPARATOR.join([str(error), *details])
+
+        if isinstance(error, ExecutionInterruptedError):
+            return self.__resource_failure(
+                limit=error.limit,
+                phase=error.phase,
+                task_id=error.task_id or self.__active_task_id,
+                description=description,
+            )
+        if isinstance(error, PhaseParsingError) and error.limit is not None:
+            return self.__resource_failure(
+                limit=error.limit, phase=error.phase, task_id=self.__active_task_id, description=description
+            )
+        return SessionFailure(
+            reason=SessionFailureReasonEnum.TECHNICAL_ERROR,
+            phase=error.phase if isinstance(error, PhaseParsingError) else self.__running_phase,
+            description=description,
+            occurred_at=self.clock.now(),
+            task_id=self.__active_task_id,
+            pending_criteria_ids=self.__pending_criteria_ids,
+        )
+
+    def __resource_failure(
+        self, limit: BudgetLimitEnum, phase: ThinkingPhaseEnum, task_id: str | None, description: str
+    ) -> SessionFailure:
+        """Monta a falha por limite de recursos.
+
+        Args:
+            limit: Limite responsável pela interrupção.
+            phase: Fase em que o fluxo foi interrompido.
+            task_id: Tarefa afetada, quando houver.
+            description: Descrição legível da causa e do diagnóstico.
+
+        Returns:
+            SessionFailure: Falha estruturada por limite de recursos.
+        """
+        return SessionFailure(
+            reason=SessionFailureReasonEnum.RESOURCE_LIMIT,
+            phase=phase,
+            description=description,
+            occurred_at=self.clock.now(),
+            limit=limit,
+            task_id=task_id,
+            pending_criteria_ids=self.__pending_criteria_ids,
+        )
 
     def __new_context(self, phase: ThinkingPhaseEnum, task_id: str | None = None) -> ContextWindow:
         """Cria e passa a considerar corrente uma janela de contexto nova.
@@ -627,6 +737,31 @@ class RalphThinkingUseCase:
         """
         self.__context = self.context_window_factory.create(phase=phase, task_id=task_id)
         return self.__context
+
+    async def __execute_phase(
+        self,
+        runner: IThinkingPhase,
+        context: ContextWindow,
+        variables: dict[str, str],
+        validation: ValidationContext | None = None,
+    ) -> PhaseOutcome:
+        """Executa uma fase registrando qual fase e qual janela estão em andamento.
+
+        O diagnóstico de uma falha técnica precisa apontar a fase que realmente falhou, e não a
+        origem da janela corrente: B.2 roda numa janela própria e B.4 reaproveita a janela de B.1.
+
+        Args:
+            runner: Fase a executar.
+            context: Janela de contexto em que a fase roda.
+            variables: Placeholders do template da fase.
+            validation: Dados esperados pela chamada, repassados ao parser.
+
+        Returns:
+            PhaseOutcome: Resultado da execução da fase.
+        """
+        self.__context = context
+        self.__running_phase = runner.phase
+        return await runner.execute(context=context, variables=variables, validation=validation)
 
     def __configure_phases(self, input_dto: RalphThinkingInputDTO) -> None:
         """Fixa modelo, teto de tokens e temperatura em todas as fases.
@@ -651,31 +786,38 @@ class RalphThinkingUseCase:
                 provider=input_dto.provider,
             )
 
-    def __loop_budget_limit(self) -> BudgetLimitEnum | None:
+    def __ensure_next_task_can_start(self) -> None:
         """Consulta o guardião de custo antes de iniciar mais uma tarefa.
 
-        Returns:
-            BudgetLimitEnum | None: Limite que impede a próxima tarefa, ou `None`
-            quando o loop pode prosseguir.
+        Raises:
+            ExecutionInterruptedError: Quando o guardião nega a próxima chamada de resolução.
         """
-        if self.cost_guard.remaining_tokens() <= _NO_REMAINING:
-            return BudgetLimitEnum.SESSION_TOKEN_BUDGET
+        verdict = self.cost_guard.authorize(
+            phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION, reserved_output_tokens=self.__max_tokens
+        )
+        if not verdict.authorized:
+            raise ExecutionInterruptedError(
+                limit=verdict.limit, phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION, detail=verdict.reason
+            )
 
-        verdict = self.cost_guard.authorize(phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION)
-        if verdict.authorized:
-            return None
-        return verdict.limit
-
-    def __planning_limit(self) -> BudgetLimitEnum:
-        """Identifica o limite que impediu mais uma rodada de C.2.
+    def __planning_limits(self) -> dict[str, str]:
+        """Informa aos templates de planejamento quantas tarefas a sessão ainda comporta.
 
         Returns:
-            BudgetLimitEnum: Limite de tarefas, quando não há mais slot, ou o
-            limite de rodadas de planejamento adicional.
+            dict[str, str]: Teto de tarefas do lote.
         """
-        if self.cost_guard.remaining_task_slots() <= _NO_REMAINING:
-            return BudgetLimitEnum.TASKS_PER_SESSION
-        return BudgetLimitEnum.ADDITIONAL_PLANNING_ROUNDS
+        return {"max_tasks": str(self.cost_guard.remaining_task_slots())}
+
+    def __planning_validation(self) -> ValidationContext:
+        """Monta o contexto que o parser usa para validar um lote de tarefas planejado.
+
+        Returns:
+            ValidationContext: Teto de tarefas e identificadores já usados na sessão.
+        """
+        return ValidationContext(
+            max_tasks=self.cost_guard.remaining_task_slots(),
+            known_task_ids=self.task_queue.known_task_ids(),
+        )
 
     async def __record_and_build(
         self,
@@ -789,14 +931,17 @@ class RalphThinkingUseCase:
             "task_acceptance_criteria": self.__render_criteria(criteria=task.acceptance_criteria),
         }
 
-    def __synthesis_variables(self) -> dict[str, str]:
+    def __synthesis_variables(self, stored_results: str) -> dict[str, str]:
         """Monta as variáveis dos Templates C.1 e C.3.
+
+        Args:
+            stored_results: Resultados aprovados, já renderizados.
 
         Returns:
             dict[str, str]: Resultados armazenados e critérios de aceite gerais.
         """
         return {
-            "stored_results": self.__render_results(),
+            "stored_results": stored_results,
             "general_acceptance_criteria": self.__render_criteria(criteria=self.__general_criteria),
         }
 
@@ -900,10 +1045,8 @@ class RalphThinkingUseCase:
             criteria: Critérios a renderizar.
 
         Returns:
-            str: Lista markdown, ou um traço quando não há critérios.
+            str: Lista markdown, um critério por linha.
         """
-        if not criteria:
-            return _EMPTY_LIST_CONTENT
         return _ITEM_SEPARATOR.join(
             _CRITERION_ITEM.format(criterion_id=criterion.id, description=criterion.description)
             for criterion in criteria

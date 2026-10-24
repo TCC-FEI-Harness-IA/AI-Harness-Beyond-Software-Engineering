@@ -105,3 +105,29 @@ def test_id_ja_consumido_continua_bloqueado() -> None:
 
     with pytest.raises(ValueError, match="T1"):
         fila.push_front(tasks=[_tarefa("T1")])
+
+
+def test_lote_rejeitado_nao_deixa_ids_nem_contadores_pela_metade() -> None:
+    fila = TaskQueue()
+    fila.push_back(tasks=[_tarefa("T1")])
+
+    with pytest.raises(ValueError, match="T2"):
+        fila.push_back(tasks=[_tarefa("T3"), _tarefa("T2"), _tarefa("T2")])
+
+    assert fila.total_created() == 1
+    assert fila.known_task_ids() == frozenset({"T1"})
+    fila.push_back(tasks=[_tarefa("T3")])
+    assert fila.total_created() == 2
+
+
+def test_known_task_ids_inclui_as_tarefas_enfileiradas_e_as_consumidas() -> None:
+    fila = TaskQueue()
+    fila.push_back(tasks=[_tarefa("T1"), _tarefa("T2")])
+    fila.pop_next()
+    fila.push_front(tasks=[_tarefa("T3")])
+
+    assert fila.known_task_ids() == frozenset({"T1", "T2", "T3"})
+
+
+def test_known_task_ids_de_fila_nova_e_vazio() -> None:
+    assert TaskQueue().known_task_ids() == frozenset()

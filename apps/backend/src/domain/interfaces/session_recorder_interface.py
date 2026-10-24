@@ -2,8 +2,10 @@ from abc import ABC, abstractmethod
 
 from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.session.session import Session
-from src.domain.entities.session.session_degradation import SessionDegradation
+from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
+from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
+from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 
@@ -19,6 +21,7 @@ class ISessionRecorder(ABC):
         model_name: str,
         max_tokens: int,
         temperature: float,
+        provider: ModelProviderEnum | None = None,
     ) -> Session:
         """Inicia e persiste uma nova sessão.
 
@@ -28,6 +31,7 @@ class ISessionRecorder(ABC):
             model_name: Nome do modelo usado na sessão.
             max_tokens: Limite de tokens de saída configurado para a sessão.
             temperature: Temperatura de geração configurada para a sessão.
+            provider: Provedor efetivo das chamadas da sessão, quando conhecido.
 
         Returns:
             Session: Sessão recém-criada.
@@ -93,24 +97,74 @@ class ISessionRecorder(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def record_degradation(self, degradation: SessionDegradation) -> None:
-        """Registra uma degradação ocorrida durante a sessão.
+    async def start_invocation(
+        self,
+        phase: ThinkingPhaseEnum,
+        task_id: str | None,
+        context_id: str | None,
+        model_name: str,
+        provider: ModelProviderEnum,
+    ) -> str:
+        """Registra o envio de uma chamada ao modelo, que já conta nos totais da sessão.
+
+        Deve ser chamado depois da autorização e antes do envio ao provedor.
 
         Args:
-            degradation: Degradação a ser registrada.
+            phase: Fase de thinking que faz a chamada.
+            task_id: Tarefa associada, quando houver.
+            context_id: Janela de contexto associada, quando houver.
+            model_name: Modelo solicitado.
+            provider: Provedor que atende a chamada.
+
+        Returns:
+            str: Identificador da invocação, para `complete_invocation`.
         """
         raise NotImplementedError
 
     @abstractmethod
-    async def finish(self, status: SessionStatusEnum, final_answer: str | None) -> Session:
+    async def complete_invocation(
+        self,
+        invocation_id: str,
+        outcome: InvocationOutcomeEnum,
+        duration_ms: int,
+        tokens_input: int | None,
+        tokens_output: int | None,
+        finish_reason: str | None = None,
+        provider_response_id: str | None = None,
+    ) -> None:
+        """Conclui uma invocação registrada, acumulando o seu consumo conhecido nos totais.
+
+        Args:
+            invocation_id: Identificador devolvido por `start_invocation`.
+            outcome: Desfecho da chamada.
+            duration_ms: Duração da chamada, em milissegundos.
+            tokens_input: Tokens de entrada informados, ou `None` se desconhecidos.
+            tokens_output: Tokens de saída informados, ou `None` se desconhecidos.
+            finish_reason: Motivo de término informado pelo provedor, quando há.
+            provider_response_id: Identificador da resposta no provedor, quando há.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def finish(
+        self,
+        status: SessionStatusEnum,
+        final_answer: str | None,
+        failure: SessionFailure | None = None,
+    ) -> Session:
         """Encerra e persiste a sessão com o status e a resposta final informados.
 
         Args:
             status: Estado final da sessão.
             final_answer: Resposta final entregue ao usuário, quando houver.
+            failure: Motivo estruturado do encerramento sem conclusão, quando houver.
 
         Returns:
             Session: Sessão encerrada.
+
+        Raises:
+            Exception: A falha do repositório, quando a gravação não conclui; a sessão então segue
+                em execução e pode ser encerrada por outro caminho.
         """
         raise NotImplementedError
 

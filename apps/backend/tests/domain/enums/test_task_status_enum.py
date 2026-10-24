@@ -6,7 +6,7 @@ def test_declara_exatamente_os_estados_suportados() -> None:
         "pending",
         "in_progress",
         "approved",
-        "degraded",
+        "failed",
         "discarded",
     }
 
@@ -15,7 +15,7 @@ def test_valores_de_cada_membro() -> None:
     assert TaskStatusEnum.PENDING == "pending"
     assert TaskStatusEnum.IN_PROGRESS == "in_progress"
     assert TaskStatusEnum.APPROVED == "approved"
-    assert TaskStatusEnum.DEGRADED == "degraded"
+    assert TaskStatusEnum.FAILED == "failed"
     assert TaskStatusEnum.DISCARDED == "discarded"
 
 

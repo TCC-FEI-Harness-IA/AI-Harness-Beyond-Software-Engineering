@@ -12,11 +12,15 @@ from src.application.phases.task_decomposition_phase import TaskDecompositionPha
 from src.application.phases.task_resolution_phase import TaskResolutionPhase
 from src.application.phases.task_verification_phase import TaskVerificationPhase
 from src.application.usecases.ralph_thinking_usecase import RalphThinkingUseCase
+from src.domain.entities.resilience.cost_budget import CostBudget
 from src.domain.entities.thinking.thinking_event import ThinkingEvent
+from src.domain.interfaces.cost_guard_interface import ICostGuard
+from src.domain.interfaces.llm_completions_interface import ILLMCompletions
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.services.learnings_memory import LearningsMemory
 from src.domain.services.task_queue import TaskQueue
 from src.infra.adapters.context_window_factory_adapter import ContextWindowFactoryAdapter
+from src.infra.adapters.cost_guard_adapter import CostGuardAdapter
 from src.infra.adapters.session_recorder_adapter import SessionRecorderAdapter
 from src.infra.adapters.structured_response_parser_adapter import StructuredResponseParserAdapter
 from tests.doubles.fake_clock import FakeClock
@@ -41,7 +45,9 @@ class RalphScenario:
 
     Só a porta de completions é falsa por obrigação; o parser, o gravador de
     sessão, a fila e a memória de aprendizados são as implementações reais, de
-    forma que o cenário exercite a fiação completa do fluxo.
+    forma que o cenário exercite a fiação completa do fluxo. O guardião de custo
+    é o dublê programável por padrão; informar `budget` troca-o pelo
+    `CostGuardAdapter` real, para os cenários que provam a política de orçamento.
     """
 
     def __init__(
@@ -52,6 +58,12 @@ class RalphScenario:
         tokens_input: int = 10,
         tokens_output: int = 5,
         error: Exception | None = None,
+        budget: CostBudget | None = None,
+        llm: ILLMCompletions | None = None,
+        clock_step_ms: int = _PASSO_MONOTONICO_MS,
+        max_tokens: int = _MAX_TOKENS,
+        temperature: float = _TEMPERATURA,
+        repository: InMemorySessionRepository | None = None,
     ) -> None:
         """Monta o grafo do caso de uso para um roteiro de respostas do modelo.
 
@@ -62,9 +74,17 @@ class RalphScenario:
             tokens_input: Tokens de entrada contabilizados por chamada.
             tokens_output: Tokens de saída contabilizados por chamada.
             error: Exceção levantada pela porta de completions, quando informada.
+            budget: Limites do guardião real; quando informado, substitui `cost_guard`.
+            llm: Porta de completions alternativa; quando informada, substitui o roteiro de `responses`.
+            clock_step_ms: Avanço do relógio monotônico a cada leitura.
+            max_tokens: Teto de tokens de saída pedido ao modelo em cada chamada.
+            temperature: Temperatura pedida ao modelo em cada chamada.
+            repository: Repositório de sessões alternativo, para os cenários de falha de persistência.
         """
+        self.max_tokens = max_tokens
+        self.temperature = temperature
         logger = logging.getLogger("teste.ralph")
-        self.llm = ScriptedLLMCompletions(
+        self.llm = llm or ScriptedLLMCompletions(
             responses=responses,
             tokens_input=tokens_input,
             tokens_output=tokens_output,
@@ -72,13 +92,17 @@ class RalphScenario:
         )
         self.template_provider = FakePromptTemplateProvider()
         self.parser = StructuredResponseParserAdapter(logger=logger)
-        self.cost_guard = cost_guard or FakeCostGuard()
         self.settings = settings or FakeSettings()
         self.clock = FakeClock(
-            monotonic_values=[passo * _PASSO_MONOTONICO_MS for passo in range(_CHAMADAS_MAXIMAS)]
+            monotonic_values=[passo * clock_step_ms for passo in range(_CHAMADAS_MAXIMAS)]
+        )
+        self.cost_guard: ICostGuard = (
+            CostGuardAdapter(budget=budget, clock=self.clock, logger=logger)
+            if budget is not None
+            else cost_guard or FakeCostGuard()
         )
         self.id_generator = FakeIdGenerator()
-        self.repository = InMemorySessionRepository()
+        self.repository = repository or InMemorySessionRepository()
         self.recorder = SessionRecorderAdapter(
             repository=self.repository,
             clock=self.clock,
@@ -130,8 +154,8 @@ class RalphScenario:
             input_dto=RalphThinkingInputDTO(
                 user_input=question,
                 model_name=_MODELO,
-                max_tokens=_MAX_TOKENS,
-                temperature=_TEMPERATURA,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
                 provider=_PROVEDOR,
             )
         )
@@ -154,6 +178,7 @@ class RalphScenario:
             template_provider=self.template_provider,
             parser=self.parser,
             cost_guard=self.cost_guard,
+            session_recorder=self.recorder,
             clock=self.clock,
             settings=self.settings,
             logger=logging.getLogger("teste.fase"),

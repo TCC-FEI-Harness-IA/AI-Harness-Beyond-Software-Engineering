@@ -16,10 +16,13 @@ class LLMProviderRequest:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        temperature = self.temperature
+        """Converte e valida a temperatura, preservando exatamente o valor recebido.
 
-        temperature = float(temperature)
+        Raises:
+            ValueError: Quando a temperatura está fora do intervalo `[0, 1]` ou não é finita.
+        """
+        temperature = float(self.temperature)
         if not 0 <= temperature <= 1:
             raise ValueError("temperature deve estar entre 0 e 1")
 
-        object.__setattr__(self, "temperature", round(temperature, 1))
+        object.__setattr__(self, "temperature", temperature)

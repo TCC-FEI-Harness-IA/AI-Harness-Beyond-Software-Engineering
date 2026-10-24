@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 
-from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.resilience.budget_verdict import BudgetVerdict
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 
@@ -9,11 +8,16 @@ class ICostGuard(ABC):
     """Contrato do ponto único de decisão sobre limites de custo da sessão."""
 
     @abstractmethod
-    def authorize(self, phase: ThinkingPhaseEnum) -> BudgetVerdict:
-        """Autoriza, ou não, mais uma chamada ao modelo para a fase informada.
+    def authorize(self, phase: ThinkingPhaseEnum, reserved_output_tokens: int = 0) -> BudgetVerdict:
+        """Consulta se uma chamada ao modelo para a fase informada seria autorizada.
+
+        É uma consulta sem efeito: não conta a chamada. Quem de fato vai chamar o modelo
+        usa `begin_call`.
 
         Args:
             phase: Fase de thinking que pretende chamar o modelo.
+            reserved_output_tokens: Tokens de saída que a chamada pode produzir, no máximo. A
+                entrada não é estimada, então a contabilização real pode divergir deste cálculo.
 
         Returns:
             BudgetVerdict: Veredito da autorização.
@@ -21,11 +25,28 @@ class ICostGuard(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def register_call(self, tokens: TokensUsage) -> None:
-        """Registra o consumo de uma chamada ao modelo já realizada.
+    def begin_call(self, phase: ThinkingPhaseEnum, reserved_output_tokens: int = 0) -> BudgetVerdict:
+        """Autoriza e, se autorizada, já conta uma chamada ao modelo, numa só operação.
+
+        A chamada é contada no envio, e não na resposta: uma chamada que devolve conteúdo
+        vazio, JSON inválido ou erro também consumiu o limite. Uma negação não conta nada.
 
         Args:
-            tokens: Consumo de tokens da chamada.
+            phase: Fase de thinking que vai chamar o modelo.
+            reserved_output_tokens: Tokens de saída que a chamada pode produzir, no máximo.
+
+        Returns:
+            BudgetVerdict: Veredito da autorização.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def register_usage(self, tokens_input: int, tokens_output: int) -> None:
+        """Contabiliza o consumo conhecido de uma chamada já iniciada com `begin_call`.
+
+        Args:
+            tokens_input: Tokens de entrada informados pelo provedor.
+            tokens_output: Tokens de saída informados pelo provedor.
         """
         raise NotImplementedError
 
@@ -63,11 +84,15 @@ class ICostGuard(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def can_run_additional_planning(self) -> bool:
-        """Informa se ainda é possível executar mais uma rodada de C.2.
+    def authorize_additional_planning(self, reserved_output_tokens: int = 0) -> BudgetVerdict:
+        """Consulta se ainda é possível executar mais uma rodada de C.2, e por que não.
+
+        Args:
+            reserved_output_tokens: Tokens de saída que a chamada de C.2 pode produzir, no máximo.
 
         Returns:
-            bool: `True` quando o limite de rodadas ainda não foi atingido.
+            BudgetVerdict: Autorizado, ou negado com o limite que de fato impede a rodada:
+            rodadas, slots de tarefa, chamadas, tokens ou tempo.
         """
         raise NotImplementedError
 

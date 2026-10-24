@@ -13,7 +13,9 @@ from src.application.phases.task_decomposition_phase import TaskDecompositionPha
 from src.application.phases.task_resolution_phase import TaskResolutionPhase
 from src.application.phases.task_verification_phase import TaskVerificationPhase
 from src.domain.entities.llm.context_window import ContextWindow
+from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
+from src.infra.adapters.session_recorder_adapter import SessionRecorderAdapter
 from src.infra.adapters.structured_response_parser_adapter import StructuredResponseParserAdapter
 from tests.doubles.fake_clock import FakeClock
 from tests.doubles.fake_cost_guard import FakeCostGuard
@@ -89,13 +91,17 @@ _CASOS = [
 ]
 
 
+_FASES_DE_VERIFICACAO = {ThinkingPhaseEnum.B2_TASK_VERIFICATION, ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION}
+
+
 def _monta(fase_classe: type[BaseThinkingPhase], llm: ScriptedLLMCompletions,
-           provider: FakePromptTemplateProvider) -> BaseThinkingPhase:
+           provider: FakePromptTemplateProvider, recorder: SessionRecorderAdapter) -> BaseThinkingPhase:
     return fase_classe(
         llm_completions=llm,
         template_provider=provider,
         parser=StructuredResponseParserAdapter(logger=logging.getLogger("teste.parser")),
         cost_guard=FakeCostGuard(),
+        session_recorder=recorder,
         clock=FakeClock(),
         settings=FakeSettings(),
         logger=logging.getLogger("teste.fase"),
@@ -108,8 +114,11 @@ def test_cada_fase_expoe_o_identificador_do_paper(
     fase: ThinkingPhaseEnum,
     saida: str,
     variaveis: dict[str, str],
+    recorder: SessionRecorderAdapter,
 ) -> None:
-    montada = _monta(fase_classe, ScriptedLLMCompletions(responses=[saida]), FakePromptTemplateProvider())
+    montada = _monta(
+        fase_classe, ScriptedLLMCompletions(responses=[saida]), FakePromptTemplateProvider(), recorder
+    )
 
     assert montada.phase is fase
 
@@ -120,13 +129,16 @@ async def test_cada_fase_renderiza_o_proprio_template_com_as_variaveis_recebidas
     fase: ThinkingPhaseEnum,
     saida: str,
     variaveis: dict[str, str],
+    recorder: SessionRecorderAdapter,
 ) -> None:
     provider = FakePromptTemplateProvider()
-    montada = _monta(fase_classe, ScriptedLLMCompletions(responses=[saida]), provider)
+    montada = _monta(fase_classe, ScriptedLLMCompletions(responses=[saida]), provider, recorder)
+    validacao = ValidationContext(expected_criteria_ids=("T1-AC1",)) if fase in _FASES_DE_VERIFICACAO else None
 
     resultado = await montada.execute(
         context=ContextWindow(context_id="ctx-1", phase=fase),
         variables=variaveis,
+        validation=validacao,
     )
 
     assert provider.variables_of(fase) == [variaveis]

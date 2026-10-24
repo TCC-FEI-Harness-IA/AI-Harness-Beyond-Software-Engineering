@@ -4,6 +4,8 @@ from typing import Any
 
 import pytest
 
+from src.domain.entities.thinking.validation_context import ValidationContext
+from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.errors.phase_parsing_error import PhaseParsingError
 from src.infra.adapters.structured_response_parser_adapter import StructuredResponseParserAdapter
@@ -169,6 +171,76 @@ def test_decomposicao_invalida_e_recusada(payload: dict[str, Any]) -> None:
         )
 
 
+def _planejar(
+    tarefas: list[dict[str, Any]],
+    validation: ValidationContext | None = None,
+    fase: ThinkingPhaseEnum = ThinkingPhaseEnum.A2_TASK_DECOMPOSITION,
+) -> dict[str, Any]:
+    return _parser().parse(raw_output=json.dumps({"tasks": tarefas}), phase=fase, validation=validation)
+
+
+def _tarefa_com_id(task_id: str) -> dict[str, Any]:
+    return {**_TAREFA_VALIDA, "id": task_id, "acceptance_criteria": [{"id": f"{task_id}-AC1", "description": "c"}]}
+
+
+def test_a1_com_ids_de_criterio_repetidos_e_recusado() -> None:
+    payload = {
+        "general_acceptance_criteria": [
+            {"id": "AC1", "description": "um"},
+            {"id": "AC1", "description": "dois"},
+        ]
+    }
+
+    with pytest.raises(PhaseParsingError, match="AC1"):
+        _parse_a1(payload)
+
+
+def test_decomposicao_com_ids_de_tarefa_repetidos_no_lote_e_recusada() -> None:
+    with pytest.raises(PhaseParsingError, match="T1"):
+        _planejar([_tarefa_com_id("T1"), _tarefa_com_id("T1")])
+
+
+def test_decomposicao_com_ids_de_criterio_repetidos_na_tarefa_e_recusada() -> None:
+    tarefa = {
+        **_TAREFA_VALIDA,
+        "acceptance_criteria": [{"id": "T1-AC1", "description": "a"}, {"id": "T1-AC1", "description": "b"}],
+    }
+
+    with pytest.raises(PhaseParsingError, match="T1-AC1"):
+        _planejar([tarefa])
+
+
+def test_decomposicao_que_reusa_id_de_tarefa_ja_criada_e_recusada() -> None:
+    contexto = ValidationContext(known_task_ids=frozenset({"T1"}))
+
+    with pytest.raises(PhaseParsingError, match="T1"):
+        _planejar([_tarefa_com_id("T1")], validation=contexto, fase=ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING)
+
+
+def test_decomposicao_dentro_do_teto_e_aceita() -> None:
+    contexto = ValidationContext(max_tasks=2, known_task_ids=frozenset({"T1"}))
+
+    resultado = _planejar([_tarefa_com_id("T2"), _tarefa_com_id("T3")], validation=contexto)
+
+    assert [tarefa["id"] for tarefa in resultado["tasks"]] == ["T2", "T3"]
+
+
+def test_decomposicao_acima_do_teto_e_recusada_apontando_o_limite_de_tarefas() -> None:
+    contexto = ValidationContext(max_tasks=1)
+
+    with pytest.raises(PhaseParsingError, match="no máximo 1") as erro:
+        _planejar([_tarefa_com_id("T1"), _tarefa_com_id("T2")], validation=contexto)
+
+    assert erro.value.limit is BudgetLimitEnum.TASKS_PER_SESSION
+
+
+def test_recusas_estruturais_nao_apontam_limite() -> None:
+    with pytest.raises(PhaseParsingError) as erro:
+        _planejar([])
+
+    assert erro.value.limit is None
+
+
 # ── Schema B.1 ───────────────────────────────────────────────────────────────
 
 
@@ -192,38 +264,63 @@ def test_b1_invalido_e_recusado(payload: dict[str, Any]) -> None:
 
 # ── Schema B.2 / C.1 ─────────────────────────────────────────────────────────
 
+_FASES_DE_VERIFICACAO = [ThinkingPhaseEnum.B2_TASK_VERIFICATION, ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION]
 
-@pytest.mark.parametrize(
-    "fase",
-    [ThinkingPhaseEnum.B2_TASK_VERIFICATION, ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION],
-)
+
+def _esperando(*ids: str) -> ValidationContext:
+    return ValidationContext(expected_criteria_ids=tuple(ids))
+
+
+def _avaliacao(criterion_id: str, met: bool = True) -> dict[str, Any]:
+    return {"criterion_id": criterion_id, "met": met, "justification": "porque sim"}
+
+
+def _relatorio(
+    *avaliacoes: dict[str, Any], decision: str | None = None, unmet: list[str] | None = None
+) -> dict[str, Any]:
+    falhas = [a["criterion_id"] for a in avaliacoes if not a["met"]]
+    return {
+        "decision": decision or ("reproved" if falhas else "approved"),
+        "criteria_evaluation": list(avaliacoes),
+        "unmet_criteria_ids": falhas if unmet is None else unmet,
+    }
+
+
+def _verificar(
+    payload: dict[str, Any],
+    esperados: tuple[str, ...] = ("T1-AC1",),
+    fase: ThinkingPhaseEnum = ThinkingPhaseEnum.B2_TASK_VERIFICATION,
+) -> dict[str, Any]:
+    return _parser().parse(raw_output=json.dumps(payload), phase=fase, validation=_esperando(*esperados))
+
+
+@pytest.mark.parametrize("fase", _FASES_DE_VERIFICACAO)
 def test_verificacao_valida(fase: ThinkingPhaseEnum) -> None:
-    assert _parser().parse(
-        raw_output=json.dumps(_VERIFICACAO_VALIDA),
-        phase=fase,
-    ) == _VERIFICACAO_VALIDA
+    assert _verificar(_VERIFICACAO_VALIDA, fase=fase) == _VERIFICACAO_VALIDA
 
 
 def test_verificacao_reprovada_valida() -> None:
-    payload = {
-        "decision": "reproved",
-        "criteria_evaluation": [{"criterion_id": "T1-AC1", "met": False, "justification": "nao atende"}],
-        "unmet_criteria_ids": ["T1-AC1"],
-    }
+    payload = _relatorio(_avaliacao("T1-AC1", met=False))
 
-    assert _parser().parse(
-        raw_output=json.dumps(payload),
-        phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION,
-    ) == payload
+    assert _verificar(payload) == payload
 
 
-def test_verificacao_aceita_lista_de_avaliacoes_vazia() -> None:
-    payload = {"decision": "approved", "criteria_evaluation": [], "unmet_criteria_ids": []}
+def test_verificacao_aceita_avaliacoes_em_ordem_diferente_da_dos_criterios() -> None:
+    payload = _relatorio(_avaliacao("AC2"), _avaliacao("AC1"), _avaliacao("AC3", met=False))
 
-    assert _parser().parse(
-        raw_output=json.dumps(payload),
-        phase=ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION,
-    ) == payload
+    assert _verificar(payload, esperados=("AC1", "AC2", "AC3")) == payload
+
+
+@pytest.mark.parametrize("fase", _FASES_DE_VERIFICACAO)
+def test_verificacao_exige_o_contexto_de_validacao(fase: ThinkingPhaseEnum) -> None:
+    with pytest.raises(ValueError, match="contexto de validação"):
+        _parser().parse(raw_output=json.dumps(_VERIFICACAO_VALIDA), phase=fase)
+
+
+@pytest.mark.parametrize("fase", _FASES_DE_VERIFICACAO)
+def test_verificacao_exige_os_criterios_esperados_no_contexto(fase: ThinkingPhaseEnum) -> None:
+    with pytest.raises(ValueError, match="contexto de validação"):
+        _parser().parse(raw_output=json.dumps(_VERIFICACAO_VALIDA), phase=fase, validation=ValidationContext())
 
 
 @pytest.mark.parametrize(
@@ -245,30 +342,84 @@ def test_verificacao_aceita_lista_de_avaliacoes_vazia() -> None:
 )
 def test_verificacao_invalida_e_recusada(payload: dict[str, Any]) -> None:
     with pytest.raises(PhaseParsingError):
-        _parser().parse(
-            raw_output=json.dumps(payload),
-            phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION,
-        )
+        _verificar(payload)
+
+
+def test_relatorio_sem_avaliacoes_e_recusado_mesmo_aprovado() -> None:
+    payload = {"decision": "approved", "criteria_evaluation": [], "unmet_criteria_ids": []}
+
+    with pytest.raises(PhaseParsingError, match="T1-AC1"):
+        _verificar(payload)
+
+
+def test_avaliacao_faltante_e_recusada() -> None:
+    payload = _relatorio(_avaliacao("AC1"))
+
+    with pytest.raises(PhaseParsingError, match="AC2"):
+        _verificar(payload, esperados=("AC1", "AC2"))
+
+
+def test_avaliacao_repetida_e_recusada() -> None:
+    payload = _relatorio(_avaliacao("AC1"), _avaliacao("AC1"))
+
+    with pytest.raises(PhaseParsingError, match="mais de uma vez"):
+        _verificar(payload, esperados=("AC1",))
+
+
+def test_avaliacao_de_criterio_desconhecido_e_recusada() -> None:
+    payload = _relatorio(_avaliacao("AC1"), _avaliacao("INEXISTENTE"))
+
+    with pytest.raises(PhaseParsingError, match="INEXISTENTE"):
+        _verificar(payload, esperados=("AC1",))
+
+
+def test_aprovado_com_avaliacao_negativa_e_recusado() -> None:
+    payload = _relatorio(_avaliacao("T1-AC1", met=False), decision="approved", unmet=[])
+
+    with pytest.raises(PhaseParsingError, match="incoerente"):
+        _verificar(payload)
 
 
 def test_aprovado_com_pendencias_e_incoerente() -> None:
     payload = {**_VERIFICACAO_VALIDA, "unmet_criteria_ids": ["T1-AC1"]}
 
     with pytest.raises(PhaseParsingError, match="incoerente"):
-        _parser().parse(
-            raw_output=json.dumps(payload),
-            phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION,
-        )
+        _verificar(payload)
 
 
 def test_reprovado_sem_pendencias_e_incoerente() -> None:
     payload = {**_VERIFICACAO_VALIDA, "decision": "reproved"}
 
     with pytest.raises(PhaseParsingError, match="incoerente"):
-        _parser().parse(
-            raw_output=json.dumps(payload),
-            phase=ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION,
-        )
+        _verificar(payload, fase=ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION)
+
+
+def test_reprovado_com_todas_as_avaliacoes_positivas_e_recusado() -> None:
+    payload = _relatorio(_avaliacao("T1-AC1"), decision="reproved", unmet=["T1-AC1"])
+
+    with pytest.raises(PhaseParsingError, match="pendências"):
+        _verificar(payload)
+
+
+def test_pendencia_desconhecida_e_recusada() -> None:
+    payload = _relatorio(_avaliacao("AC1", met=False), decision="reproved", unmet=["AC1", "DESCONHECIDO"])
+
+    with pytest.raises(PhaseParsingError, match="pendências"):
+        _verificar(payload, esperados=("AC1",))
+
+
+def test_pendencia_repetida_e_recusada() -> None:
+    payload = _relatorio(_avaliacao("AC1", met=False), decision="reproved", unmet=["AC1", "AC1"])
+
+    with pytest.raises(PhaseParsingError, match="repet"):
+        _verificar(payload, esperados=("AC1",))
+
+
+def test_pendencias_que_nao_correspondem_as_avaliacoes_negativas_sao_recusadas() -> None:
+    payload = _relatorio(_avaliacao("AC1"), _avaliacao("AC2", met=False), decision="reproved", unmet=["AC1"])
+
+    with pytest.raises(PhaseParsingError, match="pendências"):
+        _verificar(payload, esperados=("AC1", "AC2"))
 
 
 # ── Schema B.4 ───────────────────────────────────────────────────────────────

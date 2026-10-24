@@ -28,6 +28,21 @@ class ILLMService(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def validate_request(self, request: LLMProviderRequest) -> None:
+        """Valida localmente a requisição, sem nenhuma chamada de rede.
+
+        É a fronteira entre recusar e enviar: tudo o que este método recusa nunca chegou ao provedor
+        e, portanto, não é uma chamada.
+
+        Args:
+            request: Payload técnico da chamada de completion.
+
+        Raises:
+            ValueError: Quando configurações obrigatórias ou dados da requisição são inválidos.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     async def generate_response(self, request: LLMProviderRequest) -> LLMProviderResponse:
         """Executa uma chamada de chat completion no provedor.
 

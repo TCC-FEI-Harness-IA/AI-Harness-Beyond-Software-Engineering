@@ -65,3 +65,27 @@ def test_construcao_direta_deixa_todos_os_campos_vazios() -> None:
     assert llm_message.input_message is None
     assert llm_message.output_message is None
     assert llm_message.tokens is None
+
+
+def test_new_aceita_motivo_de_termino_e_identificador_do_provedor() -> None:
+    llm_message = LLMMessage.new(
+        input_message=_build_message(text="pergunta", source=MessageSourceEnum.USER),
+        output_message=_build_message(text="resposta", source=MessageSourceEnum.LLM_AGENT),
+        tokens=_build_tokens(),
+        finish_reason="stop",
+        provider_response_id="resp-1",
+    )
+
+    assert llm_message.finish_reason == "stop"
+    assert llm_message.provider_response_id == "resp-1"
+
+
+def test_new_deixa_motivo_de_termino_e_identificador_vazios_por_padrao() -> None:
+    llm_message = LLMMessage.new(
+        input_message=_build_message(text="pergunta", source=MessageSourceEnum.USER),
+        output_message=_build_message(text="resposta", source=MessageSourceEnum.LLM_AGENT),
+        tokens=_build_tokens(),
+    )
+
+    assert llm_message.finish_reason is None
+    assert llm_message.provider_response_id is None

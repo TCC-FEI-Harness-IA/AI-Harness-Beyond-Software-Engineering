@@ -4,9 +4,11 @@ from typing import Any
 
 import pytest
 
+from src.domain.entities.llm.llm_provider_response import LLMProviderResponse
 from src.domain.entities.llm.message import Message
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.errors.empty_completion_error import EmptyCompletionError
 from src.infra.adapters.llm_completions_adapter import LLMCompletionsAdapter
 from tests.doubles.fake_llm_service import FakeLLMService
 from tests.doubles.fake_model_catalog import FakeModelCatalog
@@ -174,14 +176,31 @@ async def test_temperatura_fora_do_intervalo_e_recusada(temperature: float) -> N
         await _build_adapter().send_message(input_message=_build_message(), temperature=temperature)
 
 
-async def test_temperatura_e_arredondada_para_uma_casa() -> None:
+@pytest.mark.parametrize("temperature", [float("nan"), float("inf")])
+async def test_temperatura_nao_finita_e_recusada(temperature: float) -> None:
+    with pytest.raises(ValueError, match="temperature"):
+        await _build_adapter().send_message(input_message=_build_message(), temperature=temperature)
+
+
+@pytest.mark.parametrize("temperature", [0, 0.25, 0.66])
+async def test_temperatura_solicitada_chega_ao_servico_sem_arredondamento(temperature: float) -> None:
     service = FakeLLMService()
 
     await _build_adapter(llm_services=[service]).send_message(
-        input_message=_build_message(), temperature=0.66
+        input_message=_build_message(), temperature=temperature
     )
 
-    assert service.requests[0].temperature == 0.7
+    assert service.requests[0].temperature == temperature
+
+
+async def test_temperatura_zero_nao_e_confundida_com_ausencia() -> None:
+    service = FakeLLMService()
+
+    await _build_adapter(llm_services=[service], llm_temperature=0.4).send_message(
+        input_message=_build_message(), temperature=0
+    )
+
+    assert service.requests[0].temperature == 0
 
 
 # ── Conversa multi-turno ─────────────────────────────────────────────────────
@@ -241,3 +260,128 @@ async def test_envio_simples_produz_exatamente_uma_chamada_ao_servico() -> None:
 
     assert len(service.requests) == 1
     assert len(service.requests[0].messages) == 1
+
+
+async def test_repassa_motivo_de_termino_identificador_e_consumo_conhecido() -> None:
+    service = FakeLLMService(
+        response=LLMProviderResponse(
+            output_text="texto", input_tokens=3, output_tokens=4, finish_reason="stop", response_id="gen-1"
+        )
+    )
+
+    resultado = await _build_adapter(llm_services=[service]).send_message(input_message=_build_message())
+
+    assert resultado.finish_reason == "stop"
+    assert resultado.provider_response_id == "gen-1"
+    assert (resultado.tokens.input_known, resultado.tokens.output_known) == (True, True)
+
+
+async def test_consumo_desconhecido_do_provedor_e_sinalizado_nos_tokens() -> None:
+    service = FakeLLMService(
+        response=LLMProviderResponse(output_text="texto", input_tokens=None, output_tokens=None)
+    )
+
+    resultado = await _build_adapter(llm_services=[service]).send_message(input_message=_build_message())
+
+    assert (resultado.tokens.input_known, resultado.tokens.output_known) == (False, False)
+    assert (resultado.tokens.known_input, resultado.tokens.known_output) == (None, None)
+
+
+async def test_consumo_parcial_do_provedor_e_sinalizado_por_contador() -> None:
+    service = FakeLLMService(
+        response=LLMProviderResponse(output_text="texto", input_tokens=10, output_tokens=None)
+    )
+
+    resultado = await _build_adapter(llm_services=[service]).send_message(input_message=_build_message())
+
+    assert resultado.tokens.known_input == 10
+    assert resultado.tokens.known_output is None
+    assert resultado.tokens.tokens_output == 0
+
+
+async def test_completion_vazia_do_servico_chega_intacta_ao_chamador() -> None:
+    erro = EmptyCompletionError(finish_reason="length", tokens_input=10, tokens_output=5)
+    service = FakeLLMService(error=erro)
+
+    with pytest.raises(EmptyCompletionError) as excinfo:
+        await _build_adapter(llm_services=[service]).send_message(input_message=_build_message())
+
+    assert excinfo.value is erro
+
+
+# ── Validação local anterior ao envio ────────────────────────────────────────
+
+
+def test_validacao_local_aceita_uma_conversa_valida_sem_enviar_nada() -> None:
+    service = FakeLLMService()
+
+    _build_adapter(llm_services=[service]).validate_conversation(
+        conversation=[_build_message(text="pergunta")], temperature=0
+    )
+
+    assert service.requests == []
+    (validada,) = service.validated_requests
+    assert validada.messages[0].content == "pergunta"
+    assert validada.temperature == 0
+
+
+def test_validacao_local_consulta_o_catalogo_com_o_modelo_e_o_provedor_pedidos() -> None:
+    catalogo = FakeModelCatalog()
+    services = _build_all_providers()
+
+    _build_adapter(llm_services=list(services.values()), model_catalog=catalogo).validate_conversation(
+        conversation=[_build_message()], model_name="vendor/outro", provider=ModelProviderEnum.OPENAI
+    )
+
+    assert catalogo.resolved == [("vendor/outro", ModelProviderEnum.OPENAI)]
+    assert len(services[ModelProviderEnum.OPENAI].validated_requests) == 1
+    assert services[ModelProviderEnum.OPEN_ROUTER].validated_requests == []
+
+
+def test_validacao_local_recusa_conversa_vazia() -> None:
+    with pytest.raises(ValueError, match="conversation"):
+        _build_adapter().validate_conversation(conversation=[])
+
+
+def test_validacao_local_recusa_modelo_recusado_pelo_catalogo() -> None:
+    catalogo = FakeModelCatalog(error=ValueError("modelo fora do catálogo"))
+
+    with pytest.raises(ValueError, match="modelo fora do catálogo"):
+        _build_adapter(model_catalog=catalogo).validate_conversation(conversation=[_build_message()])
+
+
+def test_validacao_local_recusa_provedor_sem_servico() -> None:
+    with pytest.raises(ValueError, match="Não há serviço registrado"):
+        _build_adapter().validate_conversation(
+            conversation=[_build_message()], provider=ModelProviderEnum.AZURE_AI_FOUNDRY
+        )
+
+
+@pytest.mark.parametrize("max_tokens", [0, -5])
+def test_validacao_local_recusa_max_tokens_nao_positivo(max_tokens: int) -> None:
+    with pytest.raises(ValueError, match="max_tokens"):
+        _build_adapter().validate_conversation(conversation=[_build_message()], max_tokens=max_tokens)
+
+
+@pytest.mark.parametrize("temperature", [-0.1, 1.1, float("nan")])
+def test_validacao_local_recusa_temperatura_invalida(temperature: float) -> None:
+    with pytest.raises(ValueError, match="temperature"):
+        _build_adapter().validate_conversation(conversation=[_build_message()], temperature=temperature)
+
+
+def test_validacao_local_propaga_a_recusa_do_servico() -> None:
+    service = FakeLLMService(validation_error=ValueError("Missing OpenRouter settings."))
+
+    with pytest.raises(ValueError, match="Missing OpenRouter settings"):
+        _build_adapter(llm_services=[service]).validate_conversation(conversation=[_build_message()])
+
+    assert service.requests == []
+
+
+async def test_o_envio_continua_validando_antes_de_chamar_o_servico() -> None:
+    service = FakeLLMService(validation_error=ValueError("Missing OpenRouter settings."))
+
+    with pytest.raises(ValueError, match="Missing OpenRouter settings"):
+        await _build_adapter(llm_services=[service]).send_message(input_message=_build_message())
+
+    assert service.requests == []

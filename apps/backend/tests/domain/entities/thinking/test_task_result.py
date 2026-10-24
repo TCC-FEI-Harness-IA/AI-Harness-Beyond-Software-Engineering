@@ -13,10 +13,8 @@ def test_carrega_os_campos_informados() -> None:
     assert resultado.content == "conteudo aprovado"
 
 
-def test_default_de_degraded_e_falso() -> None:
-    resultado = TaskResult(task_id="t1", task_title="titulo", content="conteudo aprovado")
-
-    assert resultado.degraded is False
+def test_nao_existe_resultado_aprovado_por_degradacao() -> None:
+    assert not hasattr(TaskResult(task_id="t1", task_title="titulo", content="c"), "degraded")
 
 
 def test_e_imutavel() -> None:

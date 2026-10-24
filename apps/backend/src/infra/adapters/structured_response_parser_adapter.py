@@ -3,6 +3,8 @@ import logging
 import re
 from typing import Any, Callable
 
+from src.domain.entities.thinking.validation_context import ValidationContext
+from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.enums.verification_decision_enum import VerificationDecisionEnum
 from src.domain.errors.phase_parsing_error import PhaseParsingError
@@ -16,6 +18,7 @@ _TRUNCATION_SUFFIX = "..."
 _TASK_TEXT_FIELDS = ("id", "title", "description", "expected_input", "expected_output")
 _CRITERION_TEXT_FIELDS = ("id", "description")
 _NOT_FOUND = -1
+_ID_LIST_SEPARATOR = ", "
 
 
 class StructuredResponseParserAdapter(IStructuredResponseParser):
@@ -35,19 +38,27 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         """
         self.logger = logger
 
-    def parse(self, raw_output: str, phase: ThinkingPhaseEnum) -> dict[str, Any]:
+    def parse(
+        self,
+        raw_output: str,
+        phase: ThinkingPhaseEnum,
+        validation: ValidationContext | None = None,
+    ) -> dict[str, Any]:
         """Extrai e valida o JSON produzido pelo modelo para a fase informada.
 
         Args:
             raw_output: Saída bruta devolvida pelo modelo.
             phase: Fase de thinking que produziu a saída.
+            validation: Dados esperados pela chamada; obrigatório nas fases de verificação.
 
         Returns:
             dict[str, Any]: Estrutura JSON já validada contra o schema da fase.
 
         Raises:
             PhaseParsingError: Quando não há JSON válido, quando a fase não produz
-                saída estruturada ou quando o schema não confere.
+                saída estruturada, quando o schema não confere ou quando a saída
+                contradiz o contexto de validação.
+            ValueError: Quando uma fase de verificação é chamada sem os critérios esperados.
         """
         validator = self.__validators().get(phase)
         if validator is None:
@@ -58,12 +69,12 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             )
 
         parsed = self.__extract(raw_output=raw_output, phase=phase)
-        validator(parsed, phase, raw_output)
+        validator(parsed, phase, raw_output, validation)
         return parsed
 
     def __validators(
         self,
-    ) -> dict[ThinkingPhaseEnum, Callable[[dict[str, Any], ThinkingPhaseEnum, str], None]]:
+    ) -> dict[ThinkingPhaseEnum, Callable[[dict[str, Any], ThinkingPhaseEnum, str, ValidationContext | None], None]]:
         """Mapa de fase para o validador de schema correspondente.
 
         Returns:
@@ -144,23 +155,37 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         parsed: dict[str, Any],
         phase: ThinkingPhaseEnum,
         raw_output: str,
+        validation: ValidationContext | None,
     ) -> None:
         """Valida o schema de A.1.
 
         Raises:
-            PhaseParsingError: Quando a lista de critérios gerais não confere.
+            PhaseParsingError: Quando a lista de critérios gerais não confere ou repete identificadores.
         """
         criteria = self.__require_list(
             parsed=parsed, field="general_acceptance_criteria", phase=phase, raw_output=raw_output, allow_empty=False
         )
         for criterion in criteria:
             self.__validate_criterion(criterion=criterion, phase=phase, raw_output=raw_output)
+        self.__require_unique_ids(
+            ids=[criterion["id"] for criterion in criteria],
+            what="critérios gerais",
+            phase=phase,
+            raw_output=raw_output,
+        )
 
-    def __validate_tasks(self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, raw_output: str) -> None:
-        """Valida o schema de A.2 e C.2.
+    def __validate_tasks(
+        self,
+        parsed: dict[str, Any],
+        phase: ThinkingPhaseEnum,
+        raw_output: str,
+        validation: ValidationContext | None,
+    ) -> None:
+        """Valida o schema de A.2 e C.2 e o lote contra o contexto de validação.
 
         Raises:
-            PhaseParsingError: Quando a lista de tarefas não confere.
+            PhaseParsingError: Quando a lista de tarefas não confere, repete identificadores,
+                reutiliza o de uma tarefa já criada ou excede o teto de tarefas do lote.
         """
         tasks = self.__require_list(
             parsed=parsed, field="tasks", phase=phase, raw_output=raw_output, allow_empty=False
@@ -176,8 +201,60 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             )
             for criterion in criteria:
                 self.__validate_criterion(criterion=criterion, phase=phase, raw_output=raw_output)
+            self.__require_unique_ids(
+                ids=[criterion["id"] for criterion in criteria],
+                what=f"critérios da tarefa '{task['id']}'",
+                phase=phase,
+                raw_output=raw_output,
+            )
 
-    def __validate_task_result(self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, raw_output: str) -> None:
+        self.__require_unique_ids(
+            ids=[task["id"] for task in tasks], what="tarefas do lote", phase=phase, raw_output=raw_output
+        )
+        self.__validate_batch_against_session(tasks=tasks, phase=phase, raw_output=raw_output, validation=validation)
+
+    def __validate_batch_against_session(
+        self,
+        tasks: list[dict[str, Any]],
+        phase: ThinkingPhaseEnum,
+        raw_output: str,
+        validation: ValidationContext | None,
+    ) -> None:
+        """Confronta o lote de tarefas com o que a sessão já tem e com o teto de tarefas.
+
+        Raises:
+            PhaseParsingError: Quando o lote reutiliza o identificador de uma tarefa já criada
+                ou tem mais tarefas do que a sessão ainda comporta.
+        """
+        if validation is None:
+            return
+
+        reused = sorted(task["id"] for task in tasks if task["id"] in validation.known_task_ids)
+        if reused:
+            self.__fail(
+                phase=phase,
+                raw_output=raw_output,
+                reason=f"Os identificadores de tarefa {_ID_LIST_SEPARATOR.join(reused)} já foram usados na sessão.",
+            )
+
+        if validation.max_tasks is not None and len(tasks) > validation.max_tasks:
+            self.__fail(
+                phase=phase,
+                raw_output=raw_output,
+                reason=(
+                    f"O lote tem {len(tasks)} tarefas, mas a sessão comporta no máximo {validation.max_tasks}. "
+                    "Reduza o lote preservando tarefas autônomas e de objetivo único."
+                ),
+                limit=BudgetLimitEnum.TASKS_PER_SESSION,
+            )
+
+    def __validate_task_result(
+        self,
+        parsed: dict[str, Any],
+        phase: ThinkingPhaseEnum,
+        raw_output: str,
+        validation: ValidationContext | None,
+    ) -> None:
         """Valida o schema de B.1.
 
         Raises:
@@ -186,13 +263,29 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         self.__require_text(source=parsed, field="result", value=parsed.get("result"), phase=phase,
                             raw_output=raw_output)
 
-    def __validate_verification(self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, raw_output: str) -> None:
-        """Valida o schema e a coerência semântica de B.2 e C.1.
+    def __validate_verification(
+        self,
+        parsed: dict[str, Any],
+        phase: ThinkingPhaseEnum,
+        raw_output: str,
+        validation: ValidationContext | None,
+    ) -> None:
+        """Valida o schema e a coerência de B.2 e C.1 contra os critérios esperados.
+
+        O relatório só é aceito quando avalia cada critério esperado exatamente uma vez e
+        quando decisão, avaliações e pendências não se contradizem. Nada aqui julga a
+        veracidade semântica das avaliações: isso continua sendo do modelo verificador.
 
         Raises:
-            PhaseParsingError: Quando o schema não confere ou quando a decisão é
-                incoerente com a lista de critérios não atendidos.
+            PhaseParsingError: Quando o schema não confere, a cobertura dos critérios é
+                incompleta ou a decisão é incoerente com as avaliações e as pendências.
+            ValueError: Quando o contexto de validação não informa os critérios esperados.
         """
+        if validation is None or validation.expected_criteria_ids is None:
+            raise ValueError(
+                f"A fase '{phase.value}' exige um contexto de validação com os critérios esperados."
+            )
+
         decision = parsed.get("decision")
         if decision not in tuple(VerificationDecisionEnum):
             self.__fail(
@@ -218,18 +311,125 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
                     reason="Cada item de 'unmet_criteria_ids' deve ser uma string.",
                 )
 
+        self.__require_exact_coverage(
+            evaluated_ids=[evaluation["criterion_id"] for evaluation in evaluations],
+            expected_ids=validation.expected_criteria_ids,
+            phase=phase,
+            raw_output=raw_output,
+        )
+        failed_ids = [evaluation["criterion_id"] for evaluation in evaluations if not evaluation["met"]]
+        self.__require_coherent_decision(
+            decision=decision, failed_ids=failed_ids, unmet=unmet, phase=phase, raw_output=raw_output
+        )
+        self.__require_unique_ids(ids=unmet, what="pendências", phase=phase, raw_output=raw_output)
+        if set(unmet) != set(failed_ids):
+            self.__fail(
+                phase=phase,
+                raw_output=raw_output,
+                reason=(
+                    "As pendências em 'unmet_criteria_ids' devem ser exatamente os critérios avaliados com "
+                    f"met=false. Avaliados com met=false: [{_ID_LIST_SEPARATOR.join(failed_ids)}]; "
+                    f"pendências informadas: [{_ID_LIST_SEPARATOR.join(unmet)}]."
+                ),
+            )
+
+    def __require_exact_coverage(
+        self,
+        evaluated_ids: list[str],
+        expected_ids: tuple[str, ...],
+        phase: ThinkingPhaseEnum,
+        raw_output: str,
+    ) -> None:
+        """Exige uma avaliação para cada critério esperado, sem omissões, repetições ou extras.
+
+        Raises:
+            PhaseParsingError: Quando algum critério esperado não foi avaliado, foi avaliado
+                mais de uma vez ou há avaliação de um critério desconhecido.
+        """
+        self.__require_unique_ids(
+            ids=evaluated_ids, what="avaliações (cada critério deve ser avaliado uma vez)", phase=phase,
+            raw_output=raw_output, repeated_message="foi avaliado mais de uma vez",
+        )
+        unknown = [criterion_id for criterion_id in evaluated_ids if criterion_id not in expected_ids]
+        if unknown:
+            self.__fail(
+                phase=phase,
+                raw_output=raw_output,
+                reason=(
+                    f"Há avaliações de critérios desconhecidos: {_ID_LIST_SEPARATOR.join(unknown)}. "
+                    f"Avalie somente: {_ID_LIST_SEPARATOR.join(expected_ids)}."
+                ),
+            )
+        missing = [criterion_id for criterion_id in expected_ids if criterion_id not in evaluated_ids]
+        if missing:
+            self.__fail(
+                phase=phase,
+                raw_output=raw_output,
+                reason=f"Faltam avaliações para os critérios: {_ID_LIST_SEPARATOR.join(missing)}.",
+            )
+
+    def __require_coherent_decision(
+        self,
+        decision: str,
+        failed_ids: list[str],
+        unmet: list[str],
+        phase: ThinkingPhaseEnum,
+        raw_output: str,
+    ) -> None:
+        """Exige que a decisão não contradiga as avaliações nem as pendências.
+
+        Raises:
+            PhaseParsingError: Quando uma aprovação convive com critério não atendido ou
+                uma reprovação não aponta nenhuma pendência.
+        """
         approved = decision == VerificationDecisionEnum.APPROVED
-        if approved is bool(unmet):
+        if approved and (failed_ids or unmet):
+            self.__fail(
+                phase=phase,
+                raw_output=raw_output,
+                reason=(
+                    f"A decisão '{decision}' é incoerente com as avaliações: aprovar exige todos os critérios "
+                    "com met=true e 'unmet_criteria_ids' vazia."
+                ),
+            )
+        if not approved and not unmet:
             self.__fail(
                 phase=phase,
                 raw_output=raw_output,
                 reason=(
                     f"A decisão '{decision}' é incoerente com 'unmet_criteria_ids': "
-                    "aprovar exige lista vazia e reprovar exige ao menos um critério."
+                    "reprovar exige ao menos um critério pendente."
                 ),
             )
 
-    def __validate_learnings(self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, raw_output: str) -> None:
+    def __require_unique_ids(
+        self,
+        ids: list[str],
+        what: str,
+        phase: ThinkingPhaseEnum,
+        raw_output: str,
+        repeated_message: str = "se repete",
+    ) -> None:
+        """Exige que uma lista de identificadores não tenha repetições.
+
+        Raises:
+            PhaseParsingError: Quando algum identificador aparece mais de uma vez.
+        """
+        repeated = sorted({identifier for identifier in ids if ids.count(identifier) > 1})
+        if repeated:
+            self.__fail(
+                phase=phase,
+                raw_output=raw_output,
+                reason=f"Em {what}, o identificador {_ID_LIST_SEPARATOR.join(repeated)} {repeated_message}.",
+            )
+
+    def __validate_learnings(
+        self,
+        parsed: dict[str, Any],
+        phase: ThinkingPhaseEnum,
+        raw_output: str,
+        validation: ValidationContext | None,
+    ) -> None:
         """Valida o schema de B.4, onde a lista vazia é legítima.
 
         Raises:
@@ -246,7 +446,13 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
                     reason="Cada item de 'learnings' deve ser uma string.",
                 )
 
-    def __validate_final_answer(self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, raw_output: str) -> None:
+    def __validate_final_answer(
+        self,
+        parsed: dict[str, Any],
+        phase: ThinkingPhaseEnum,
+        raw_output: str,
+        validation: ValidationContext | None,
+    ) -> None:
         """Valida o schema de C.3.
 
         Raises:
@@ -327,14 +533,22 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
                 reason=f"O campo '{field}' deve ser uma string não vazia.",
             )
 
-    def __fail(self, phase: ThinkingPhaseEnum, raw_output: str, reason: str) -> None:
+    def __fail(
+        self,
+        phase: ThinkingPhaseEnum,
+        raw_output: str,
+        reason: str,
+        limit: BudgetLimitEnum | None = None,
+    ) -> None:
         """Registra e levanta a falha de parsing da fase.
 
         Raises:
             PhaseParsingError: Sempre.
         """
         self.logger.warning("Saída da fase '%s' recusada pelo parser: %s", phase.value, reason)
-        raise PhaseParsingError(phase=phase, raw_output=self.__truncate(raw_output=raw_output), reason=reason)
+        raise PhaseParsingError(
+            phase=phase, raw_output=self.__truncate(raw_output=raw_output), reason=reason, limit=limit
+        )
 
     def __truncate(self, raw_output: str) -> str:
         """Trunca a saída bruta para caber no erro sem inundar o log.

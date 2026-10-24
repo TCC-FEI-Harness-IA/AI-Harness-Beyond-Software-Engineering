@@ -19,6 +19,10 @@ class ContextWindow:
         messages: Conversa acumulada na janela, em ordem.
         tokens_input: Tokens de entrada acumulados na janela.
         tokens_output: Tokens de saída acumulados na janela.
+
+    Os contadores somam o consumo de cada chamada feita sobre a janela. Como cada chamada reenvia
+    o histórico, a soma conta de novo o que já estava lá: ela mede consumo acumulado, e não o
+    comprimento atual da janela, e não deve ser lida como medida de mitigação de *context rot*.
     """
 
     context_id: str
@@ -30,7 +34,7 @@ class ContextWindow:
 
     @property
     def context_size(self) -> int:
-        """Total de tokens acumulados na janela.
+        """Total de tokens consumidos pelas chamadas feitas sobre a janela (consumo acumulado).
 
         Returns:
             int: Soma de `tokens_input` e `tokens_output`.

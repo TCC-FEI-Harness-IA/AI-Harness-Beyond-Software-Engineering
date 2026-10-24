@@ -84,18 +84,32 @@ class TaskQueue(ITaskQueue):
         """
         return self.__total_created
 
+    def known_task_ids(self) -> frozenset[str]:
+        """Identificadores de todas as tarefas já enfileiradas na sessão, inclusive as consumidas.
+
+        Returns:
+            frozenset[str]: Identificadores que um novo lote de tarefas não pode repetir.
+        """
+        return frozenset(self.__known_ids)
+
     def __register(self, tasks: Sequence[Task]) -> None:
-        """Registra os identificadores do lote, recusando colisões.
+        """Registra os identificadores do lote de forma atômica, recusando colisões.
+
+        O lote inteiro é validado antes de qualquer alteração: se ele for recusado, nenhum
+        identificador nem contador muda.
 
         Args:
             tasks: Tarefas prestes a entrar na fila.
 
         Raises:
-            ValueError: Quando alguma tarefa repete um identificador já enfileirado.
+            ValueError: Quando alguma tarefa repete um identificador já enfileirado ou
+                repetido dentro do próprio lote.
         """
+        batch_ids: set[str] = set()
         for task in tasks:
-            if task.id in self.__known_ids:
+            if task.id in self.__known_ids or task.id in batch_ids:
                 raise ValueError(f"A tarefa '{task.id}' já foi enfileirada nesta sessão.")
-            self.__known_ids.add(task.id)
+            batch_ids.add(task.id)
 
+        self.__known_ids.update(batch_ids)
         self.__total_created += len(tasks)

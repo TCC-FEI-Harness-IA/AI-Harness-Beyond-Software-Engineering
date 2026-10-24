@@ -104,6 +104,33 @@ async def test_conteudo_em_branco_e_recusado(spec: ProviderSpec) -> None:
         await _build(spec).generate_response(request=_build_request(spec, messages=mensagens))
 
 
+# ── Validação local sem rede ─────────────────────────────────────────────────
+
+def test_validate_request_aceita_requisicao_valida_sem_chamar_a_rede(spec: ProviderSpec) -> None:
+    capturadas: list[httpx.Request] = []
+
+    _build(spec, capturadas=capturadas).validate_request(request=_build_request(spec))
+
+    assert capturadas == []
+
+
+def test_validate_request_recusa_credencial_ausente_citando_a_variavel(spec: ProviderSpec) -> None:
+    capturadas: list[httpx.Request] = []
+    service = _build(spec, capturadas=capturadas, **{spec.api_key_setting: ""})
+
+    with pytest.raises(ValueError, match=spec.api_key_variable):
+        service.validate_request(request=_build_request(spec))
+
+    assert capturadas == []
+
+
+def test_validate_request_recusa_conteudo_em_branco(spec: ProviderSpec) -> None:
+    mensagens = [LLMProviderMessage(role="user", content="  ")]
+
+    with pytest.raises(ValueError, match="content"):
+        _build(spec).validate_request(request=_build_request(spec, messages=mensagens))
+
+
 # ── Resposta bem-sucedida ────────────────────────────────────────────────────
 
 async def test_extrai_texto_tokens_e_motivo_de_termino(spec: ProviderSpec) -> None:
@@ -114,6 +141,22 @@ async def test_extrai_texto_tokens_e_motivo_de_termino(spec: ProviderSpec) -> No
     assert resposta.output_tokens == 22
     assert resposta.finish_reason == "stop"
     assert resposta.raw_response == RESPOSTA_COMPLETA
+
+
+async def test_extrai_o_identificador_da_resposta_do_provedor(spec: ProviderSpec) -> None:
+    body = {"id": "gen-9", "choices": [{"message": {"content": "texto"}}]}
+
+    resposta = await _build(spec, body=body).generate_response(request=_build_request(spec))
+
+    assert resposta.response_id == "gen-9"
+
+
+async def test_identificador_ausente_fica_vazio(spec: ProviderSpec) -> None:
+    body = {"choices": [{"message": {"content": "texto"}}]}
+
+    resposta = await _build(spec, body=body).generate_response(request=_build_request(spec))
+
+    assert resposta.response_id is None
 
 
 async def test_conteudo_como_lista_de_blocos_de_texto_e_concatenado(spec: ProviderSpec) -> None:
@@ -204,6 +247,48 @@ async def test_completion_truncada_por_teto_de_tokens_explica_a_causa(spec: Prov
     assert "LLM_REASONING_EFFORT" in str(excinfo.value)
 
 
+async def test_completion_vazia_preserva_o_consumo_informado_pelo_provedor(spec: ProviderSpec) -> None:
+    """A chamada custou mesmo sem texto: o uso do provedor viaja no erro, em vez de ser descartado."""
+    body = {
+        "id": "gen-123",
+        "choices": [{"message": {"content": None}, "finish_reason": "length"}],
+        "usage": {"prompt_tokens": 100, "completion_tokens": 40},
+    }
+
+    with pytest.raises(EmptyCompletionError) as excinfo:
+        await _build(spec, body=body).generate_response(request=_build_request(spec))
+
+    assert excinfo.value.tokens_input == 100
+    assert excinfo.value.tokens_output == 40
+    assert excinfo.value.response_id == "gen-123"
+
+
+@pytest.mark.parametrize("usage", [None, "nao-e-dict", {}, {"prompt_tokens": None, "completion_tokens": None}])
+async def test_completion_vazia_sem_uso_informado_deixa_o_consumo_desconhecido(
+    spec: ProviderSpec, usage: Any
+) -> None:
+    body: dict[str, Any] = {"choices": [{"message": {"content": ""}}]}
+    if usage is not None:
+        body["usage"] = usage
+
+    with pytest.raises(EmptyCompletionError) as excinfo:
+        await _build(spec, body=body).generate_response(request=_build_request(spec))
+
+    assert excinfo.value.tokens_input is None
+    assert excinfo.value.tokens_output is None
+    assert excinfo.value.response_id is None
+
+
+async def test_completion_vazia_com_apenas_um_dos_consumos_preserva_so_esse(spec: ProviderSpec) -> None:
+    body = {"choices": [{"message": {"content": ""}}], "usage": {"completion_tokens": 7}}
+
+    with pytest.raises(EmptyCompletionError) as excinfo:
+        await _build(spec, body=body).generate_response(request=_build_request(spec))
+
+    assert excinfo.value.tokens_input is None
+    assert excinfo.value.tokens_output == 7
+
+
 async def test_apenas_blocos_sem_texto_sao_recusados(spec: ProviderSpec) -> None:
     body = {"choices": [{"message": {"content": [{"type": "image", "text": "ignorado"}]}}]}
 
@@ -211,28 +296,58 @@ async def test_apenas_blocos_sem_texto_sao_recusados(spec: ProviderSpec) -> None
         await _build(spec, body=body).generate_response(request=_build_request(spec))
 
 
-async def test_usage_ausente_zera_os_tokens(spec: ProviderSpec) -> None:
+async def test_usage_ausente_deixa_os_dois_contadores_desconhecidos(spec: ProviderSpec) -> None:
     body = {"choices": [{"message": {"content": "texto"}}]}
 
     resposta = await _build(spec, body=body).generate_response(request=_build_request(spec))
 
-    assert resposta.input_tokens == 0
-    assert resposta.output_tokens == 0
+    assert resposta.input_tokens is None
+    assert resposta.output_tokens is None
 
 
-async def test_usage_de_tipo_invalido_zera_os_tokens(spec: ProviderSpec) -> None:
+async def test_usage_de_tipo_invalido_deixa_os_contadores_desconhecidos(spec: ProviderSpec) -> None:
     body = {"choices": [{"message": {"content": "texto"}}], "usage": "nao-e-dict"}
 
     resposta = await _build(spec, body=body).generate_response(request=_build_request(spec))
 
-    assert resposta.input_tokens == 0
-    assert resposta.output_tokens == 0
+    assert resposta.input_tokens is None
+    assert resposta.output_tokens is None
 
 
-async def test_tokens_nulos_no_usage_viram_zero(spec: ProviderSpec) -> None:
+async def test_tokens_nulos_no_usage_continuam_desconhecidos(spec: ProviderSpec) -> None:
     body = {
         "choices": [{"message": {"content": "texto"}}],
         "usage": {"prompt_tokens": None, "completion_tokens": None},
+    }
+
+    resposta = await _build(spec, body=body).generate_response(request=_build_request(spec))
+
+    assert resposta.input_tokens is None
+    assert resposta.output_tokens is None
+
+
+async def test_uso_parcial_so_a_entrada_preserva_a_saida_como_desconhecida(spec: ProviderSpec) -> None:
+    body = {"choices": [{"message": {"content": "texto"}}], "usage": {"prompt_tokens": 10}}
+
+    resposta = await _build(spec, body=body).generate_response(request=_build_request(spec))
+
+    assert resposta.input_tokens == 10
+    assert resposta.output_tokens is None
+
+
+async def test_uso_parcial_so_a_saida_preserva_a_entrada_como_desconhecida(spec: ProviderSpec) -> None:
+    body = {"choices": [{"message": {"content": "texto"}}], "usage": {"completion_tokens": 7}}
+
+    resposta = await _build(spec, body=body).generate_response(request=_build_request(spec))
+
+    assert resposta.input_tokens is None
+    assert resposta.output_tokens == 7
+
+
+async def test_zero_informado_pelo_provedor_continua_sendo_zero_conhecido(spec: ProviderSpec) -> None:
+    body = {
+        "choices": [{"message": {"content": "texto"}}],
+        "usage": {"prompt_tokens": 0, "completion_tokens": 0},
     }
 
     resposta = await _build(spec, body=body).generate_response(request=_build_request(spec))
@@ -286,3 +401,14 @@ async def test_usa_o_timeout_unificado_de_todos_os_provedores(spec: ProviderSpec
     )
 
     assert capturadas[0].extensions["timeout"]["read"] == 12.5
+
+
+async def test_envia_a_temperatura_zero_e_fracionaria_sem_arredondar(spec: ProviderSpec) -> None:
+    for temperatura in (0, 0.25, 0.66):
+        capturadas: list[httpx.Request] = []
+
+        await _build(spec, capturadas=capturadas).generate_response(
+            request=_build_request(spec, temperature=temperatura)
+        )
+
+        assert json.loads(capturadas[0].content)["temperature"] == temperatura

@@ -129,6 +129,15 @@ def test_injeta_o_mesmo_guardiao_de_custo_em_todos_os_consumidores() -> None:
         assert getattr(startup, atributo).cost_guard is startup.cost_guard
 
 
+def test_injeta_o_mesmo_registro_de_sessao_em_todas_as_fases_e_no_caso_de_uso() -> None:
+    """As fases gravam cada invocação na mesma sessão que o caso de uso acompanha."""
+    startup = RalphThinkingStartup()
+
+    assert startup.ralph_thinking_use_case.session_recorder is startup.session_recorder
+    for atributo in _PHASE_ATTRIBUTES:
+        assert getattr(startup, atributo).session_recorder is startup.session_recorder
+
+
 def test_o_guardiao_de_custo_usa_o_budget_montado_pelo_startup() -> None:
     startup = RalphThinkingStartup()
 

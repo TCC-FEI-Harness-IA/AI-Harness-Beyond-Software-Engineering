@@ -393,7 +393,7 @@ class Settings(ISettings):
 
     @property
     def ralph_final_answer_token_reserve(self) -> int:
-        """Reserva de tokens que o loop nunca consome, garantindo a execução de C.3."""
+        """Reserva de tokens que o loop não consome, deixada para C.3 em regime de melhor esforço."""
         return self.__get_int("RALPH_FINAL_ANSWER_TOKEN_RESERVE")
 
     @property

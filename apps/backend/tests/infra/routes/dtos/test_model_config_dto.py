@@ -11,10 +11,18 @@ _BASE = {
 }
 
 
-def test_temperatura_informada_e_arredondada_para_uma_casa() -> None:
-    dto = ModelConfigDTO.model_validate({**_BASE, "temperature": 0.66})
+@pytest.mark.parametrize("temperature", [0, 0.0, 0.25, 0.66, 1])
+def test_temperatura_informada_e_preservada_sem_arredondamento(temperature: float) -> None:
+    dto = ModelConfigDTO.model_validate({**_BASE, "temperature": temperature})
 
-    assert dto.temperature == 0.7
+    assert dto.temperature == temperature
+
+
+def test_temperatura_zero_nao_e_trocada_pelo_default() -> None:
+    dto = ModelConfigDTO.model_validate({**_BASE, "temperature": 0})
+
+    assert dto.temperature == 0.0
+    assert dto.temperature != 0.7
 
 
 def test_temperatura_ausente_assume_o_default() -> None:
@@ -23,11 +31,21 @@ def test_temperatura_ausente_assume_o_default() -> None:
     assert dto.temperature == 0.7
 
 
-@pytest.mark.parametrize("temperature", [0, None])
-def test_temperatura_sem_valor_util_assume_o_default(temperature: float | None) -> None:
-    dto = ModelConfigDTO.model_validate({**_BASE, "temperature": temperature})
+def test_temperatura_nula_assume_o_default() -> None:
+    dto = ModelConfigDTO.model_validate({**_BASE, "temperature": None})
 
     assert dto.temperature == 0.7
+
+
+@pytest.mark.parametrize("temperature", [float("nan"), float("inf"), float("-inf")])
+def test_temperatura_nao_finita_e_recusada(temperature: float) -> None:
+    with pytest.raises(ValueError, match="temperature deve estar entre 0 e 1"):
+        ModelConfigDTO.model_validate({**_BASE, "temperature": temperature})
+
+
+def test_temperatura_que_nao_e_numero_e_recusada() -> None:
+    with pytest.raises(ValidationError):
+        ModelConfigDTO.model_validate({**_BASE, "temperature": "quente"})
 
 
 @pytest.mark.parametrize("temperature", [-0.1, 1.1])

@@ -37,3 +37,13 @@ def test_ids_de_contexto_sucessivos_sao_distintos() -> None:
     gerador = _build_adapter()
 
     assert gerador.new_context_id() != gerador.new_context_id()
+
+
+def test_id_de_invocacao_e_nao_vazio_e_distinto_a_cada_chamada() -> None:
+    gerador = _build_adapter()
+
+    primeiro = gerador.new_invocation_id()
+    segundo = gerador.new_invocation_id()
+
+    assert primeiro
+    assert primeiro != segundo

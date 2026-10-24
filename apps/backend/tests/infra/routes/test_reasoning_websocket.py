@@ -1,5 +1,6 @@
 import asyncio
 import json
+from types import SimpleNamespace
 from typing import Any, AsyncGenerator
 
 import pytest
@@ -44,13 +45,22 @@ def _event(session_id: str = "sess_ws1", **overrides: Any) -> ReasoningEventDTO:
 
 
 class _FakeSessionRecorder:
-    """Dublê mínimo, só para provar que a rota finaliza a sessão em falha."""
+    """Dublê mínimo, só para provar que a rota finaliza a sessão em falha — e só uma vez."""
+
+    status = SessionStatusEnum.RUNNING
 
     def __init__(self) -> None:
         self.finished_with: SessionStatusEnum | None = None
+        self.finish_calls = 0
+
+    @property
+    def session(self) -> Any:
+        """Sessão em andamento, de que a rota só consulta o estado."""
+        return SimpleNamespace(status=type(self).status)
 
     async def finish(self, status: SessionStatusEnum, final_answer: str | None) -> None:
         self.finished_with = status
+        self.finish_calls += 1
 
 
 class _FakeStartup:
@@ -101,6 +111,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     _FakeStartup.events = []
     _FakeStartup.error = None
     _FakeStartup.instances = []
+    _FakeSessionRecorder.status = SessionStatusEnum.RUNNING
     monkeypatch.setattr(message_router_module, "RalphThinkingStartup", _FakeStartup)
     return TestClient(create_app())
 
@@ -211,6 +222,48 @@ def test_cliente_desconecta_no_meio_nao_derruba_o_servidor_e_finaliza_sessao_com
 
     assert primeiro_evento["type"] == "thinking"
     assert _FakeStartup.instances[0].session_recorder.finished_with == SessionStatusEnum.FAILED
+
+
+def test_cliente_que_desconecta_depois_da_sessao_encerrada_nao_a_encerra_de_novo(client: TestClient) -> None:
+    """A sessão concluída (ou já falha) não pode ser finalizada outra vez pela rota."""
+    _FakeSessionRecorder.status = SessionStatusEnum.COMPLETED
+    _FakeStartup.events = [_event(type="result", subtype="compile", task="synthesis")]
+    _FakeStartup.error = WebSocketDisconnect(code=1001)
+
+    with client.websocket_connect("/v1/message/reasoning") as ws:
+        ws.send_json(_build_payload())
+        ws.receive_json()
+
+    assert _FakeStartup.instances[0].session_recorder.finish_calls == 0
+
+
+def test_interrupcao_que_ja_emitiu_o_evento_de_erro_do_dominio_nao_envia_um_segundo_frame_de_erro(
+    client: TestClient,
+) -> None:
+    """O desfecho terminal é um só: o evento de erro do domínio, seguido do fechamento 1011."""
+    _FakeStartup.events = [_event(), _event(type="error", subtype="compile", task="synthesis", content="**Erro:** x")]
+    _FakeStartup.error = RuntimeError("limite atingido")
+
+    with client.websocket_connect("/v1/message/reasoning") as ws:
+        ws.send_json(_build_payload())
+        frames, close_code = _collect_frames(ws)
+
+    assert [frame["type"] for frame in frames] == ["thinking", "error"]
+    assert set(frames[-1].keys()) == _CONTRATO_CAMPOS
+    assert close_code == 1011
+
+
+def test_falha_sem_evento_de_erro_do_dominio_ainda_recebe_o_frame_generico(client: TestClient) -> None:
+    _FakeStartup.events = [_event()]
+    _FakeStartup.error = RuntimeError("provedor fora do ar")
+
+    with client.websocket_connect("/v1/message/reasoning") as ws:
+        ws.send_json(_build_payload())
+        frames, close_code = _collect_frames(ws)
+
+    assert [frame["type"] for frame in frames] == ["thinking", "error"]
+    assert frames[-1] == {"type": "error", "content": "provedor fora do ar"}
+    assert close_code == 1011
 
 
 def test_use_case_levanta_gera_evento_de_erro_e_fecha_com_1011(client: TestClient) -> None:

@@ -1,6 +1,5 @@
 import logging
 
-from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.resilience.budget_verdict import BudgetVerdict
 from src.domain.entities.resilience.cost_budget import CostBudget
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
@@ -13,6 +12,7 @@ _INITIAL_COUNTER = 0
 _NO_ATTEMPTS = 0
 _MINIMUM_REMAINING = 0
 _FIRST_ATTEMPT = 1
+_NO_RESERVED_OUTPUT = 0
 
 
 class CostGuardAdapter(ICostGuard):
@@ -41,15 +41,20 @@ class CostGuardAdapter(ICostGuard):
         self.__attempts_by_task: dict[str, int] = {}
         self.__started_at_ms: int = clock.monotonic_ms()
 
-    def authorize(self, phase: ThinkingPhaseEnum) -> BudgetVerdict:
-        """Autoriza, ou não, mais uma chamada ao modelo para a fase informada.
+    def authorize(self, phase: ThinkingPhaseEnum, reserved_output_tokens: int = _NO_RESERVED_OUTPUT) -> BudgetVerdict:
+        """Consulta se uma chamada ao modelo para a fase informada seria autorizada.
 
         A ordem de avaliação é normativa: tempo de parede, depois número de
         chamadas, depois orçamento de tokens. A primeira violação encontrada é a
-        que responde pela negação.
+        que responde pela negação. A consulta não conta a chamada.
+
+        O teto de tokens considera o consumo já contabilizado mais o teto de saída da
+        chamada. A entrada não é estimada (não há tokenizador confiável), então o consumo
+        real pode divergir do cálculo e ultrapassar o teto em até o tamanho da entrada.
 
         Args:
             phase: Fase de thinking que pretende chamar o modelo.
+            reserved_output_tokens: Tokens de saída que a chamada pode produzir, no máximo.
 
         Returns:
             BudgetVerdict: Veredito da autorização.
@@ -74,26 +79,41 @@ class CostGuardAdapter(ICostGuard):
             )
 
         token_ceiling = self.__token_ceiling(phase=phase)
-        if self.__consumed_tokens >= token_ceiling:
+        projected = self.__consumed_tokens + reserved_output_tokens
+        if self.__consumed_tokens >= token_ceiling or projected > token_ceiling:
             return self.__deny(
                 phase=phase,
                 limit=BudgetLimitEnum.SESSION_TOKEN_BUDGET,
-                reason=(
-                    f"Orçamento de tokens esgotado para a fase: {self.__consumed_tokens} consumidos de um "
-                    f"teto de {token_ceiling}."
+                reason=self.__token_reason(
+                    phase=phase, token_ceiling=token_ceiling, reserved_output_tokens=reserved_output_tokens
                 ),
             )
 
         return BudgetVerdict(authorized=True)
 
-    def register_call(self, tokens: TokensUsage) -> None:
-        """Registra o consumo de uma chamada ao modelo já realizada.
+    def begin_call(self, phase: ThinkingPhaseEnum, reserved_output_tokens: int = _NO_RESERVED_OUTPUT) -> BudgetVerdict:
+        """Autoriza e, se autorizada, já conta uma chamada ao modelo, numa só operação.
 
         Args:
-            tokens: Consumo de tokens da chamada.
+            phase: Fase de thinking que vai chamar o modelo.
+            reserved_output_tokens: Tokens de saída que a chamada pode produzir, no máximo.
+
+        Returns:
+            BudgetVerdict: Veredito da autorização; só uma chamada autorizada é contada.
         """
-        self.__consumed_tokens += tokens.tokens_input + tokens.tokens_output
-        self.__llm_calls += 1
+        verdict = self.authorize(phase=phase, reserved_output_tokens=reserved_output_tokens)
+        if verdict.authorized:
+            self.__llm_calls += 1
+        return verdict
+
+    def register_usage(self, tokens_input: int, tokens_output: int) -> None:
+        """Contabiliza o consumo conhecido de uma chamada já iniciada com `begin_call`.
+
+        Args:
+            tokens_input: Tokens de entrada informados pelo provedor.
+            tokens_output: Tokens de saída informados pelo provedor.
+        """
+        self.__consumed_tokens += tokens_input + tokens_output
 
     def register_task_created(self, quantity: int) -> None:
         """Registra a criação de novas tarefas na sessão.
@@ -127,18 +147,39 @@ class CostGuardAdapter(ICostGuard):
         """
         return self.__attempts_by_task.get(task_id, _NO_ATTEMPTS) < self.budget.max_task_attempts
 
-    def can_run_additional_planning(self) -> bool:
-        """Informa se ainda é possível executar mais uma rodada de C.2.
+    def authorize_additional_planning(self, reserved_output_tokens: int = _NO_RESERVED_OUTPUT) -> BudgetVerdict:
+        """Consulta se ainda é possível executar mais uma rodada de C.2, e por que não.
+
+        A causa vem do próprio veredito, na ordem: rodadas, slots de tarefa e, por fim, a
+        autorização da chamada de C.2 (tempo, chamadas ou tokens). Assim a causa registrada
+        é sempre a que de fato impediu a rodada.
+
+        Args:
+            reserved_output_tokens: Tokens de saída que a chamada de C.2 pode produzir, no máximo.
 
         Returns:
-            bool: `True` quando o limite de rodadas ainda não foi atingido, ainda
-            há slot de tarefa disponível e o orçamento autoriza a chamada de C.2.
+            BudgetVerdict: Autorizado, ou negado com o limite responsável.
         """
+        phase = ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING
         if self.__additional_rounds >= self.budget.max_additional_planning_rounds:
-            return False
+            return self.__deny(
+                phase=phase,
+                limit=BudgetLimitEnum.ADDITIONAL_PLANNING_ROUNDS,
+                reason=(
+                    f"Rodadas de planejamento adicional esgotadas: {self.__additional_rounds} de um máximo de "
+                    f"{self.budget.max_additional_planning_rounds}."
+                ),
+            )
         if self.remaining_task_slots() <= _MINIMUM_REMAINING:
-            return False
-        return self.authorize(phase=ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING).authorized
+            return self.__deny(
+                phase=phase,
+                limit=BudgetLimitEnum.TASKS_PER_SESSION,
+                reason=(
+                    f"Não há espaço para novas tarefas: {self.__tasks_created} criadas de um máximo de "
+                    f"{self.budget.max_tasks_per_session}."
+                ),
+            )
+        return self.authorize(phase=phase, reserved_output_tokens=reserved_output_tokens)
 
     def register_additional_planning_round(self) -> None:
         """Registra a execução de mais uma rodada de planejamento adicional."""
@@ -165,8 +206,9 @@ class CostGuardAdapter(ICostGuard):
     def __token_ceiling(self, phase: ThinkingPhaseEnum) -> int:
         """Devolve o teto de tokens aplicável à fase informada.
 
-        Somente C.3 enxerga o orçamento completo; todas as demais fases param antes
-        da reserva, o que garante que a resposta final sempre possa ser produzida.
+        Somente C.3 enxerga o orçamento completo; todas as demais fases param antes da
+        reserva. A reserva é uma margem de melhor esforço para a síntese: ela não garante
+        que C.3 será alcançada, pois C.1 também precisa de recursos antes dela.
 
         Args:
             phase: Fase de thinking que pretende chamar o modelo.
@@ -177,6 +219,28 @@ class CostGuardAdapter(ICostGuard):
         if phase is ThinkingPhaseEnum.C3_FINAL_ANSWER:
             return self.budget.session_token_budget
         return self.budget.session_token_budget - self.budget.final_answer_token_reserve
+
+    def __token_reason(self, phase: ThinkingPhaseEnum, token_ceiling: int, reserved_output_tokens: int) -> str:
+        """Descreve a negação por tokens, distinguindo o orçamento de trabalho do orçamento total.
+
+        Args:
+            phase: Fase de thinking que teve a autorização negada.
+            token_ceiling: Teto aplicado à fase.
+            reserved_output_tokens: Tokens de saída considerados na conta.
+
+        Returns:
+            str: Motivo legível da negação.
+        """
+        counted = (
+            f"{self.__consumed_tokens} consumidos e {reserved_output_tokens} reservados para a saída, "
+            f"de um teto de {token_ceiling}"
+        )
+        if phase is ThinkingPhaseEnum.C3_FINAL_ANSWER:
+            return f"Orçamento total da sessão esgotado: {counted}."
+        return (
+            f"Orçamento de trabalho esgotado (a reserva de {self.budget.final_answer_token_reserve} tokens "
+            f"fica para C.3): {counted}."
+        )
 
     def __deny(self, phase: ThinkingPhaseEnum, limit: BudgetLimitEnum, reason: str) -> BudgetVerdict:
         """Monta o veredito negativo e registra o rastro de auditoria da negação.

@@ -26,8 +26,19 @@ def test_temperaturas_fora_do_intervalo_sao_recusadas(temperature: float) -> Non
         _build_request(temperature=temperature)
 
 
-def test_temperatura_em_texto_e_convertida_e_arredondada() -> None:
-    assert _build_request(temperature="0.65").temperature == 0.7
+@pytest.mark.parametrize("temperature", [0, 0.25, 0.66])
+def test_temperatura_e_preservada_sem_arredondamento(temperature: float) -> None:
+    assert _build_request(temperature=temperature).temperature == temperature
+
+
+def test_temperatura_em_texto_e_convertida_sem_arredondar() -> None:
+    assert _build_request(temperature="0.65").temperature == 0.65
+
+
+@pytest.mark.parametrize("temperature", [float("nan"), float("inf"), float("-inf")])
+def test_temperatura_nao_finita_e_recusada(temperature: float) -> None:
+    with pytest.raises(ValueError, match="temperature"):
+        _build_request(temperature=temperature)
 
 
 def test_metadata_default_e_um_dicionario_vazio() -> None:

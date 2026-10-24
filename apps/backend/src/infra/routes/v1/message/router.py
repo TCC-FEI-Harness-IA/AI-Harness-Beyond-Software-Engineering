@@ -10,6 +10,8 @@ from src.infra.routes.v1.message.dtos.reasoning_input_dto import ReasoningInputD
 from src.infra.startups.default_message_startup import DefaultMessageStartup
 from src.infra.startups.ralph_thinking_startup import RalphThinkingStartup
 
+_ERROR_EVENT_TYPE = "error"
+
 router = APIRouter(prefix="/message", tags=["message"])
 
 
@@ -49,17 +51,22 @@ async def reasoning(websocket: WebSocket) -> None:
 
     startup = RalphThinkingStartup()
     generator = startup.run(payload=payload)
+    domain_error_sent = False
 
     try:
         async for event in generator:
             await websocket.send_json(event.model_dump())
+            domain_error_sent = event.type == _ERROR_EVENT_TYPE
         await websocket.close(code=1000)
     except WebSocketDisconnect:
         await generator.aclose()
-        await startup.session_recorder.finish(status=SessionStatusEnum.FAILED, final_answer=None)
+        if startup.session_recorder.session.status is SessionStatusEnum.RUNNING:
+            await startup.session_recorder.finish(status=SessionStatusEnum.FAILED, final_answer=None)
         logger.info("Cliente desconectou durante a execução do fluxo harness")
     except Exception as error:
-        if websocket.client_state == WebSocketState.CONNECTED:
-            await websocket.send_json({"type": "error", "content": str(error)})
+        # O caso de uso já emite o evento `error` do domínio quando a execução termina sem
+        # conclusão; um segundo frame de erro duplicaria o desfecho terminal.
+        if not domain_error_sent and websocket.client_state == WebSocketState.CONNECTED:
+            await websocket.send_json({"type": _ERROR_EVENT_TYPE, "content": str(error)})
         await websocket.close(code=1011)
         logger.exception("Erro ao executar o fluxo harness")

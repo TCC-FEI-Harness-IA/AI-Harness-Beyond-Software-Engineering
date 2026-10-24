@@ -13,7 +13,8 @@ class CostBudget:
         max_tasks_per_session: Total máximo de tarefas por sessão.
         max_llm_calls_per_session: Teto absoluto de chamadas ao modelo.
         session_token_budget: Teto de tokens (entrada + saída) da sessão inteira.
-        final_answer_token_reserve: Reserva de tokens nunca consumida pelo loop.
+        final_answer_token_reserve: Reserva de tokens que só C.3 enxerga. É uma margem de melhor esforço:
+            não garante a síntese, pois C.1 também precisa de recursos antes dela.
         session_timeout_seconds: Tempo máximo de parede da sessão.
     """
 

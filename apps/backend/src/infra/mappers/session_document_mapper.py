@@ -2,12 +2,17 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, TypeVar
 
+from src.domain.entities.session.llm_invocation import LLMInvocation
 from src.domain.entities.session.session import Session
 from src.domain.entities.session.session_degradation import SessionDegradation
+from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
 from src.domain.entities.session.session_totals import SessionTotals
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
+from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
+from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.session_failure_reason_enum import SessionFailureReasonEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.interfaces.session_document_mapper_interface import ISessionDocumentMapper
@@ -17,6 +22,8 @@ _SESSION_CONTAINER = "sessão"
 _TOTALS_CONTAINER = "totais da sessão"
 _MESSAGE_CONTAINER = "mensagem da sessão"
 _DEGRADATION_CONTAINER = "degradação da sessão"
+_INVOCATION_CONTAINER = "invocação da sessão"
+_FAILURE_CONTAINER = "falha da sessão"
 
 TEnum = TypeVar("TEnum", bound=StrEnum)
 
@@ -27,6 +34,10 @@ class SessionDocumentMapper(ISessionDocumentMapper):
     O documento produzido é JSON puro: datas viram strings ISO-8601 com offset e
     enums viram os respectivos `value`. É o mesmo documento que um repositório de
     MongoDB gravaria, por isso a chave primária é `_id`, espelhada em `id`.
+
+    Documentos gravados antes do registro por invocação, da falha estruturada e do provedor
+    continuam legíveis: as chaves novas são opcionais na leitura, e a ausência de
+    `invocations` marca os totais como legados em vez de inventar chamadas passadas.
     """
 
     def to_document(self, session: Session) -> dict[str, Any]:
@@ -50,10 +61,16 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             "created_at": session.created_at.isoformat(),
             "updated_at": session.updated_at.isoformat(),
             "final_answer": session.final_answer,
+            "provider": session.provider.value if session.provider is not None else None,
+            "failure": self.__failure_to_document(failure=session.failure),
+            "legacy_totals": session.legacy_totals,
             "totals": self.__totals_to_document(totals=session.totals),
             "messages": [self.__message_to_document(message=message) for message in session.messages],
             "degradations": [
                 self.__degradation_to_document(degradation=degradation) for degradation in session.degradations
+            ],
+            "invocations": [
+                self.__invocation_to_document(invocation=invocation) for invocation in session.invocations
             ],
         }
 
@@ -89,6 +106,8 @@ class SessionDocumentMapper(ISessionDocumentMapper):
                 document=document, key="updated_at", container=_SESSION_CONTAINER
             ),
             final_answer=self.__required(document=document, key="final_answer", container=_SESSION_CONTAINER),
+            provider=self.__optional_provider(document=document),
+            failure=self.__failure_from_optional_document(document=document.get("failure")),
         )
         session.totals = self.__totals_from_document(
             document=self.__required(document=document, key="totals", container=_SESSION_CONTAINER)
@@ -101,6 +120,10 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             self.__degradation_from_document(document=item)
             for item in self.__required(document=document, key="degradations", container=_SESSION_CONTAINER)
         ]
+        session.invocations = [
+            self.__invocation_from_document(document=item) for item in document.get("invocations", [])
+        ]
+        session.legacy_totals = "invocations" not in document or document.get("legacy_totals", False)
         return session
 
     # ── Sessão → documento ───────────────────────────────────────────────────
@@ -145,7 +168,105 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             "occurred_at": degradation.occurred_at.isoformat(),
         }
 
+    def __invocation_to_document(self, invocation: LLMInvocation) -> dict[str, Any]:
+        """Converte uma invocação ao modelo no seu documento."""
+        return {
+            "id": invocation.id,
+            "phase": invocation.phase.value,
+            "task_id": invocation.task_id,
+            "context_id": invocation.context_id,
+            "model_name": invocation.model_name,
+            "provider": invocation.provider.value,
+            "started_at": invocation.started_at.isoformat(),
+            "outcome": invocation.outcome.value,
+            "duration_ms": invocation.duration_ms,
+            "tokens_input": invocation.tokens_input,
+            "tokens_output": invocation.tokens_output,
+            "finish_reason": invocation.finish_reason,
+            "provider_response_id": invocation.provider_response_id,
+        }
+
+    def __failure_to_document(self, failure: SessionFailure | None) -> dict[str, Any] | None:
+        """Converte a falha estruturada no seu documento, ou nulo quando não houve falha."""
+        if failure is None:
+            return None
+        return {
+            "reason": failure.reason.value,
+            "phase": failure.phase.value,
+            "description": failure.description,
+            "occurred_at": failure.occurred_at.isoformat(),
+            "limit": failure.limit.value if failure.limit is not None else None,
+            "task_id": failure.task_id,
+            "pending_criteria_ids": list(failure.pending_criteria_ids),
+        }
+
     # ── Documento → sessão ───────────────────────────────────────────────────
+
+    def __optional_provider(self, document: dict[str, Any]) -> ModelProviderEnum | None:
+        """Reconstrói o provedor da sessão, ausente em documentos anteriores ao registro."""
+        if document.get("provider") is None:
+            return None
+        return self.__enum_from_document(
+            document=document, key="provider", container=_SESSION_CONTAINER, enum_type=ModelProviderEnum
+        )
+
+    def __invocation_from_document(self, document: dict[str, Any]) -> LLMInvocation:
+        """Reconstrói uma invocação ao modelo a partir do documento."""
+        return LLMInvocation(
+            id=self.__required(document=document, key="id", container=_INVOCATION_CONTAINER),
+            phase=self.__enum_from_document(
+                document=document, key="phase", container=_INVOCATION_CONTAINER, enum_type=ThinkingPhaseEnum
+            ),
+            task_id=self.__required(document=document, key="task_id", container=_INVOCATION_CONTAINER),
+            context_id=self.__required(document=document, key="context_id", container=_INVOCATION_CONTAINER),
+            model_name=self.__required(document=document, key="model_name", container=_INVOCATION_CONTAINER),
+            provider=self.__enum_from_document(
+                document=document, key="provider", container=_INVOCATION_CONTAINER, enum_type=ModelProviderEnum
+            ),
+            started_at=self.__datetime_from_document(
+                document=document, key="started_at", container=_INVOCATION_CONTAINER
+            ),
+            outcome=self.__enum_from_document(
+                document=document, key="outcome", container=_INVOCATION_CONTAINER, enum_type=InvocationOutcomeEnum
+            ),
+            duration_ms=self.__required(document=document, key="duration_ms", container=_INVOCATION_CONTAINER),
+            tokens_input=self.__required(document=document, key="tokens_input", container=_INVOCATION_CONTAINER),
+            tokens_output=self.__required(document=document, key="tokens_output", container=_INVOCATION_CONTAINER),
+            finish_reason=self.__required(document=document, key="finish_reason", container=_INVOCATION_CONTAINER),
+            provider_response_id=self.__required(
+                document=document, key="provider_response_id", container=_INVOCATION_CONTAINER
+            ),
+        )
+
+    def __failure_from_optional_document(self, document: dict[str, Any] | None) -> SessionFailure | None:
+        """Reconstrói a falha estruturada, ausente em documentos anteriores ao registro."""
+        if document is None:
+            return None
+
+        has_limit = self.__required(document=document, key="limit", container=_FAILURE_CONTAINER) is not None
+        return SessionFailure(
+            reason=self.__enum_from_document(
+                document=document, key="reason", container=_FAILURE_CONTAINER, enum_type=SessionFailureReasonEnum
+            ),
+            phase=self.__enum_from_document(
+                document=document, key="phase", container=_FAILURE_CONTAINER, enum_type=ThinkingPhaseEnum
+            ),
+            description=self.__required(document=document, key="description", container=_FAILURE_CONTAINER),
+            occurred_at=self.__datetime_from_document(
+                document=document, key="occurred_at", container=_FAILURE_CONTAINER
+            ),
+            limit=(
+                self.__enum_from_document(
+                    document=document, key="limit", container=_FAILURE_CONTAINER, enum_type=BudgetLimitEnum
+                )
+                if has_limit
+                else None
+            ),
+            task_id=self.__required(document=document, key="task_id", container=_FAILURE_CONTAINER),
+            pending_criteria_ids=tuple(
+                self.__required(document=document, key="pending_criteria_ids", container=_FAILURE_CONTAINER)
+            ),
+        )
 
     def __totals_from_document(self, document: dict[str, Any]) -> SessionTotals:
         """Reconstrói os totais agregados a partir do documento."""

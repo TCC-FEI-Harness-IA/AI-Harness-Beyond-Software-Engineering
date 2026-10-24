@@ -20,23 +20,26 @@ class ModelConfigDTO(BaseModel):
 
     @field_validator("temperature", mode="before")
     @classmethod
-    def validate_and_round_temperature(cls, value: float | None) -> float:
-        """Normaliza a temperatura recebida, recusando valores fora de `[0, 1]`.
+    def validate_temperature(cls, value: float | None) -> float:
+        """Valida a temperatura recebida, aplicando o default apenas à ausência.
+
+        Zero é uma temperatura válida e pedida de propósito, e por isso é preservado; só `None`
+        (ausente) recebe o default. O valor não é arredondado.
 
         Args:
             value: Temperatura informada no corpo da requisição.
 
         Returns:
-            float: Temperatura arredondada para uma casa decimal.
+            float: Temperatura exatamente como solicitada, ou o default quando ausente.
 
         Raises:
-            ValueError: Quando a temperatura está fora do intervalo `[0, 1]`.
+            ValueError: Quando a temperatura está fora do intervalo `[0, 1]` ou não é finita.
         """
-        if not value:
+        if value is None:
             return _DEFAULT_TEMPERATURE
 
         temperature = float(value)
         if not 0 <= temperature <= 1:
             raise ValueError("temperature deve estar entre 0 e 1")
 
-        return round(temperature, 1)
+        return temperature

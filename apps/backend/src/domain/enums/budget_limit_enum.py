@@ -2,7 +2,10 @@ from enum import StrEnum
 
 
 class BudgetLimitEnum(StrEnum):
-    """Enum dos limites de orçamento que podem disparar uma degradação."""
+    """Enum dos limites operacionais que podem interromper uma sessão.
+
+    Em sessões gravadas por versões anteriores, os mesmos limites disparavam degradações.
+    """
 
     TASK_ATTEMPTS = "task_attempts"
     ADDITIONAL_PLANNING_ROUNDS = "additional_planning_rounds"

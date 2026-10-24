@@ -7,17 +7,39 @@ from src.domain.interfaces.llm_completions_interface import ILLMCompletions
 class FakeLLMCompletions(ILLMCompletions):
     """Dublê de `ILLMCompletions` com retorno programável e contagem de chamadas."""
 
-    def __init__(self, result: LLMMessage | None = None, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        result: LLMMessage | None = None,
+        error: Exception | None = None,
+        validation_error: Exception | None = None,
+    ) -> None:
         """Configura o dublê.
 
         Args:
             result: Resultado devolvido em cada chamada.
             error: Exceção levantada em vez de responder, quando informada.
+            validation_error: Exceção levantada pela validação local, antes de qualquer envio.
         """
         self.result = result
         self.error = error
+        self.validation_error = validation_error
+        self.validations: list[list[Message]] = []
         self.conversations: list[list[Message]] = []
         self.calls: list[dict[str, object]] = []
+
+    def validate_conversation(
+        self,
+        conversation: list[Message],
+        model_name: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        provider: ModelProviderEnum | None = None,
+    ) -> None:
+        """Registra a validação local e levanta o erro programado, quando há."""
+        self.validations.append(conversation)
+
+        if self.validation_error is not None:
+            raise self.validation_error
 
     async def send_message(
         self,

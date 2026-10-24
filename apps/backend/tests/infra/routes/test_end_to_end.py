@@ -62,6 +62,16 @@ def _resolucao(texto: str) -> str:
     return json.dumps({"task_id": "T1", "result": texto})
 
 
+def _reprovado(criterion_id: str = "T1-AC1") -> str:
+    return json.dumps(
+        {
+            "decision": "reproved",
+            "criteria_evaluation": [{"criterion_id": criterion_id, "met": False, "justification": "nao atende"}],
+            "unmet_criteria_ids": [criterion_id],
+        }
+    )
+
+
 def _aprovado(criterion_id: str = "T1-AC1") -> str:
     return json.dumps(
         {
@@ -104,22 +114,29 @@ def storage_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return caminho
 
 
-@pytest.fixture
-def client(storage_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+def _build_client(
+    monkeypatch: pytest.MonkeyPatch, responses: list[str], llm_service: FakeLLMService | None = None
+) -> TestClient:
     """Cliente HTTP com as portas de LLM dos dois fluxos substituídas por dublês."""
-    llm_service = FakeLLMService()
+    llm_service = llm_service or FakeLLMService()
     monkeypatch.setattr(
         default_startup_module,
         "LLMServiceFactory",
         lambda settings: _FakeLLMServiceFactory(settings=settings, llm_service=llm_service),
     )
-    scripted_completions = ScriptedLLMCompletions(responses=_roteiro_feliz())
+    scripted_completions = ScriptedLLMCompletions(responses=responses)
     monkeypatch.setattr(
         ralph_startup_module,
         "LLMCompletionsAdapter",
         lambda **kwargs: scripted_completions,
     )
     return TestClient(create_app())
+
+
+@pytest.fixture
+def client(storage_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    """Cliente HTTP com o roteiro feliz do harness."""
+    return _build_client(monkeypatch=monkeypatch, responses=_roteiro_feliz())
 
 
 def _build_default_body() -> dict[str, object]:
@@ -178,6 +195,52 @@ def test_harness_completo_grava_pergunta_fases_resposta_tokens_e_tempos(
     assert {"A1", "A2", "B1", "B2", "B3", "B4", "C1", "C3"} <= fases_percorridas
 
 
+def test_harness_completo_grava_uma_invocacao_por_chamada_sem_falha_e_com_o_provedor(
+    client: TestClient, storage_path: Path
+) -> None:
+    frames, _ = _run_harness(client)
+
+    documento = json.loads((storage_path / f"{frames[-1]['session_id']}.json").read_text(encoding="utf-8"))
+    assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 7
+    assert {invocacao["outcome"] for invocacao in documento["invocations"]} == {"success"}
+    assert sum(i["tokens_input"] + i["tokens_output"] for i in documento["invocations"]) == (
+        documento["totals"]["total_tokens"]
+    )
+    assert documento["failure"] is None
+    assert documento["legacy_totals"] is False
+    assert documento["provider"] == "open_router"
+    assert documento["temperature"] == 0.3
+    assert documento["degradations"] == []
+
+
+def test_harness_interrompido_por_limite_encerra_com_um_unico_frame_de_erro_e_persiste_o_motivo(
+    storage_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("RALPH_MAX_TASK_ATTEMPTS", "1")
+    client = _build_client(
+        monkeypatch=monkeypatch,
+        responses=[_criterios(), _tarefas("T1"), _resolucao("resolucao ruim"), _reprovado()],
+    )
+
+    frames, close_code = _run_harness(client)
+
+    assert close_code == 1011
+    assert [frame["type"] for frame in frames].count("error") == 1
+    assert frames[-1]["type"] == "error"
+    assert "task_attempts" in frames[-1]["content"]
+    assert "result" not in {frame["type"] for frame in frames}
+    assert not [frame for frame in frames if frame["phase"] in ("B3", "C1", "C3")]
+
+    documento = json.loads((storage_path / f"{frames[-1]['session_id']}.json").read_text(encoding="utf-8"))
+    assert documento["status"] == "failed"
+    assert documento["final_answer"] is None
+    assert documento["failure"]["reason"] == "resource_limit"
+    assert documento["failure"]["limit"] == "task_attempts"
+    assert documento["failure"]["task_id"] == "T1"
+    assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 4
+    assert client.get(f"/v1/sessions/{frames[-1]['session_id']}").json() == documento
+
+
 def test_consulta_apos_o_websocket_devolve_exatamente_a_sessao_persistida(
     client: TestClient, storage_path: Path
 ) -> None:
@@ -199,6 +262,24 @@ def test_baseline_cria_sessao_direct_inference_com_duas_mensagens(client: TestCl
     documento = client.get(f"/v1/sessions/{session_id}").json()
     assert documento["flow"] == "DIRECT"
     assert len(documento["messages"]) == 2
+    assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 1
+    assert documento["invocations"][0]["phase"] == "DIRECT"
+    assert documento["provider"] == "open_router"
+    assert documento["temperature"] == 0.3
+
+
+def test_baseline_com_temperatura_zero_registra_e_envia_zero(
+    storage_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    llm_service = FakeLLMService()
+    client = _build_client(monkeypatch=monkeypatch, responses=[], llm_service=llm_service)
+    corpo = _build_default_body()
+    corpo["llm_model_config"]["temperature"] = 0  # type: ignore[index]
+
+    session_id = client.post("/v1/message/default", json=corpo).json()["session_id"]
+
+    assert client.get(f"/v1/sessions/{session_id}").json()["temperature"] == 0
+    assert llm_service.requests[0].temperature == 0
 
 
 def test_baseline_e_harness_produzem_sessoes_comparaveis_para_a_mesma_pergunta(client: TestClient) -> None:

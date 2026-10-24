@@ -30,3 +30,12 @@ class IIdGenerator(ABC):
             str: Identificador único de janela de contexto.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def new_invocation_id(self) -> str:
+        """Gera um novo identificador de invocação ao modelo.
+
+        Returns:
+            str: Identificador único de invocação.
+        """
+        raise NotImplementedError

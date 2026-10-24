@@ -115,41 +115,62 @@ class BaseChatCompletionsService(ILLMService, ABC):
             RuntimeError: Quando ocorre falha na chamada HTTP ao provedor.
             EmptyCompletionError: Quando o provedor responde sem texto utilizável.
         """
+        self.validate_request(request=request)
         self.logger.info("Iniciando chamada ao provedor %s", self.provider_label)
-        self.__run_message_validations(request=request)
 
         response_data = await self.__post_completion(request=request)
 
         usage = response_data.get("usage", {})
         if not isinstance(usage, dict):
             usage = {}
+        tokens_input = self.__extract_token_count(usage=usage, key="prompt_tokens")
+        tokens_output = self.__extract_token_count(usage=usage, key="completion_tokens")
+        response_id = self.__extract_response_id(response_data=response_data)
 
         output_text = self.__extract_output_text(response_data=response_data)
         finish_reason = self.__extract_finish_reason(response_data=response_data)
-        self.__reject_empty_completion(output_text=output_text, finish_reason=finish_reason)
+        self.__reject_empty_completion(
+            output_text=output_text,
+            finish_reason=finish_reason,
+            tokens_input=tokens_input,
+            tokens_output=tokens_output,
+            response_id=response_id,
+        )
 
         provider_response = LLMProviderResponse(
             output_text=output_text,
-            input_tokens=int(usage.get("prompt_tokens", 0) or 0),
-            output_tokens=int(usage.get("completion_tokens", 0) or 0),
+            input_tokens=tokens_input,
+            output_tokens=tokens_output,
             finish_reason=finish_reason,
             raw_response=response_data,
+            response_id=response_id,
         )
 
         self.logger.info("Resposta recebida com sucesso do %s", self.provider_label)
         return provider_response
 
-    def __reject_empty_completion(self, output_text: str, finish_reason: str | None) -> None:
+    def __reject_empty_completion(
+        self,
+        output_text: str,
+        finish_reason: str | None,
+        tokens_input: int | None,
+        tokens_output: int | None,
+        response_id: str | None,
+    ) -> None:
         """Recusa uma completion sem texto, em vez de deixá-la seguir o fluxo.
 
         Modelos de raciocínio devolvem `content` nulo quando o teto de tokens acaba
         durante o raciocínio interno (`finish_reason == "length"`). Sem esta recusa, o
         fluxo baseline entregaria uma resposta em branco e o fluxo harness gastaria
-        todas as retentativas de parsing sobre um texto que nunca existiu.
+        todas as retentativas de parsing sobre um texto que nunca existiu. A chamada,
+        porém, custou: o consumo e o identificador informados pelo provedor seguem no erro.
 
         Args:
             output_text: Texto extraído da resposta do provedor.
             finish_reason: Motivo de término informado pelo provedor, quando há.
+            tokens_input: Tokens de entrada informados, ou `None` se desconhecidos.
+            tokens_output: Tokens de saída informados, ou `None` se desconhecidos.
+            response_id: Identificador da resposta no provedor, quando há.
 
         Raises:
             EmptyCompletionError: Quando o texto extraído está vazio ou em branco.
@@ -162,7 +183,41 @@ class BaseChatCompletionsService(ILLMService, ABC):
             self.provider_label,
             finish_reason,
         )
-        raise EmptyCompletionError(finish_reason=finish_reason)
+        raise EmptyCompletionError(
+            finish_reason=finish_reason,
+            tokens_input=tokens_input,
+            tokens_output=tokens_output,
+            response_id=response_id,
+        )
+
+    def __extract_token_count(self, usage: dict[str, Any], key: str) -> int | None:
+        """Extrai um contador de tokens do `usage`, distinguindo ausente de zero.
+
+        Args:
+            usage: Bloco `usage` da resposta do provedor.
+            key: Nome do contador (`prompt_tokens` ou `completion_tokens`).
+
+        Returns:
+            int | None: Contador informado, ou `None` quando o provedor não o informou.
+        """
+        value = usage.get(key)
+        if value is None:
+            return None
+        return int(value)
+
+    def __extract_response_id(self, response_data: dict[str, Any]) -> str | None:
+        """Extrai o identificador da resposta no provedor, quando disponível.
+
+        Args:
+            response_data: Corpo da resposta do provedor.
+
+        Returns:
+            str | None: Identificador, ou `None` quando ausente.
+        """
+        response_id = response_data.get("id")
+        if response_id is None:
+            return None
+        return str(response_id)
 
     async def __post_completion(self, request: LLMProviderRequest) -> dict[str, Any]:
         """Executa o POST de chat completion e devolve o corpo desserializado.
@@ -203,8 +258,8 @@ class BaseChatCompletionsService(ILLMService, ABC):
 
         return response_data
 
-    def __run_message_validations(self, request: LLMProviderRequest) -> None:
-        """Executa as validações de entrada para envio de mensagem ao provedor.
+    def validate_request(self, request: LLMProviderRequest) -> None:
+        """Valida localmente a requisição de envio ao provedor, sem nenhuma chamada de rede.
 
         Args:
             request: Payload técnico de envio da completion.

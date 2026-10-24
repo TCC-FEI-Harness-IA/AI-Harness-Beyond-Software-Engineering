@@ -1,4 +1,3 @@
-from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.resilience.budget_verdict import BudgetVerdict
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
@@ -14,8 +13,9 @@ class FakeCostGuard(ICostGuard):
     """Dublê de `ICostGuard` com vereditos e limites diretamente programáveis.
 
     Todos os limites são atributos públicos mutáveis: o teste pode apertá-los no
-    meio do fluxo, entre dois eventos consumidos, para provocar a degradação
-    exatamente no ponto que pretende exercitar.
+    meio do fluxo, entre dois eventos consumidos, para provocar a interrupção
+    exatamente no ponto que pretende exercitar. Diferente do guardião real, este
+    dublê não deriva nada do consumo registrado: ele só obedece ao que foi programado.
     """
 
     def __init__(
@@ -26,16 +26,18 @@ class FakeCostGuard(ICostGuard):
         task_slots: int = _DEFAULT_TASK_SLOTS,
         tokens_left: int = _DEFAULT_TOKENS_LEFT,
         additional_planning_allowed: bool = True,
+        additional_planning_denied_limit: BudgetLimitEnum = BudgetLimitEnum.ADDITIONAL_PLANNING_ROUNDS,
     ) -> None:
         """Configura o dublê.
 
         Args:
-            authorized: Resposta padrão de `authorize`.
-            denied_limit: Limite apontado quando `authorize` nega.
+            authorized: Resposta padrão de `authorize` e `begin_call`.
+            denied_limit: Limite apontado quando a autorização nega.
             max_task_attempts: Tentativas máximas por tarefa.
             task_slots: Slots de tarefa ainda disponíveis.
             tokens_left: Tokens ainda disponíveis para o loop.
-            additional_planning_allowed: Resposta de `can_run_additional_planning`.
+            additional_planning_allowed: Se `authorize_additional_planning` autoriza.
+            additional_planning_denied_limit: Limite apontado quando o planejamento adicional é negado.
         """
         self.authorized = authorized
         self.denied_limit = denied_limit
@@ -43,23 +45,29 @@ class FakeCostGuard(ICostGuard):
         self.task_slots = task_slots
         self.tokens_left = tokens_left
         self.additional_planning_allowed = additional_planning_allowed
-        self.authorizations: list[ThinkingPhaseEnum] = []
-        self.registered_calls: list[TokensUsage] = []
+        self.additional_planning_denied_limit = additional_planning_denied_limit
+        self.authorizations: list[tuple[ThinkingPhaseEnum, int]] = []
+        self.started_calls: list[tuple[ThinkingPhaseEnum, int]] = []
+        self.registered_usages: list[tuple[int, int]] = []
         self.tasks_created: list[int] = []
         self.attempts_by_task: dict[str, int] = {}
         self.additional_rounds = 0
 
-    def authorize(self, phase: ThinkingPhaseEnum) -> BudgetVerdict:
-        """Registra o pedido e devolve o veredito programado."""
-        self.authorizations.append(phase)
+    def authorize(self, phase: ThinkingPhaseEnum, reserved_output_tokens: int = 0) -> BudgetVerdict:
+        """Registra a consulta e devolve o veredito programado."""
+        self.authorizations.append((phase, reserved_output_tokens))
+        return self.__verdict()
 
-        if self.authorized:
-            return BudgetVerdict(authorized=True)
-        return BudgetVerdict(authorized=False, limit=self.denied_limit, reason="negado pelo dublê")
+    def begin_call(self, phase: ThinkingPhaseEnum, reserved_output_tokens: int = 0) -> BudgetVerdict:
+        """Registra o início da chamada e devolve o veredito programado."""
+        verdict = self.__verdict()
+        if verdict.authorized:
+            self.started_calls.append((phase, reserved_output_tokens))
+        return verdict
 
-    def register_call(self, tokens: TokensUsage) -> None:
+    def register_usage(self, tokens_input: int, tokens_output: int) -> None:
         """Registra o consumo de uma chamada ao modelo."""
-        self.registered_calls.append(tokens)
+        self.registered_usages.append((tokens_input, tokens_output))
 
     def register_task_created(self, quantity: int) -> None:
         """Registra a criação de novas tarefas."""
@@ -75,9 +83,13 @@ class FakeCostGuard(ICostGuard):
         """Informa se a tarefa ainda pode ser retentada."""
         return self.attempts_by_task.get(task_id, _NO_ATTEMPTS) < self.max_task_attempts
 
-    def can_run_additional_planning(self) -> bool:
-        """Informa se ainda é possível executar mais uma rodada de C.2."""
-        return self.additional_planning_allowed
+    def authorize_additional_planning(self, reserved_output_tokens: int = 0) -> BudgetVerdict:
+        """Devolve o veredito programado para o planejamento adicional."""
+        if self.additional_planning_allowed:
+            return BudgetVerdict(authorized=True)
+        return BudgetVerdict(
+            authorized=False, limit=self.additional_planning_denied_limit, reason="planejamento negado pelo dublê"
+        )
 
     def register_additional_planning_round(self) -> None:
         """Registra a execução de mais uma rodada de planejamento adicional."""
@@ -90,3 +102,9 @@ class FakeCostGuard(ICostGuard):
     def remaining_tokens(self) -> int:
         """Devolve os tokens restantes programados."""
         return self.tokens_left
+
+    def __verdict(self) -> BudgetVerdict:
+        """Monta o veredito de autorização programado."""
+        if self.authorized:
+            return BudgetVerdict(authorized=True)
+        return BudgetVerdict(authorized=False, limit=self.denied_limit, reason="negado pelo dublê")

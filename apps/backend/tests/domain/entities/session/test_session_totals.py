@@ -52,55 +52,63 @@ def test_e_mutavel() -> None:
     assert totais.total_messages == 3
 
 
-def test_mensagem_com_consumo_conta_como_chamada_ao_modelo() -> None:
+def test_mensagem_conta_apenas_como_mensagem_e_nunca_soma_consumo() -> None:
+    """O consumo vem das invocações; somá-lo também pelas mensagens o contaria duas vezes."""
     totais = SessionTotals()
 
     totais.add_message(_nova_mensagem(tokens_input=10, tokens_output=20, inference_time_ms=500))
-
-    assert totais.total_messages == 1
-    assert totais.total_llm_calls == 1
-    assert totais.tokens_input == 10
-    assert totais.tokens_output == 20
-    assert totais.total_tokens == 30
-    assert totais.inference_time_ms == 500
-
-
-def test_mensagem_programatica_nao_conta_como_chamada_ao_modelo() -> None:
-    totais = SessionTotals()
-
     totais.add_message(_nova_mensagem())
 
-    assert totais.total_messages == 1
+    assert totais.total_messages == 2
     assert totais.total_llm_calls == 0
     assert totais.total_tokens == 0
     assert totais.inference_time_ms == 0
 
 
-def test_mensagem_apenas_com_tokens_de_saida_conta_como_chamada_ao_modelo() -> None:
+def test_o_inicio_de_uma_invocacao_ja_conta_como_chamada() -> None:
     totais = SessionTotals()
 
-    totais.add_message(_nova_mensagem(tokens_output=7))
+    totais.register_invocation_start()
+    totais.register_invocation_start()
 
-    assert totais.total_llm_calls == 1
-
-
-def test_duas_mensagens_acumulam_os_totais() -> None:
-    totais = SessionTotals()
-
-    totais.add_message(_nova_mensagem(tokens_input=10, tokens_output=20, inference_time_ms=500))
-    totais.add_message(_nova_mensagem(tokens_input=1, tokens_output=2, inference_time_ms=30))
-
-    assert totais.total_messages == 2
     assert totais.total_llm_calls == 2
+    assert totais.total_tokens == 0
+
+
+def test_o_consumo_conhecido_de_uma_invocacao_e_acumulado() -> None:
+    totais = SessionTotals()
+
+    totais.add_usage(tokens_input=10, tokens_output=20, duration_ms=500)
+    totais.add_usage(tokens_input=1, tokens_output=2, duration_ms=30)
+
     assert totais.tokens_input == 11
     assert totais.tokens_output == 22
     assert totais.total_tokens == 33
     assert totais.inference_time_ms == 530
 
 
-def test_wall_time_nao_e_alterado_pelo_registro_de_mensagens() -> None:
+def test_consumo_desconhecido_nao_soma_tokens_mas_soma_o_tempo() -> None:
+    totais = SessionTotals()
+
+    totais.add_usage(tokens_input=None, tokens_output=None, duration_ms=40)
+
+    assert totais.total_tokens == 0
+    assert totais.inference_time_ms == 40
+
+
+def test_consumo_parcialmente_conhecido_soma_apenas_o_que_se_sabe() -> None:
+    totais = SessionTotals()
+
+    totais.add_usage(tokens_input=None, tokens_output=140, duration_ms=10)
+
+    assert totais.tokens_input == 0
+    assert totais.tokens_output == 140
+
+
+def test_wall_time_nao_e_alterado_pelo_registro_de_mensagens_nem_de_consumo() -> None:
     totais = SessionTotals()
 
     totais.add_message(_nova_mensagem(tokens_input=10, tokens_output=20, inference_time_ms=500))
+    totais.add_usage(tokens_input=10, tokens_output=20, duration_ms=500)
 
     assert totais.wall_time_ms == 0

@@ -16,6 +16,8 @@ class LLMMessage:
         input_message: Mensagem de entrada utilizada na interação.
         output_message: Mensagem de saída retornada pelo LLM.
         tokens: Dados de consumo de tokens da interação.
+        finish_reason: Motivo de término informado pelo provedor, quando há.
+        provider_response_id: Identificador da resposta no provedor, quando há.
     """
 
     id: UUID | None = None
@@ -23,6 +25,8 @@ class LLMMessage:
     input_message: Message | None = None
     output_message: Message | None = None
     tokens: TokensUsage | None = None
+    finish_reason: str | None = None
+    provider_response_id: str | None = None
 
     @classmethod
     def new(
@@ -30,6 +34,8 @@ class LLMMessage:
         input_message: Message,
         output_message: Message,
         tokens: TokensUsage,
+        finish_reason: str | None = None,
+        provider_response_id: str | None = None,
     ) -> "LLMMessage":
         """Cria uma interação de LLM inferindo `id` e `creation_timestamp`.
 
@@ -37,6 +43,8 @@ class LLMMessage:
             input_message: Mensagem de entrada utilizada na interação.
             output_message: Mensagem de saída retornada pelo LLM.
             tokens: Dados de consumo de tokens da interação.
+            finish_reason: Motivo de término informado pelo provedor, quando há.
+            provider_response_id: Identificador da resposta no provedor, quando há.
 
         Returns:
             LLMMessage: Interação recém-criada.
@@ -47,4 +55,6 @@ class LLMMessage:
             input_message=input_message,
             output_message=output_message,
             tokens=tokens,
+            finish_reason=finish_reason,
+            provider_response_id=provider_response_id,
         )

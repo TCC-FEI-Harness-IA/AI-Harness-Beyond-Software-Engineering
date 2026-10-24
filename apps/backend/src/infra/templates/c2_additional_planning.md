@@ -25,6 +25,10 @@ Cada tarefa deve:
 
 **O contexto não será compartilhado entre as tarefas.** Cada descrição precisa ser autossuficiente.
 
+**Limite do lote:** a sessão comporta no máximo {{max_tasks}} tarefas novas. Não ultrapasse esse
+número e não funda tarefas independentes em uma só apenas para caber: mantenha cada uma autônoma
+e de objetivo único. Um lote acima do limite é recusado e devolvido a você para correção.
+
 Continue a numeração das tarefas a partir de `T{{next_task_number}}`, para que os identificadores
 não colidam com os das tarefas já existentes.
 

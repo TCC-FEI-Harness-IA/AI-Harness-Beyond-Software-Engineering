@@ -42,6 +42,14 @@ class IdGeneratorAdapter(IIdGenerator):
         """
         return self.__new_hex()[:_CONTEXT_ID_LENGTH]
 
+    def new_invocation_id(self) -> str:
+        """Gera um novo identificador de invocação ao modelo.
+
+        Returns:
+            str: Identificador único de invocação.
+        """
+        return self.__new_hex()
+
     def __new_hex(self) -> str:
         """Devolve a representação hexadecimal de um `uuid4`."""
         return uuid4().hex

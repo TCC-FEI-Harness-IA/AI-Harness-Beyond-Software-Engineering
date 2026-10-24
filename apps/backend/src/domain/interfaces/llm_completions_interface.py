@@ -13,6 +13,34 @@ class ILLMCompletions(ABC):
     """
 
     @abstractmethod
+    def validate_conversation(
+        self,
+        conversation: list[Message],
+        model_name: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        provider: ModelProviderEnum | None = None,
+    ) -> None:
+        """Valida localmente uma chamada, sem enviá-la ao provedor.
+
+        Quem chama usa esta validação para separar a recusa local do início efetivo da chamada: o
+        que é recusado aqui nunca foi enviado, não consome orçamento e não é uma invocação ao modelo.
+        Os parâmetros são os mesmos de `send_conversation`.
+
+        Args:
+            conversation: Mensagens da janela de contexto, em ordem cronológica.
+            model_name: Nome do modelo a ser usado na chamada. Se `None`, usa o padrão da implementação.
+            max_tokens: Limite de tokens de saída. Se `None`, usa o padrão da implementação.
+            temperature: Temperatura da geração. Se `None`, usa o padrão da implementação.
+            provider: Provedor que atende a chamada. Se `None`, usa o padrão da implementação.
+
+        Raises:
+            ValueError: Quando a conversa está vazia, algum parâmetro é inválido, o modelo é recusado
+                ou o provedor não está configurado para atender a chamada.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     async def send_message(
         self,
         input_message: Message,
