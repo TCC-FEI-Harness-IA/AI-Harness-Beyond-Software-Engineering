@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/assets/ralph_image.png" alt="Ralph, ícone do projeto" height="120" />
+</p>
+
 # Frontend — Ralph Wiggum Loop (harness) vs. inferência direta
 
 Interface do TCC **"Um Harness de IA para Resolução de Perguntas em Linguagem Natural: Adaptando
@@ -120,6 +124,7 @@ Camadas espelham as do backend, com as mesmas dependências unidirecionais
 
 ```
 apps/frontend/
+├── public/            favicon.png — recorte do rosto de ralph_image.png (aba do navegador)
 └── src/
     ├── config/       env.ts — único ponto que lê import.meta.env
     ├── router/        Rotas e navegação
@@ -136,6 +141,7 @@ apps/frontend/
     ├── state/         RunConfigContext, ThemeContext, ViewModeContext
     ├── components/    UI reutilizável e burra: primitives/, markdown/, chat/, timeline/, layout/
     ├── features/      Telas: home/, simple-chat/, ralph/, history/
+    ├── assets/        ralph_image.png — ícone do projeto (TopBar, Home e READMEs)
     └── styles/        reset.css, tokens.css, animations.css
 ```
 

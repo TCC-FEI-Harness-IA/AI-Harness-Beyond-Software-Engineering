@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import ralphImage from '@/assets/ralph_image.png'
 import { ROUTES } from '@/router/routes'
 import { ThemeToggle } from './ThemeToggle'
 import styles from './TopBar.module.css'
@@ -12,7 +13,7 @@ export interface TopBarProps {
 
 /**
  * Barra superior fixa e translúcida, presente em todas as telas. À esquerda, o nome do
- * app leva à home (com o botão de abrir a barra lateral, quando existe, logo antes); ao
+ * app (ícone do projeto + nome) leva à home (com o botão de abrir a barra lateral, quando existe, logo antes); ao
  * centro fica o slot do interruptor de modo (FASE 05); à direita, o link de histórico e o
  * alternador de tema.
  */
@@ -33,6 +34,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps): JSX.Element {
           </button>
         ) : null}
         <Link to={ROUTES.home} className={styles.brand}>
+          <img className={styles.brandIcon} src={ralphImage} alt="" />
           TCC Harness
         </Link>
       </div>

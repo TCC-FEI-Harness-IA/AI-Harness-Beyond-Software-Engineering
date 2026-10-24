@@ -3,6 +3,16 @@
   text-align: center;
 }
 
+/* A imagem é um retrato: o recorte quadrado pelo topo mostra o rosto. */
+.logo {
+  display: block;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto var(--space-4);
+  object-fit: cover;
+  object-position: top;
+}
+
 .title {
   font-size: var(--text-2xl);
   letter-spacing: var(--tracking-tight);

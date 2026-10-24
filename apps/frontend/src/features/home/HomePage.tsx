@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ralphImage from '@/assets/ralph_image.png'
 import { Composer } from '@/components/chat/Composer'
 import { PageContainer } from '@/components/layout/PageContainer'
 import type { InferenceNavigationState } from '@/router/navigationState'
@@ -65,6 +66,7 @@ export function HomePage(): JSX.Element {
   return (
     <PageContainer width="content">
       <div className={styles.hero}>
+        <img className={styles.logo} src={ralphImage} alt="" />
         <h1 className={styles.title}>Harness de IA</h1>
         <p className={styles.subtitle}>
           Ralph Wiggum Loop adaptado para perguntas em linguagem natural

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="apps/frontend/src/assets/ralph_image.png" alt="Ralph, ícone do projeto" height="140" />
+</p>
+
 # Aprimoramento de outputs de Inteligência Artificial
 
 Este repositório contém o projeto de TCC **“Um Harness de IA para Resolução de Perguntas em Linguagem Natural: Adaptando o Ralph Wiggum Loop Além do Desenvolvimento de Software”**. A aplicação compara uma resposta obtida por inferência direta com outra produzida pelo Ralph Loop Adaptado.

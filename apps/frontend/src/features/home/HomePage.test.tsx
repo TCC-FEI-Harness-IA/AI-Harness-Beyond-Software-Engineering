@@ -29,6 +29,14 @@ beforeEach(() => {
 })
 
 describe('HomePage', () => {
+  it('o cabeçalho mostra o ícone do projeto, decorativo', () => {
+    renderHome()
+
+    const icon = screen.getByRole('heading', { name: 'Harness de IA' }).parentElement?.querySelector('img')
+    expect(icon?.getAttribute('src')).toContain('ralph_image')
+    expect(icon).toHaveAttribute('alt', '')
+  })
+
   it('mostra os dois cartões de modo', () => {
     renderHome()
 
