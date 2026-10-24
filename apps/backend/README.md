@@ -1,24 +1,97 @@
-# Backend — Ralph Wiggum Loop (harness) vs. inferência direta
+# Backend
 
-API do TCC **"Um Harness de IA para Resolução de Perguntas em Linguagem Natural: Adaptando o
-Ralph Wiggum Loop Além do Desenvolvimento de Software"**.
+## Boas práticas de desenvolvimento
 
-O objetivo do projeto é comparar, para a mesma pergunta, duas formas de obter resposta de um LLM:
+Este guia reúne as convenções de `feature_ralph/README.md` (seções 3.1–3.3) e os padrões
+encontrados em `src/` e `tests/`. Use os exemplos indicados como referência para novas implementações.
 
-- **Baseline** — uma única chamada direta ao modelo (grupo de controle do experimento).
-- **Harness (Ralph Loop adaptado)** — a pergunta é decomposta em tarefas, cada tarefa é resolvida
-  e validada em um contexto isolado e a resposta final é sintetizada a partir dos resultados
-  aprovados.
+### Separação de responsabilidades e dependências
 
-Os dois fluxos gravam uma **sessão** persistida com histórico de mensagens, custo de tokens e
-tempo de inferência, para que sejam comparáveis nos benchmarks (MMLU, GPQA) descritos no paper.
+- **Mantenha as dependências voltadas para o domínio.** `domain/` contém entidades, enums,
+  erros, serviços e interfaces, sem importar `application/` ou `infra/`. `application/`
+  coordena os casos de uso usando os contratos do domínio e seus próprios DTOs.
+  Integrações com FastAPI, provedores e armazenamento ficam em `infra/`.
+- **Injete dependências pelos contratos.** Declare portas com `ABC` e `@abstractmethod` em
+  `domain/interfaces/`, como `ISessionRepository` e `ILLMCompletions`. Receba essas portas
+  pelo construtor, como faz `DefaultMessageUseCase`, permitindo substituí-las por duplos nos testes.
+- **Monte os casos de uso nos startups.** `infra/startups/` concentra a composição dos grafos
+  de dependências e a tradução entre DTOs de transporte e de aplicação. Quando a criação depende
+  da configuração, use factories, como `LLMServiceFactory` e `SessionRepositoryFactory`.
+- **Deixe as rotas responsáveis pelo transporte.** Valide o payload, delegue ao startup e
+  traduza resultados e erros para HTTP ou WebSocket. Regras de negócio ficam nos casos de uso
+  e no domínio.
+
+Exemplos: [`DefaultMessageUseCase`](src/application/usecases/default_message_usecase.py),
+[`DefaultMessageStartup`](src/infra/startups/default_message_startup.py) e
+[`ISessionRepository`](src/domain/interfaces/session_repository_interface.py).
+
+### Modelagem, organização e legibilidade
+
+- **Use dataclasses para dados internos.** Entidades ficam em `domain/entities/`, agrupadas
+  por assunto. Prefira `frozen=True` para objetos de valor, como `GenaiModel` e `TokensUsage`;
+  agregados que evoluem durante a execução, como `Session`, permanecem mutáveis. DTOs de
+  aplicação também são dataclasses e ficam em `application/dtos/`.
+- **Separe os contratos de transporte.** Modelos Pydantic ficam em `infra/routes/.../dtos/`,
+  com validação de tipos, limites e campos na fronteira da API. Não os importe nos casos de uso.
+- **Declare uma classe por arquivo.** Use nomes em `snake_case`; interfaces seguem o padrão
+  `*_interface.py` e enums ficam em `domain/enums/`, um por arquivo, com sufixo `_enum.py`.
+  Reserve `domain/services/` para serviços com comportamento, como `TaskQueue`.
+- **Explicite a API pública.** Use o prefixo `__` nos métodos auxiliares privados, seguindo
+  exemplos como `DefaultMessageUseCase.__infer`.
+- **Documente e tipe as assinaturas.** Use type hints modernos (`str | None`, `list[str]`) e
+  docstrings em português no formato Google, com `Args:`, `Returns:` e `Raises:` quando aplicáveis.
+
+### Configuração e integração com serviços externos
+
+- **Centralize configurações em `Settings`.** Caminhos, credenciais, modelos, timeouts e limites
+  configuráveis devem ser expostos como propriedades tipadas de `ISettings`; a leitura e a
+  conversão das variáveis de ambiente ficam em `infra/config/settings.py`.
+- **Mantenha prompts em arquivos Markdown.** Carregue-os pela porta `IPromptTemplateProvider`,
+  implementada por `FilePromptTemplateProvider`, em vez de embuti-los nos casos de uso.
+- **Isole integrações em adapters e repositories.** `SessionDocumentMapper` converte entidades
+  em documentos; os repositórios JSON e MongoDB cuidam do armazenamento. O caso de uso depende
+  de `ISessionRepository`, sem conhecer o formato persistido.
+- **Reaproveite o fluxo comum dos provedores.** `BaseChatCompletionsService` aplica Template
+  Method para compartilhar validação, chamada HTTP e leitura da resposta. As subclasses
+  especializam URL, autenticação e parâmetros específicos.
+- **Preserve o event loop.** Use I/O assíncrono, como `httpx.AsyncClient` nas chamadas HTTP;
+  operações bloqueantes de arquivo são delegadas a `asyncio.to_thread` no repositório JSON.
+- **Torne efeitos externos substituíveis.** Use `IClock` e `IIdGenerator` para tempo e IDs,
+  registre mensagens e métricas via `ISessionRecorder` e injete o logger pelo construtor.
+  Isso permite verificar resultados e efeitos sem depender de serviços reais.
+
+### Testes e critérios de qualidade
+
+O plano de desenvolvimento estabelece **TDD**: escreva um teste de comportamento, confirme a
+falha e implemente o necessário para fazê-lo passar. A estrutura de `tests/` acompanha as
+camadas de `src/`; duplos reutilizáveis ficam em `tests/doubles/`, como `FakeClock`,
+`FakeLLMCompletions` e `InMemorySessionRepository`.
+
+- Verifique entradas, saídas, erros e efeitos observáveis, como o estado persistido da sessão.
+- Substitua chamadas de rede por fakes ou transportes HTTP de teste. Use `tmp_path` para
+  arquivos temporários e não dependa de credenciais reais.
+- Mantenha o `flake8` sem erros: `setup.cfg` define linhas de até 120 caracteres e
+  complexidade máxima de 12.
+- Execute o `pytest` com cobertura mínima de **100%** em `src/`. A configuração de cobertura
+  habilita a medição de branches e exclui interfaces e arquivos `__init__.py` do relatório.
+
+Na pasta `apps/backend`, com as dependências de desenvolvimento instaladas:
+
+```bash
+flake8 src tests
+pytest --cov=src --cov-report=term-missing --cov-fail-under=100
+```
+
+A metodologia e a explicação do Ralph Loop estão na [documentação da raiz](../../README.md)
+e em [`RALPH_LOOP_ADAPTADO.md`](../../RALPH_LOOP_ADAPTADO.md).
+As seções seguintes documentam a execução e os contratos técnicos da API.
 
 ---
 
 ## Sumário
 
-- [Como funciona](#como-funciona)
-  - [Provedores de LLM](#provedores-de-llm)
+- [Boas práticas de desenvolvimento](#boas-práticas-de-desenvolvimento)
+- [Provedores de LLM](#provedores-de-llm)
 - [Como rodar](#como-rodar)
 - [Endpoints HTTP](#endpoints-http)
   - [`POST /v1/message/default`](#post-v1messagedefault)
@@ -33,44 +106,7 @@ tempo de inferência, para que sejam comparáveis nos benchmarks (MMLU, GPQA) de
 
 ---
 
-## Como funciona
-
-### Baseline — `DefaultMessageUseCase`
-
-Uma chamada direta: `pergunta → modelo → resposta`. Sem planejamento, sem loop, sem validação de
-critérios. Serve como grupo de controle do experimento.
-
-### Harness — `RalphThinkingUseCase` (Ralph Loop adaptado)
-
-O fluxo segue exatamente `A.1 → A.2 → B.1 → B.2 → B.3 → B.4 → C.1 → (C.2) → C.3`:
-
-**A. Planejamento**
-- **A.1** — o modelo lê a pergunta e produz os **critérios de aceite gerais** da resposta final
-  (idioma, formato, restrições do enunciado).
-- **A.2** — o modelo decompõe a pergunta em **tarefas de objetivo único**, cada uma com seus
-  próprios critérios de aceite. As tarefas não compartilham contexto entre si.
-
-**B. Execução em loop** (uma tarefa por vez, retirada da fila)
-- **B.1** — a tarefa é resolvida pelo modelo. Ao iniciar uma tarefa nova, o contexto é
-  reinicializado (*fresh context*) e os aprendizados acumulados até então são injetados no início.
-- **B.2** — o resultado preliminar é validado contra os critérios **daquela** tarefa. Reprovado →
-  volta para B.1 **no mesmo contexto** (a tentativa reprovada permanece visível, para o modelo se
-  corrigir). Esgotadas as tentativas, a tarefa é aceita como `DEGRADED` com a última tentativa.
-- **B.3** — a resposta aprovada é armazenada (sem chamada ao modelo). Alimenta **exclusivamente**
-  a fase C.
-- **B.4** — fatos objetivos descobertos na tarefa (incluindo tentativas reprovadas) são extraídos
-  como **aprendizados**. Alimentam **exclusivamente** o contexto das tarefas seguintes — nunca a
-  resposta final.
-
-**C. Resposta final**
-- **C.1** — verifica se a união dos resultados armazenados satisfaz os critérios gerais de A.1.
-  Aprovado → C.3. Reprovado → C.2.
-- **C.2** — cria tarefas adicionais para cobrir só as lacunas apontadas em C.1, insere no topo da
-  fila e volta para B.1. Pode repetir (até um limite).
-- **C.3** — organiza os resultados armazenados no formato e idioma definidos em A.1, sem
-  introduzir fatos novos.
-
-### Provedores de LLM
+## Provedores de LLM
 
 A aplicação fala com três provedores — **OpenRouter**, **OpenAI** e **Azure AI Foundry** — e o
 `provider` do corpo da requisição decide qual atende cada chamada; `LLM_PROVIDER` é apenas o
@@ -87,15 +123,6 @@ em `BaseChatCompletionsService`. Cada implementação varia só o que é própri
 `LLMServiceFactory` instancia um serviço por provedor e o `LLMCompletionsAdapter` escolhe, a
 cada chamada, aquele que atende o `provider` pedido. Um provedor fora do enum é recusado com
 `422` na fronteira; um fora de `GENAI_AVAILABLE_PROVIDERS` é recusado pelo catálogo.
-
-### Resiliência de custo
-
-O sistema nunca aborta por estouro de limite — ele **degrada e conclui**: aceita a melhor
-tentativa disponível, pula planejamento adicional ou interrompe o loop e resultados existentes,
-conforme o limite atingido (tentativas por tarefa, rodadas de replanejamento, tarefas por sessão,
-chamadas ao modelo, orçamento de tokens ou tempo de parede). Toda degradação é registrada na
-sessão e emitida como evento `degraded` no WebSocket. Uma reserva de tokens garante que C.3 sempre
-rode e produza uma resposta.
 
 ---
 
@@ -126,7 +153,7 @@ Base path: `/v1`.
 
 ### `POST /v1/message/default`
 
-Executa o fluxo baseline: uma única chamada direta ao modelo.
+Executa uma chamada direta ao modelo.
 
 **Requisição** — [`DefaultInputDTO`](#defaultinputdto):
 
@@ -177,7 +204,7 @@ curl -X POST http://localhost:8000/v1/message/default \
 
 ### `GET /v1/sessions`
 
-Lista os identificadores de todas as sessões persistidas (dos dois fluxos).
+Lista os identificadores de todas as sessões persistidas.
 
 **Resposta `200`**:
 
@@ -239,8 +266,8 @@ final.
 }
 ```
 
-`flow` distingue os dois fluxos comparáveis do experimento: `A1` para sessões do harness (Ralph
-Loop), `DIRECT` para sessões do baseline.
+`flow` identifica o tipo da sessão: `A1` para `/v1/message/reasoning` e `DIRECT` para
+`/v1/message/default`.
 
 **Erros**
 | Status | Quando |
@@ -265,8 +292,7 @@ Verificação simples de disponibilidade.
 
 ### `WS /v1/message/reasoning`
 
-Executa o fluxo harness completo, emitindo **um evento por etapa de pensamento** conforme ela
-acontece. Ao final, fecha a conexão.
+Emite eventos de processamento e a resposta final da sessão. Ao final, fecha a conexão.
 
 **Protocolo**
 
@@ -383,7 +409,7 @@ outro nome de classe. `reasoning_config` não faz parte do contrato: se enviado,
 | Campo | Tipo | Descrição |
 |---|---|---|
 | `context_id` | `string` | Identidade da janela de contexto no momento do evento. |
-| `context_size` | `int` | Tokens acumulados **na janela atual**; zera quando a janela é trocada (*fresh context*). |
+| `context_size` | `int` | Tokens acumulados na janela de contexto atual. |
 
 ### `ReasoningEventDTO`
 
@@ -392,14 +418,14 @@ Cada frame emitido por `WS /v1/message/reasoning`. **Exatamente estes 9 campos, 
 | Campo | Tipo | Descrição |
 |---|---|---|
 | `type` | `string` | `thinking` \| `result` \| `degraded` \| `error`. |
-| `subtype` | `string` | `setup` (A.1) · `tasks` (A.2) · `execute` (início de B.1) · `reasoning` (saída de B.1) · `verify_pass` / `verify_fail` (B.2) · `store` (B.3) · `learn` (B.4) · `reset` (fresh context) · `compile` (C.1/C.3) · `replan` (C.2). |
+| `subtype` | `string` | `setup`, `tasks`, `execute`, `reasoning`, `verify_pass`, `verify_fail`, `store`, `learn`, `reset`, `compile`, `replan`. |
 | `phase` | `string` | `A1`, `A2`, `B1`, `B2`, `B3`, `B4`, `C1`, `C2`, `C3`. |
 | `task` | `string` | Id da tarefa (`T1`, `T2`, ...), ou `setup` / `synthesis` para etapas globais. |
 | `session_id` | `string` | Sessão em execução. |
 | `content` | `string` | Markdown pronto para renderização. |
 | `total_tokens` | `int` | Acumulado da sessão; **nunca decresce**. |
 | `context_window` | [`ContextWindowDTO`](#contextwindowdto) | Janela de contexto no momento do evento. |
-| `inference_time_ms` | `int` | Tempo da chamada ao modelo; `0` em etapas programáticas (B.3, reset). |
+| `inference_time_ms` | `int` | Tempo da chamada ao modelo; `0` em eventos sem inferência. |
 
 Frames de erro fora do fluxo normal (payload inválido, ou o frame genérico que precede o
 fechamento `1011`) usam um formato reduzido, **fora** deste contrato de 9 campos:
@@ -412,8 +438,8 @@ fechamento `1011`) usam um formato reduzido, **fora** deste contrato de 9 campos
 
 ## Variáveis de ambiente
 
-Toda constante do sistema é lida por `Settings` (`src/infra/config/settings.py`) — nenhum literal
-equivalente aparece no código. Ver `.env.example` para o arquivo completo.
+As configurações de execução são lidas por `Settings` (`src/infra/config/settings.py`).
+Ver `.env.example` para o arquivo completo.
 
 | Variável | Default | Descrição |
 |---|---|---|
@@ -447,12 +473,12 @@ equivalente aparece no código. Ver `.env.example` para o arquivo completo.
 | `MONGODB_SESSIONS_COLLECTION` | `sessions` | Coleção que guarda os documentos de sessão no MongoDB. |
 | `RALPH_SESSION_FLUSH_EVERY_MESSAGE` | `true` | Persiste a sessão após cada mensagem registrada. |
 | `RALPH_SESSION_ID_PREFIX` | `sess` | Prefixo do identificador de sessão. |
-| `RALPH_MAX_TASK_ATTEMPTS` | `3` | Tentativas máximas de B.1/B.2 para a mesma tarefa. |
-| `RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS` | `2` | Execuções máximas de C.2 por sessão. |
-| `RALPH_MAX_TASKS_PER_SESSION` | `12` | Total máximo de tarefas (A.2 + rodadas de C.2). |
+| `RALPH_MAX_TASK_ATTEMPTS` | `3` | Máximo de tentativas por tarefa. |
+| `RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS` | `2` | Máximo de rodadas de planejamento adicional por sessão. |
+| `RALPH_MAX_TASKS_PER_SESSION` | `12` | Total máximo de tarefas por sessão. |
 | `RALPH_MAX_LLM_CALLS_PER_SESSION` | `60` | Teto absoluto de chamadas ao modelo. |
 | `RALPH_SESSION_TOKEN_BUDGET` | `120000` | Teto de tokens (input + output) da sessão. |
-| `RALPH_FINAL_ANSWER_TOKEN_RESERVE` | `4000` | Reserva de tokens que garante que C.3 sempre rode. |
+| `RALPH_FINAL_ANSWER_TOKEN_RESERVE` | `4000` | Reserva de tokens configurada para a resposta final. |
 | `RALPH_SESSION_TIMEOUT_SECONDS` | `600` | Tempo máximo de parede da sessão. |
 | `RALPH_PROMPT_TEMPLATES_PATH` | `src/infra/templates` | Diretório dos templates `.md`. |
 | `RALPH_JSON_PARSE_MAX_RETRIES` | `2` | Retentativas quando o modelo devolve JSON inválido. |
@@ -470,6 +496,5 @@ domain               Entidades, enums, erros e interfaces (ABC)
 infra/*              Adapters, repositório, mapper, provider de templates, config
 ```
 
-`DefaultMessageUseCase` (baseline) e `RalphThinkingUseCase` (harness) escrevem na mesma
-`Session`, através do mesmo `ISessionRecorder` e `ISessionRepository` — por isso as duas sessões
-de uma mesma pergunta são comparáveis pelos mesmos endpoints `GET /v1/sessions*`.
+A persistência de sessões é compartilhada pelos endpoints de mensagens e pode ser consultada
+pelos endpoints `GET /v1/sessions*`.
