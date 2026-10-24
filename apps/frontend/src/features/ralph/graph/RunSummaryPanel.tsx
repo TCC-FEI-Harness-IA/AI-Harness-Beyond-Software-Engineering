@@ -21,6 +21,7 @@ function runStatsView(run: ThinkingRun): MessageStatsView {
     contextId: null,
     contextSize: null,
     timestamp: null,
+    sessionId: run.sessionId,
     llmCalls: run.totals.llmCalls,
     taskCount: run.totals.taskCount,
     attemptCount: run.totals.attemptCount,

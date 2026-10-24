@@ -14,28 +14,20 @@ function renderBar(): void {
   )
 }
 
-async function abrirPainel(): Promise<ReturnType<typeof userEvent.setup>> {
-  renderBar()
-  const user = userEvent.setup()
-  await user.click(screen.getByRole('button', { expanded: false }))
-  return user
-}
-
 beforeEach(() => {
   window.localStorage.clear()
 })
 
 describe('RunConfigBar', () => {
-  it('o resumo nomeia o provedor em uso', () => {
+  it('mostra o módulo de configuração sempre visível, sem precisar abrir nada', () => {
     renderBar()
 
-    expect(screen.getByRole('button', { expanded: false })).toHaveTextContent(
-      PROVIDER_LABELS[env.defaultProvider],
-    )
+    expect(screen.getByRole('group', { name: 'Configuração de execução' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Provedor')).toHaveValue(env.defaultProvider)
   })
 
-  it('oferece um seletor com todos os provedores disponíveis', async () => {
-    await abrirPainel()
+  it('oferece um seletor com todos os provedores disponíveis', () => {
+    renderBar()
 
     const seletor = screen.getByLabelText('Provedor')
     expect(seletor).toHaveValue(env.defaultProvider)
@@ -44,18 +36,18 @@ describe('RunConfigBar', () => {
     }
   })
 
-  it('escolher outro provedor atualiza o resumo', async () => {
-    const user = await abrirPainel()
+  it('escolher outro provedor atualiza a seleção', async () => {
+    renderBar()
+    const user = userEvent.setup()
 
     await user.selectOptions(screen.getByLabelText('Provedor'), MODEL_PROVIDER.OPENAI)
 
-    expect(screen.getByRole('button', { expanded: true })).toHaveTextContent(
-      PROVIDER_LABELS[MODEL_PROVIDER.OPENAI],
-    )
+    expect(screen.getByLabelText('Provedor')).toHaveValue(MODEL_PROVIDER.OPENAI)
   })
 
   it('restaurar padrões devolve o provedor default', async () => {
-    const user = await abrirPainel()
+    renderBar()
+    const user = userEvent.setup()
     await user.selectOptions(screen.getByLabelText('Provedor'), MODEL_PROVIDER.OPENAI)
 
     await user.click(screen.getByRole('button', { name: 'Restaurar padrões' }))

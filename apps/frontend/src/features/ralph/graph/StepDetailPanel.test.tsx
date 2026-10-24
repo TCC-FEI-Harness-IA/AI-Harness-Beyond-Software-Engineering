@@ -27,21 +27,21 @@ function buildStep(overrides: Partial<ThinkingStep> = {}): ThinkingStep {
 
 describe('StepDetailPanel', () => {
   it('abre com o conteúdo do passo em Markdown', () => {
-    render(<StepDetailPanel step={buildStep()} modelName="openai/gpt-4o-mini" onClose={vi.fn()} onViewInChat={vi.fn()} />)
+    render(<StepDetailPanel step={buildStep()} modelName="openai/gpt-4o-mini" sessionId={null} onClose={vi.fn()} onViewInChat={vi.fn()} />)
 
     expect(screen.getByRole('dialog', { name: 'Detalhe do passo' })).toBeInTheDocument()
     expect(screen.getByText('Conteúdo do passo em markdown.')).toBeInTheDocument()
   })
 
   it('não renderiza nada quando step é null', () => {
-    render(<StepDetailPanel step={null} modelName={null} onClose={vi.fn()} onViewInChat={vi.fn()} />)
+    render(<StepDetailPanel step={null} modelName={null} sessionId={null} onClose={vi.fn()} onViewInChat={vi.fn()} />)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('Esc fecha o painel', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
-    render(<StepDetailPanel step={buildStep()} modelName={null} onClose={onClose} onViewInChat={vi.fn()} />)
+    render(<StepDetailPanel step={buildStep()} modelName={null} sessionId={null} onClose={onClose} onViewInChat={vi.fn()} />)
 
     await user.keyboard('{Escape}')
 
@@ -56,12 +56,12 @@ describe('StepDetailPanel', () => {
     expect(document.activeElement).toBe(trigger)
 
     const { rerender } = render(
-      <StepDetailPanel step={buildStep()} modelName={null} onClose={vi.fn()} onViewInChat={vi.fn()} />,
+      <StepDetailPanel step={buildStep()} modelName={null} sessionId={null} onClose={vi.fn()} onViewInChat={vi.fn()} />,
     )
 
     expect(document.activeElement).not.toBe(trigger)
 
-    rerender(<StepDetailPanel step={null} modelName={null} onClose={vi.fn()} onViewInChat={vi.fn()} />)
+    rerender(<StepDetailPanel step={null} modelName={null} sessionId={null} onClose={vi.fn()} onViewInChat={vi.fn()} />)
 
     expect(document.activeElement).toBe(trigger)
     document.body.removeChild(trigger)
@@ -70,7 +70,7 @@ describe('StepDetailPanel', () => {
   it('"Ver no Modo Chat" chama o callback de troca de modo com o step.id', async () => {
     const user = userEvent.setup()
     const onViewInChat = vi.fn()
-    render(<StepDetailPanel step={buildStep({ id: 'step-42' })} modelName={null} onClose={vi.fn()} onViewInChat={onViewInChat} />)
+    render(<StepDetailPanel step={buildStep({ id: 'step-42' })} modelName={null} sessionId={null} onClose={vi.fn()} onViewInChat={onViewInChat} />)
 
     await user.click(screen.getByRole('button', { name: 'Ver no Modo Chat' }))
 

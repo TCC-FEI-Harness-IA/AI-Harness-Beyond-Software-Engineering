@@ -32,6 +32,17 @@
   background: var(--color-surface);
   color: var(--color-text);
   font-size: var(--text-sm);
+  /* Sem isso, Safari/iOS desenha o próprio campo de busca nativo (uma caixa branca com raio
+     próprio) por cima do nosso, que estoura a borda arredondada que definimos acima. */
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.search::-webkit-search-decoration,
+.search::-webkit-search-cancel-button,
+.search::-webkit-search-results-button,
+.search::-webkit-search-results-decoration {
+  display: none;
 }
 
 .search:focus-visible {

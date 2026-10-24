@@ -66,6 +66,7 @@ function runTotalsAsStats(run: ThinkingRun): MessageStatsView {
     contextId: null,
     contextSize: null,
     timestamp: null,
+    sessionId: run.sessionId,
     llmCalls: run.totals.llmCalls,
     taskCount: run.totals.taskCount,
     attemptCount: run.totals.attemptCount,
@@ -113,6 +114,7 @@ export function RalphChatMode({
                   key={step.id}
                   step={step}
                   modelName={run.modelName}
+                  sessionId={run.sessionId}
                   animateIn={isLive && step.id === lastStepId}
                 />
               ))}

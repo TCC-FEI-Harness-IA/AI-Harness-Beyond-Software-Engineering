@@ -14,6 +14,7 @@ import styles from './ThinkingStepMessage.module.css'
 export interface ThinkingStepMessageProps {
   step: ThinkingStep
   modelName: string | null
+  sessionId: string | null
   /** Só o último passo ao vivo anima — histórico e passos antigos entram sem transição. */
   animateIn?: boolean
 }
@@ -36,7 +37,7 @@ function displayTaskId(taskId: string): string | null {
   return taskId === TASK_LABEL_SETUP || taskId === TASK_LABEL_SYNTHESIS ? null : taskId
 }
 
-function buildStats(step: ThinkingStep, modelName: string | null): MessageStatsView {
+function buildStats(step: ThinkingStep, modelName: string | null, sessionId: string | null): MessageStatsView {
   return {
     modelName,
     tokensInput: null,
@@ -46,6 +47,7 @@ function buildStats(step: ThinkingStep, modelName: string | null): MessageStatsV
     contextId: step.contextId,
     contextSize: step.contextSize,
     timestamp: step.timestamp,
+    sessionId,
   }
 }
 
@@ -64,6 +66,7 @@ function toneForStep(step: ThinkingStep): Tone {
 export const ThinkingStepMessage = memo(function ThinkingStepMessage({
   step,
   modelName,
+  sessionId,
   animateIn = false,
 }: ThinkingStepMessageProps): JSX.Element {
   const anchorId = thinkingStepAnchorId(step.id)
@@ -101,7 +104,7 @@ export const ThinkingStepMessage = memo(function ThinkingStepMessage({
             {step.type === EVENT_TYPE.DEGRADED ? <Badge tone="warning">Degradação</Badge> : null}
           </span>
         }
-        stats={buildStats(step, modelName)}
+        stats={buildStats(step, modelName, sessionId)}
         animateIn={animateIn}
       />
     </div>

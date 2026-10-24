@@ -88,6 +88,7 @@ export function RalphGraphMode({ run, isLive, onViewStepInChat }: RalphGraphMode
       <StepDetailPanel
         step={selectedStep}
         modelName={run.modelName}
+        sessionId={run.sessionId}
         onClose={() => setSelectedStep(null)}
         onViewInChat={handleViewInChat}
       />

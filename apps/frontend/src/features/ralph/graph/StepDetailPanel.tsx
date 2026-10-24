@@ -13,6 +13,7 @@ export interface StepDetailPanelProps {
   /** `null` fecha o painel — controlado inteiramente pelo passo selecionado. */
   step: ThinkingStep | null
   modelName: string | null
+  sessionId: string | null
   onClose: () => void
   /** "Ver no Modo Chat" (README, seção 7): troca de modo e rola até `step.id`. */
   onViewInChat: (stepId: string) => void
@@ -39,7 +40,7 @@ function displayTaskId(taskId: string): string | null {
   return taskId === TASK_LABEL_SETUP || taskId === TASK_LABEL_SYNTHESIS ? null : taskId
 }
 
-function buildStats(step: ThinkingStep, modelName: string | null): MessageStatsView {
+function buildStats(step: ThinkingStep, modelName: string | null, sessionId: string | null): MessageStatsView {
   return {
     modelName,
     tokensInput: null,
@@ -49,6 +50,7 @@ function buildStats(step: ThinkingStep, modelName: string | null): MessageStatsV
     contextId: step.contextId,
     contextSize: step.contextSize,
     timestamp: step.timestamp,
+    sessionId,
   }
 }
 
@@ -57,7 +59,13 @@ function buildStats(step: ThinkingStep, modelName: string | null): MessageStatsV
  * clicado em qualquer nó ou ponto do Modo Gráfico. Reusa `<Markdown />` e `<MessageStats />` —
  * o Modo Gráfico não tem renderização própria de conteúdo (regra de reuso 4/5).
  */
-export function StepDetailPanel({ step, modelName, onClose, onViewInChat }: StepDetailPanelProps): JSX.Element | null {
+export function StepDetailPanel({
+  step,
+  modelName,
+  sessionId,
+  onClose,
+  onViewInChat,
+}: StepDetailPanelProps): JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const isOpen = step !== null
@@ -109,7 +117,7 @@ export function StepDetailPanel({ step, modelName, onClose, onViewInChat }: Step
             <PhaseTag phase={step.phase} subtype={step.subtype} taskId={displayTaskId(step.taskId)} />
             <IconButton aria-label="Fechar" icon={CLOSE_ICON} variant="ghost" size="sm" onClick={onClose} />
           </div>
-          <MessageStats stats={buildStats(step, modelName)} layout="panel" />
+          <MessageStats stats={buildStats(step, modelName, sessionId)} layout="panel" />
         </div>
 
         <div className={styles.body}>
