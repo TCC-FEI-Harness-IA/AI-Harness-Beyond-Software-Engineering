@@ -46,6 +46,12 @@ _DEFAULTS: dict[str, Any] = {
     "ralph_prompt_templates_path": "src/infra/templates",
     "ralph_json_parse_max_retries": 2,
     "ralph_websocket_max_message_bytes": 1048576,
+    "ralph_benchmark_sessions_storage_path": "./data/benchmark-sessions",
+    "mongodb_benchmark_sessions_collection": "benchmark_sessions",
+    "ralph_benchmark_questions_path": "src/infra/benchmark/questions",
+    "ralph_benchmark_prompt_path": "src/infra/benchmark/prompt.md",
+    "ralph_benchmark_max_parallel": 10,
+    "ralph_benchmark_progress_interval_seconds": 0.05,
 }
 
 
@@ -224,6 +230,30 @@ class FakeSettings(ISettings):
     @property
     def ralph_websocket_max_message_bytes(self) -> int:
         return self.values["ralph_websocket_max_message_bytes"]
+
+    @property
+    def ralph_benchmark_sessions_storage_path(self) -> str:
+        return self.values["ralph_benchmark_sessions_storage_path"]
+
+    @property
+    def mongodb_benchmark_sessions_collection(self) -> str:
+        return self.values["mongodb_benchmark_sessions_collection"]
+
+    @property
+    def ralph_benchmark_questions_path(self) -> str:
+        return self.values["ralph_benchmark_questions_path"]
+
+    @property
+    def ralph_benchmark_prompt_path(self) -> str:
+        return self.values["ralph_benchmark_prompt_path"]
+
+    @property
+    def ralph_benchmark_max_parallel(self) -> int:
+        return self.values["ralph_benchmark_max_parallel"]
+
+    @property
+    def ralph_benchmark_progress_interval_seconds(self) -> float:
+        return self.values["ralph_benchmark_progress_interval_seconds"]
 
     def logger(self, module_file: str) -> logging.Logger:
         """Registra a chamada e devolve um logger inerte nomeado pelo módulo."""

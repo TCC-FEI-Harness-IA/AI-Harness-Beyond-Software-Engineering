@@ -39,3 +39,12 @@ class IIdGenerator(ABC):
             str: Identificador único de invocação.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def new_benchmark_session_id(self) -> str:
+        """Gera um novo identificador de bateria de benchmark.
+
+        Returns:
+            str: Identificador único de bateria.
+        """
+        raise NotImplementedError

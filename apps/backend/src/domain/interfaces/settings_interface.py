@@ -264,6 +264,44 @@ class ISettings(ABC):
         """Retentativas quando o modelo devolve JSON inválido."""
         raise NotImplementedError
 
+    # ── Benchmark ────────────────────────────────────────────────────────────
+
+    @property
+    @abstractmethod
+    def ralph_benchmark_sessions_storage_path(self) -> str:
+        """Diretório dos JSON de bateria de benchmark, quando o backend é `json_file`."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def mongodb_benchmark_sessions_collection(self) -> str:
+        """Nome da coleção que guarda as baterias de benchmark no MongoDB."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def ralph_benchmark_questions_path(self) -> str:
+        """Diretório do dataset de questões do benchmark."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def ralph_benchmark_prompt_path(self) -> str:
+        """Arquivo da instrução de resposta anexada a cada questão do benchmark."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def ralph_benchmark_max_parallel(self) -> int:
+        """Limite superior de questões executadas em paralelo numa bateria."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def ralph_benchmark_progress_interval_seconds(self) -> float:
+        """Intervalo máximo, em segundos, entre dois envios de progresso da bateria."""
+        raise NotImplementedError
+
     # ── Transporte ───────────────────────────────────────────────────────────
 
     @property
