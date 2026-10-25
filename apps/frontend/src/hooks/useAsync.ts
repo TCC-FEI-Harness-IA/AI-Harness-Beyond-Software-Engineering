@@ -29,12 +29,14 @@ export function useAsync<T>(
   const [reloadToken, setReloadToken] = useState(0)
   const mountedRef = useRef(true)
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    // O StrictMode roda montagem → limpeza → montagem em desenvolvimento; sem religar a flag aqui,
+    // a limpeza simulada a deixaria em `false` para sempre e toda resposta seria descartada.
+    mountedRef.current = true
+    return () => {
       mountedRef.current = false
-    },
-    [],
-  )
+    }
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()

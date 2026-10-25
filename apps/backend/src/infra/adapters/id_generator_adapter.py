@@ -5,6 +5,7 @@ from src.domain.interfaces.settings_interface import ISettings
 
 _CONTEXT_ID_LENGTH = 7
 _SESSION_ID_SEPARATOR = "_"
+_BENCHMARK_SESSION_ID_PREFIX = "bench"
 
 
 class IdGeneratorAdapter(IIdGenerator):
@@ -49,6 +50,14 @@ class IdGeneratorAdapter(IIdGenerator):
             str: Identificador único de invocação.
         """
         return self.__new_hex()
+
+    def new_benchmark_session_id(self) -> str:
+        """Gera um novo identificador de bateria de benchmark.
+
+        Returns:
+            str: Identificador único de bateria, com prefixo próprio para não colidir com sessões.
+        """
+        return f"{_BENCHMARK_SESSION_ID_PREFIX}{_SESSION_ID_SEPARATOR}{self.__new_hex()}"
 
     def __new_hex(self) -> str:
         """Devolve a representação hexadecimal de um `uuid4`."""

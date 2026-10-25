@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppError } from '../api/errors/AppError'
@@ -18,6 +19,15 @@ describe('useAsync', () => {
 
   afterEach(() => {
     warnSpy.mockRestore()
+  })
+
+  it('resolve com sucesso sob StrictMode, que monta, limpa e monta de novo', async () => {
+    const run = vi.fn().mockResolvedValue('dado-carregado')
+    const { result } = renderHook(() => useAsync(run, []), { wrapper: StrictMode })
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
   })
 
   it('resolve com sucesso', async () => {

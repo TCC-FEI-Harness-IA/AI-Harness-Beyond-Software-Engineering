@@ -43,7 +43,11 @@ function sortByCreatedAtDesc(items: SessionSummaryView[]): SessionSummaryView[] 
   return [...items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 }
 
-export function useSessionList(source: SessionSource = 'history'): UseSessionList {
+/**
+ * `explicitIds` restringe a lista a sessões conhecidas (ex.: as de uma bateria de benchmark) e
+ * dispensa `GET /v1/sessions`; `null` lista todas as sessões da fonte.
+ */
+export function useSessionList(source: SessionSource = 'history', explicitIds: readonly string[] | null = null): UseSessionList {
   const [ids, setIds] = useState<string[] | null>(null)
   const [isLoadingIds, setIsLoadingIds] = useState(true)
   const [error, setError] = useState<AppError | null>(null)
@@ -51,6 +55,8 @@ export function useSessionList(source: SessionSource = 'history'): UseSessionLis
   const [failedIds, setFailedIds] = useState<string[]>([])
   const [processedIds, setProcessedIds] = useState<string[]>([])
   const [reloadToken, setReloadToken] = useState(0)
+  // Chave estável: um array novo com os mesmos ids não deve refazer a busca a cada render.
+  const explicitKey = explicitIds === null ? null : explicitIds.join('\n')
 
   // Passo 1: busca os ids. Falha aqui vira `ErrorState` na tela inteira (requisito 1). Só a
   // hidratação de cada documento (o passo caro) é cacheada — `GET /v1/sessions` é uma chamada
@@ -63,6 +69,12 @@ export function useSessionList(source: SessionSource = 'history'): UseSessionLis
     setFailedIds([])
     setProcessedIds([])
     setIds(null)
+
+    if (explicitKey !== null) {
+      setIds(explicitKey === '' ? [] : explicitKey.split('\n'))
+      setIsLoadingIds(false)
+      return () => controller.abort()
+    }
 
     listSessionIds(controller.signal)
       .then((sessionIds) => {
@@ -77,7 +89,7 @@ export function useSessionList(source: SessionSource = 'history'): UseSessionLis
       })
 
     return () => controller.abort()
-  }, [reloadToken, source])
+  }, [reloadToken, source, explicitKey])
 
   // Passo 2: hidrata cada sessão com um pool de `env.historyFetchConcurrency` requisições
   // simultâneas. Causa desta complexidade toda: `GET /v1/sessions` devolve só ids — um

@@ -83,6 +83,20 @@ class Settings(ISettings):
             "RALPH_PROMPT_TEMPLATES_PATH": os.getenv("RALPH_PROMPT_TEMPLATES_PATH", "src/infra/templates"),
             "RALPH_JSON_PARSE_MAX_RETRIES": os.getenv("RALPH_JSON_PARSE_MAX_RETRIES", "2"),
             "RALPH_WEBSOCKET_MAX_MESSAGE_BYTES": os.getenv("RALPH_WEBSOCKET_MAX_MESSAGE_BYTES", "1048576"),
+            "RALPH_BENCHMARK_SESSIONS_STORAGE_PATH": os.getenv(
+                "RALPH_BENCHMARK_SESSIONS_STORAGE_PATH", "./data/benchmark-sessions"
+            ),
+            "MONGODB_BENCHMARK_SESSIONS_COLLECTION": os.getenv(
+                "MONGODB_BENCHMARK_SESSIONS_COLLECTION", "benchmark_sessions"
+            ),
+            "RALPH_BENCHMARK_QUESTIONS_PATH": os.getenv(
+                "RALPH_BENCHMARK_QUESTIONS_PATH", "src/infra/benchmark/questions"
+            ),
+            "RALPH_BENCHMARK_PROMPT_PATH": os.getenv("RALPH_BENCHMARK_PROMPT_PATH", "src/infra/benchmark/prompt.md"),
+            "RALPH_BENCHMARK_MAX_PARALLEL": os.getenv("RALPH_BENCHMARK_MAX_PARALLEL", "10"),
+            "RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS": os.getenv(
+                "RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS", "1"
+            ),
         }
 
     # ── Conversores ──────────────────────────────────────────────────────────
@@ -412,6 +426,38 @@ class Settings(ISettings):
     def ralph_json_parse_max_retries(self) -> int:
         """Retentativas quando o modelo devolve JSON inválido."""
         return self.__get_int("RALPH_JSON_PARSE_MAX_RETRIES")
+
+    # ── Benchmark ────────────────────────────────────────────────────────────
+
+    @property
+    def ralph_benchmark_sessions_storage_path(self) -> str:
+        """Diretório dos JSON de bateria de benchmark, quando o backend é `json_file`."""
+        return self.__get_str("RALPH_BENCHMARK_SESSIONS_STORAGE_PATH")
+
+    @property
+    def mongodb_benchmark_sessions_collection(self) -> str:
+        """Nome da coleção que guarda as baterias de benchmark no MongoDB."""
+        return self.__get_str("MONGODB_BENCHMARK_SESSIONS_COLLECTION").strip()
+
+    @property
+    def ralph_benchmark_questions_path(self) -> str:
+        """Diretório do dataset de questões do benchmark."""
+        return self.__get_str("RALPH_BENCHMARK_QUESTIONS_PATH")
+
+    @property
+    def ralph_benchmark_prompt_path(self) -> str:
+        """Arquivo da instrução de resposta anexada a cada questão do benchmark."""
+        return self.__get_str("RALPH_BENCHMARK_PROMPT_PATH")
+
+    @property
+    def ralph_benchmark_max_parallel(self) -> int:
+        """Limite superior de questões executadas em paralelo numa bateria."""
+        return self.__get_int("RALPH_BENCHMARK_MAX_PARALLEL")
+
+    @property
+    def ralph_benchmark_progress_interval_seconds(self) -> float:
+        """Intervalo máximo, em segundos, entre dois envios de progresso da bateria."""
+        return self.__get_float("RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS")
 
     # ── Transporte ───────────────────────────────────────────────────────────
 

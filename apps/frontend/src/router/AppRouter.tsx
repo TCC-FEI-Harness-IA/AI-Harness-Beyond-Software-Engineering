@@ -5,8 +5,11 @@ import { SimpleChatPage } from '@/features/simple-chat/SimpleChatPage'
 import { RalphPage } from '@/features/ralph/RalphPage'
 import { HistoryListPage } from '@/features/history/HistoryListPage'
 import { HistoryDetailPage } from '@/features/history/HistoryDetailPage'
+import { BenchmarkPage } from '@/features/benchmark/BenchmarkPage'
+import { BenchmarkSessionPage } from '@/features/benchmark/BenchmarkSessionPage'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
 import { ComponentsGalleryPage } from '@/features/dev/ComponentsGalleryPage'
+import { BenchmarkRunProvider } from '@/state/BenchmarkRunContext'
 import { SidebarSlotProvider, useSidebarSlotValue } from '@/state/SidebarSlotContext'
 import { ROUTES } from './routes'
 import styles from './AppRouter.module.css'
@@ -35,8 +38,9 @@ function AppShellWithRoutes({ enableDevRoute }: Required<AppRouterProps>): JSX.E
           <Route path={ROUTES.ralphChat} element={<RalphPage />} />
           <Route path={ROUTES.history} element={<HistoryListPage />} />
           <Route path={ROUTES.historyDetail} element={<HistoryDetailPage />} />
-          <Route path={ROUTES.benchmark} element={<HistoryListPage source="benchmark" />} />
-          <Route path={ROUTES.benchmarkDetail} element={<HistoryDetailPage source="benchmark" />} />
+          <Route path={ROUTES.benchmark} element={<BenchmarkPage />} />
+          <Route path={ROUTES.benchmarkSession} element={<BenchmarkSessionPage />} />
+          <Route path={ROUTES.benchmarkChildSession} element={<HistoryDetailPage source="benchmark" />} />
           {enableDevRoute ? (
             <Route path={ROUTES.devComponents} element={<ComponentsGalleryPage />} />
           ) : null}
@@ -47,11 +51,16 @@ function AppShellWithRoutes({ enableDevRoute }: Required<AppRouterProps>): JSX.E
   )
 }
 
-/** Monta a casca de layout e as rotas do app. Espera ser renderizado dentro de um Router. */
+/**
+ * Monta a casca de layout e as rotas do app. Espera ser renderizado dentro de um Router. A bateria
+ * de benchmark em execução fica acima das rotas, para sobreviver à navegação entre as telas.
+ */
 export function AppRouter({ enableDevRoute = false }: AppRouterProps): JSX.Element {
   return (
-    <SidebarSlotProvider>
-      <AppShellWithRoutes enableDevRoute={enableDevRoute} />
-    </SidebarSlotProvider>
+    <BenchmarkRunProvider>
+      <SidebarSlotProvider>
+        <AppShellWithRoutes enableDevRoute={enableDevRoute} />
+      </SidebarSlotProvider>
+    </BenchmarkRunProvider>
   )
 }

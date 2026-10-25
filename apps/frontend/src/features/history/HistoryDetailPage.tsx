@@ -1,19 +1,22 @@
 import type { SessionSource } from '@/domain/types/sessionSource'
 import { useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { HttpError } from '@/api/errors/HttpError'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { Button } from '@/components/primitives/Button'
 import { EmptyState } from '@/components/primitives/EmptyState'
 import { ErrorState } from '@/components/primitives/ErrorState'
 import { Skeleton } from '@/components/primitives/Skeleton'
+import { BENCHMARK_MODE_LABEL } from '@/domain/enums/benchmarkStatus'
 import { SESSION_STATUS } from '@/domain/enums/sessionStatus'
 import { sessionToRun } from '@/domain/services/sessionToRun'
 import { RalphView } from '@/features/ralph/RalphView'
 import { SimpleChatView } from '@/features/simple-chat/SimpleChatView'
+import { useBenchmarkSession } from '@/hooks/useBenchmarkData'
 import { useSession } from '@/hooks/useSession'
 import { useSessionList } from '@/hooks/useSessionList'
-import { ROUTES } from '@/router/routes'
+import { ROUTES, buildBenchmarkChildSessionPath, buildBenchmarkSessionPath, buildHistoryDetailPath } from '@/router/routes'
+import { useBenchmarkRun } from '@/state/BenchmarkRunContext'
 import { useRegisterSidebar } from '@/state/SidebarSlotContext'
 import { HistorySidebar } from './HistorySidebar'
 import styles from './HistoryDetailPage.module.css'
@@ -32,18 +35,49 @@ const NOT_FOUND_ICON = (
  * uma variante "de histórico" (regra de reuso 3 do README).
  */
 export function HistoryDetailPage({ source = 'history' }: { source?: SessionSource }): JSX.Element {
-  const { sessionId: rawSessionId } = useParams<{ sessionId: string }>()
+  const { sessionId: rawSessionId, benchmarkSessionId: rawBenchmarkSessionId } = useParams<{
+    sessionId: string
+    benchmarkSessionId: string
+  }>()
   const sessionId = rawSessionId ? decodeURIComponent(rawSessionId) : ''
+  const benchmarkSessionId =
+    source === 'benchmark' && rawBenchmarkSessionId ? decodeURIComponent(rawBenchmarkSessionId) : null
   const navigate = useNavigate()
   const { state, reload } = useSession(sessionId, source)
-  const { items: sidebarItems, isLoadingIds: isSidebarLoading } = useSessionList(source)
+
+  // Numa sessão de benchmark, a barra lateral lista só as sessões da mesma bateria — ao vivo,
+  // quando é a bateria em execução, ou como foram persistidas.
+  const benchmarkRun = useBenchmarkRun()
+  const liveBattery = benchmarkRun.session?.id === benchmarkSessionId ? benchmarkRun.session : null
+  const storedBattery = useBenchmarkSession(liveBattery === null ? benchmarkSessionId : null)
+  const batterySessionIds =
+    benchmarkSessionId === null
+      ? null
+      : (liveBattery?.session_ids ?? (storedBattery.status === 'success' ? storedBattery.data?.session_ids : null) ?? [])
+  const { items: sidebarItems, isLoadingIds: isSidebarLoading } = useSessionList(source, batterySessionIds)
+  const isBatteryLoading = benchmarkSessionId !== null && liveBattery === null && storedBattery.status === 'loading'
+  const backPath = benchmarkSessionId === null ? ROUTES.history : buildBenchmarkSessionPath(benchmarkSessionId)
+  const linkTo = useMemo(
+    () =>
+      benchmarkSessionId === null
+        ? buildHistoryDetailPath
+        : (id: string) => buildBenchmarkChildSessionPath(benchmarkSessionId, id),
+    [benchmarkSessionId],
+  )
 
   // Memoizado: um elemento JSX é um objeto novo a cada render, mesmo com as mesmas props. Sem
   // isto, `useRegisterSidebar` (cujo efeito depende deste nó) rodaria a cada render — inclusive
   // os que o próprio `setSidebar` dispara no provider acima — entrando em loop infinito.
   const sidebarNode = useMemo(
-    () => <HistorySidebar items={sidebarItems} activeSessionId={sessionId} isLoading={isSidebarLoading} source={source} />,
-    [sidebarItems, sessionId, isSidebarLoading, source],
+    () => (
+      <HistorySidebar
+        items={sidebarItems}
+        activeSessionId={sessionId}
+        isLoading={isSidebarLoading || isBatteryLoading}
+        linkTo={linkTo}
+      />
+    ),
+    [sidebarItems, sessionId, isSidebarLoading, isBatteryLoading, linkTo],
   )
   useRegisterSidebar(sidebarNode)
 
@@ -65,7 +99,11 @@ export function HistoryDetailPage({ source = 'history' }: { source?: SessionSour
           <EmptyState
             icon={NOT_FOUND_ICON}
             title="Esta conversa não existe mais"
-            action={<Button onClick={() => navigate(source === 'benchmark' ? ROUTES.benchmark : ROUTES.history)}>Voltar ao histórico</Button>}
+            action={
+              <Button onClick={() => navigate(backPath)}>
+                {benchmarkSessionId === null ? 'Voltar ao histórico' : 'Voltar à bateria'}
+              </Button>
+            }
           />
         </PageContainer>
       )
@@ -97,17 +135,33 @@ export function HistoryDetailPage({ source = 'history' }: { source?: SessionSour
 
   return (
     <>
-      {document.benchmark_details?.is_banchmark ? (
+      {benchmarkSessionId !== null && document.benchmark_details?.is_banchmark ? (
         <PageContainer width="content">
-          <h2>{document.benchmark_details.question_name}</h2>
-          <p>
-            {document.benchmark_details.is_correct === null
-              ? 'Avaliação pendente' : document.benchmark_details.is_correct ? 'Certo' : 'Errado'}
-            {' · '}Gabarito: {document.benchmark_details.corret_answer ?? '—'}
-            {' · '}Alternativa selecionada: {document.benchmark_details.selected_alternative ?? '—'}
-          </p>
-          <p>Execução: {document.benchmark_details.run_id ?? '—'}</p>
-          {document.benchmark_details.error ? <p role="status">{document.benchmark_details.error}</p> : null}
+          <div className={styles.benchmarkHeader}>
+            <Link to={backPath} className={styles.backLink}>
+              ← Voltar à bateria
+            </Link>
+            <h2 className={styles.benchmarkTitle}>
+              {document.benchmark_details.question_name}
+              {document.benchmark_details.inference_mode
+                ? ` · ${BENCHMARK_MODE_LABEL[document.benchmark_details.inference_mode]}`
+                : null}
+            </h2>
+            <p className={styles.benchmarkMeta}>
+              {document.benchmark_details.is_correct === null
+                ? 'Avaliação pendente'
+                : document.benchmark_details.is_correct
+                  ? 'Certo'
+                  : 'Errado'}
+              {' · '}Gabarito: {document.benchmark_details.corret_answer ?? '—'}
+              {' · '}Alternativa selecionada: {document.benchmark_details.selected_alternative ?? '—'}
+            </p>
+            {document.benchmark_details.error ? (
+              <p className={styles.benchmarkMeta} role="status">
+                {document.benchmark_details.error}
+              </p>
+            ) : null}
+          </div>
         </PageContainer>
       ) : null}
       {document.status === SESSION_STATUS.FAILED ? (

@@ -38,6 +38,14 @@ O front fala com o backend por dois transportes:
 | Inferência simples (baseline) | HTTP `POST` | `/v1/message/default` |
 | Ralph Loop Adaptado (harness) | WebSocket | `/v1/message/reasoning` |
 | Histórico | HTTP `GET` | `/v1/sessions`, `/v1/sessions/{id}` |
+| BenchMark — execução da bateria | WebSocket | `/v1/benchmark/run` |
+| BenchMark — baterias e dataset | HTTP `GET` | `/v1/benchmark/sessions`, `/v1/benchmark/sessions/{id}`, `/v1/benchmark/questions` |
+
+A página **BenchMark** (`/benchmark`) inicia uma bateria (quantidade de questões, questões em paralelo e a
+configuração de modelo da home), acompanha o progresso pelos frames do WebSocket e lista as baterias; o
+detalhe (`/benchmark/:id`) compara os fluxos e leva ao chat de cada sessão (`/benchmark/:id/sessao/:sessionId`).
+A conexão vive em `BenchmarkRunContext`, acima das rotas: navegar pelo app não interrompe a bateria; cancelar,
+fechar ou recarregar a aba fecha o WebSocket e o backend a encerra como `interrupted`.
 
 Toda comunicação passa por `src/api/` — um único cliente HTTP (`httpClient.ts`) e um único
 cliente WebSocket (`websocketClient.ts`) — e toda resposta entra como `unknown` até passar por um

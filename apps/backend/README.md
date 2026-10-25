@@ -100,6 +100,11 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
   - [`GET /v1/health`](#get-v1health)
 - [Endpoint WebSocket](#endpoint-websocket)
   - [`WS /v1/message/reasoning`](#ws-v1messagereasoning)
+- [Benchmark](#benchmark)
+  - [`WS /v1/benchmark/run`](#ws-v1benchmarkrun)
+  - [`GET /v1/benchmark/sessions`](#get-v1benchmarksessions)
+  - [`GET /v1/benchmark/sessions/{benchmark_session_id}`](#get-v1benchmarksessionsbenchmark_session_id)
+  - [`GET /v1/benchmark/questions`](#get-v1benchmarkquestions)
 - [Garantias do harness e encerramento sem conclusão](#garantias-do-harness-e-encerramento-sem-conclusão)
 - [Contratos (DTOs)](#contratos-dtos)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
@@ -553,7 +558,8 @@ de interrupção. Os limites (`RALPH_*`) e o encerramento sem conclusão são um
 adicional, que nunca promove material reprovado nem sintetiza sem aprovação global. A reserva de
 tokens é uma margem de melhor esforço, não uma garantia de conclusão.
 
-**Fora deste backend.** Não há executor de datasets (MMLU/GPQA) nem cálculo de acurácia aqui.
+**Benchmark.** O único executor de dataset é o [benchmark](#benchmark) de questões de múltipla
+escolha, com avaliação determinística pelo gabarito. Datasets como MMLU/GPQA não fazem parte deste backend.
 
 ---
 
@@ -603,7 +609,13 @@ Ver `.env.example` para o arquivo completo.
 | `RALPH_SESSION_TIMEOUT_SECONDS` | `600` | Tempo máximo de parede da sessão, verificado antes de cada chamada. O timeout HTTP de uma chamada (`LLM_TIMEOUT_SECONDS`) não é limitado ao tempo restante da sessão. |
 | `RALPH_PROMPT_TEMPLATES_PATH` | `src/infra/templates` | Diretório dos templates `.md`. |
 | `RALPH_JSON_PARSE_MAX_RETRIES` | `2` | Retentativas quando o modelo devolve JSON inválido, relatório de verificação inconsistente, lote de tarefas inválido ou completion vazia. Cada retentativa é uma chamada contada. |
-| `RALPH_WEBSOCKET_MAX_MESSAGE_BYTES` | `1048576` | Tamanho máximo do frame recebido no WebSocket. |
+| `RALPH_WEBSOCKET_MAX_MESSAGE_BYTES` | `1048576` | Tamanho máximo do frame recebido no WebSocket (vale também para `WS /v1/benchmark/run`). |
+| `RALPH_BENCHMARK_SESSIONS_STORAGE_PATH` | `./data/benchmark-sessions` | Diretório dos JSON das baterias de benchmark, quando o backend é `json_file`. |
+| `MONGODB_BENCHMARK_SESSIONS_COLLECTION` | `benchmark_sessions` | Coleção das baterias de benchmark no MongoDB. |
+| `RALPH_BENCHMARK_QUESTIONS_PATH` | `src/infra/benchmark/questions` | Dataset de questões: uma pasta por questão, com `enunciado.md` e `alternativa_correta.md`. |
+| `RALPH_BENCHMARK_PROMPT_PATH` | `src/infra/benchmark/prompt.md` | Instrução de resposta anexada ao enunciado de cada questão. |
+| `RALPH_BENCHMARK_MAX_PARALLEL` | `10` | Limite superior de `max_parallel` numa bateria. |
+| `RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS` | `1` | Intervalo máximo entre dois frames `progress` sem mudança de estado, para manter o tempo decorrido atualizado. |
 
 ---
 
@@ -621,14 +633,124 @@ A persistência de sessões é compartilhada pelos endpoints de mensagens e pode
 pelos endpoints `GET /v1/sessions*`.
 
 
-## Sessões de benchmark
+## Benchmark
 
-O script de [`teste benchmark`](../../teste%20benchmark/README.md) roda no container e reutiliza os composition roots da API e o repositório configurado (JSON ou MongoDB). `Session.benchmark_details` usa a classe dedicada `BenchmarkDetails`, com os campos `is_banchmark`, `question_name`, `corret_answer`, `providade_answer`, `inference_mode` (`simple`/`ralph`), `run_id`, `expected_alternative`, `selected_alternative`, `is_correct`, `duration_seconds` e `error`. Os nomes preservam o contrato solicitado.
+O benchmark compara a inferência simples e o Ralph Loop sobre questões de múltipla escolha de
+vestibulares brasileiros. É uma funcionalidade da API: a página **BenchMark** do front-end inicia uma
+bateria pelo WebSocket, acompanha o progresso e consulta as baterias pelos endpoints `GET`.
 
-Sessões comuns têm `is_banchmark=false` e todos os demais campos nulos. Documentos antigos sem `benchmark_details` recebem esse padrão na leitura. A consulta continua pelos endpoints normais de sessões; não existe origem alternativa de arquivos locais. O front-end usa esses metadados para separar Histórico e BenchMark. O gabarito é metadado de avaliação e não participa dos prompts.
+**Dataset.** As questões ficam em [`src/infra/benchmark/questions`](src/infra/benchmark/questions/README.md),
+no mesmo formato de antes: uma pasta por questão, com `enunciado.md` (enunciado e alternativas `A)` a
+`E)`) e `alternativa_correta.md` (letra e texto do gabarito). O dataset inteiro é validado antes de qualquer
+chamada ao modelo. A instrução de resposta, comum aos dois fluxos, fica em
+[`src/infra/benchmark/prompt.md`](src/infra/benchmark/prompt.md). O gabarito nunca entra no prompt.
 
-```bash
-docker compose exec -T backend python /opt/benchmark/executar.py
+**Bateria (`BenchmarkSession`).** Cada execução cria uma `BenchmarkSession`, persistida no mesmo backend
+das sessões (JSON em `RALPH_BENCHMARK_SESSIONS_STORAGE_PATH` ou a coleção
+`MONGODB_BENCHMARK_SESSIONS_COLLECTION`). Ela agrupa a configuração do modelo, o paralelismo, o estado de
+cada questão e o desfecho de cada fluxo (sessão gerada, alternativa escolhida, acerto, falha, tokens e
+duração). Os totais — progresso, tokens, sessões e, por fluxo, acertos, erros, falhas, acurácia, tokens e
+tempo — são derivados das questões. Cada fluxo grava a própria `Session` normal, com `benchmark_details`
+preenchido e `run_id` igual ao `id` da bateria.
+
+**Execução.** As questões escolhidas entram numa fila FIFO, na ordem do dataset, consumida por até
+`max_parallel` workers. Cada worker executa a questão inteira em sequência: inferência simples e depois
+Ralph Loop, pelos mesmos composition roots dos endpoints de mensagem. Falhas de um fluxo (provedor, limite
+do Ralph, resposta sem alternativa) viram erro avaliado e não impedem o outro fluxo nem as próximas
+questões. A bateria é gravada no início, a cada desfecho de fluxo e no encerramento.
+
+**Avaliação.** Determinística: a última linha `RESPOSTA_FINAL: A`, uma letra isolada ou uma alternativa
+completa isolada. Respostas ambíguas, sem alternativa e falhas técnicas contam como erro, com diagnóstico
+em `error`. A acurácia de um fluxo é `correct / executed`.
+
+### `WS /v1/benchmark/run`
+
+1. O cliente abre a conexão e envia **um único frame** de abertura:
+
+   ```json
+   {
+     "question_count": 10,
+     "max_parallel": 5,
+     "llm_model_config": {
+       "provider": "open_router",
+       "provider_config": { "model_name": "deepseek/deepseek-v4-flash-0731" },
+       "max_tokens": 4096,
+       "temperature": 0
+     }
+   }
+   ```
+
+   `question_count` (opcional, `>= 1`) executa as primeiras questões do dataset; ausente, executa todas.
+   `max_parallel` (default `5`) vai de `1` a `RALPH_BENCHMARK_MAX_PARALLEL`. `llm_model_config` é o
+   [`ModelConfigDTO`](#modelconfigdto) dos endpoints de mensagem e vale para todos os fluxos.
+
+2. O servidor envia um frame `{"type": "progress", "benchmark_session": {...}}` a cada mudança (questão ou
+   fluxo começando ou terminando, consumo de tokens do Ralph) e, sem mudanças, a cada
+   `RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS`. `benchmark_session` é o documento completo da bateria (abaixo).
+3. O último frame é `{"type": "result", "benchmark_session": {...}}`, com a bateria encerrada.
+
+| Código | Motivo |
+|---|---|
+| `1000` | Bateria concluída (`status = completed`). |
+| `1003` | Abertura fora do contrato, ou `question_count`/`max_parallel` acima do permitido — precedido de `{"type": "error", "content": "<detalhe>"}`; nenhuma bateria é criada. |
+| `1009` | Frame de abertura maior que `RALPH_WEBSOCKET_MAX_MESSAGE_BYTES`. |
+| `1011` | Bateria encerrada sem concluir (`failed`, depois do frame `result`) ou erro fora do caso de uso (frame `error`). |
+
+**Desconexão.** Se o cliente fecha a conexão, a bateria é interrompida: os workers são cancelados, as
+sessões em execução são encerradas como `failed`, as questões em execução ficam `interrupted`, as que
+nem começaram ficam `pending` e a bateria é gravada com `status = interrupted`.
+
+**Documento da bateria** (o mesmo de `GET /v1/benchmark/sessions/{id}`):
+
+```json
+{
+  "_id": "bench_3f2a…", "id": "bench_3f2a…",
+  "status": "running",
+  "model_name": "deepseek/deepseek-v4-flash-0731", "provider": "open_router",
+  "max_tokens": 4096, "temperature": 0, "max_parallel": 5, "question_count": 10,
+  "created_at": "2026-10-25T12:00:00+00:00", "updated_at": "…", "finished_at": null,
+  "wall_time_ms": 61250, "error": null,
+  "progress": { "total": 10, "pending": 3, "running": 5, "finished": 2, "interrupted": 0 },
+  "total_tokens": 48211,
+  "session_ids": ["sess_…", "sess_…"],
+  "summary": {
+    "simple": { "executed": 7, "correct": 4, "wrong": 3, "failures": 0, "accuracy": 0.571, "total_tokens": 5120, "duration_seconds": 21.4 },
+    "ralph":  { "executed": 2, "correct": 2, "wrong": 0, "failures": 0, "accuracy": 1.0, "total_tokens": 38000, "duration_seconds": 95.0 }
+  },
+  "questions": [
+    {
+      "question_id": "FISICA_ENEM_2023_AZUL_Q108", "expected_alternative": "D",
+      "status": "running", "current_mode": "ralph", "current_tokens": 5091, "total_tokens": 5731,
+      "simple": { "mode": "simple", "session_id": "sess_…", "selected_alternative": "D", "is_correct": true,
+                  "error": null, "duration_seconds": 3.2, "total_tokens": 640 },
+      "ralph": null
+    }
+  ]
+}
 ```
 
-Os relatórios ficam em `/app/data/benchmark-reports`, no volume persistente do backend.
+`status` da bateria: `running`, `completed`, `failed` (erro técnico da bateria, como persistência
+indisponível; detalhe em `error`) ou `interrupted`. `status` da questão: `pending`, `running`, `finished`
+ou `interrupted`. `total_tokens` inclui o consumo já informado pelos fluxos em execução.
+
+### `GET /v1/benchmark/sessions`
+
+Lista as baterias, da mais recente para a mais antiga: `{ "benchmark_sessions": [<documento>, ...] }`.
+
+### `GET /v1/benchmark/sessions/{benchmark_session_id}`
+
+Documento de uma bateria. `404` quando não existe; `400` para identificador ou documento persistido
+inválido; `500` para outras falhas. As sessões de cada fluxo são consultadas por `GET /v1/sessions/{id}`.
+
+### `GET /v1/benchmark/questions`
+
+Questões do dataset, na ordem de execução, e o limite de paralelismo:
+`{ "question_ids": ["FISICA_ENEM_2023_AZUL_Q108", ...], "max_parallel_limit": 10 }`.
+
+### Metadados nas sessões
+
+`Session.benchmark_details` usa a classe `BenchmarkDetails`, com os campos `is_banchmark`, `question_name`,
+`corret_answer`, `providade_answer`, `inference_mode` (`simple`/`ralph`), `run_id` (o `id` da bateria),
+`expected_alternative`, `selected_alternative`, `is_correct`, `duration_seconds` e `error`. Os nomes preservam o
+contrato solicitado. Sessões comuns têm `is_banchmark=false` e os demais campos nulos; documentos antigos
+sem `benchmark_details` recebem esse padrão na leitura.

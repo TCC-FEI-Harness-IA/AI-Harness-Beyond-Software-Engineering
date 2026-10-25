@@ -4,6 +4,7 @@ import {
   formatDateTime,
   formatDuration,
   formatRelative,
+  formatPercent,
   formatTemperature,
   formatTokens,
   truncate,
@@ -84,5 +85,13 @@ describe('truncate', () => {
 describe('formatTemperature', () => {
   it('formata com vírgula decimal', () => {
     expect(formatTemperature(0.3)).toBe('0,3')
+  })
+})
+
+describe('formatPercent', () => {
+  it('converte a fração em porcentagem pt-BR com até uma casa', () => {
+    expect(formatPercent(0.5)).toBe('50%')
+    expect(formatPercent(1 / 3)).toBe('33,3%')
+    expect(formatPercent(0)).toBe('0%')
   })
 })

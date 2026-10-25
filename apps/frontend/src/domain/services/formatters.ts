@@ -15,6 +15,7 @@ const secondsFormatter = new Intl.NumberFormat(LOCALE, {
 })
 const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, { dateStyle: 'short', timeStyle: 'short' })
 const relativeTimeFormatter = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' })
+const percentFormatter = new Intl.NumberFormat(LOCALE, { style: 'percent', maximumFractionDigits: 1 })
 const temperatureFormatter = new Intl.NumberFormat(LOCALE, {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
@@ -77,4 +78,9 @@ export function truncate(text: string, max: number): string {
 
 export function formatTemperature(temperature: number): string {
   return temperatureFormatter.format(temperature)
+}
+
+/** Fração de 0 a 1 como porcentagem pt-BR (`0.5` → `50%`). */
+export function formatPercent(ratio: number): string {
+  return percentFormatter.format(ratio)
 }

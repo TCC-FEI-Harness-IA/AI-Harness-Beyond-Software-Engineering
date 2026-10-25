@@ -20,6 +20,15 @@ def test_sessions_collection_usa_o_banco_e_a_colecao_configurados() -> None:
     assert colecao.database.name == "banco_de_teste"
 
 
+def test_benchmark_sessions_collection_usa_o_banco_e_a_colecao_configurados() -> None:
+    adapter = _build_adapter(mongodb_database="banco_de_teste", mongodb_benchmark_sessions_collection="baterias")
+
+    colecao = adapter.benchmark_sessions_collection
+
+    assert colecao.name == "baterias"
+    assert colecao.database.name == "banco_de_teste"
+
+
 def test_cliente_e_construido_com_a_uri_configurada(monkeypatch: pytest.MonkeyPatch) -> None:
     uris_recebidas: list[str] = []
 

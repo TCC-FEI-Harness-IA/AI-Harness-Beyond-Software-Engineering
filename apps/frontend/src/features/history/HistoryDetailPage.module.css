@@ -14,3 +14,32 @@
   color: var(--color-text);
   font-size: var(--text-sm);
 }
+
+.benchmarkHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.backLink {
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.benchmarkTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  letter-spacing: var(--tracking-tight);
+}
+
+.benchmarkMeta {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}

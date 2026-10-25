@@ -48,6 +48,12 @@ _ENV_VARS = (
     "RALPH_PROMPT_TEMPLATES_PATH",
     "RALPH_JSON_PARSE_MAX_RETRIES",
     "RALPH_WEBSOCKET_MAX_MESSAGE_BYTES",
+    "RALPH_BENCHMARK_SESSIONS_STORAGE_PATH",
+    "MONGODB_BENCHMARK_SESSIONS_COLLECTION",
+    "RALPH_BENCHMARK_QUESTIONS_PATH",
+    "RALPH_BENCHMARK_PROMPT_PATH",
+    "RALPH_BENCHMARK_MAX_PARALLEL",
+    "RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS",
 )
 
 
@@ -252,6 +258,31 @@ def test_le_do_ambiente_as_variaveis_de_mongodb(monkeypatch: pytest.MonkeyPatch)
     assert settings.mongodb_sessions_collection == "colecao_de_teste"
 
 
+def test_aplica_os_defaults_do_benchmark_quando_ausentes() -> None:
+    settings = Settings()
+
+    assert settings.ralph_benchmark_sessions_storage_path == "./data/benchmark-sessions"
+    assert settings.mongodb_benchmark_sessions_collection == "benchmark_sessions"
+    assert settings.ralph_benchmark_questions_path == "src/infra/benchmark/questions"
+    assert settings.ralph_benchmark_prompt_path == "src/infra/benchmark/prompt.md"
+    assert settings.ralph_benchmark_max_parallel == 10
+    assert settings.ralph_benchmark_progress_interval_seconds == 1.0
+
+
+def test_le_do_ambiente_as_variaveis_de_benchmark(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RALPH_BENCHMARK_SESSIONS_STORAGE_PATH", "/tmp/baterias")
+    monkeypatch.setenv("MONGODB_BENCHMARK_SESSIONS_COLLECTION", "  baterias  ")
+    monkeypatch.setenv("RALPH_BENCHMARK_QUESTIONS_PATH", "/tmp/questoes")
+    monkeypatch.setenv("RALPH_BENCHMARK_PROMPT_PATH", "/tmp/prompt.md")
+
+    settings = Settings()
+
+    assert settings.ralph_benchmark_sessions_storage_path == "/tmp/baterias"
+    assert settings.mongodb_benchmark_sessions_collection == "baterias"
+    assert settings.ralph_benchmark_questions_path == "/tmp/questoes"
+    assert settings.ralph_benchmark_prompt_path == "/tmp/prompt.md"
+
+
 def test_log_level_e_normalizado_para_maiusculas(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LOG_LEVEL", "  debug  ")
 
@@ -273,6 +304,7 @@ def test_log_level_e_normalizado_para_maiusculas(monkeypatch: pytest.MonkeyPatch
         ("RALPH_SESSION_TIMEOUT_SECONDS", "ralph_session_timeout_seconds"),
         ("RALPH_JSON_PARSE_MAX_RETRIES", "ralph_json_parse_max_retries"),
         ("RALPH_WEBSOCKET_MAX_MESSAGE_BYTES", "ralph_websocket_max_message_bytes"),
+        ("RALPH_BENCHMARK_MAX_PARALLEL", "ralph_benchmark_max_parallel"),
     ],
 )
 def test_converte_para_inteiro(monkeypatch: pytest.MonkeyPatch, var_name: str, attribute: str) -> None:
@@ -295,6 +327,7 @@ def test_valor_nao_inteiro_levanta_erro_citando_a_variavel(monkeypatch: pytest.M
     [
         ("LLM_TEMPERATURE", "llm_temperature"),
         ("LLM_TIMEOUT_SECONDS", "llm_timeout_seconds"),
+        ("RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS", "ralph_benchmark_progress_interval_seconds"),
     ],
 )
 def test_converte_para_decimal(monkeypatch: pytest.MonkeyPatch, var_name: str, attribute: str) -> None:

@@ -18,7 +18,6 @@ services:
     volumes:
       - ./apps/backend:/app
       - backend_data:/app/data
-      - "./teste benchmark:/opt/benchmark:ro"
     depends_on:
       - mongo
     networks:

@@ -1,0 +1,44 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.field input {
+  height: 34px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.field input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.field small {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}

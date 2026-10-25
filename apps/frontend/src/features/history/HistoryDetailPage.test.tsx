@@ -8,6 +8,7 @@ import type * as SessionApiModule from '@/api/sessionApi'
 import { AppShell } from '@/components/layout/AppShell'
 import type { SessionDocument } from '@/domain/types/sessionDocument'
 import { ROUTES } from '@/router/routes'
+import { BenchmarkRunProvider } from '@/state/BenchmarkRunContext'
 import { SidebarSlotProvider, useSidebarSlotValue } from '@/state/SidebarSlotContext'
 import { ThemeProvider } from '@/state/ThemeContext'
 import { ViewModeProvider } from '@/state/ViewModeContext'
@@ -147,6 +148,7 @@ function renderDetail(sessionId: string): void {
     <MemoryRouter initialEntries={[`/historico/${sessionId}`]}>
       <ThemeProvider>
         <ViewModeProvider>
+          <BenchmarkRunProvider>
           <SidebarSlotProvider>
             <SlotBridge>
               <Routes>
@@ -154,6 +156,7 @@ function renderDetail(sessionId: string): void {
               </Routes>
             </SlotBridge>
           </SidebarSlotProvider>
+          </BenchmarkRunProvider>
         </ViewModeProvider>
       </ThemeProvider>
     </MemoryRouter>,
