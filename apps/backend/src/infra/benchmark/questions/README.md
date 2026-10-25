@@ -1,40 +1,29 @@
 # Questões de benchmark
 
-15 questões de múltipla escolha do ENEM 2023, aplicação regular, segundo dia, caderno 7 (azul): cinco de Física, cinco de Química e cinco de Matemática.
+90 questões reais de múltipla escolha: 30 de Física, 30 de Matemática e 30 de Química. As 15 questões preexistentes do ENEM 2023 foram preservadas byte a byte. As 75 novas questões provêm de provas realizadas do ENEM, FUVEST, ITA e UNICAMP, com respostas verificadas nos gabaritos oficiais definitivos.
 
-Cada subpasta identifica a disciplina, o exame, o ano, a cor do caderno e o número original da questão. Ela contém exatamente dois arquivos:
+| Disciplina | ENEM | FUVEST | ITA | UNICAMP | Total |
+| --- | --- | --- | --- | --- | --- |
+| Física | 17 | 1 | 9 | 3 | 30 |
+| Matemática | 16 | 1 | 8 | 5 | 30 |
+| Química | 14 | 1 | 11 | 4 | 30 |
+| Total | 47 | 3 | 28 | 12 | 90 |
 
-- `enunciado.md`: enunciado e cinco alternativas originais em Markdown.
-- `alternativa_correta.md`: somente a letra e o texto da alternativa indicada pelo gabarito oficial.
+As edições utilizadas são ENEM 2022, 2023 e 2024; FUVEST 2024; ITA 2024 e 2025; UNICAMP 2025. O ano no identificador é o da edição de ingresso, que pode diferir do ano de realização da prova. Cada disciplina contém questões dos quatro vestibulares e de pelo menos três anos de edição.
 
-Os textos foram conferidos nas páginas originais do PDF. Foram preservados a redação, os dados, a pontuação e a ordem das alternativas. A diagramação foi convertida para Markdown: títulos, parágrafos sem as quebras de linha de impressão, tabelas, itálico, índices e expoentes Unicode e expressões matemáticas em LaTeX. As letras das alternativas são apresentadas como `A)` a `E)`. As questões selecionadas não dependem de imagens externas. A nomenclatura dos compostos da questão 118 foi mantida conforme impressa na prova.
+Cada subpasta contém exatamente dois arquivos:
 
-## Fontes oficiais
+- `enunciado.md`: enunciado completo e alternativas originais em Markdown.
+- `alternativa_correta.md`: somente a letra e o texto exato da alternativa indicada pelo gabarito oficial.
 
-Autoria: Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira (Inep).
+Os identificadores originais foram mantidos. Novos identificadores seguem `DISCIPLINA_EXAME_ANO_[F1_]CADERNO_QNNN`; `F1` identifica a primeira fase, `UNICA` o caderno único do ITA, `V` a versão da FUVEST e `QZ` as versões equivalentes Q e Z da UNICAMP. O ENEM usa o segundo dia da aplicação regular, caderno 7 azul.
 
-- [Página de provas e gabaritos do ENEM 2023](https://www.gov.br/inep/pt-br/areas-de-atuacao/avaliacao-e-exames-educacionais/enem/provas-e-gabaritos/2023).
-- [Prova: segundo dia, caderno 7, azul](https://download.inep.gov.br/enem/provas_e_gabaritos/2023_PV_impresso_D2_CD7.pdf).
-- [Gabarito oficial: segundo dia, caderno 7, azul](https://download.inep.gov.br/enem/provas_e_gabaritos/2023_GB_impresso_D2_CD7.pdf).
+O carregador associa os dois arquivos pela pasta, ordena os identificadores e aceita quatro (`A)` a `D)`) ou cinco (`A)` a `E)`) alternativas consecutivas. As 12 questões da UNICAMP preservam suas quatro alternativas originais. Os gabaritos e metadados ficam fora do enunciado enviado ao modelo. Não há limite fixo de 15 questões: a quantidade permitida é determinada pelo dataset carregado.
 
-A página oficial informa a licença [Creative Commons Atribuição-SemDerivações 3.0 Não Adaptada](https://creativecommons.org/licenses/by-nd/3.0/deed.pt_BR). Esta transcrição altera o formato de apresentação para Markdown.
+As quebras de impressão foram substituídas por parágrafos, tabelas Markdown, índices e expoentes Unicode e fórmulas LaTeX. Os textos, valores, unidades e alternativas foram conferidos nas páginas dos PDFs oficiais, incluindo as continuações em outras páginas. Foram selecionadas questões que dispensam imagens ou gráficos; as tabelas necessárias foram integralmente transcritas. Dados gerais e textos comuns da prova necessários para interpretar questões isoladas foram incluídos no próprio enunciado. Na prova do ITA 2024, a unidade de G foi preservada como impressa, inclusive o expoente `kg³`.
 
-Consulta e conferência: 24 de outubro de 2026. A página indicada abaixo é a numeração impressa do caderno, que coincide com a página do PDF.
+A procedência individual, as páginas, os links oficiais e as versões dos gabaritos estão no [catálogo de fontes](../sources/CATALOG.md) e no [manifesto estruturado](../sources/manifest.json). As cópias oficiais completas e seus hashes SHA-256 estão em [sources](../sources/README.md), fora do diretório percorrido pelo carregador. O [registro dos arquivos preexistentes](../sources/preserved_originals.json) permite verificar sua preservação.
 
-| Pasta | Disciplina | Questão original | Página da prova |
-| --- | --- | --- | --- |
-| [FISICA_ENEM_2023_AZUL_Q108](FISICA_ENEM_2023_AZUL_Q108/enunciado.md) | Física | 108 | 5 |
-| [FISICA_ENEM_2023_AZUL_Q112](FISICA_ENEM_2023_AZUL_Q112/enunciado.md) | Física | 112 | 7 |
-| [FISICA_ENEM_2023_AZUL_Q113](FISICA_ENEM_2023_AZUL_Q113/enunciado.md) | Física | 113 | 7 |
-| [FISICA_ENEM_2023_AZUL_Q122](FISICA_ENEM_2023_AZUL_Q122/enunciado.md) | Física | 122 | 10 |
-| [FISICA_ENEM_2023_AZUL_Q124](FISICA_ENEM_2023_AZUL_Q124/enunciado.md) | Física | 124 | 11 |
-| [QUIMICA_ENEM_2023_AZUL_Q094](QUIMICA_ENEM_2023_AZUL_Q094/enunciado.md) | Química | 94 | 2 |
-| [QUIMICA_ENEM_2023_AZUL_Q096](QUIMICA_ENEM_2023_AZUL_Q096/enunciado.md) | Química | 96 | 2 |
-| [QUIMICA_ENEM_2023_AZUL_Q102](QUIMICA_ENEM_2023_AZUL_Q102/enunciado.md) | Química | 102 | 4 |
-| [QUIMICA_ENEM_2023_AZUL_Q118](QUIMICA_ENEM_2023_AZUL_Q118/enunciado.md) | Química | 118 | 9 |
-| [QUIMICA_ENEM_2023_AZUL_Q126](QUIMICA_ENEM_2023_AZUL_Q126/enunciado.md) | Química | 126 | 12 |
-| [MATEMATICA_ENEM_2023_AZUL_Q137](MATEMATICA_ENEM_2023_AZUL_Q137/enunciado.md) | Matemática | 137 | 16 |
-| [MATEMATICA_ENEM_2023_AZUL_Q138](MATEMATICA_ENEM_2023_AZUL_Q138/enunciado.md) | Matemática | 138 | 16 |
-| [MATEMATICA_ENEM_2023_AZUL_Q139](MATEMATICA_ENEM_2023_AZUL_Q139/enunciado.md) | Matemática | 139 | 17 |
-| [MATEMATICA_ENEM_2023_AZUL_Q141](MATEMATICA_ENEM_2023_AZUL_Q141/enunciado.md) | Matemática | 141 | 18 |
-| [MATEMATICA_ENEM_2023_AZUL_Q143](MATEMATICA_ENEM_2023_AZUL_Q143/enunciado.md) | Matemática | 143 | 18 |
+A autoria das questões pertence às respectivas instituições. A página oficial do Inep informa a licença [Creative Commons Atribuição-SemDerivações 3.0 Não Adaptada](https://creativecommons.org/licenses/by-nd/3.0/deed.pt_BR). A transcrição muda a apresentação para Markdown, preservando o conteúdo.
+
+Consulte os comandos e resultados da conferência em [VALIDATION.md](../VALIDATION.md).

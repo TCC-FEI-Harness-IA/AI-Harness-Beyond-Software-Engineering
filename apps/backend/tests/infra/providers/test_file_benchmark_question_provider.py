@@ -26,14 +26,15 @@ def _gravar(diretorio: Path, nome: str, enunciado: str | None = None, gabarito: 
     (pasta / "alternativa_correta.md").write_text(gabarito, encoding="utf-8")
 
 
-def test_dataset_real_tem_quinze_questoes_validas_em_ordem() -> None:
+def test_dataset_real_tem_noventa_questoes_validas_em_ordem() -> None:
     provider = FileBenchmarkQuestionProvider(settings=Settings(), logger=logging.getLogger("teste"))
 
     questoes = provider.list_questions()
 
-    assert len(questoes) == 15
+    assert len(questoes) == 90
     assert [item.id for item in questoes] == sorted(item.id for item in questoes)
-    assert all(len(item.options) == 5 for item in questoes)
+    assert all(len(item.options) in (4, 5) for item in questoes)
+    assert sum(len(item.options) == 4 for item in questoes) == 12
     assert "RESPOSTA_FINAL: LETRA" in provider.answer_instruction()
 
 
@@ -77,8 +78,32 @@ def test_questao_sem_gabarito_e_recusada(tmp_path: Path) -> None:
         _provider(tmp_path).list_questions()
 
 
-def test_questao_sem_as_cinco_alternativas_e_recusada(tmp_path: Path) -> None:
+def test_questao_com_menos_de_quatro_alternativas_e_recusada(tmp_path: Path) -> None:
     _gravar(tmp_path, "Q1", enunciado="Pergunta\n\nA) um\nB) dois")
+
+    with pytest.raises(ValueError, match="Alternativas ou gabarito"):
+        _provider(tmp_path).list_questions()
+
+
+def test_carrega_quatro_alternativas_originais_sem_criar_uma_quinta(tmp_path: Path) -> None:
+    _gravar(tmp_path, "UNICAMP", enunciado="Pergunta\n\nA) um\nB) dois\nC) três\nD) quatro", gabarito="D) quatro")
+
+    questoes = _provider(tmp_path).list_questions()
+
+    assert questoes[0].options == {"A": "um", "B": "dois", "C": "três", "D": "quatro"}
+    assert questoes[0].expected_answer == "D) quatro"
+
+
+def test_gabarito_e_em_questao_com_quatro_alternativas_e_recusado(tmp_path: Path) -> None:
+    _gravar(tmp_path, "UNICAMP", enunciado="Pergunta\n\nA) um\nB) dois\nC) três\nD) quatro", gabarito="E) cinco")
+
+    with pytest.raises(ValueError, match="Texto do gabarito difere"):
+        _provider(tmp_path).list_questions()
+
+
+@pytest.mark.parametrize("alternativas", ["A) um\nB) dois\nD) quatro\nE) cinco", "A) um\nB) dois\nB) dois\nD) quatro"])
+def test_alternativas_com_lacunas_ou_letras_duplicadas_sao_recusadas(tmp_path: Path, alternativas: str) -> None:
+    _gravar(tmp_path, "INVALIDA", enunciado=f"Pergunta\n\n{alternativas}")
 
     with pytest.raises(ValueError, match="Alternativas ou gabarito"):
         _provider(tmp_path).list_questions()
