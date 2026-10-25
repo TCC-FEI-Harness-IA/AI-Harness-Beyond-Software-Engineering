@@ -40,10 +40,13 @@ O front fala com o backend por dois transportes:
 | Histórico | HTTP `GET` | `/v1/sessions`, `/v1/sessions/{id}` |
 | BenchMark — execução da bateria | WebSocket | `/v1/benchmark/run` |
 | BenchMark — baterias e dataset | HTTP `GET` | `/v1/benchmark/sessions`, `/v1/benchmark/sessions/{id}`, `/v1/benchmark/questions` |
+| BenchMark — exportar erros do Ralph Loop | HTTP `GET` | `/v1/benchmark/sessions/{id}/ralph-loop-errors/export` |
 
 A página **BenchMark** (`/benchmark`) inicia uma bateria (quantidade de questões, questões em paralelo e a
 configuração de modelo da home), acompanha o progresso pelos frames do WebSocket e lista as baterias; o
 detalhe (`/benchmark/:id`) compara os fluxos e leva ao chat de cada sessão (`/benchmark/:id/sessao/:sessionId`).
+O detalhe também traz o botão **Exportar erros do Ralph Loop**, que baixa um ZIP com as questões erradas no
+Ralph Loop; fica desabilitado enquanto a bateria executa ou quando nenhuma questão errou nesse fluxo.
 A conexão vive em `BenchmarkRunContext`, acima das rotas: navegar pelo app não interrompe a bateria; cancelar,
 fechar ou recarregar a aba fecha o WebSocket e o backend a encerra como `interrupted`.
 

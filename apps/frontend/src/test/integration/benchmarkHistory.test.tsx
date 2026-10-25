@@ -68,7 +68,12 @@ beforeEach(() => {
   vi.stubGlobal('WebSocket', FakeWebSocket)
 })
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+  Reflect.deleteProperty(URL, 'createObjectURL')
+  Reflect.deleteProperty(URL, 'revokeObjectURL')
+})
 
 describe('Benchmark como funcionalidade da aplicação', () => {
   it('inicia uma bateria, monitora o progresso ao vivo e lista a bateria ao terminar', async () => {
@@ -222,6 +227,41 @@ describe('Benchmark como funcionalidade da aplicação', () => {
 
     await user.click(screen.getByRole('link', { name: '← Voltar à bateria' }))
     expect(await screen.findByRole('heading', { name: /Bateria de/ })).toBeInTheDocument()
+  })
+
+  it('o detalhe de uma bateria encerrada exporta os erros do Ralph Loop em ZIP', async () => {
+    const user = userEvent.setup()
+    const battery = completedBenchmarkSession()
+    battery.questions[1]!.ralph = outcome({ mode: 'ralph', session_id: 'sess_q2_ralph', is_correct: false })
+    const { fetchMock } = mockBackend([battery])
+    const original = fetchMock.getMockImplementation()!
+    const download = vi.fn()
+    const exportCalls: string[] = []
+    fetchMock.mockImplementation((url: string) => {
+      if (!url.endsWith('/ralph-loop-errors/export')) return original(url)
+      exportCalls.push(new URL(url).pathname)
+      return Promise.resolve({ status: 200, blob: () => Promise.resolve(new Blob(['PK'])) } as Response)
+    })
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:zip', revokeObjectURL: vi.fn() }))
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      download(this.download)
+    })
+    renderApp('/benchmark/bench_1')
+
+    await user.click(await screen.findByRole('button', { name: 'Exportar erros do Ralph Loop' }))
+
+    await waitFor(() =>
+      expect(download).toHaveBeenCalledWith('benchmark-session-bench_1-ralph-loop-errors.zip'),
+    )
+    expect(exportCalls).toEqual(['/v1/benchmark/sessions/bench_1/ralph-loop-errors/export'])
+  })
+
+  it('o detalhe de uma bateria sem erros no Ralph Loop não oferece o download', async () => {
+    mockBackend([completedBenchmarkSession()])
+    renderApp('/benchmark/bench_1')
+
+    expect(await screen.findByRole('button', { name: 'Exportar erros do Ralph Loop' })).toBeDisabled()
+    expect(screen.getByText(/Nenhuma questão errou no Ralph Loop/)).toBeInTheDocument()
   })
 
   it('bateria inexistente mostra o estado de não encontrada', async () => {

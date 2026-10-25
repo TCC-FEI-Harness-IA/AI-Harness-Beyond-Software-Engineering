@@ -3,9 +3,11 @@ import { benchmarkSession } from '@/test/fixtures/benchmarkSession'
 import { ContractError } from './errors/ContractError'
 import {
   buildBenchmarkRunPayload,
+  exportBenchmarkRalphErrors,
   getBenchmarkDataset,
   getBenchmarkSession,
   listBenchmarkSessions,
+  ralphErrorsArchiveName,
 } from './benchmarkApi'
 
 const CONFIG = {
@@ -72,5 +74,26 @@ describe('buildBenchmarkRunPayload', () => {
   ])('recusa parâmetros inválidos (%#)', (params, field) => {
     expect(() => buildBenchmarkRunPayload(params)).toThrow(ContractError)
     expect(() => buildBenchmarkRunPayload(params)).toThrow(field)
+  })
+})
+
+describe('exportBenchmarkRalphErrors', () => {
+  it('baixa o ZIP da bateria com o identificador codificado', async () => {
+    const zip = new Blob(['PK'], { type: 'application/zip' })
+    const fetchMock = vi.fn().mockResolvedValue({ status: 200, blob: () => Promise.resolve(zip) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await exportBenchmarkRalphErrors('bench 1')).toBe(zip)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      'http://localhost:8000/v1/benchmark/sessions/bench%201/ralph-loop-errors/export',
+    )
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('ralphErrorsArchiveName', () => {
+  it('segue o nome sugerido pelo backend, trocando caracteres inseguros', () => {
+    expect(ralphErrorsArchiveName('bench_1')).toBe('benchmark-session-bench_1-ralph-loop-errors.zip')
+    expect(ralphErrorsArchiveName('a/b c')).toBe('benchmark-session-a_b_c-ralph-loop-errors.zip')
   })
 })

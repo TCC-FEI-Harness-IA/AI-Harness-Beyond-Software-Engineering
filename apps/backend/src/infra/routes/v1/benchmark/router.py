@@ -1,14 +1,17 @@
 from typing import Any, AsyncGenerator
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Response, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 from starlette.websockets import WebSocketState
 
+from src.domain.errors.benchmark_session_not_finished_error import BenchmarkSessionNotFinishedError
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
 from src.domain.errors.invalid_benchmark_request_error import InvalidBenchmarkRequestError
+from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
 from src.infra.config.settings import Settings
 from src.infra.routes.v1.benchmark.dtos.benchmark_frame_dto import BenchmarkFrameDTO
 from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
+from src.infra.startups.benchmark_export_startup import BenchmarkExportStartup
 from src.infra.startups.benchmark_query_startup import BenchmarkQueryStartup
 from src.infra.startups.benchmark_run_startup import BenchmarkRunStartup
 
@@ -67,6 +70,37 @@ async def get_benchmark_session(benchmark_session_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get(
+    "/sessions/{benchmark_session_id}/ralph-loop-errors/export",
+    status_code=200,
+    response_class=Response,
+    responses={
+        200: {"content": {"application/zip": {}}, "description": "ZIP com uma pasta por questão errada no Ralph Loop"},
+        400: {"description": "Bad Request"},
+        404: {"description": "Not Found"},
+        409: {"description": "Bateria em execução ou sem erros do Ralph Loop para exportar"},
+        500: {"description": "Internal Server Error"},
+    },
+)
+async def export_ralph_loop_errors(benchmark_session_id: str) -> Response:
+    """Baixa, em ZIP, as questões erradas no Ralph Loop de uma bateria encerrada."""
+    try:
+        archive = await BenchmarkExportStartup().export_ralph_errors(benchmark_session_id=benchmark_session_id)
+    except BenchmarkSessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (BenchmarkSessionNotFinishedError, NoBenchmarkErrorsToExportError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return Response(
+        content=archive.content,
+        media_type=archive.media_type,
+        headers={"Content-Disposition": f'attachment; filename="{archive.filename}"'},
+    )
 
 
 @router.websocket("/run")

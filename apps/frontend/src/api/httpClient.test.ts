@@ -156,3 +156,35 @@ describe('httpClient', () => {
     expect(error).not.toBeInstanceOf(DOMException)
   })
 })
+
+describe('httpClient.getBlob', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('devolve o corpo da resposta como Blob, sem interpretá-lo como JSON', async () => {
+    const zip = new Blob(['PK'], { type: 'application/zip' })
+    const fetchMock = vi.fn().mockResolvedValue({ status: 200, blob: () => Promise.resolve(zip) })
+    vi.stubGlobal('fetch', fetchMock)
+    const { httpClient } = await importHttpClient()
+
+    expect(await httpClient.getBlob('/arquivo.zip')).toBe(zip)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://localhost:8000/v1/arquivo.zip')
+  })
+
+  it('traduz o status de erro em HttpError com o detail do servidor', async () => {
+    const detail = 'A bateria ainda está em execução.'
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(409, JSON.stringify({ detail }))))
+    const { httpClient, HttpError } = await importHttpClient()
+
+    const error: unknown = await httpClient.getBlob('/arquivo.zip').catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(HttpError)
+    expect(error).toMatchObject({
+      status: 409,
+      detail,
+      userMessage: 'A operação não é possível no estado atual do recurso.',
+    })
+  })
+})

@@ -4,6 +4,7 @@
 const HTTP_STATUS_MESSAGE: Record<number, string> = {
   400: 'O registro deste chat está corrompido.',
   404: 'Chat não encontrado.',
+  409: 'A operação não é possível no estado atual do recurso.',
   422: 'Os parâmetros enviados não são aceitos pelo servidor.',
   500: 'O servidor falhou ao processar a requisição.',
 }

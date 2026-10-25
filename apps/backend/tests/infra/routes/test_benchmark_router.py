@@ -7,11 +7,14 @@ from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketTestSession
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
+from src.domain.errors.benchmark_session_not_finished_error import BenchmarkSessionNotFinishedError
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
 from src.domain.errors.invalid_benchmark_request_error import InvalidBenchmarkRequestError
+from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
 from src.infra.routes.v1.benchmark import router as benchmark_router_module
 from src.infra.routes.v1.benchmark.dtos.benchmark_frame_dto import BenchmarkFrameDTO
 from src.infra.routes.v1.benchmark.router import run_benchmark
+from src.infra.services.benchmark_ralph_errors_archive_builder import BenchmarkArchive
 from src.main import create_app
 
 
@@ -69,6 +72,21 @@ class _QueryStartupQueLevanta(_FakeQueryStartup):
 
     async def get_benchmark_session_document(self, benchmark_session_id: str) -> dict[str, Any]:
         raise _QueryStartupQueLevanta.lookup_error
+
+
+class _FakeExportStartup:
+    """Dublê do startup de exportação, com arquivo e falha programáveis."""
+
+    error: Exception | None = None
+    requested: list[str] = []
+
+    async def export_ralph_errors(self, benchmark_session_id: str) -> BenchmarkArchive:
+        _FakeExportStartup.requested.append(benchmark_session_id)
+        if _FakeExportStartup.error is not None:
+            raise _FakeExportStartup.error
+        return BenchmarkArchive(
+            filename=f"benchmark-session-{benchmark_session_id}-ralph-loop-errors.zip", content=b"PK-zip"
+        )
 
 
 def _abertura(**sobrescritas: Any) -> dict[str, Any]:
@@ -139,6 +157,50 @@ def test_erros_conhecidos_da_consulta_viram_404_e_400(
     monkeypatch.setattr(benchmark_router_module, "BenchmarkQueryStartup", _QueryStartupQueLevanta)
 
     resposta = client.get("/v1/benchmark/sessions/bench_9")
+
+    assert resposta.status_code == status
+    assert resposta.json()["detail"] == str(erro)
+
+
+# ── Exportação ───────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def exportacao(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    _FakeExportStartup.error = None
+    _FakeExportStartup.requested = []
+    monkeypatch.setattr(benchmark_router_module, "BenchmarkExportStartup", _FakeExportStartup)
+    return client
+
+
+def test_exportacao_devolve_o_zip_como_anexo(exportacao: TestClient) -> None:
+    resposta = exportacao.get("/v1/benchmark/sessions/bench_7/ralph-loop-errors/export")
+
+    assert resposta.status_code == 200
+    assert resposta.content == b"PK-zip"
+    assert resposta.headers["content-type"] == "application/zip"
+    assert resposta.headers["content-disposition"] == (
+        'attachment; filename="benchmark-session-bench_7-ralph-loop-errors.zip"'
+    )
+    assert _FakeExportStartup.requested == ["bench_7"]
+
+
+@pytest.mark.parametrize(
+    ("erro", "status"),
+    [
+        (BenchmarkSessionNotFoundError("bench_9"), 404),
+        (BenchmarkSessionNotFinishedError("bench_9"), 409),
+        (NoBenchmarkErrorsToExportError("bench_9"), 409),
+        (ValueError("identificador inválido"), 400),
+        (RuntimeError("disco fora do ar"), 500),
+    ],
+)
+def test_falhas_da_exportacao_viram_o_status_http_correspondente(
+    exportacao: TestClient, erro: Exception, status: int
+) -> None:
+    _FakeExportStartup.error = erro
+
+    resposta = exportacao.get("/v1/benchmark/sessions/bench_9/ralph-loop-errors/export")
 
     assert resposta.status_code == status
     assert resposta.json()["detail"] == str(erro)

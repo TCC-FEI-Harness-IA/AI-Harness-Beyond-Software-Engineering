@@ -43,6 +43,25 @@ export function getBenchmarkSession(
   )
 }
 
+const RALPH_ERRORS_EXPORT_SEGMENT = 'ralph-loop-errors/export'
+const UNSAFE_FILENAME_CHARS = /[^A-Za-z0-9_.-]/g
+
+/** `GET /v1/benchmark/sessions/{id}/ralph-loop-errors/export` — ZIP com as questões erradas no Ralph Loop. */
+export function exportBenchmarkRalphErrors(
+  benchmarkSessionId: string,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  return httpClient.getBlob(
+    `${SESSIONS_PATH}/${encodeURIComponent(benchmarkSessionId)}/${RALPH_ERRORS_EXPORT_SEGMENT}`,
+    signal,
+  )
+}
+
+/** Mesmo nome que o backend sugere em `Content-Disposition`. */
+export function ralphErrorsArchiveName(benchmarkSessionId: string): string {
+  return `benchmark-session-${benchmarkSessionId.replace(UNSAFE_FILENAME_CHARS, '_')}-ralph-loop-errors.zip`
+}
+
 function requirePositiveInteger(value: number, field: string): void {
   if (!Number.isInteger(value) || value <= 0) {
     throw new ContractError(`${field} precisa ser um inteiro positivo, recebeu: ${value}`)

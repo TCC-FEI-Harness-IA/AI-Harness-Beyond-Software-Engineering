@@ -42,7 +42,7 @@ async function request<T>(
   method: 'GET' | 'POST',
   path: string,
   body: unknown,
-  parse: (raw: unknown) => T,
+  readBody: (response: Response) => Promise<T>,
   callerSignal?: AbortSignal,
 ): Promise<T> {
   const controller = new AbortController()
@@ -72,7 +72,7 @@ async function request<T>(
       throw new HttpError(response.status, detail)
     }
 
-    return await parseBody(response, parse)
+    return await readBody(response)
   } catch (error) {
     if (error instanceof HttpError || error instanceof ContractError) throw error
 
@@ -93,11 +93,15 @@ async function request<T>(
 
 export const httpClient = {
   get: <T>(path: string, parse: (raw: unknown) => T, signal?: AbortSignal): Promise<T> =>
-    request('GET', path, undefined, parse, signal),
+    request('GET', path, undefined, (response) => parseBody(response, parse), signal),
+  /** Baixa um arquivo: devolve o corpo como `Blob`, sem interpretá-lo como JSON. */
+  getBlob: (path: string, signal?: AbortSignal): Promise<Blob> =>
+    request('GET', path, undefined, (response) => response.blob(), signal),
   post: <T>(
     path: string,
     body: unknown,
     parse: (raw: unknown) => T,
     signal?: AbortSignal,
-  ): Promise<T> => request('POST', path, body, parse, signal),
+  ): Promise<T> =>
+    request('POST', path, body, (response) => parseBody(response, parse), signal),
 }

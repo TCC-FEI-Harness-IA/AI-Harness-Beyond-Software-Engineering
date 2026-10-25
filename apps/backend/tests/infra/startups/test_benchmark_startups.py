@@ -1,16 +1,21 @@
+import io
 import json
+import zipfile
 from pathlib import Path
 from typing import Any, Callable
 
 import pytest
 
+from src.application.usecases.export_benchmark_ralph_errors_usecase import ExportBenchmarkRalphErrorsUseCase
 from src.application.usecases.get_benchmark_session_usecase import GetBenchmarkSessionUseCase
 from src.application.usecases.list_benchmark_sessions_usecase import ListBenchmarkSessionsUseCase
 from src.application.usecases.run_benchmark_usecase import RunBenchmarkUseCase
 from src.domain.entities.benchmark.benchmark_flow_outcome import BenchmarkFlowOutcome
 from src.domain.entities.benchmark.benchmark_flow_request import BenchmarkFlowRequest
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
+from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
 from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
+from src.infra.startups.benchmark_export_startup import BenchmarkExportStartup
 from src.infra.startups.benchmark_query_startup import BenchmarkQueryStartup
 from src.infra.startups.benchmark_run_startup import BenchmarkRunStartup
 
@@ -95,3 +100,51 @@ async def test_startup_de_consulta_lista_detalha_e_descreve(armazenamento: Path)
 async def test_startup_de_consulta_recusa_bateria_inexistente(armazenamento: Path) -> None:
     with pytest.raises(BenchmarkSessionNotFoundError):
         await BenchmarkQueryStartup().get_benchmark_session_document(benchmark_session_id="bench_9")
+
+
+class _RunnerQueErraNoRalph:
+    """Executor dublê: o simples acerta e o Ralph Loop erra, deixando uma sessão persistida."""
+
+    async def run(self, request: BenchmarkFlowRequest, on_tokens: Callable[[int], None]) -> BenchmarkFlowOutcome:
+        ralph = request.mode.value == "ralph"
+        return BenchmarkFlowOutcome(
+            mode=request.mode, session_id=f"{request.question.id}_{request.mode.value}", selected_alternative="A",
+            is_correct=not ralph, error=None, duration_seconds=0.1, total_tokens=3,
+        )
+
+
+def test_startup_de_exportacao_monta_todo_o_grafo(armazenamento: Path) -> None:
+    startup = BenchmarkExportStartup()
+
+    assert all(valor is not None for valor in vars(startup).values())
+    assert isinstance(startup.export_use_case, ExportBenchmarkRalphErrorsUseCase)
+    assert startup.archive_builder.session_mapper is startup.session_mapper
+
+
+async def test_startup_de_exportacao_gera_o_zip_com_os_erros_do_ralph(armazenamento: Path) -> None:
+    execucao = BenchmarkRunStartup()
+    execucao.run_benchmark_use_case.flow_runner = _RunnerQueErraNoRalph()
+    frames = [frame async for frame in execucao.run(payload=_abertura(question_count=2))]
+    bateria = frames[-1].benchmark_session
+
+    arquivo = await BenchmarkExportStartup().export_ralph_errors(benchmark_session_id=bateria["id"])
+
+    assert arquivo.filename == f"benchmark-session-{bateria['id']}-ralph-loop-errors.zip"
+    with zipfile.ZipFile(io.BytesIO(arquivo.content)) as zip_:
+        pastas = {nome.split("/")[0] for nome in zip_.namelist()}
+        assert pastas == {f"questao-{item['question_id']}" for item in bateria["questions"]}
+        execucao_ralph = json.loads(zip_.read(f"{sorted(pastas)[0]}/execucao-ralph-loop.json"))
+    assert execucao_ralph["outcome"]["is_correct"] is False
+    assert execucao_ralph["session"] is None  # o executor dublê não grava a sessão
+
+
+async def test_startup_de_exportacao_recusa_bateria_inexistente_e_sem_erros(armazenamento: Path) -> None:
+    with pytest.raises(BenchmarkSessionNotFoundError):
+        await BenchmarkExportStartup().export_ralph_errors(benchmark_session_id="bench_9")
+
+    execucao = BenchmarkRunStartup()
+    execucao.run_benchmark_use_case.flow_runner = _RunnerImediato()
+    frames = [frame async for frame in execucao.run(payload=_abertura(question_count=1))]
+
+    with pytest.raises(NoBenchmarkErrorsToExportError):
+        await BenchmarkExportStartup().export_ralph_errors(benchmark_session_id=frames[-1].benchmark_session["id"])

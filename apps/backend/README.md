@@ -104,6 +104,7 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
   - [`WS /v1/benchmark/run`](#ws-v1benchmarkrun)
   - [`GET /v1/benchmark/sessions`](#get-v1benchmarksessions)
   - [`GET /v1/benchmark/sessions/{benchmark_session_id}`](#get-v1benchmarksessionsbenchmark_session_id)
+  - [`GET /v1/benchmark/sessions/{benchmark_session_id}/ralph-loop-errors/export`](#get-v1benchmarksessionsbenchmark_session_idralph-loop-errorsexport)
   - [`GET /v1/benchmark/questions`](#get-v1benchmarkquestions)
 - [Garantias do harness e encerramento sem conclusão](#garantias-do-harness-e-encerramento-sem-conclusão)
 - [Contratos (DTOs)](#contratos-dtos)
@@ -741,6 +742,23 @@ Lista as baterias, da mais recente para a mais antiga: `{ "benchmark_sessions": 
 
 Documento de uma bateria. `404` quando não existe; `400` para identificador ou documento persistido
 inválido; `500` para outras falhas. As sessões de cada fluxo são consultadas por `GET /v1/sessions/{id}`.
+
+### `GET /v1/benchmark/sessions/{benchmark_session_id}/ralph-loop-errors/export`
+
+Baixa um ZIP (`application/zip`, `benchmark-session-<id>-ralph-loop-errors.zip`) com uma pasta
+`questao-<id>/` para cada questão com desfecho incorreto no Ralph Loop (falhas técnicas e respostas
+inválidas contam como erro; questões certas e o fluxo simples ficam de fora). Usa só o que já está
+gravado — não executa o benchmark de novo. Cada pasta tem:
+
+- `questao.json` — `id`, `statement` (enunciado com as alternativas) e `options`;
+- `execucao-ralph-loop.json` — `outcome` do Ralph Loop e `session`, o documento completo da sessão
+  (`GET /v1/sessions/{id}`: mensagens, invocações, `final_answer`, `benchmark_details`);
+- `resposta-esperada.json` — `alternative` (letra), `text` e `answer` (`LETRA) texto`).
+
+`statement`/`options`/`text`/`answer` e `session` são `null` quando a questão saiu do dataset ou a
+sessão não existe mais (por exemplo, o fluxo falhou antes de criá-la). `409` quando a bateria ainda
+está em execução ou nenhuma questão errou no Ralph Loop (nunca devolve um ZIP vazio); `404` quando a
+bateria não existe; `400` para identificador inválido; `500` para outras falhas.
 
 ### `GET /v1/benchmark/questions`
 
