@@ -616,6 +616,7 @@ Ver `.env.example` para o arquivo completo.
 | `RALPH_BENCHMARK_QUESTIONS_PATH` | `src/infra/benchmark/questions` | Dataset de questões: uma pasta por questão, com `enunciado.md` e `alternativa_correta.md`. |
 | `RALPH_BENCHMARK_PROMPT_PATH` | `src/infra/benchmark/prompt.md` | Instrução de resposta anexada ao enunciado de cada questão. |
 | `RALPH_BENCHMARK_MAX_PARALLEL` | `10` | Limite superior de `max_parallel` numa bateria. |
+| `RALPH_BENCHMARK_MAX_TOKENS_LIMIT` | `32000` | Maior `max_tokens` aceito numa bateria. Acima disso o Ralph é bloqueado pelo orçamento da sessão (cada chamada reserva `max_tokens`) e o provedor recusa a chamada simples por exceder a janela de contexto. |
 | `RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS` | `1` | Intervalo máximo entre dois frames `progress` sem mudança de estado, para manter o tempo decorrido atualizado. |
 
 ---
@@ -683,7 +684,10 @@ em `error`. A acurácia de um fluxo é `correct / executed`.
 
    `question_count` (opcional, `>= 1`) executa as primeiras questões do dataset; ausente, executa todas.
    `max_parallel` (default `5`) vai de `1` a `RALPH_BENCHMARK_MAX_PARALLEL`. `llm_model_config` é o
-   [`ModelConfigDTO`](#modelconfigdto) dos endpoints de mensagem e vale para todos os fluxos.
+   [`ModelConfigDTO`](#modelconfigdto) dos endpoints de mensagem e vale para todos os fluxos; seu
+   `max_tokens` vai de `1` a `RALPH_BENCHMARK_MAX_TOKENS_LIMIT`. O `max_tokens` é o teto de saída de **cada
+   chamada**: o Ralph reserva esse valor no `RALPH_SESSION_TOKEN_BUDGET` a cada chamada, então um teto
+   próximo ao orçamento bloqueia a execução logo na fase A.1.
 
 2. O servidor envia um frame `{"type": "progress", "benchmark_session": {...}}` a cada mudança (questão ou
    fluxo começando ou terminando, consumo de tokens do Ralph) e, sem mudanças, a cada
@@ -693,7 +697,7 @@ em `error`. A acurácia de um fluxo é `correct / executed`.
 | Código | Motivo |
 |---|---|
 | `1000` | Bateria concluída (`status = completed`). |
-| `1003` | Abertura fora do contrato, ou `question_count`/`max_parallel` acima do permitido — precedido de `{"type": "error", "content": "<detalhe>"}`; nenhuma bateria é criada. |
+| `1003` | Abertura fora do contrato, ou `question_count`/`max_parallel`/`max_tokens` acima do permitido — precedido de `{"type": "error", "content": "<detalhe>"}`; nenhuma bateria é criada. |
 | `1009` | Frame de abertura maior que `RALPH_WEBSOCKET_MAX_MESSAGE_BYTES`. |
 | `1011` | Bateria encerrada sem concluir (`failed`, depois do frame `result`) ou erro fora do caso de uso (frame `error`). |
 
@@ -762,8 +766,8 @@ bateria não existe; `400` para identificador inválido; `500` para outras falha
 
 ### `GET /v1/benchmark/questions`
 
-Questões do dataset, na ordem de execução, e o limite de paralelismo:
-`{ "question_ids": ["FISICA_ENEM_2023_AZUL_Q108", ...], "max_parallel_limit": 10 }`.
+Questões do dataset, na ordem de execução, e os limites de paralelismo e de `max_tokens`:
+`{ "question_ids": ["FISICA_ENEM_2023_AZUL_Q108", ...], "max_parallel_limit": 10, "max_tokens_limit": 32000 }`.
 
 ### Metadados nas sessões
 

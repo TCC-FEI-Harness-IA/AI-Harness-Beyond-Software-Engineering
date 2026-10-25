@@ -94,6 +94,7 @@ class Settings(ISettings):
             ),
             "RALPH_BENCHMARK_PROMPT_PATH": os.getenv("RALPH_BENCHMARK_PROMPT_PATH", "src/infra/benchmark/prompt.md"),
             "RALPH_BENCHMARK_MAX_PARALLEL": os.getenv("RALPH_BENCHMARK_MAX_PARALLEL", "10"),
+            "RALPH_BENCHMARK_MAX_TOKENS_LIMIT": os.getenv("RALPH_BENCHMARK_MAX_TOKENS_LIMIT", "32000"),
             "RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS": os.getenv(
                 "RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS", "1"
             ),
@@ -453,6 +454,11 @@ class Settings(ISettings):
     def ralph_benchmark_max_parallel(self) -> int:
         """Limite superior de questões executadas em paralelo numa bateria."""
         return self.__get_int("RALPH_BENCHMARK_MAX_PARALLEL")
+
+    @property
+    def ralph_benchmark_max_tokens_limit(self) -> int:
+        """Maior `max_tokens` aceito numa bateria, por chamada ao modelo."""
+        return self.__get_int("RALPH_BENCHMARK_MAX_TOKENS_LIMIT")
 
     @property
     def ralph_benchmark_progress_interval_seconds(self) -> float:

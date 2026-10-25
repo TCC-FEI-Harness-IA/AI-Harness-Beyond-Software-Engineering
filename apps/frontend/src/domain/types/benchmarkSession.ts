@@ -66,10 +66,12 @@ export interface BenchmarkSessionDocument {
   questions: BenchmarkQuestionRun[]
 }
 
-/** `GET /v1/benchmark/questions` — questões na ordem de execução e o limite de paralelismo. */
+/** `GET /v1/benchmark/questions` — questões na ordem de execução e os limites aceitos numa bateria. */
 export interface BenchmarkDataset {
   question_ids: string[]
   max_parallel_limit: number
+  /** Maior `max_tokens` por chamada: acima disso o Ralph esgota o orçamento da sessão. */
+  max_tokens_limit: number
 }
 
 /** Frames de `WS /v1/benchmark/run`: `progress` durante a bateria, `result` no fim, `error` na recusa. */

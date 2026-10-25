@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -45,7 +45,7 @@ function mockBackend(batteries: BenchmarkSessionDocument[] = []) {
   const documents = [...childSessions, normal]
   const fetchMock = vi.fn((url: string) => {
     const path = new URL(url).pathname
-    if (path === '/v1/benchmark/questions') return respond({ question_ids: ['Q1', 'Q2', 'Q3'], max_parallel_limit: 4 })
+    if (path === '/v1/benchmark/questions') return respond({ question_ids: ['Q1', 'Q2', 'Q3'], max_parallel_limit: 4, max_tokens_limit: 32000 })
     if (path === '/v1/benchmark/sessions') return respond({ benchmark_sessions: batteries })
     if (path.startsWith('/v1/benchmark/sessions/')) {
       const battery = batteries.find((item) => item.id === decodeURIComponent(path.split('/').at(-1) ?? ''))
@@ -63,12 +63,20 @@ function emit(socket: FakeWebSocket, type: 'progress' | 'result', session: Bench
   act(() => socket.emitMessage({ type, benchmark_session: session }))
 }
 
+function storeMaxTokens(maxTokens: number): void {
+  window.localStorage.setItem(
+    'tcc.runConfig',
+    JSON.stringify({ modelName: 'openai/gpt-4o-mini', maxTokens, temperature: 0.3, provider: 'open_router' }),
+  )
+}
+
 beforeEach(() => {
   FakeWebSocket.reset()
   vi.stubGlobal('WebSocket', FakeWebSocket)
 })
 
 afterEach(() => {
+  window.localStorage.clear()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
   Reflect.deleteProperty(URL, 'createObjectURL')
@@ -148,6 +156,44 @@ describe('Benchmark como funcionalidade da aplicação', () => {
 
     await user.click(within(monitor).getByRole('button', { name: 'Fechar' }))
     expect(screen.queryByRole('article', { name: 'Bateria atual' })).not.toBeInTheDocument()
+  })
+
+  it('impede iniciar quando o máximo de tokens passa do limite do servidor', async () => {
+    const user = userEvent.setup()
+    mockBackend()
+    storeMaxTokens(10_000_000)
+    renderApp('/benchmark')
+
+    const start = await screen.findByRole('button', { name: 'Iniciar bateria' })
+    expect(screen.getByRole('alert')).toHaveTextContent('passa do limite de 32.000 por chamada')
+    expect(start).toBeDisabled()
+
+    // Contornar o botão desabilitado (envio direto do formulário) também não abre a conexão.
+    fireEvent.submit(screen.getByRole('form', { name: 'Nova bateria de benchmark' }))
+    expect(FakeWebSocket.instances).toHaveLength(0)
+
+    const tokens = screen.getByRole('spinbutton', { name: /Máximo de tokens/ })
+    await user.clear(tokens)
+    await user.type(tokens, '4000')
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(start).toBeEnabled()
+    await user.click(start)
+    expect(FakeWebSocket.instances).toHaveLength(1)
+  })
+
+  it.each([
+    [32_000, true],
+    [32_001, false],
+  ])('o limite de tokens é inclusivo: %i tokens, iniciar permitido = %s', async (maxTokens, allowed) => {
+    mockBackend()
+    storeMaxTokens(maxTokens)
+    renderApp('/benchmark')
+
+    const start = await screen.findByRole('button', { name: 'Iniciar bateria' })
+
+    expect(start).toHaveProperty('disabled', !allowed)
+    expect(screen.queryByRole('alert') === null).toBe(allowed)
   })
 
   it('mantém a bateria em execução ao navegar e mostra o detalhe ao vivo', async () => {

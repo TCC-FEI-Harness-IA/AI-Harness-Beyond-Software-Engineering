@@ -51,6 +51,7 @@ _DEFAULTS: dict[str, Any] = {
     "ralph_benchmark_questions_path": "src/infra/benchmark/questions",
     "ralph_benchmark_prompt_path": "src/infra/benchmark/prompt.md",
     "ralph_benchmark_max_parallel": 10,
+    "ralph_benchmark_max_tokens_limit": 32000,
     "ralph_benchmark_progress_interval_seconds": 0.05,
 }
 
@@ -250,6 +251,10 @@ class FakeSettings(ISettings):
     @property
     def ralph_benchmark_max_parallel(self) -> int:
         return self.values["ralph_benchmark_max_parallel"]
+
+    @property
+    def ralph_benchmark_max_tokens_limit(self) -> int:
+        return self.values["ralph_benchmark_max_tokens_limit"]
 
     @property
     def ralph_benchmark_progress_interval_seconds(self) -> float:

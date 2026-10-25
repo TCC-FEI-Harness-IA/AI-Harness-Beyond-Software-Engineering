@@ -2,7 +2,9 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Button } from '@/components/primitives/Button'
 import type { BenchmarkDataset } from '@/domain/types/benchmarkSession'
+import { formatTokens } from '@/domain/services/formatters'
 import { RunConfigBar } from '@/features/home/RunConfigBar'
+import { useRunConfig } from '@/state/RunConfigContext'
 import styles from './NewRunForm.module.css'
 
 const DEFAULT_PARALLEL = 5
@@ -28,6 +30,12 @@ function clamp(raw: string, max: number): number {
  * em paralelo. Modelo, provedor, teto de tokens e temperatura são os mesmos da tela inicial.
  */
 export function NewRunForm({ dataset, disabled, onStart }: NewRunFormProps): JSX.Element {
+  const { config } = useRunConfig()
+  // O `max_tokens` é o teto de saída de cada chamada: o Ralph o reserva no orçamento da sessão a
+  // cada chamada, então um valor perto do orçamento o bloqueia logo na primeira fase, e um valor
+  // acima da janela de contexto faz o provedor recusar a inferência simples. O servidor recusa
+  // esses valores; avisar aqui evita uma bateria inteira de falhas.
+  const tokensTooHigh = config.maxTokens > dataset.max_tokens_limit
   const available = dataset.question_ids.length
   const [questionCount, setQuestionCount] = useState(String(available))
   const [maxParallel, setMaxParallel] = useState(
@@ -36,6 +44,7 @@ export function NewRunForm({ dataset, disabled, onStart }: NewRunFormProps): JSX
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
+    if (tokensTooHigh) return
     onStart(clamp(questionCount, available), clamp(maxParallel, dataset.max_parallel_limit))
   }
 
@@ -80,8 +89,16 @@ export function NewRunForm({ dataset, disabled, onStart }: NewRunFormProps): JSX
 
       <RunConfigBar />
 
+      {tokensTooHigh ? (
+        <p className={styles.warning} role="alert">
+          O máximo de tokens ({formatTokens(config.maxTokens)}) passa do limite de{' '}
+          {formatTokens(dataset.max_tokens_limit)} por chamada. Reduza o valor em “Máximo de tokens”
+          para iniciar a bateria.
+        </p>
+      ) : null}
+
       <div className={styles.actions}>
-        <Button type="submit" disabled={disabled}>
+        <Button type="submit" disabled={disabled || tokensTooHigh}>
           Iniciar bateria
         </Button>
       </div>

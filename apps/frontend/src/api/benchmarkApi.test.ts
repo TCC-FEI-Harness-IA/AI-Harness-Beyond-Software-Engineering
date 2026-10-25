@@ -29,9 +29,9 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('consultas de benchmark', () => {
   it('busca o dataset', async () => {
-    const fetchMock = mockFetch({ question_ids: ['Q1'], max_parallel_limit: 3 })
+    const fetchMock = mockFetch({ question_ids: ['Q1'], max_parallel_limit: 3, max_tokens_limit: 32000 })
 
-    expect(await getBenchmarkDataset()).toEqual({ question_ids: ['Q1'], max_parallel_limit: 3 })
+    expect(await getBenchmarkDataset()).toEqual({ question_ids: ['Q1'], max_parallel_limit: 3, max_tokens_limit: 32000 })
     expect(fetchMock.mock.calls[0]?.[0]).toBe('http://localhost:8000/v1/benchmark/questions')
   })
 

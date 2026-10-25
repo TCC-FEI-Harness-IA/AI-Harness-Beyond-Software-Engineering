@@ -53,6 +53,7 @@ _ENV_VARS = (
     "RALPH_BENCHMARK_QUESTIONS_PATH",
     "RALPH_BENCHMARK_PROMPT_PATH",
     "RALPH_BENCHMARK_MAX_PARALLEL",
+    "RALPH_BENCHMARK_MAX_TOKENS_LIMIT",
     "RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS",
 )
 
@@ -266,7 +267,16 @@ def test_aplica_os_defaults_do_benchmark_quando_ausentes() -> None:
     assert settings.ralph_benchmark_questions_path == "src/infra/benchmark/questions"
     assert settings.ralph_benchmark_prompt_path == "src/infra/benchmark/prompt.md"
     assert settings.ralph_benchmark_max_parallel == 10
+    assert settings.ralph_benchmark_max_tokens_limit == 32000
     assert settings.ralph_benchmark_progress_interval_seconds == 1.0
+
+
+def test_limite_padrao_de_max_tokens_do_benchmark_cabe_no_orcamento_padrao_do_ralph() -> None:
+    """Cada chamada do Ralph reserva `max_tokens` no orçamento: o limite não pode, sozinho, estourá-lo."""
+    settings = Settings()
+
+    teto_de_trabalho = settings.ralph_session_token_budget - settings.ralph_final_answer_token_reserve
+    assert settings.ralph_benchmark_max_tokens_limit < teto_de_trabalho
 
 
 def test_le_do_ambiente_as_variaveis_de_benchmark(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -274,6 +284,7 @@ def test_le_do_ambiente_as_variaveis_de_benchmark(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setenv("MONGODB_BENCHMARK_SESSIONS_COLLECTION", "  baterias  ")
     monkeypatch.setenv("RALPH_BENCHMARK_QUESTIONS_PATH", "/tmp/questoes")
     monkeypatch.setenv("RALPH_BENCHMARK_PROMPT_PATH", "/tmp/prompt.md")
+    monkeypatch.setenv("RALPH_BENCHMARK_MAX_TOKENS_LIMIT", "8000")
 
     settings = Settings()
 
@@ -281,6 +292,7 @@ def test_le_do_ambiente_as_variaveis_de_benchmark(monkeypatch: pytest.MonkeyPatc
     assert settings.mongodb_benchmark_sessions_collection == "baterias"
     assert settings.ralph_benchmark_questions_path == "/tmp/questoes"
     assert settings.ralph_benchmark_prompt_path == "/tmp/prompt.md"
+    assert settings.ralph_benchmark_max_tokens_limit == 8000
 
 
 def test_log_level_e_normalizado_para_maiusculas(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -305,6 +317,7 @@ def test_log_level_e_normalizado_para_maiusculas(monkeypatch: pytest.MonkeyPatch
         ("RALPH_JSON_PARSE_MAX_RETRIES", "ralph_json_parse_max_retries"),
         ("RALPH_WEBSOCKET_MAX_MESSAGE_BYTES", "ralph_websocket_max_message_bytes"),
         ("RALPH_BENCHMARK_MAX_PARALLEL", "ralph_benchmark_max_parallel"),
+        ("RALPH_BENCHMARK_MAX_TOKENS_LIMIT", "ralph_benchmark_max_tokens_limit"),
     ],
 )
 def test_converte_para_inteiro(monkeypatch: pytest.MonkeyPatch, var_name: str, attribute: str) -> None:

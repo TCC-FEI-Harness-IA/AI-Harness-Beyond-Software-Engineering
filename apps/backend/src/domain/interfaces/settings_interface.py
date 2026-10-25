@@ -298,6 +298,12 @@ class ISettings(ABC):
 
     @property
     @abstractmethod
+    def ralph_benchmark_max_tokens_limit(self) -> int:
+        """Maior `max_tokens` aceito numa bateria, por chamada ao modelo."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def ralph_benchmark_progress_interval_seconds(self) -> float:
         """Intervalo máximo, em segundos, entre dois envios de progresso da bateria."""
         raise NotImplementedError

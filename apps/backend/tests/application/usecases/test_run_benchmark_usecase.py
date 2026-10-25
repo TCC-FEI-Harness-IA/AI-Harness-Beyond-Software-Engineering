@@ -26,12 +26,14 @@ _SIMPLES = BenchmarkInferenceModeEnum.SIMPLE
 _RALPH = BenchmarkInferenceModeEnum.RALPH
 
 
-def _entrada(question_count: int | None = None, max_parallel: int = 5) -> RunBenchmarkInputDTO:
+def _entrada(
+    question_count: int | None = None, max_parallel: int = 5, max_tokens: int = 4096
+) -> RunBenchmarkInputDTO:
     return RunBenchmarkInputDTO(
         question_count=question_count,
         max_parallel=max_parallel,
         model_name="vendor/modelo",
-        max_tokens=4096,
+        max_tokens=max_tokens,
         temperature=0.0,
         provider=ModelProviderEnum.OPEN_ROUTER,
     )
@@ -269,6 +271,28 @@ async def test_consumidor_que_para_de_ler_interrompe_a_bateria_e_cancela_os_flux
     assert final.interrupted_count == 2
     assert final.pending_count == 2
     assert len(runner.cancelled) == 2
+
+
+@pytest.mark.parametrize("max_tokens", [0, 32001, 10_000_000, 1_000_000_000])
+async def test_max_tokens_fora_do_limite_e_recusado_antes_de_criar_a_bateria(max_tokens: int) -> None:
+    runner = FakeBenchmarkFlowRunner(_imediato)
+    caso, repositorio = _caso_de_uso(runner)
+
+    with pytest.raises(InvalidBenchmarkRequestError, match="max_tokens deve estar entre 1 e 32000"):
+        await _coletar(caso, _entrada(max_tokens=max_tokens))
+
+    assert repositorio.saved == []
+    assert runner.requests == []
+
+
+@pytest.mark.parametrize("max_tokens", [1, 4096, 32000])
+async def test_max_tokens_dentro_do_limite_e_aceito_e_chega_aos_fluxos(max_tokens: int) -> None:
+    runner = FakeBenchmarkFlowRunner(_imediato)
+    caso, _ = _caso_de_uso(runner, quantidade=1)
+
+    await _coletar(caso, _entrada(max_tokens=max_tokens))
+
+    assert {pedido.llm_config.max_tokens for pedido in runner.requests} == {max_tokens}
 
 
 @pytest.mark.parametrize("max_parallel", [0, 11])

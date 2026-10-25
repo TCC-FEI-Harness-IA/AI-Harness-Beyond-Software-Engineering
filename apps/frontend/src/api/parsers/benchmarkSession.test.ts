@@ -73,15 +73,18 @@ describe('parseBenchmarkSessionList', () => {
 })
 
 describe('parseBenchmarkDataset', () => {
-  it('lê as questões e o limite de paralelismo', () => {
-    expect(parseBenchmarkDataset({ question_ids: ['Q1'], max_parallel_limit: 10 })).toEqual({
-      question_ids: ['Q1'],
-      max_parallel_limit: 10,
-    })
+  it('lê as questões e os limites de paralelismo e de tokens', () => {
+    const raw = { question_ids: ['Q1'], max_parallel_limit: 10, max_tokens_limit: 32000 }
+
+    expect(parseBenchmarkDataset(raw)).toEqual(raw)
   })
 
-  it('recusa limite ausente', () => {
-    expect(() => parseBenchmarkDataset({ question_ids: [] })).toThrow(ContractError)
+  it.each([
+    [{ question_ids: [], max_tokens_limit: 32000 }, 'max_parallel_limit'],
+    [{ question_ids: [], max_parallel_limit: 10 }, 'max_tokens_limit'],
+  ])('recusa limite ausente (%#)', (raw, field) => {
+    expect(() => parseBenchmarkDataset(raw)).toThrow(ContractError)
+    expect(() => parseBenchmarkDataset(raw)).toThrow(field)
   })
 })
 

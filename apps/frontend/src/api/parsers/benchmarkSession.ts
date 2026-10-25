@@ -172,6 +172,7 @@ export function parseBenchmarkDataset(raw: unknown): BenchmarkDataset {
   return {
     question_ids: parseStringArray(obj, 'question_ids', 'question_ids'),
     max_parallel_limit: requireNumber(obj, 'max_parallel_limit', 'max_parallel_limit'),
+    max_tokens_limit: requireNumber(obj, 'max_tokens_limit', 'max_tokens_limit'),
   }
 }
 

@@ -22,6 +22,7 @@ from src.domain.interfaces.settings_interface import ISettings
 _FLOW_ORDER = (BenchmarkInferenceModeEnum.SIMPLE, BenchmarkInferenceModeEnum.RALPH)
 _MIN_PARALLEL = 1
 _MIN_QUESTIONS = 1
+_MIN_TOKENS = 1
 
 
 class RunBenchmarkUseCase:
@@ -79,7 +80,8 @@ class RunBenchmarkUseCase:
             BenchmarkSession: Estado da bateria; o último emitido já está encerrado.
 
         Raises:
-            InvalidBenchmarkRequestError: Antes de criar a bateria, quando os parâmetros não podem ser atendidos.
+            InvalidBenchmarkRequestError: Antes de criar a bateria, quando os parâmetros não podem ser atendidos
+                (`max_tokens`, `max_parallel` ou `question_count` fora do permitido).
         """
         questions = self.__select_questions(input_dto=input_dto)
         instruction = self.question_provider.answer_instruction().strip()
@@ -127,8 +129,16 @@ class RunBenchmarkUseCase:
         """Valida os parâmetros e escolhe as primeiras questões do dataset.
 
         Raises:
-            InvalidBenchmarkRequestError: Quando a quantidade de questões ou o paralelismo estão fora do permitido.
+            InvalidBenchmarkRequestError: Quando `max_tokens`, o paralelismo ou a quantidade de questões
+                estão fora do permitido.
         """
+        max_tokens_limit = self.settings.ralph_benchmark_max_tokens_limit
+        if not _MIN_TOKENS <= input_dto.max_tokens <= max_tokens_limit:
+            raise InvalidBenchmarkRequestError(
+                f"max_tokens deve estar entre {_MIN_TOKENS} e {max_tokens_limit}. Valor: {input_dto.max_tokens}. "
+                "Cada chamada do Ralph reserva max_tokens no orçamento da sessão, e a inferência simples não "
+                "cabe na janela de contexto do modelo acima disso."
+            )
         max_parallel_limit = self.settings.ralph_benchmark_max_parallel
         if not _MIN_PARALLEL <= input_dto.max_parallel <= max_parallel_limit:
             raise InvalidBenchmarkRequestError(
