@@ -1,3 +1,4 @@
+from src.domain.entities.session.benchmark_details import BenchmarkDetails
 from inspect import getfile
 
 from src.application.dtos.default_message_input_dto import DefaultMessageInputDTO
@@ -23,7 +24,7 @@ class DefaultMessageStartup:
     (Pydantic) para os DTOs da camada de aplicação, e o caminho inverso na saída.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, benchmark_details: BenchmarkDetails | None = None) -> None:
         """Instancia e injeta todas as dependências do fluxo baseline."""
         self.settings: ISettings = Settings()
         self.logger = self.settings.logger(module_file=__file__)
@@ -45,6 +46,7 @@ class DefaultMessageStartup:
             mapper=SessionDocumentMapper(),
         ).create()
         session_recorder = SessionRecorderAdapter(
+            benchmark_details=benchmark_details,
             repository=session_repository,
             clock=clock,
             id_generator=IdGeneratorAdapter(settings=self.settings),

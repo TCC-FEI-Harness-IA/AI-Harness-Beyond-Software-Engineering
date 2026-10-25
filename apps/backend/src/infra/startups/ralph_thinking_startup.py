@@ -1,3 +1,4 @@
+from src.domain.entities.session.benchmark_details import BenchmarkDetails
 from inspect import getfile
 from typing import AsyncGenerator
 
@@ -43,7 +44,7 @@ class RalphThinkingStartup:
     estado da sessão em execução.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, benchmark_details: BenchmarkDetails | None = None) -> None:
         """Instancia e injeta todas as dependências do fluxo harness."""
         self.settings: ISettings = Settings()
         self.logger = self.settings.logger(module_file=__file__)
@@ -57,6 +58,7 @@ class RalphThinkingStartup:
             mapper=self.session_document_mapper,
         ).create()
         self.session_recorder = SessionRecorderAdapter(
+            benchmark_details=benchmark_details,
             repository=self.session_repository,
             clock=self.clock,
             id_generator=self.id_generator,

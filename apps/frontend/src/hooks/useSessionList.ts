@@ -10,6 +10,7 @@ import { getSession, listSessionIds } from '@/api/sessionApi'
 import { env } from '@/config/env'
 import { truncate } from '@/domain/services/formatters'
 import { sessionSummary } from '@/domain/services/sessionSummary'
+import type { SessionSource } from '@/domain/types/sessionSource'
 import type { SessionDocument } from '@/domain/types/sessionDocument'
 import type { SessionSummaryView } from '@/domain/types/sessionSummaryView'
 import { getCachedSession, setCachedSession } from './sessionCache'
@@ -42,12 +43,13 @@ function sortByCreatedAtDesc(items: SessionSummaryView[]): SessionSummaryView[] 
   return [...items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 }
 
-export function useSessionList(): UseSessionList {
+export function useSessionList(source: SessionSource = 'history'): UseSessionList {
   const [ids, setIds] = useState<string[] | null>(null)
   const [isLoadingIds, setIsLoadingIds] = useState(true)
   const [error, setError] = useState<AppError | null>(null)
   const [items, setItems] = useState<SessionSummaryView[]>([])
   const [failedIds, setFailedIds] = useState<string[]>([])
+  const [processedIds, setProcessedIds] = useState<string[]>([])
   const [reloadToken, setReloadToken] = useState(0)
 
   // Passo 1: busca os ids. Falha aqui vira `ErrorState` na tela inteira (requisito 1). Só a
@@ -59,6 +61,7 @@ export function useSessionList(): UseSessionList {
     setError(null)
     setItems([])
     setFailedIds([])
+    setProcessedIds([])
     setIds(null)
 
     listSessionIds(controller.signal)
@@ -74,7 +77,7 @@ export function useSessionList(): UseSessionList {
       })
 
     return () => controller.abort()
-  }, [reloadToken])
+  }, [reloadToken, source])
 
   // Passo 2: hidrata cada sessão com um pool de `env.historyFetchConcurrency` requisições
   // simultâneas. Causa desta complexidade toda: `GET /v1/sessions` devolve só ids — um
@@ -86,7 +89,9 @@ export function useSessionList(): UseSessionList {
     const controller = new AbortController()
 
     function appendItem(document: SessionDocument): void {
-      setCachedSession(document)
+      setProcessedIds((prev) => prev.includes(document.id) ? prev : [...prev, document.id])
+      if ((document.benchmark_details?.is_banchmark === true) !== (source === 'benchmark')) return
+      setCachedSession(document, source)
       const view = toSummaryView(document)
       setItems((prev) => sortByCreatedAtDesc([...prev.filter((item) => item.id !== view.id), view]))
     }
@@ -99,7 +104,7 @@ export function useSessionList(): UseSessionList {
         const id = currentIds[current]
         if (id === undefined) return
 
-        const cached = getCachedSession(id)
+        const cached = getCachedSession(id, source)
         if (cached) {
           appendItem(cached)
           continue
@@ -124,11 +129,11 @@ export function useSessionList(): UseSessionList {
     void Promise.all(workers)
 
     return () => controller.abort()
-  }, [ids])
+  }, [ids, source])
 
   const reload = useCallback(() => setReloadToken((token) => token + 1), [])
 
-  const pendingCount = ids === null ? 0 : Math.max(0, ids.length - items.length - failedIds.length)
+  const pendingCount = ids === null ? 0 : Math.max(0, ids.length - processedIds.length - failedIds.length)
 
   return { items, pendingCount, isLoadingIds, error, failedIds, reload }
 }

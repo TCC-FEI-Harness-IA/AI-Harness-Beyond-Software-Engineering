@@ -4,9 +4,11 @@
 // lista → detalhe → lista").
 
 import { useCallback, useEffect, useState } from 'react'
+import { HttpError } from '@/api/errors/HttpError'
 import { AppError } from '@/api/errors/AppError'
 import { ContractError } from '@/api/errors/ContractError'
 import { getSession } from '@/api/sessionApi'
+import type { SessionSource } from '@/domain/types/sessionSource'
 import type { SessionDocument } from '@/domain/types/sessionDocument'
 import { getCachedSession, setCachedSession } from './sessionCache'
 
@@ -28,15 +30,15 @@ function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError'
 }
 
-export function useSession(sessionId: string): UseSession {
+export function useSession(sessionId: string, source: SessionSource = 'history'): UseSession {
   const [state, setState] = useState<UseSessionState>(() => {
-    const cached = getCachedSession(sessionId)
+    const cached = getCachedSession(sessionId, source)
     return cached ? { status: 'success', data: cached } : { status: 'loading' }
   })
   const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
-    const cached = getCachedSession(sessionId)
+    const cached = getCachedSession(sessionId, source)
     if (cached && reloadToken === 0) {
       setState({ status: 'success', data: cached })
       return
@@ -48,7 +50,10 @@ export function useSession(sessionId: string): UseSession {
     getSession(sessionId, controller.signal)
       .then((document) => {
         if (controller.signal.aborted) return
-        setCachedSession(document)
+        if ((document.benchmark_details?.is_banchmark === true) !== (source === 'benchmark')) {
+          throw new HttpError(404, 'Sessão não pertence a este histórico.')
+        }
+        setCachedSession(document, source)
         setState({ status: 'success', data: document })
       })
       .catch((rawError: unknown) => {
@@ -57,7 +62,7 @@ export function useSession(sessionId: string): UseSession {
       })
 
     return () => controller.abort()
-  }, [sessionId, reloadToken])
+  }, [sessionId, reloadToken, source])
 
   const reload = useCallback(() => setReloadToken((token) => token + 1), [])
 

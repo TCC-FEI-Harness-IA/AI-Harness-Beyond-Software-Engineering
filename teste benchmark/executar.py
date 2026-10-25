@@ -12,14 +12,17 @@ from benchmark import DEFAULT_CONCURRENCY, MODEL, load_questions, run_benchmark,
 
 MODULE = Path(__file__).resolve().parent
 PROJECT = MODULE.parent
+BACKEND = PROJECT / "apps/backend" if (PROJECT / "apps/backend/src").is_dir() else Path("/app")
+DEFAULT_OUTPUT = MODULE / "resultados" if BACKEND != Path("/app") else BACKEND / "data/benchmark-reports"
 
 
 def arguments() -> argparse.Namespace:
     """Lê parâmetros; os defaults executam todas as questões com cinco workers."""
     parser = argparse.ArgumentParser(description="Compara inferência simples e RALPH LOOP nas questões locais.")
     parser.add_argument("--questions-dir", type=Path, default=MODULE / "QUESTOES_BENCHMARK")
-    parser.add_argument("--output-dir", type=Path, default=MODULE / "resultados")
-    parser.add_argument("--env-file", type=Path, default=PROJECT / "apps/backend/.env")
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--backend-dir", type=Path, default=BACKEND)
+    parser.add_argument("--env-file", type=Path, default=BACKEND / ".env")
     parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY)
     parser.add_argument("--max-tokens", type=int, default=4096)
     parser.add_argument("--temperature", type=float, default=0.0)
@@ -46,7 +49,7 @@ def main() -> int:
 
     now = datetime.now(timezone.utc)
     output = args.output_dir.resolve() / f"{now:%Y%m%dT%H%M%SZ}_{uuid4().hex[:8]}"
-    configure_backend(PROJECT, output, args.env_file.resolve())
+    configure_backend(args.backend_dir.resolve(), args.env_file.resolve())
     output.mkdir(parents=True, exist_ok=False)
     metadata = {
         "model": MODEL, "provider": "open_router", "concurrency": args.concurrency,
@@ -58,7 +61,7 @@ def main() -> int:
     instruction = (MODULE / "prompt.md").read_text(encoding="utf-8")
     (output / "prompt.md").write_text(instruction, encoding="utf-8")
     started = perf_counter()
-    flows = BackendFlows(output, args.max_tokens, args.temperature)
+    flows = BackendFlows(output, args.max_tokens, args.temperature, questions)
     results = asyncio.run(run_benchmark(questions, flows, instruction, args.concurrency, output))
     metadata.update(finished_at=datetime.now(timezone.utc).isoformat(), seconds=round(perf_counter() - started, 3))
     write_reports(output, results, metadata)

@@ -1,3 +1,4 @@
+import type { SessionSource } from '@/domain/types/sessionSource'
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { HttpError } from '@/api/errors/HttpError'
@@ -30,19 +31,19 @@ const NOT_FOUND_ICON = (
  * modificação — se algo não coubesse aqui, o conserto seria generalizar aquelas telas, não criar
  * uma variante "de histórico" (regra de reuso 3 do README).
  */
-export function HistoryDetailPage(): JSX.Element {
+export function HistoryDetailPage({ source = 'history' }: { source?: SessionSource }): JSX.Element {
   const { sessionId: rawSessionId } = useParams<{ sessionId: string }>()
   const sessionId = rawSessionId ? decodeURIComponent(rawSessionId) : ''
   const navigate = useNavigate()
-  const { state, reload } = useSession(sessionId)
-  const { items: sidebarItems, isLoadingIds: isSidebarLoading } = useSessionList()
+  const { state, reload } = useSession(sessionId, source)
+  const { items: sidebarItems, isLoadingIds: isSidebarLoading } = useSessionList(source)
 
   // Memoizado: um elemento JSX é um objeto novo a cada render, mesmo com as mesmas props. Sem
   // isto, `useRegisterSidebar` (cujo efeito depende deste nó) rodaria a cada render — inclusive
   // os que o próprio `setSidebar` dispara no provider acima — entrando em loop infinito.
   const sidebarNode = useMemo(
-    () => <HistorySidebar items={sidebarItems} activeSessionId={sessionId} isLoading={isSidebarLoading} />,
-    [sidebarItems, sessionId, isSidebarLoading],
+    () => <HistorySidebar items={sidebarItems} activeSessionId={sessionId} isLoading={isSidebarLoading} source={source} />,
+    [sidebarItems, sessionId, isSidebarLoading, source],
   )
   useRegisterSidebar(sidebarNode)
 
@@ -64,7 +65,7 @@ export function HistoryDetailPage(): JSX.Element {
           <EmptyState
             icon={NOT_FOUND_ICON}
             title="Esta conversa não existe mais"
-            action={<Button onClick={() => navigate(ROUTES.history)}>Voltar ao histórico</Button>}
+            action={<Button onClick={() => navigate(source === 'benchmark' ? ROUTES.benchmark : ROUTES.history)}>Voltar ao histórico</Button>}
           />
         </PageContainer>
       )
@@ -96,6 +97,19 @@ export function HistoryDetailPage(): JSX.Element {
 
   return (
     <>
+      {document.benchmark_details?.is_banchmark ? (
+        <PageContainer width="content">
+          <h2>{document.benchmark_details.question_name}</h2>
+          <p>
+            {document.benchmark_details.is_correct === null
+              ? 'Avaliação pendente' : document.benchmark_details.is_correct ? 'Certo' : 'Errado'}
+            {' · '}Gabarito: {document.benchmark_details.corret_answer ?? '—'}
+            {' · '}Alternativa selecionada: {document.benchmark_details.selected_alternative ?? '—'}
+          </p>
+          <p>Execução: {document.benchmark_details.run_id ?? '—'}</p>
+          {document.benchmark_details.error ? <p role="status">{document.benchmark_details.error}</p> : null}
+        </PageContainer>
+      ) : null}
       {document.status === SESSION_STATUS.FAILED ? (
         <p className={styles.notice} role="status">
           Esta execução falhou antes de terminar.

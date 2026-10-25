@@ -1,3 +1,4 @@
+import { parseBenchmarkDetails } from './benchmarkDetails'
 // `unknown` → `SessionDocument` (README, FASE 02, seção 5) — `GET /v1/sessions/{session_id}`.
 // Diferente de `parseReasoningFrame`, aqui não há stream ao vivo para proteger: uma mensagem
 // inválida invalida o documento inteiro.
@@ -99,6 +100,7 @@ export function parseSessionDocument(raw: unknown): SessionDocument {
 
   return {
     id: requireString(obj, 'id', 'id'),
+    benchmark_details: parseBenchmarkDetails(obj.benchmark_details),
     user_question: requireString(obj, 'user_question', 'user_question'),
     flow,
     model_name: requireString(obj, 'model_name', 'model_name'),

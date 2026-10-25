@@ -43,6 +43,9 @@ export function TopBar({ onToggleSidebar }: TopBarProps): JSX.Element {
         <Link to={ROUTES.history} className={styles.historyLink}>
           Histórico
         </Link>
+        <Link to={ROUTES.benchmark} className={styles.historyLink}>
+          BenchMark
+        </Link>
         <ThemeToggle />
       </nav>
     </header>

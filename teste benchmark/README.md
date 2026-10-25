@@ -1,66 +1,102 @@
-# Teste benchmark
+# Teste benchmark no container
 
-Executa todas as questões de `teste benchmark/QUESTOES_BENCHMARK` pelos fluxos existentes do backend: inferência simples (`DefaultMessageStartup`) e RALPH LOOP adaptado (`RalphThinkingStartup`, incluindo A.3). Não é necessário iniciar FastAPI, WebSocket nem MongoDB.
+O script executa as 15 questões pelos mesmos composition roots usados pela API (`DefaultMessageStartup` e `RalphThinkingStartup`). Cada questão passa pela inferência simples e depois pelo RALPH LOOP adaptado. Uma fila FIFO distribui o trabalho entre cinco workers por padrão, sempre com o modelo `deepseek/deepseek-v4-flash-0731` via OpenRouter.
 
-Uma `asyncio.Queue` FIFO distribui as questões para **5 workers**, por padrão. Cada worker executa **simples → Ralph** para a mesma questão antes de retirar a próxima. Assim, há no máximo cinco questões em processamento simultâneo. A ordem de conclusão pode variar. Cada fluxo recebe uma instância nova do startup, com sessão, memórias e limites próprios.
+As sessões, mensagens, invocações e métricas são persistidas **no armazenamento normal do backend**, conforme `RALPH_SESSION_STORAGE_BACKEND`: MongoDB ou JSON. O script herda as configurações e credenciais do container. Não há leitor de históricos locais nem configuração `BENCHMARK_RESULTS_PATH`.
 
-O modelo é **`deepseek/deepseek-v4-flash-0731`**, via OpenRouter, tanto na chamada simples quanto em todas as fases e retentativas do Ralph. O script fixa modelo, provedor e allowlists apenas no próprio processo, sem editar o `.env` do projeto. Os limites operacionais `RALPH_*` e o timeout HTTP vêm das configurações existentes do backend. Ambos os fluxos usam os mesmos parâmetros de geração: por padrão, `max_tokens=4096` e `temperature=0.0`.
+## Executar com Docker Compose
 
-## Executar
-
-Na raiz do projeto, com Python **3.11 ou superior** e as dependências de `apps/backend/requirements.txt` instaladas:
+Na raiz do projeto, atualize o backend e o front-end, incluindo o volume com o script e as questões:
 
 ```bash
-# Valida as 15 questões e mostra os dois fluxos; não faz chamadas nem exige credenciais.
-python3 "teste benchmark/executar.py" --dry-run
-
-# Usa o ambiente virtual existente do backend.
-apps/backend/.venv/bin/python "teste benchmark/executar.py"
+docker compose up -d --build backend frontend
 ```
 
-Configure `OPENROUTER_API_KEY` no ambiente ou em `apps/backend/.env`. Variáveis já exportadas têm precedência sobre o arquivo. Para usar outro arquivo:
+Valide o dataset sem chamar modelos nem gerar sessões:
 
 ```bash
-apps/backend/.venv/bin/python "teste benchmark/executar.py" --env-file /caminho/credenciais.env
+docker compose exec -T backend python /opt/benchmark/executar.py --dry-run
 ```
 
-Outras opções:
+Execute o benchmark real:
 
 ```bash
-apps/backend/.venv/bin/python "teste benchmark/executar.py" \
-  --concurrency 5 \
-  --max-tokens 4096 \
-  --temperature 0 \
-  --questions-dir "teste benchmark/QUESTOES_BENCHMARK" \
-  --output-dir "teste benchmark/resultados"
+docker compose exec -T backend python /opt/benchmark/executar.py
 ```
 
-Os caminhos padrão são resolvidos a partir da localização do script; caminhos fornecidos na CLI são relativos ao diretório de onde ele é chamado. A execução real faz chamadas cobradas pelo provedor.
+As credenciais de `apps/backend/.env` já são fornecidas ao container pelo Compose. O script usa o mesmo banco ou diretório de sessões da API. A execução real faz chamadas cobradas pelo provedor.
 
-## Avaliação e relatório
+Para o ambiente de desenvolvimento, use o mesmo arquivo Compose em todos os comandos:
 
-O enunciado original recebe as mesmas instruções de `prompt.md` nos dois fluxos. A última linha da resposta deve ser `RESPOSTA_FINAL: A`, substituindo `A` pela letra escolhida. O gabarito e a resposta da inferência simples **não são enviados ao Ralph**. A avaliação é local e determinística, sem chamada a outro modelo.
+```bash
+docker compose -f docker-compose.dev.yml up -d --build backend frontend
+docker compose -f docker-compose.dev.yml exec -T backend python /opt/benchmark/executar.py
+```
 
-O avaliador usa somente o marcador final, uma letra isolada ou uma alternativa completa isolada. Letras citadas no raciocínio não são interpretadas como resposta. Respostas ambíguas, ausência de resposta final e falhas técnicas contam como **erros**, com diagnóstico separado. Uma falha no simples não impede o Ralph; uma falha em uma questão não impede as próximas. Não há retentativas adicionais do benchmark; o simples continua sendo uma única inferência e o Ralph mantém suas próprias retentativas.
+Parâmetros opcionais:
 
-Cada execução cria uma pasta exclusiva em `resultados/<data UTC>_<id>/`, com:
+```bash
+docker compose exec -T backend python /opt/benchmark/executar.py \
+  --concurrency 5 --max-tokens 4096 --temperature 0
+```
 
-- `relatorio.md`: certo/errado e alternativa de cada fluxo por questão, mais totais de acertos, erros, acurácia e falhas.
-- `resultados.json`: resultados completos, respostas brutas, alternativas esperadas e selecionadas, erros, tempos e IDs das sessões.
-- `<questao>.json`: checkpoint atualizado após cada fluxo, inclusive antes de começar o Ralph.
-- `<questao>_ralph_eventos.jsonl`: todos os eventos do Ralph; só o evento final `result` é usado como resposta.
-- `sessions/`: sessões reais do backend com histórico, invocações e consumo de tokens.
-- `execucao.json` e `prompt.md`: parâmetros iniciais, lista de questões e instruções usadas.
+O modelo é fixado no processo do benchmark; os limites de recursos `RALPH_*` e os timeouts são os mesmos configurados no backend. A inferência simples continua sendo uma única chamada; o Ralph mantém suas próprias fases e retentativas.
 
-O terminal também mostra o andamento e os totais finais. Os relatórios mantêm a ordem dos nomes das questões, independentemente da ordem de conclusão. Em uma interrupção, os checkpoints e eventos já gravados permanecem disponíveis; os relatórios consolidados são gerados quando todas as questões terminam.
+## Metadados persistidos em Session
 
-Códigos de saída: `0` se todos os fluxos devolverem respostas avaliáveis (mesmo que erradas), `1` se houver falhas técnicas ou respostas inválidas, `2` para configuração/dataset inválido e `130` para interrupção pelo teclado.
+Cada sessão contém `benchmark_details`, uma instância da classe dedicada `BenchmarkDetails`. Os nomes abaixo foram mantidos conforme o contrato solicitado:
 
-## Verificar sem consumir API
+| Campo | Conteúdo |
+| --- | --- |
+| `is_banchmark` | `true` quando criada pelo script; `false` em sessões comuns da API |
+| `question_name` | Nome da pasta que identifica a questão |
+| `corret_answer` | Alternativa correta completa, com letra e texto |
+| `providade_answer` | Resposta bruta devolvida pelo fluxo |
+| `inference_mode` | Enum `simple` ou `ralph` |
+| `run_id` | Identificador único da execução do benchmark |
+| `expected_alternative` | Letra esperada |
+| `selected_alternative` | Letra identificada na resposta, ou `null` |
+| `is_correct` | Acerto/erro; `null` enquanto a avaliação não terminou |
+| `duration_seconds` | Duração do fluxo |
+| `error` | Diagnóstico de falha técnica ou resposta inválida |
+
+Nas sessões comuns, todos os campos são `null`, exceto `is_banchmark=false`. Sessões antigas sem esse campo continuam legíveis com esse mesmo valor padrão. Os metadados iniciais são persistidos desde a criação da sessão; ao terminar cada fluxo, o script grava a avaliação pelo mesmo recorder e repositório. Gabaritos e resultados do baseline não são enviados ao modelo nem ao Ralph.
+
+A avaliação é determinística: usa a última linha `RESPOSTA_FINAL: A`, uma letra isolada ou uma alternativa completa isolada. Respostas ambíguas, ausência de alternativa e falhas técnicas contam como erros, com diagnóstico separado. Falhas não impedem a execução do outro fluxo ou das próximas questões.
+
+## Front-end
+
+O botão **BenchMark** reutiliza a lista e os detalhes do histórico, incluindo busca, filtro de fluxo, barra lateral e modos Chat/Gráfico. As sessões são carregadas pelos endpoints normais `GET /v1/sessions` e `GET /v1/sessions/{id}`. A separação vem de `benchmark_details.is_banchmark`, e a página mostra nome da questão, gabarito, alternativa escolhida e acerto/erro.
+
+O Histórico normal mostra sessões comuns; BenchMark mostra as sessões identificadas pelo script. Os resultados antigos salvos apenas no computador não são importados automaticamente: eles permanecem preservados nos arquivos locais, e novas execuções pelo container passam a aparecer no histórico compartilhado.
+
+## Relatórios
+
+Além das sessões no armazenamento normal, cada execução gera relatórios e checkpoints em `/app/data/benchmark-reports/<execucao>/`, dentro do volume persistente `backend_data`:
+
+- `relatorio.md`: resultado de cada questão nos dois fluxos e totais de acertos, erros e acurácia.
+- `resultados.json`: respostas, avaliações, tempos e IDs das sessões.
+- `<questao>.json`: checkpoint atualizado após cada fluxo.
+- `<questao>_ralph_eventos.jsonl`: eventos completos do Ralph.
+- `execucao.json` e `prompt.md`: parâmetros e instruções usadas.
+
+O terminal informa o caminho exato do relatório. Para copiar os relatórios para o computador:
+
+```bash
+docker compose cp backend:/app/data/benchmark-reports "./teste benchmark/relatorios-container"
+```
+
+`--output-dir` pode mudar o diretório dos relatórios, mas não muda o repositório das sessões. O código e o dataset são montados em `/opt/benchmark` somente para leitura. Não use essa pasta como saída no container.
+
+Códigos de saída: `0` para respostas avaliáveis, mesmo erradas; `1` para falhas ou respostas inválidas; `2` para configuração/dataset inválido; `130` para interrupção. Uma interrupção preserva as sessões e checkpoints já gravados; os relatórios consolidados são gerados ao terminar todas as questões.
+
+## Testes sem chamadas pagas
+
+Na raiz do projeto:
 
 ```bash
 apps/backend/.venv/bin/python -m pytest "teste benchmark/tests" -q
 apps/backend/.venv/bin/flake8 --config apps/backend/setup.cfg "teste benchmark"
 ```
 
-Os testes verificam concorrência de cinco questões, ordem simples → Ralph, continuidade após falhas, avaliação sem falsos positivos, somas dos relatórios e integração com os dois fluxos reais usando transporte HTTP simulado. Nenhum teste acessa o provedor.
+Os testes exercitam fila, concorrência, avaliação e relatórios. A integração dos dois fluxos usa transporte HTTP simulado, verifica o modelo em todas as fases e comprova a persistência dos metadados tanto em JSON quanto em MongoDB simulado.

@@ -1,3 +1,4 @@
+import type { SessionSource } from '@/domain/types/sessionSource'
 import { Link } from 'react-router-dom'
 import { Skeleton } from '@/components/primitives/Skeleton'
 import { env } from '@/config/env'
@@ -9,6 +10,7 @@ import { RALPH_FLOW_ICON, SIMPLE_FLOW_ICON } from '../flowIcons'
 import styles from './HistorySidebar.module.css'
 
 export interface HistorySidebarProps {
+  source?: SessionSource
   items: SessionSummaryView[]
   activeSessionId: string
   /** A lista ainda não chegou do cache/rede — mostra esqueletos no lugar dos itens. */
@@ -23,7 +25,7 @@ const SKELETON_COUNT = 6
  * aparece instantaneamente; ao entrar direto pela URL, ela mostra esqueletos enquanto
  * `HistoryListPage`/`HistoryDetailPage` hidratam em segundo plano.
  */
-export function HistorySidebar({ items, activeSessionId, isLoading }: HistorySidebarProps): JSX.Element {
+export function HistorySidebar({ items, activeSessionId, isLoading, source = 'history' }: HistorySidebarProps): JSX.Element {
   return (
     <nav className={styles.nav} aria-label="Conversas">
       <ul className={styles.list}>
@@ -32,7 +34,7 @@ export function HistorySidebar({ items, activeSessionId, isLoading }: HistorySid
           return (
             <li key={item.id}>
               <Link
-                to={buildHistoryDetailPath(item.id)}
+                to={buildHistoryDetailPath(item.id, source)}
                 className={cx(styles.item, isActive && styles.itemActive)}
                 aria-current={isActive ? 'page' : undefined}
                 title={item.fullQuestion}

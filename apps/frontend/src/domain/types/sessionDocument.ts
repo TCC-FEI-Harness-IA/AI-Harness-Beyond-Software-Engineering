@@ -1,3 +1,4 @@
+import type { BenchmarkDetails } from './benchmarkDetails'
 // `GET /v1/sessions/{session_id}` (README, seção 3.4). A mensagem persistida não tem
 // `subtype` — a derivação vive em `domain/services/deriveSubtype.ts` (FASE 07).
 
@@ -41,6 +42,7 @@ export interface SessionDegradationDocument {
 }
 
 export interface SessionDocument {
+  benchmark_details?: BenchmarkDetails
   id: string
   user_question: string
   flow: ThinkingPhase

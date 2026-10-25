@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from src.domain.entities.session.llm_invocation import LLMInvocation
+from src.domain.entities.session.benchmark_details import BenchmarkDetails
 from src.domain.entities.session.session_degradation import SessionDegradation
 from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
@@ -33,6 +34,7 @@ class Session:
         provider: Provedor efetivo das chamadas; `None` em sessões anteriores ao registro.
         invocations: Uma entrada por chamada enviada ao modelo, na ordem do envio.
         failure: Motivo estruturado do encerramento sem conclusão, quando houve.
+        benchmark_details: Identificação e avaliação do benchmark; padrão não benchmark para a API.
         legacy_totals: Indica que os totais vêm de uma sessão gravada antes do registro por
             invocação, e por isso não têm chamadas individuais correspondentes.
     """
@@ -54,6 +56,7 @@ class Session:
     invocations: list[LLMInvocation] = field(default_factory=list)
     failure: SessionFailure | None = None
     legacy_totals: bool = False
+    benchmark_details: BenchmarkDetails = field(default_factory=BenchmarkDetails)
 
     def add_message(self, message: SessionMessage) -> None:
         """Anexa uma mensagem ao histórico e atualiza os totais da sessão.

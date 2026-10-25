@@ -3,7 +3,7 @@
 import asyncio
 import json
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from time import perf_counter
 from typing import Protocol
@@ -118,7 +118,7 @@ async def evaluate(flows: Flows, name: str, question: Question, prompt: str) -> 
     error = reply.error
     if error is None and selected is None:
         error = "Resposta sem alternativa final válida e inequívoca."
-    return Outcome(
+    outcome = Outcome(
         response=reply.response,
         selected=selected,
         correct=error is None and selected == question.expected,
@@ -126,6 +126,14 @@ async def evaluate(flows: Flows, name: str, question: Question, prompt: str) -> 
         session_id=reply.session_id,
         seconds=round(perf_counter() - started, 3),
     )
+
+    persist = getattr(flows, "record_outcome", None)
+    if persist is not None:
+        try:
+            await persist(question.id, name, outcome)
+        except Exception as failure:
+            outcome = replace(outcome, correct=False, error=f"Falha ao persistir avaliação: {failure}")
+    return outcome
 
 
 def write_json(path: Path, payload: object) -> None:

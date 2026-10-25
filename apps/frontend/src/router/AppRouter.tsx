@@ -35,6 +35,8 @@ function AppShellWithRoutes({ enableDevRoute }: Required<AppRouterProps>): JSX.E
           <Route path={ROUTES.ralphChat} element={<RalphPage />} />
           <Route path={ROUTES.history} element={<HistoryListPage />} />
           <Route path={ROUTES.historyDetail} element={<HistoryDetailPage />} />
+          <Route path={ROUTES.benchmark} element={<HistoryListPage source="benchmark" />} />
+          <Route path={ROUTES.benchmarkDetail} element={<HistoryDetailPage source="benchmark" />} />
           {enableDevRoute ? (
             <Route path={ROUTES.devComponents} element={<ComponentsGalleryPage />} />
           ) : null}

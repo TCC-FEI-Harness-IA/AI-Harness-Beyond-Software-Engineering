@@ -2,6 +2,7 @@ import logging
 
 from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.session.session import Session
+from src.domain.entities.session.benchmark_details import BenchmarkDetails
 from src.domain.entities.session.llm_invocation import LLMInvocation
 from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
@@ -31,6 +32,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         id_generator: IIdGenerator,
         settings: ISettings,
         logger: logging.Logger,
+        benchmark_details: BenchmarkDetails | None = None,
     ) -> None:
         """Inicializa o adapter.
 
@@ -40,12 +42,14 @@ class SessionRecorderAdapter(ISessionRecorder):
             id_generator: Gerador de identificadores de sessão e mensagem.
             settings: Configurações da aplicação.
             logger: Logger do módulo.
+            benchmark_details: Metadados opcionais, persistidos desde a criação da sessão.
         """
         self.repository: ISessionRepository = repository
         self.clock: IClock = clock
         self.id_generator: IIdGenerator = id_generator
         self.settings: ISettings = settings
         self.logger = logger
+        self.benchmark_details = benchmark_details or BenchmarkDetails()
         self.__session: Session | None = None
         self.__wall_time_start_ms: int = _NO_INFERENCE_TIME_MS
 
@@ -89,6 +93,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             created_at=created_at,
             updated_at=created_at,
             provider=provider,
+            benchmark_details=self.benchmark_details,
         )
         self.__wall_time_start_ms = self.clock.monotonic_ms()
 
@@ -300,6 +305,17 @@ class SessionRecorderAdapter(ISessionRecorder):
             raise
         self.logger.info("Sessão '%s' encerrada com status '%s'", session.id, status.value)
         return session
+
+    async def update_benchmark_details(self, details: BenchmarkDetails) -> None:
+        """Persiste a avaliação sem modificar mensagens, status ou métricas da inferência."""
+        session = self.session
+        previous = session.benchmark_details
+        session.benchmark_details = details
+        try:
+            await self.repository.save(session=session)
+        except Exception:
+            session.benchmark_details = previous
+            raise
 
     @property
     def session(self) -> Session:

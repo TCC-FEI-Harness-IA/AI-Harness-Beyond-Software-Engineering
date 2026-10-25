@@ -1,3 +1,4 @@
+import type { SessionSource } from '@/domain/types/sessionSource'
 import { useMemo, useRef } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -52,8 +53,8 @@ function isFlowFilter(value: string | null): value is FlowFilter {
  * fluxo vivem na URL (`?q=` e `?fluxo=`), para que o link seja compartilhável e o botão
  * "voltar" do navegador funcione.
  */
-export function HistoryListPage(): JSX.Element {
-  const { items, pendingCount, isLoadingIds, error, failedIds, reload } = useSessionList()
+export function HistoryListPage({ source = 'history' }: { source?: SessionSource }): JSX.Element {
+  const { items, pendingCount, isLoadingIds, error, failedIds, reload } = useSessionList(source)
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const listRef = useRef<HTMLUListElement>(null)
@@ -118,12 +119,12 @@ export function HistoryListPage(): JSX.Element {
   }
 
   const hasAnySession = !isLoadingIds && (items.length > 0 || failedIds.length > 0)
-  const isEmptyHistory = !isLoadingIds && items.length === 0 && failedIds.length === 0
+  const isEmptyHistory = !isLoadingIds && pendingCount === 0 && items.length === 0 && failedIds.length === 0
 
   return (
     <PageContainer width="content">
       <div className={styles.header}>
-        <h1 className={styles.title}>Histórico</h1>
+        <h1 className={styles.title}>{source === 'benchmark' ? 'BenchMark' : 'Histórico'}</h1>
         {hasAnySession ? (
           <p className={styles.subtitle}>
             {items.length} {items.length === 1 ? 'conversa' : 'conversas'} · {formatTokens(totalTokens)} tokens
@@ -145,7 +146,7 @@ export function HistoryListPage(): JSX.Element {
         </div>
       ) : null}
 
-      {isLoadingIds ? (
+      {isLoadingIds || (items.length === 0 && pendingCount > 0) ? (
         <div className={styles.list}>
           {Array.from({ length: 6 }, (_, index) => (
             <Skeleton key={index} height="4.5rem" radius="var(--radius-lg)" />
@@ -154,7 +155,7 @@ export function HistoryListPage(): JSX.Element {
       ) : isEmptyHistory ? (
         <EmptyState
           icon={HISTORY_ICON}
-          title="Nenhuma conversa ainda"
+          title={source === 'benchmark' ? 'Nenhuma execução de benchmark encontrada' : 'Nenhuma conversa ainda'}
           action={<Button onClick={() => navigate(ROUTES.home)}>Fazer uma pergunta</Button>}
         />
       ) : filtered.length === 0 && failedIds.length === 0 ? (
@@ -171,7 +172,7 @@ export function HistoryListPage(): JSX.Element {
         <>
           <ul ref={listRef} className={styles.list} onKeyDown={handleListKeyDown}>
             {filtered.map((item) => (
-              <SessionCard key={item.id} session={item} />
+              <SessionCard key={item.id} session={item} source={source} />
             ))}
             {failedIds.map((id) => (
               <li key={id} className={styles.failedCard}>

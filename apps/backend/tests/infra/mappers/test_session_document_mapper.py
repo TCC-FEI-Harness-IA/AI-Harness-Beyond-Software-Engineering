@@ -5,6 +5,9 @@ from typing import Any
 
 import pytest
 
+from src.domain.entities.session.benchmark_details import BenchmarkDetails
+from src.domain.enums.benchmark_inference_mode_enum import BenchmarkInferenceModeEnum
+
 from src.domain.entities.session.session import Session
 from src.domain.entities.session.llm_invocation import LLMInvocation
 from src.domain.entities.session.session_degradation import SessionDegradation
@@ -532,3 +535,25 @@ def test_from_document_nao_altera_o_documento_recebido() -> None:
     _build_mapper().from_document(document=documento)
 
     assert documento == original
+
+
+def test_benchmark_roundtrip_e_sessoes_antigas() -> None:
+    session = _nova_sessao()
+    session.benchmark_details = BenchmarkDetails(
+        is_banchmark=True, question_name="Q1", corret_answer="A) um", providade_answer="A",
+        inference_mode=BenchmarkInferenceModeEnum.SIMPLE, run_id="run_1", is_correct=True,
+    )
+    mapper = _build_mapper()
+    document = mapper.to_document(session)
+    assert mapper.from_document(document).benchmark_details == session.benchmark_details
+    assert json.loads(json.dumps(document))["benchmark_details"]["inference_mode"] == "simple"
+    del document["benchmark_details"]
+    assert mapper.from_document(document).benchmark_details == BenchmarkDetails()
+
+
+@pytest.mark.parametrize("value", [[], {"unknown": "invalid"}, {"inference_mode": "invalid"}])
+def test_benchmark_malformado_e_recusado(value) -> None:
+    document = _documento_valido()
+    document["benchmark_details"] = value
+    with pytest.raises(ValueError):
+        _build_mapper().from_document(document)

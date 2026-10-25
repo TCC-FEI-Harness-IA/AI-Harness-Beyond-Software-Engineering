@@ -10,6 +10,7 @@ import type { SessionSummaryView } from '../types/sessionSummaryView'
 export function sessionSummary(document: SessionDocument): SessionSummaryView {
   return {
     id: document.id,
+    benchmarkDetails: document.benchmark_details ?? null,
     question: document.user_question,
     fullQuestion: document.user_question,
     flow: document.flow === THINKING_PHASE.DIRECT ? 'simple' : 'ralph',

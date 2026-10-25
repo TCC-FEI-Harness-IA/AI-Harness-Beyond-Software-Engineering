@@ -17,6 +17,7 @@ services:
       - "8000:8000"
     volumes:
       - backend_data:/app/data
+      - "./teste benchmark:/opt/benchmark:ro"
     depends_on:
       - mongo
     networks:

@@ -619,3 +619,16 @@ infra/*              Adapters, repositório, mapper, provider de templates, conf
 
 A persistência de sessões é compartilhada pelos endpoints de mensagens e pode ser consultada
 pelos endpoints `GET /v1/sessions*`.
+
+
+## Sessões de benchmark
+
+O script de [`teste benchmark`](../../teste%20benchmark/README.md) roda no container e reutiliza os composition roots da API e o repositório configurado (JSON ou MongoDB). `Session.benchmark_details` usa a classe dedicada `BenchmarkDetails`, com os campos `is_banchmark`, `question_name`, `corret_answer`, `providade_answer`, `inference_mode` (`simple`/`ralph`), `run_id`, `expected_alternative`, `selected_alternative`, `is_correct`, `duration_seconds` e `error`. Os nomes preservam o contrato solicitado.
+
+Sessões comuns têm `is_banchmark=false` e todos os demais campos nulos. Documentos antigos sem `benchmark_details` recebem esse padrão na leitura. A consulta continua pelos endpoints normais de sessões; não existe origem alternativa de arquivos locais. O front-end usa esses metadados para separar Histórico e BenchMark. O gabarito é metadado de avaliação e não participa dos prompts.
+
+```bash
+docker compose exec -T backend python /opt/benchmark/executar.py
+```
+
+Os relatórios ficam em `/app/data/benchmark-reports`, no volume persistente do backend.

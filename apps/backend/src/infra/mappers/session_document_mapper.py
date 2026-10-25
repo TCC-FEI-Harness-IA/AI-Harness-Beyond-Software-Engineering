@@ -1,9 +1,12 @@
 from datetime import datetime
+from dataclasses import asdict
 from enum import StrEnum
 from typing import Any, TypeVar
 
 from src.domain.entities.session.llm_invocation import LLMInvocation
 from src.domain.entities.session.session import Session
+from src.domain.entities.session.benchmark_details import BenchmarkDetails
+from src.domain.enums.benchmark_inference_mode_enum import BenchmarkInferenceModeEnum
 from src.domain.entities.session.session_degradation import SessionDegradation
 from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
@@ -52,6 +55,7 @@ class SessionDocumentMapper(ISessionDocumentMapper):
         return {
             _DOCUMENT_ID_KEY: session.id,
             "id": session.id,
+            "benchmark_details": asdict(session.benchmark_details),
             "user_question": session.user_question,
             "flow": session.flow.value,
             "model_name": session.model_name,
@@ -74,6 +78,22 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             ],
         }
 
+    @staticmethod
+    def __benchmark_from_document(document: dict[str, Any]) -> BenchmarkDetails:
+        """Sessões antigas recebem o valor padrão não benchmark."""
+        raw = document.get("benchmark_details")
+        if raw is None:
+            return BenchmarkDetails()
+        if not isinstance(raw, dict):
+            raise ValueError("benchmark_details deve ser um objeto.")
+        values = dict(raw)
+        if values.get("inference_mode") is not None:
+            values["inference_mode"] = BenchmarkInferenceModeEnum(values["inference_mode"])
+        try:
+            return BenchmarkDetails(**values)
+        except TypeError as error:
+            raise ValueError("Campos inválidos em benchmark_details.") from error
+
     def from_document(self, document: dict[str, Any]) -> Session:
         """Converte um documento persistido de volta em uma sessão.
 
@@ -88,6 +108,7 @@ class SessionDocumentMapper(ISessionDocumentMapper):
                 desconhecido ou uma data não é ISO-8601 com fuso horário.
         """
         session = Session(
+            benchmark_details=self.__benchmark_from_document(document),
             id=self.__required(document=document, key=_DOCUMENT_ID_KEY, container=_SESSION_CONTAINER),
             user_question=self.__required(document=document, key="user_question", container=_SESSION_CONTAINER),
             flow=self.__enum_from_document(

@@ -2,6 +2,10 @@ import logging
 from datetime import UTC, datetime
 
 import pytest
+from dataclasses import replace
+from unittest.mock import AsyncMock
+
+from src.domain.entities.session.benchmark_details import BenchmarkDetails
 
 from src.domain.entities.llm.genai_model import GenaiModel
 from src.domain.entities.llm.tokens_usage import TokensUsage
@@ -109,6 +113,27 @@ async def test_session_devolve_a_sessao_corrente() -> None:
 def test_session_antes_de_start_e_recusada() -> None:
     with pytest.raises(ValueError, match="não foi iniciada"):
         _build_recorder().session
+
+
+async def test_benchmark_e_marcado_desde_o_inicio_e_avaliacao_persistida() -> None:
+    recorder = _build_recorder()
+    recorder.benchmark_details = BenchmarkDetails(is_banchmark=True, question_name="Q1")
+    await _start(recorder)
+    assert recorder.session.benchmark_details.is_banchmark
+    details = replace(recorder.session.benchmark_details, is_correct=True, providade_answer="A")
+    await recorder.update_benchmark_details(details)
+    saved = await recorder.repository.find_by_id(recorder.session.id)
+    assert saved.benchmark_details == details
+
+
+async def test_falha_de_persistencia_da_avaliacao_preserva_metadados_anteriores(monkeypatch) -> None:
+    recorder = _build_recorder()
+    await _start(recorder)
+    before = recorder.session.benchmark_details
+    monkeypatch.setattr(recorder.repository, "save", AsyncMock(side_effect=OSError("disco")))
+    with pytest.raises(OSError):
+        await recorder.update_benchmark_details(BenchmarkDetails(is_banchmark=True))
+    assert recorder.session.benchmark_details == before
 
 
 async def test_record_user_input_antes_de_start_e_recusado() -> None:
