@@ -5,6 +5,7 @@ MongoDB simulado, mapper e templates reais — com a única substituição na fr
 transporte HTTP do provedor, por `httpx.MockTransport`.
 """
 import json
+import logging
 from collections import deque
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,8 @@ from mongomock_motor import AsyncMongoMockClient
 from starlette.websockets import WebSocketDisconnect
 
 from src.infra.adapters import mongo_client_adapter
+from src.infra.config.settings import Settings
+from src.infra.providers.file_benchmark_question_provider import FileBenchmarkQuestionProvider
 from src.infra.services.llm_service_factory import LLMServiceFactory
 from src.infra.services.openrouter_service import OpenRouterService
 from src.main import create_app
@@ -128,9 +131,9 @@ def _sessoes_gravadas(diretorio: Path) -> list[dict[str, Any]]:
 def test_bateria_executa_as_primeiras_questoes_e_grava_a_benchmark_session(
     ambiente: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Q108 (gabarito D): simples acerta, Ralph acerta. Q112 (gabarito A): simples erra, Ralph acerta.
+    # ENEM 2022 Q93 e Q100 (gabarito B): simples acerta só a primeira, Ralph acerta ambas.
     provedor = _Provedor(
-        ["RESPOSTA_FINAL: D", *_roteiro_ralph("RESPOSTA_FINAL: D"), "RESPOSTA_FINAL: B", *_roteiro_ralph("A")]
+        ["RESPOSTA_FINAL: B", *_roteiro_ralph("RESPOSTA_FINAL: B"), "RESPOSTA_FINAL: A", *_roteiro_ralph("B")]
     )
 
     frames, codigo = _executar(_cliente(monkeypatch, provedor), _abertura())
@@ -149,8 +152,8 @@ def test_bateria_executa_as_primeiras_questoes_e_grava_a_benchmark_session(
     assert bateria["status"] == "completed"
     assert bateria["progress"]["finished"] == 2
     assert [questao["question_id"] for questao in bateria["questions"]] == [
-        "FISICA_ENEM_2023_AZUL_Q108",
-        "FISICA_ENEM_2023_AZUL_Q112",
+        "FISICA_ENEM_2022_AZUL_Q093",
+        "FISICA_ENEM_2022_AZUL_Q100",
     ]
     assert bateria["summary"]["simple"]["correct"] == 1
     assert bateria["summary"]["simple"]["wrong"] == 1
@@ -220,8 +223,8 @@ def test_consultas_listam_detalham_e_descrevem_o_dataset(ambiente: Path, monkeyp
     listagem = cliente.get("/v1/benchmark/sessions").json()
     detalhe = cliente.get(f"/v1/benchmark/sessions/{bateria['id']}")
 
-    assert len(dataset["question_ids"]) == 15
-    assert dataset["question_ids"][0] == "FISICA_ENEM_2023_AZUL_Q108"
+    assert len(dataset["question_ids"]) == 90
+    assert dataset["question_ids"][0] == "FISICA_ENEM_2022_AZUL_Q093"
     assert dataset["max_parallel_limit"] == 10
     assert listagem == {"benchmark_sessions": [bateria]}
     assert detalhe.status_code == 200
@@ -233,10 +236,34 @@ def test_quantidade_acima_do_dataset_e_recusada_antes_de_qualquer_chamada(
 ) -> None:
     provedor = _Provedor([])
 
-    frames, codigo = _executar(_cliente(monkeypatch, provedor), _abertura(question_count=16))
+    frames, codigo = _executar(_cliente(monkeypatch, provedor), _abertura(question_count=91))
 
     assert codigo == 1003
     assert frames == [{"type": "error", "content": frames[0]["content"]}]
     assert "question_count" in frames[0]["content"]
     assert provedor.enviados == []
     assert not (ambiente / "benchmark-sessions").exists()
+
+
+def test_bateria_completa_usa_as_noventa_questoes_nos_dois_fluxos(
+    ambiente: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    questoes = FileBenchmarkQuestionProvider(Settings(), logging.getLogger("teste.dataset")).list_questions()
+    respostas = []
+    for questao in questoes:
+        resposta = f"RESPOSTA_FINAL: {questao.expected_alternative}"
+        respostas.extend([resposta, *_roteiro_ralph(resposta)])
+    provedor = _Provedor(respostas)
+
+    frames, codigo = _executar(_cliente(monkeypatch, provedor), _abertura(question_count=90))
+
+    assert codigo == 1000
+    assert not provedor.respostas
+    bateria = frames[-1]["benchmark_session"]
+    assert bateria["status"] == "completed"
+    assert bateria["progress"]["finished"] == 90
+    assert [item["question_id"] for item in bateria["questions"]] == [questao.id for questao in questoes]
+    assert bateria["summary"]["simple"]["correct"] == 90
+    assert bateria["summary"]["ralph"]["correct"] == 90
+    assert len(bateria["session_ids"]) == 180
+    assert len(provedor.enviados) == 90 * 9

@@ -1,0 +1,1707 @@
+{
+  "schema_version": 1,
+  "verified_on": "2026-10-25",
+  "sources": {
+    "enem22": {
+      "exam": "ENEM",
+      "year": 2022,
+      "phase": "Aplicação regular, 2º dia",
+      "booklet": "Caderno 7, azul",
+      "date": "2022-11-20",
+      "index": "https://www.gov.br/inep/pt-br/areas-de-atuacao/avaliacao-e-exames-educacionais/enem/provas-e-gabaritos/2022",
+      "proof": "https://download.inep.gov.br/enem/provas_e_gabaritos/2022_PV_impresso_D2_CD7.pdf",
+      "key": "https://download.inep.gov.br/enem/provas_e_gabaritos/2022_GB_impresso_D2_CD7.pdf",
+      "proof_file": "sources/enem22-proof.pdf",
+      "proof_sha256": "ab4cdea89504ab1bfc9435addacea482417cd82e9f220abaa6a317a10bd0b0f9",
+      "key_file": "sources/enem22-key.pdf",
+      "key_sha256": "1b4b0cd0978bfc6c862d9631c4f8a5c25091938d09acfd2bd8c8b510764cb118"
+    },
+    "enem23": {
+      "exam": "ENEM",
+      "year": 2023,
+      "phase": "Aplicação regular, 2º dia",
+      "booklet": "Caderno 7, azul",
+      "date": "2023-11-12",
+      "index": "https://www.gov.br/inep/pt-br/areas-de-atuacao/avaliacao-e-exames-educacionais/enem/provas-e-gabaritos/2023",
+      "proof": "https://download.inep.gov.br/enem/provas_e_gabaritos/2023_PV_impresso_D2_CD7.pdf",
+      "key": "https://download.inep.gov.br/enem/provas_e_gabaritos/2023_GB_impresso_D2_CD7.pdf",
+      "proof_file": "sources/enem23-proof.pdf",
+      "proof_sha256": "49e7ad9d0ab25710f6e5c4c3296fc40b63d86a3a87d5f25d83e8ecc81b98415b",
+      "key_file": "sources/enem23-key.pdf",
+      "key_sha256": "cf40c0c8b19145440132673b11ec682ceef2e047eb1cfa1a2f19a0f908c12410"
+    },
+    "enem24": {
+      "exam": "ENEM",
+      "year": 2024,
+      "phase": "Aplicação regular, 2º dia",
+      "booklet": "Caderno 7, azul",
+      "date": "2024-11-10",
+      "index": "https://www.gov.br/inep/pt-br/areas-de-atuacao/avaliacao-e-exames-educacionais/enem/provas-e-gabaritos/2024",
+      "proof": "https://download.inep.gov.br/enem/provas_e_gabaritos/2024_PV_impresso_D2_CD7.pdf",
+      "key": "https://download.inep.gov.br/enem/provas_e_gabaritos/2024_GB_impresso_D2_CD7.pdf",
+      "proof_file": "sources/enem24-proof.pdf",
+      "proof_sha256": "0993ae687a93dfbcda8e95ce8708883be9d5a55cabbe1f1a06b81a50c18c6cdc",
+      "key_file": "sources/enem24-key.pdf",
+      "key_sha256": "8d27b5a447061e9a1c181d00a916d10f45e1c6c1da68d628b3ae8bdfedbf5c92"
+    },
+    "ita24": {
+      "exam": "ITA",
+      "year": 2024,
+      "phase": "1ª fase",
+      "booklet": "Caderno único",
+      "date": "2023-10-08",
+      "index": "https://vestibular.ita.br/provas.htm",
+      "proof": "https://vestibular.ita.br/provas/2024_fase1.pdf",
+      "key": "https://vestibular.ita.br/provas/gabarito_2024.pdf",
+      "proof_file": "sources/ita24-proof.pdf",
+      "proof_sha256": "b18e8f95aa95e1cc0b5e07c54e0c82783c95148725d90d24cc0c42c491267834",
+      "key_file": "sources/ita24-key.pdf",
+      "key_sha256": "5ff17fa70afac6c3d788570ed808190d0ae61fd184fd484bbc6ff6edccb7d4d9"
+    },
+    "ita25": {
+      "exam": "ITA",
+      "year": 2025,
+      "phase": "1ª fase",
+      "booklet": "Caderno único",
+      "date": "2024-10-13",
+      "index": "https://vestibular.ita.br/provas.htm",
+      "proof": "https://vestibular.ita.br/provas/2025_fase1.pdf",
+      "key": "https://vestibular.ita.br/provas/gabarito_2025.pdf",
+      "proof_file": "sources/ita25-proof.pdf",
+      "proof_sha256": "cd5c3fb869f4a4d77d2f36cc19df602f6ed109c341e45ed9a09c73cf75a86aa6",
+      "key_file": "sources/ita25-key.pdf",
+      "key_sha256": "91f4af43908f200d6d2e8b37561c62110fdf0e3e5d912d20fd2fef2323d33d5d"
+    },
+    "fuvest24": {
+      "exam": "FUVEST",
+      "year": 2024,
+      "phase": "1ª fase, conhecimentos gerais",
+      "booklet": "Prova V",
+      "date": "2023-11-19",
+      "index": "https://www.fuvest.br/acervo-vestibular-2024",
+      "proof": "https://www.fuvest.br/wp-content/uploads/fuvest2024_primeira_fase_prova_V.pdf",
+      "key": "https://www.fuvest.br/wp-content/uploads/fuvest2024_gabarito_primeira_fase_retificado_2023-11-24.pdf",
+      "key_revision": "Retificado em 24/11/2023",
+      "proof_file": "sources/fuvest24-proof.pdf",
+      "proof_sha256": "f7d6e72253ac8fb23ec2283a5776155e6f5a91ef192c280bcc0e94e167c7f41e",
+      "key_file": "sources/fuvest24-key.pdf",
+      "key_sha256": "e0ba949bd86f7aee6f7526639e2efd47383482c8f7eefdb32979cb198a333dfb"
+    },
+    "unicamp25": {
+      "exam": "UNICAMP",
+      "year": 2025,
+      "phase": "1ª fase, conhecimentos gerais",
+      "booklet": "Provas Q e Z",
+      "date": "2024-10-20",
+      "index": "https://www.comvest.unicamp.br/vestibulares-anteriores/vestibular-2025/",
+      "proof": "https://www.comvest.unicamp.br/vest2025/F1/f12025Q_Z.pdf",
+      "key": "https://www.comvest.unicamp.br/wp-content/uploads/2024/10/QZ_gabarito_2025_FINAL_site.pdf",
+      "key_revision": "FINAL_site, com questão 53 anulada",
+      "proof_file": "sources/unicamp25-proof.pdf",
+      "proof_sha256": "41564e9bbd20e03a9b62356c0ccf29b6070bf615b9ac8ecfe660021548cd0710",
+      "key_file": "sources/unicamp25-key.pdf",
+      "key_sha256": "26cc09a657c54357a84fbe23a6e8af34eb150c6a0012556929a481bf29a3f008"
+    }
+  },
+  "questions": [
+    {
+      "id": "FISICA_ENEM_2022_AZUL_Q093",
+      "discipline": "FISICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 93,
+      "proof_pages": [
+        2
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "606555a7d058445fc0b2c65d6fb8508fca53a60d03c8600220fb6c02d76132ae",
+      "answer_sha256": "3303839d63dcd5e7aa20840693f45aeb57008b2f34fdab3c70d31d847197f204",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ENEM_2022_AZUL_Q100",
+      "discipline": "FISICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 100,
+      "proof_pages": [
+        5
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "486f8a0a7a2a5ab50daff886ea658abb13740d68f205a88f66f4642549700d62",
+      "answer_sha256": "3b7496d70cc2b0ece1500f0cf3bcf65ce86a33b443cb8ac3044fb829ce8cf0e8",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ENEM_2022_AZUL_Q105",
+      "discipline": "FISICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 105,
+      "proof_pages": [
+        7
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "b515f5625011abdbcc4a79d970778e1301b4be47c82cbe4dc5a2fbb1aeaa0a8a",
+      "answer_sha256": "c790dd9a09f234e90ed31da264a55b2eef83a1f6540b4f4eb12df555d2511d84",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ENEM_2022_AZUL_Q112",
+      "discipline": "FISICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 112,
+      "proof_pages": [
+        10
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "ed6064381e8a3ad7f00b4fa359d5c1afea9f42eecf0cd14d70db295914c34d03",
+      "answer_sha256": "95e32335c20d324d53625c2f9e5a68de844952b084a251b0b0f3e16e7ff42bd2",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ENEM_2022_AZUL_Q116",
+      "discipline": "FISICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 116,
+      "proof_pages": [
+        11
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "99832f2160a4332b1cf294eafbffc057bf2b33fe21419815b2940e66a3cedb30",
+      "answer_sha256": "b7898c3b9c51190df32395e977afe990c7f0a3b0d4a75a170abc8bc849c772e7",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ENEM_2022_AZUL_Q119",
+      "discipline": "FISICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 119,
+      "proof_pages": [
+        12
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "7f305fd6b4a8ebedd150ee8a0bb1827af258827d7ae8a5c4400bcb9008a2c8ab",
+      "answer_sha256": "d1ebcf324077a2f05e39a74ff0c2c88b39545363da009d9d0aad64696a655655",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ENEM_2022_AZUL_Q123",
+      "discipline": "FISICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 123,
+      "proof_pages": [
+        13
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "E",
+      "statement_sha256": "de2d85bdc2003de6f3efe7f52d38e1eeb07e290f6b4355a2f33b5cbd64fa3878",
+      "answer_sha256": "cc74ee7013ce08fa6ff713a1e573e294b301b4d5de91003e36738c32197ca94c",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ENEM_2023_AZUL_Q100",
+      "discipline": "FISICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 100,
+      "proof_pages": [
+        3
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "36c1340c3709ddd22565bcfb8769f58d31e861596ae4420be683b8b723c4b920",
+      "answer_sha256": "f1a09d715d34934544475cb313ccdef4ff46e0e92bfb9380648c460213c34227",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ENEM_2023_AZUL_Q108",
+      "discipline": "FISICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 108,
+      "proof_pages": [
+        5
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "ef3bde1d7a2aa4d36782e6655ee82d7251c1195254f9ce752f342a77409ca121",
+      "answer_sha256": "bf80bd984075a35d6b6019b84ee80b375edb05586b2dfa57cd1fd9f76f6d5d1c",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "FISICA_ENEM_2023_AZUL_Q112",
+      "discipline": "FISICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 112,
+      "proof_pages": [
+        7
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "d6d01e3f125a21efaba2908addc945c4ce3de79e2a1900983b8d65b64ba50c81",
+      "answer_sha256": "ee7647e36ad03fed99fd43740ead27a6060b11a49e1dc0104b0e26591616363e",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "FISICA_ENEM_2023_AZUL_Q113",
+      "discipline": "FISICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 113,
+      "proof_pages": [
+        7
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "b595401c34b5cef61d81c658462ce44de0ca2f7861bb40c75aeb576d92d8272a",
+      "answer_sha256": "81adca4b820812013e0b105b6edb0cc82314c79da7f17153d34a489c77839ab4",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "FISICA_ENEM_2023_AZUL_Q117",
+      "discipline": "FISICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 117,
+      "proof_pages": [
+        8
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "08281c9a5102969ba39ad219a1d1596eca726bf27768bae2b6226c9cdb9da52a",
+      "answer_sha256": "46e53b0b7fdf52e2713758adfb87dc68d7eff11e0a271edbffac8e25dd4f9f9d",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ENEM_2023_AZUL_Q122",
+      "discipline": "FISICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 122,
+      "proof_pages": [
+        10
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "4b1dd1fac64fd1c5cba89b5b3eb11b3c60af4d90c5ce665f2dfd4d31765e173f",
+      "answer_sha256": "0976e8d4ea22d038d342c6b2e048ad755ca6108c5d80b2f5aebade870e61fbbb",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "FISICA_ENEM_2023_AZUL_Q124",
+      "discipline": "FISICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 124,
+      "proof_pages": [
+        11
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "b09d878d2c0c0cbdd456884e00801922b3e226361d748ec92174d862eb2e0144",
+      "answer_sha256": "6f7edd58fca1d9e7a7bd650920aa9832fc3c1b563cda57e8f7e0b1e44afe0ea0",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "FISICA_ENEM_2023_AZUL_Q128",
+      "discipline": "FISICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 128,
+      "proof_pages": [
+        13
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "3e2605f8f6679c8f021c9fdb9afa11b0aa8373097a4a84bca0b01b92f56da7cb",
+      "answer_sha256": "7df8eea33f7976a351ad87c8a5cd7e832330fc8d209acaba2d5b86eaec191251",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ENEM_2024_AZUL_Q099",
+      "discipline": "FISICA",
+      "source_id": "enem24",
+      "exam": "ENEM",
+      "year": 2024,
+      "original_number": 99,
+      "proof_pages": [
+        4
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "56c28a18e0d41493e33777e3611a0b8eb98a2ce13529695fd39490b20b0f4a90",
+      "answer_sha256": "d46ff3a419e75b4c81efdbbc74f982b7a409b3ce0fd36ebe1f9c3829c836696d",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ENEM_2024_AZUL_Q106",
+      "discipline": "FISICA",
+      "source_id": "enem24",
+      "exam": "ENEM",
+      "year": 2024,
+      "original_number": 106,
+      "proof_pages": [
+        6
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "553faa398f7cc571499940b06db2be40a0496366974410fc2c196b723ee102b8",
+      "answer_sha256": "2d26b9dae4f55bee7d3b74eac8584e02918f7dbae8cc5ec049a705953f760229",
+      "notes": []
+    },
+    {
+      "id": "FISICA_FUVEST_2024_F1_V_Q024",
+      "discipline": "FISICA",
+      "source_id": "fuvest24",
+      "exam": "FUVEST",
+      "year": 2024,
+      "original_number": 24,
+      "proof_pages": [
+        9
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "6d541ecbca410c6d749cea70aac7e670515ac1eb422291dc57613e58973aca66",
+      "answer_sha256": "69baa60769d324818c1a4834cd8c634b535ae60268556c79fb7bd5f482e04de8",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ITA_2024_F1_UNICA_Q004",
+      "discipline": "FISICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 4,
+      "proof_pages": [
+        2,
+        3
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "e3cbb131633b793331d5395f092d876020f8a7b26ca24338841295dc15360fb4",
+      "answer_sha256": "ae7d409dbfa3d21bc1cb08b81b872a09dd78772596edb0eee08e2ef9a5dedb8a",
+      "notes": [
+        "Dados gerais da p. 2 incluídos; unidade N.m²/kg³ de G preservada tal como impressa no original."
+      ]
+    },
+    {
+      "id": "FISICA_ITA_2024_F1_UNICA_Q005",
+      "discipline": "FISICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 5,
+      "proof_pages": [
+        2,
+        3
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "98399b4b5aaa3b2c8af55cd27b388d53e92b1a0cdc2d2dc0f0f566a41b96ade9",
+      "answer_sha256": "fbdd4ef790c418dbd3028bd396e425d47d4c54987ebd50f52a0efc986430c891",
+      "notes": [
+        "Dados gerais da p. 2 incluídos; unidade N.m²/kg³ de G preservada tal como impressa no original."
+      ]
+    },
+    {
+      "id": "FISICA_ITA_2024_F1_UNICA_Q006",
+      "discipline": "FISICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 6,
+      "proof_pages": [
+        2,
+        3
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "11a057cf3088df14724129036ed42039982a76722d8f562439773cb7869ef77d",
+      "answer_sha256": "feab63a7fafb6f66a7c6aa57e7d5ef2dbc77bbaa16aef127e5e02a05e7154de9",
+      "notes": [
+        "Dados gerais da p. 2 incluídos; unidade N.m²/kg³ de G preservada tal como impressa no original."
+      ]
+    },
+    {
+      "id": "FISICA_ITA_2024_F1_UNICA_Q007",
+      "discipline": "FISICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 7,
+      "proof_pages": [
+        2,
+        4
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "E",
+      "statement_sha256": "2b04dc780f7a18522d5a26bff668fc09d71e6392fceff52ae6cd7504b36d2a48",
+      "answer_sha256": "ea6a78eb7f6387d6cc4bcc4077c910443aa9a1ee1104902cd630c31219f212c5",
+      "notes": [
+        "Dados gerais da p. 2 incluídos; unidade N.m²/kg³ de G preservada tal como impressa no original."
+      ]
+    },
+    {
+      "id": "FISICA_ITA_2024_F1_UNICA_Q012",
+      "discipline": "FISICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 12,
+      "proof_pages": [
+        2,
+        5
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "7ca7ad854c6e3f7cd204b7ebf6d578867b59ad1b078dc5fdde6fcba97e92e2e6",
+      "answer_sha256": "bb25f650f013ec41a02299bbe9ec01d80c0ae7cf78824a5967459512b59346ae",
+      "notes": [
+        "Dados gerais da p. 2 incluídos; unidade N.m²/kg³ de G preservada tal como impressa no original."
+      ]
+    },
+    {
+      "id": "FISICA_ITA_2025_F1_UNICA_Q015",
+      "discipline": "FISICA",
+      "source_id": "ita25",
+      "exam": "ITA",
+      "year": 2025,
+      "original_number": 15,
+      "proof_pages": [
+        5,
+        6
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "461fa973ece9f1516d9e93b6c406da096cfde5d190aad8a69b220e9ba5126741",
+      "answer_sha256": "30eb621d01a24407a130b19aa63605307b3a5786f728c59d6df8bb99c3efd34b",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ITA_2025_F1_UNICA_Q016",
+      "discipline": "FISICA",
+      "source_id": "ita25",
+      "exam": "ITA",
+      "year": 2025,
+      "original_number": 16,
+      "proof_pages": [
+        5,
+        6
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "3e34350d9c834411a4e6d4187e522022c072c84798f0458a461f6a93b489f6fd",
+      "answer_sha256": "880e3f592d0b2b38d15662c8883b6d9461bb64a17350034f63d8382fabba4635",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ITA_2025_F1_UNICA_Q020",
+      "discipline": "FISICA",
+      "source_id": "ita25",
+      "exam": "ITA",
+      "year": 2025,
+      "original_number": 20,
+      "proof_pages": [
+        5,
+        8
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "cd77d4e0f843d01fcea611ef74c087900985742dec493da81e4a4cf8f07a5710",
+      "answer_sha256": "a0710ce36ff56cc36139e949b84d62441b1834a1a8348d29062ce8e1508b9b25",
+      "notes": []
+    },
+    {
+      "id": "FISICA_ITA_2025_F1_UNICA_Q023",
+      "discipline": "FISICA",
+      "source_id": "ita25",
+      "exam": "ITA",
+      "year": 2025,
+      "original_number": 23,
+      "proof_pages": [
+        5,
+        9
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "72fcb7593f333ed0ce2f3bc6b2f1c2f445cdd947be0674ba70a77793222c272e",
+      "answer_sha256": "fcc70844f305806475f9f5c522ea46570e1ad4f780e5a3d309a37c83889f90f5",
+      "notes": []
+    },
+    {
+      "id": "FISICA_UNICAMP_2025_F1_QZ_Q009",
+      "discipline": "FISICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 9,
+      "proof_pages": [
+        5,
+        6
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "B",
+      "statement_sha256": "2ea6895a2c9e31adca50873631814388cd0d2de64f704bef426574ebb0458e52",
+      "answer_sha256": "a0f033e64c49c0d8f26b1baf6a8ee9cfa738ea4d714d31b45b70db9bfdd869f3",
+      "notes": []
+    },
+    {
+      "id": "FISICA_UNICAMP_2025_F1_QZ_Q011",
+      "discipline": "FISICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 11,
+      "proof_pages": [
+        6
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "B",
+      "statement_sha256": "9b5a3439f19763eea72eb7729f0b92d2e648f3faf79022d47ca3e56aed25fd42",
+      "answer_sha256": "93290fffcfeb0a214ad257f16afd97812c2402753a0e0208f1cae6ca71b2be0f",
+      "notes": []
+    },
+    {
+      "id": "FISICA_UNICAMP_2025_F1_QZ_Q014",
+      "discipline": "FISICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 14,
+      "proof_pages": [
+        7
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "B",
+      "statement_sha256": "e5c177accfac47c1d92f50d6c99ff8af0ab09991b433e6ddb21aeca18e151b2f",
+      "answer_sha256": "b4c15168aa17cf65c6af7daf2b36dac5bb4b186d467be96b2d0c3a19ab65c824",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2022_AZUL_Q137",
+      "discipline": "MATEMATICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 137,
+      "proof_pages": [
+        17
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "0e60e5ac1d25e57ada1d39517315da31aac86bfa70816d43dd517631280745c1",
+      "answer_sha256": "e7e5760a82f1909c93055577d08b484b242f342fddd6b121c435bcc870aef699",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2022_AZUL_Q139",
+      "discipline": "MATEMATICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 139,
+      "proof_pages": [
+        18
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "cb997f6ac75998757172e8e7c73eff4874921e8e97eb47644dba64a48fc80878",
+      "answer_sha256": "5cc2ef8cbeee6dd8bc3ab826929cdba077636a8ce8ba214ed774d9917750def7",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2022_AZUL_Q140",
+      "discipline": "MATEMATICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 140,
+      "proof_pages": [
+        18
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "5cfe2f1682b367339ca979a8b207451e41021bc3436cbc6e4730b307e69648ae",
+      "answer_sha256": "5d96cb9d8840b18a535fb90ac055d502dc9cd0ce5b93adc8c42505a638674fed",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2022_AZUL_Q142",
+      "discipline": "MATEMATICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 142,
+      "proof_pages": [
+        19
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "b683da0ebaf4b459e42ab4d2f46a1e623226eedfc91c520dd91e4c0189b9c9e8",
+      "answer_sha256": "6eb07fb062027cef703ee510f41d00aa0d76462393bf8cbba140db7c3af57c79",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2022_AZUL_Q145",
+      "discipline": "MATEMATICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 145,
+      "proof_pages": [
+        20
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "E",
+      "statement_sha256": "9ab7d9f9b4644299a428f9b3ff72e888fc0edf242068c258e8159ecee8941f86",
+      "answer_sha256": "bd1c5efbcce62a4ac8c5d06d0f7fa0f402c33d066ef54223e1cf88295a0e73b3",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2022_AZUL_Q146",
+      "discipline": "MATEMATICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 146,
+      "proof_pages": [
+        20
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "E",
+      "statement_sha256": "8bddf5a3838d66a7d6fe4b25899a2535610a5d76e302540df132e79eb10442e7",
+      "answer_sha256": "f308fdcecb8b2bd2c363f94e8e76dacb317caf6f4a0e54b01d77c4376a3471f5",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2022_AZUL_Q154",
+      "discipline": "MATEMATICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 154,
+      "proof_pages": [
+        23
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "d7e643734e24e5c366e8b4a19b237a2b02c89bd16481f0c45772e772a1c67875",
+      "answer_sha256": "7041092f02c3aba42d406f7a71db7f8f55a4f03ed9c394958c423f99c5412196",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2022_AZUL_Q163",
+      "discipline": "MATEMATICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 163,
+      "proof_pages": [
+        27
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "e999194136f667d35cd4eda7e4877109ceb67b1f2adbaf3c8eeafd513be5ca9d",
+      "answer_sha256": "fd336aa898ca1e57e9273039fb5ef04861d61bb8d8356b9aef0e9e635c41b7e6",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2022_AZUL_Q164",
+      "discipline": "MATEMATICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 164,
+      "proof_pages": [
+        27
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "b4d6773e593991481d6d73284821a77493f2007794a29774d248fdd6217b5144",
+      "answer_sha256": "6ab4829a2295836e78016278bd56891f3bcebe8e09cfc9a3f2be5231f81ba262",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2022_AZUL_Q167",
+      "discipline": "MATEMATICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 167,
+      "proof_pages": [
+        27
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "79b020c984698a32e2b25717cc6dcd801de3d27688598153ca75940d0573836f",
+      "answer_sha256": "d906fdff700ddbf6421f81dc517dd2008690ab5ca9c59ec58ab15ee6232a987f",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2022_AZUL_Q178",
+      "discipline": "MATEMATICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 178,
+      "proof_pages": [
+        30
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "E",
+      "statement_sha256": "7f9f9cc3dae4985ca2611685cc81a54f78b6fa6b86176529f7b32bcb1f7071cd",
+      "answer_sha256": "ba74455d9c8ea7b25d8389dc8556095c4088f2b19d610ae792f0bf57d6393784",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ENEM_2023_AZUL_Q137",
+      "discipline": "MATEMATICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 137,
+      "proof_pages": [
+        16
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "0932f4932c0bb56b5e5ced2c15c254006bedfed2b4ae58eef50b349e85a1b01a",
+      "answer_sha256": "85228e0dd9195ba93a7ad40da5cc7dbb7d5db39d4cc919069ed1201c50ebe9ca",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "MATEMATICA_ENEM_2023_AZUL_Q138",
+      "discipline": "MATEMATICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 138,
+      "proof_pages": [
+        16
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "2e6c7cda005c23a62c015419f9901f0d577ae734467d54381e14ec58d6f2d89b",
+      "answer_sha256": "2c1297468012e8b278a46873a4f4286f2f453e928b86b41be100038cce8c47cd",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "MATEMATICA_ENEM_2023_AZUL_Q139",
+      "discipline": "MATEMATICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 139,
+      "proof_pages": [
+        17
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "d483f7163e5c67f1dff369a8a46da2eba555378ed8958e9eaa0c2678ba3b6021",
+      "answer_sha256": "7f5c1b2c1a17167092a3144fccf48928a00f8b1ea1c8d2d823943be4726bba38",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "MATEMATICA_ENEM_2023_AZUL_Q141",
+      "discipline": "MATEMATICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 141,
+      "proof_pages": [
+        18
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "E",
+      "statement_sha256": "ae789853c4390202d7dc3cdd8868f2a6e69d10b1c5118b885bc46ec2726e61ac",
+      "answer_sha256": "64827e2acdbf8c5028f68a3b7fc13f11637450f408fba19bc2801cc231d9d47b",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "MATEMATICA_ENEM_2023_AZUL_Q143",
+      "discipline": "MATEMATICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 143,
+      "proof_pages": [
+        18
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "4522c318cd280fd9c0dd710b84ec3bde6eca7809cd34cf87ba55f307a25fd80f",
+      "answer_sha256": "28156eda13b8ac827a3363e046defc50b8a3ce846736c086227d6c84ccabaebb",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "MATEMATICA_FUVEST_2024_F1_V_Q034",
+      "discipline": "MATEMATICA",
+      "source_id": "fuvest24",
+      "exam": "FUVEST",
+      "year": 2024,
+      "original_number": 34,
+      "proof_pages": [
+        14
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "944a93f23aa71d80562b6d7e82d91bb4c3122894b88a991cbc8583724bbe3e6e",
+      "answer_sha256": "46e53b0b7fdf52e2713758adfb87dc68d7eff11e0a271edbffac8e25dd4f9f9d",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ITA_2024_F1_UNICA_Q037",
+      "discipline": "MATEMATICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 37,
+      "proof_pages": [
+        15
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "53b557e20a819c81ccb358f1568404a1ae40428daaec3705fdf33bab58f88b2f",
+      "answer_sha256": "5c3ef7e604667ea2670b6f3d49133f7166726c223e64d46c5702308e68306565",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ITA_2024_F1_UNICA_Q038",
+      "discipline": "MATEMATICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 38,
+      "proof_pages": [
+        15
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "E",
+      "statement_sha256": "ecb1c444ee235390b8d2f3fee2f597bb719cb207b8e3b61876a19032f348eaca",
+      "answer_sha256": "a4491098e0a02e020dcbc1826da65f047d7a395f975c72ef610543a37bd291a9",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ITA_2024_F1_UNICA_Q039",
+      "discipline": "MATEMATICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 39,
+      "proof_pages": [
+        15,
+        16
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "b00c70fe6f3e26a32d231601c2104201de858a0232c6ba5967de987d4189c234",
+      "answer_sha256": "aadadc90a2a7bba93018858ba2711324f8efe7eb5d876b701323415509ee8530",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ITA_2024_F1_UNICA_Q040",
+      "discipline": "MATEMATICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 40,
+      "proof_pages": [
+        15,
+        16
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "a4e53d23e7fdca0bd9ea0c5bcf8c28c2884e3bb10ae44ed5fd6ead0479b1dae4",
+      "answer_sha256": "bb57033ad1b267683d7b5d4e271ad8b3c37d53faf01cc34618fa722a378787ae",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ITA_2024_F1_UNICA_Q042",
+      "discipline": "MATEMATICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 42,
+      "proof_pages": [
+        15,
+        16
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "6a4715a7f165922d141b9d4334007aadaad5daf82c0c64603ee706db18269e8e",
+      "answer_sha256": "8d9bd95cb7a6968315d0dcb29d8bcf10e551d3ae3f2d0e3a5376ffd74ef30692",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ITA_2024_F1_UNICA_Q043",
+      "discipline": "MATEMATICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 43,
+      "proof_pages": [
+        15,
+        16
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "E",
+      "statement_sha256": "ec2dc5a4bc88668cfaa5e202391d8d484255decaf5c6ae37dd33421f6fa7055b",
+      "answer_sha256": "ccb0219cc2cfb6a3137d941acd717eee06b366603061aee6a6f0e9feeee484e0",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ITA_2024_F1_UNICA_Q044",
+      "discipline": "MATEMATICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 44,
+      "proof_pages": [
+        15,
+        16
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "2e0d82209b0e7aaf5ed3ccd61afc53a220a6bb4932acc090fb5ebc72a46ea632",
+      "answer_sha256": "4ad2a9c1078bb8d0285edf834010482134bd364737590d85c25496042796096f",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_ITA_2024_F1_UNICA_Q046",
+      "discipline": "MATEMATICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 46,
+      "proof_pages": [
+        15,
+        17
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "b466334cfa005dd166f7851f3b4ebc807997a0e0c9061d823cb7a3fb3b808081",
+      "answer_sha256": "2016ebb08958ca3410f3c1987331438568b9d1e46810026f1604fe94df54b1a2",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_UNICAMP_2025_F1_QZ_Q049",
+      "discipline": "MATEMATICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 49,
+      "proof_pages": [
+        17,
+        18
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "B",
+      "statement_sha256": "3a4c5234719dfe877c77a44cd011aafe0f4a9dbe38eb829a730223212f15cfa5",
+      "answer_sha256": "a52405e3e77466319993c5ad8a42be38e33d14f8dbf495bbd70827cec4c9e413",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_UNICAMP_2025_F1_QZ_Q052",
+      "discipline": "MATEMATICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 52,
+      "proof_pages": [
+        18
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "C",
+      "statement_sha256": "578964952ce466f9dbdaee2d9910221ee645ef16b225938ce79370c1261b9baa",
+      "answer_sha256": "04f5ece3b145c1308598dba47135150170c5dde3f5bbeb099e3173694917ca78",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_UNICAMP_2025_F1_QZ_Q054",
+      "discipline": "MATEMATICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 54,
+      "proof_pages": [
+        18
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "B",
+      "statement_sha256": "6665f63fce8a843d2ce12048342bc3277404e3c55c1ec47cb4e2152d7a50e333",
+      "answer_sha256": "1ed2e78b44aa1e11bb455a1accf7c727c3d6784b9812ec85a9a3cdfcf659e283",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_UNICAMP_2025_F1_QZ_Q056",
+      "discipline": "MATEMATICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 56,
+      "proof_pages": [
+        19
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "B",
+      "statement_sha256": "caf6e76940758d69e0c69d5cfce19eafe5819738de50b3cb0cd3b4c8737e4e29",
+      "answer_sha256": "ed741bb94cfc6cdf4eeecef95a0e28dd43229a4ffc260cb2c7917b6175b4f957",
+      "notes": []
+    },
+    {
+      "id": "MATEMATICA_UNICAMP_2025_F1_QZ_Q057",
+      "discipline": "MATEMATICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 57,
+      "proof_pages": [
+        19
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "D",
+      "statement_sha256": "31b41cc13ccd832fb6a2b14f2d91f44f44b6dd8cb0b6d3e4bc02172eac76d8d9",
+      "answer_sha256": "fbbe5b22c996c3a98e11623d0da587b95656be44f8bbf1872e0ab9b8f936d8b9",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ENEM_2022_AZUL_Q097",
+      "discipline": "QUIMICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 97,
+      "proof_pages": [
+        4
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "f3cb5f79cad00383097f847cd378c11d77863d43ed14aff7b563e9f7361c336d",
+      "answer_sha256": "50474e7b151ef480d515c45128f23854301663d507c41b9d85e043968e9ee6da",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ENEM_2022_AZUL_Q101",
+      "discipline": "QUIMICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 101,
+      "proof_pages": [
+        5
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "6b8a493dc7574fb74009974d75121baa232bc0f437420a22819f245b05c266ac",
+      "answer_sha256": "3920dced88cf17d706a804d5518a8152ddaac950ee00aa0d0e426ccb92bfe909",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ENEM_2022_AZUL_Q109",
+      "discipline": "QUIMICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 109,
+      "proof_pages": [
+        9
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "ac43c8164a467469e55977d2a7f8f36d91c9888bd1b242fd0c60d24d725e179c",
+      "answer_sha256": "9c0459394986f802a442ad18d79994a6f37469cab26e062d137e5799fde7d9b1",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ENEM_2022_AZUL_Q113",
+      "discipline": "QUIMICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 113,
+      "proof_pages": [
+        10
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "14f0f9029ab41a329c75f39b0cf7dffa35b8f857f9d68fc48b783dbccadeea16",
+      "answer_sha256": "2eef1b74e3f68edff0873cc663578549efca769008900c7961a732ea9158ee4b",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ENEM_2022_AZUL_Q124",
+      "discipline": "QUIMICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 124,
+      "proof_pages": [
+        13
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "8ff380f87222d8421ac7731c944c2ec209e105052e4f98138dccdadc36af17f6",
+      "answer_sha256": "4b1fd36343e0d4298883aa6252a4464c5062a2bc13facc6bd3833318b1892b83",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ENEM_2022_AZUL_Q126",
+      "discipline": "QUIMICA",
+      "source_id": "enem22",
+      "exam": "ENEM",
+      "year": 2022,
+      "original_number": 126,
+      "proof_pages": [
+        14
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "6ec9a93ccb75156eff2f4dbf186b782d193d052959ac3be30f63547bfd86dff4",
+      "answer_sha256": "df0b36b4cd7450ef5d01591052f1ddccfbc80f6fc74e7b739f63a10d994ec267",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ENEM_2023_AZUL_Q094",
+      "discipline": "QUIMICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 94,
+      "proof_pages": [
+        2
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "ebafc2596028d6c9816fe840eed8ccfa95f01f27fda3ea93d3f374f11ec2ce52",
+      "answer_sha256": "cbfe95cd86fa66c57eedc2b5c1887162a1e620d286c005fffd30d827838b2696",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "QUIMICA_ENEM_2023_AZUL_Q096",
+      "discipline": "QUIMICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 96,
+      "proof_pages": [
+        2
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "8b2a65dc97636e2dc8a82ca6b98cdfb8935a55f4425948be9915971e14dafea6",
+      "answer_sha256": "77aa2c7051c5360efb531a52f8cb60790da197582208d459eb8275619f353985",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "QUIMICA_ENEM_2023_AZUL_Q102",
+      "discipline": "QUIMICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 102,
+      "proof_pages": [
+        4
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "2e823f79ac5efffdc56ed815c8a76567ffac3defc5f09c6ad73caa54f33f4b9a",
+      "answer_sha256": "a1bdf705f05ba0f96c0ac7b4b66bc66adaada1b5804d95044c0423b1ee00ec9c",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "QUIMICA_ENEM_2023_AZUL_Q118",
+      "discipline": "QUIMICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 118,
+      "proof_pages": [
+        9
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "b0347dbfcc54025865cc8ccb98dc9bcb57bad414307857dc4bfc0fab32582ed0",
+      "answer_sha256": "e3ef4c08c045e0d4adc0309bb1bcd8abb3fb84af925aa83398ba8ca8c513aa5f",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "QUIMICA_ENEM_2023_AZUL_Q126",
+      "discipline": "QUIMICA",
+      "source_id": "enem23",
+      "exam": "ENEM",
+      "year": 2023,
+      "original_number": 126,
+      "proof_pages": [
+        12
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "ea6821f6f3d83c11fe1e8492fb070f69a9f052b5d3cf16bf2af1ddae11c21c4d",
+      "answer_sha256": "44de1977f36fd9805d6da0e048798838a1da2e748aca00efe017a321231a7878",
+      "notes": [
+        "Questão preexistente preservada byte a byte."
+      ]
+    },
+    {
+      "id": "QUIMICA_ENEM_2024_AZUL_Q097",
+      "discipline": "QUIMICA",
+      "source_id": "enem24",
+      "exam": "ENEM",
+      "year": 2024,
+      "original_number": 97,
+      "proof_pages": [
+        3
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "d697f881fd02a75c258a7be6312f65ecdc1cd6e96d7c8da1904990a7fa11ce4a",
+      "answer_sha256": "563c03eb748e0616776c6bc7d57f10078e11a45df828f413ddd7b164a2cb9843",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ENEM_2024_AZUL_Q116",
+      "discipline": "QUIMICA",
+      "source_id": "enem24",
+      "exam": "ENEM",
+      "year": 2024,
+      "original_number": 116,
+      "proof_pages": [
+        9
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "d9c8b177e0d0e477575771c7219c32b69e7fbe723ab633f6cbec240e5c1218bf",
+      "answer_sha256": "9028735dfaf8efb3244aaa84823713f87ab42fbde1afe7129855168d1e188e4e",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ENEM_2024_AZUL_Q135",
+      "discipline": "QUIMICA",
+      "source_id": "enem24",
+      "exam": "ENEM",
+      "year": 2024,
+      "original_number": 135,
+      "proof_pages": [
+        15
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "e52bae6d274c75f7b9117718b9174e375b4c9bcfeb478c0c9bc769cd1a581b44",
+      "answer_sha256": "902e3706892122e9b3f9be2097387e71e05ad0087ffb22a8bb28b109f0f6cd64",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_FUVEST_2024_F1_V_Q074",
+      "discipline": "QUIMICA",
+      "source_id": "fuvest24",
+      "exam": "FUVEST",
+      "year": 2024,
+      "original_number": 74,
+      "proof_pages": [
+        28
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "7657965f5b0253a85667d385b0a948344b715b56c6051befbd74ab8189cf3b74",
+      "answer_sha256": "0315e98df9caeac08c775f1c8b4054b4b8cdcb59b13c9cd313e435aae8db921a",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ITA_2024_F1_UNICA_Q049",
+      "discipline": "QUIMICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 49,
+      "proof_pages": [
+        18,
+        19
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "f1dd80e51360562a7d4d444a195001f0e5ae57b95c34ef4c9f5d47378d328ed6",
+      "answer_sha256": "3bdf305d410940f8dfa602b0e82cc345a1da5566532720ee6c0bd68b2f9b67a1",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ITA_2024_F1_UNICA_Q051",
+      "discipline": "QUIMICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 51,
+      "proof_pages": [
+        18,
+        19
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "E",
+      "statement_sha256": "76b9e55ba6e4b128749fb17e9d803a92da23ba457f1d1abd091e085982904581",
+      "answer_sha256": "58a1ae45e9d683b6aca7b52bf8dd04dd4c2e173780e31d6f63ff32088b37f267",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ITA_2024_F1_UNICA_Q052",
+      "discipline": "QUIMICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 52,
+      "proof_pages": [
+        18,
+        20
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "E",
+      "statement_sha256": "53e9cdd85ccb235b7573134772db26e4eb1ec7ce149df2aa6bb15f0b0180703f",
+      "answer_sha256": "236cb974aa349c0b97a0aeb246a88b41dcedb2002458bf32ee9adc8f252c6cc5",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ITA_2024_F1_UNICA_Q053",
+      "discipline": "QUIMICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 53,
+      "proof_pages": [
+        18,
+        20
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "200948bd229139ce16035c7b06a8cf7d878a7a4177fd4ec3b4673e936c6d8b91",
+      "answer_sha256": "7b96c187bd18740a7d9342672090e6b0b5d52406084ab1f98485eacd98c35806",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ITA_2024_F1_UNICA_Q054",
+      "discipline": "QUIMICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 54,
+      "proof_pages": [
+        18,
+        20
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "670d5c435f273f58dd8d0bfb39070037ad932cfa970763339af0f5cf79c7f0d1",
+      "answer_sha256": "76b149786e5d1251d87aea552d5bc73406694f8609ce4a2ac2fa9323395d1fa9",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ITA_2024_F1_UNICA_Q055",
+      "discipline": "QUIMICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 55,
+      "proof_pages": [
+        18,
+        21
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "A",
+      "statement_sha256": "072bb987d1fa35370daaca8f3c0ede81746c3eebaae04378bd5f91099c0a3eba",
+      "answer_sha256": "2d8346e0e7b15a3340d4101a096f71264e2962d432fac1c1a8a62900f5a5a058",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ITA_2024_F1_UNICA_Q056",
+      "discipline": "QUIMICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 56,
+      "proof_pages": [
+        18,
+        21
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "259caa546fc2d2bfcbd05c9c45dddf3334330711262ecc3c1eaba9be1aca8a4e",
+      "answer_sha256": "cdd494265821568fda804a69d1ef8ec65b550766ccbbe0760feef9b8a67bc3d1",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ITA_2024_F1_UNICA_Q057",
+      "discipline": "QUIMICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 57,
+      "proof_pages": [
+        18,
+        21
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "C",
+      "statement_sha256": "c79ca38d060d9a6337ddf3587ff0aa94f3d6c08739a5a819f3a4fd7044679616",
+      "answer_sha256": "f12f5da2b2a00cc2910354c7ea22b51afef2f93388594fc05999d81938fa1408",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ITA_2024_F1_UNICA_Q058",
+      "discipline": "QUIMICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 58,
+      "proof_pages": [
+        18,
+        21
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "7e7ad1bbf55014c5cecfdd13db4529a6ccaf5c21624754912e7de8111d52e683",
+      "answer_sha256": "bbacc716dca0df3d59d85bb5f4bb8634afcd5f0760b5905ada843de141b1409d",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ITA_2024_F1_UNICA_Q059",
+      "discipline": "QUIMICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 59,
+      "proof_pages": [
+        18,
+        22
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "D",
+      "statement_sha256": "f0e7c5ed57df05344cde941c26cb99c762bbdf0b6a0907516e3aca31667f09ed",
+      "answer_sha256": "d0007516201274399a4c21b30c1d8b8554b88cfb77b49da8fa2ebade30f8e50e",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_ITA_2024_F1_UNICA_Q060",
+      "discipline": "QUIMICA",
+      "source_id": "ita24",
+      "exam": "ITA",
+      "year": 2024,
+      "original_number": 60,
+      "proof_pages": [
+        18,
+        22
+      ],
+      "answer_key_page": 1,
+      "option_count": 5,
+      "official_answer": "B",
+      "statement_sha256": "5d56b9f1cd0b5bf32cffc7c3ee08ddb6dea22e4820c6abae44cc5a1f886e868d",
+      "answer_sha256": "664020cf43fbdd30c1fb9e064f29971ccfcce378df0094b02b429c6fb9d538b1",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_UNICAMP_2025_F1_QZ_Q060",
+      "discipline": "QUIMICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 60,
+      "proof_pages": [
+        20
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "A",
+      "statement_sha256": "a202c65f9df4ecbd12e9f6a4f1b0fbdb7ae7d5fa8d3950650fdd4afd79040a49",
+      "answer_sha256": "2049902583f5c992ca7908296d12813591920568175a24c391c71bca51f36e2b",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_UNICAMP_2025_F1_QZ_Q061",
+      "discipline": "QUIMICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 61,
+      "proof_pages": [
+        20
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "D",
+      "statement_sha256": "2510fbd0423271efdcd69eaaa2d2493880c58ebc269acd1ece53b53f0fde191e",
+      "answer_sha256": "f7abe630a77e51f493c8e7885448a32eb604f1900fbfd54ffde68583219aed8c",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_UNICAMP_2025_F1_QZ_Q062",
+      "discipline": "QUIMICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 62,
+      "proof_pages": [
+        20,
+        21
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "B",
+      "statement_sha256": "d8804cd9474635da913a59024a27bd5cdd16bfed73c41aead13d911d817fc09d",
+      "answer_sha256": "fd239f81fc0dc9207a11f761050ac270d42bcbab6432d08d4aa8d8ccd447bbe0",
+      "notes": []
+    },
+    {
+      "id": "QUIMICA_UNICAMP_2025_F1_QZ_Q063",
+      "discipline": "QUIMICA",
+      "source_id": "unicamp25",
+      "exam": "UNICAMP",
+      "year": 2025,
+      "original_number": 63,
+      "proof_pages": [
+        21
+      ],
+      "answer_key_page": 1,
+      "option_count": 4,
+      "official_answer": "B",
+      "statement_sha256": "9a9b1666a13b67a94b36c61b4e07465eca38244c598aa9c1cafbb76416502dca",
+      "answer_sha256": "9fd90b56e5befbff4e6a81c97d379a284e2b9ff9be3429c23c2c59b7f59780ed",
+      "notes": []
+    }
+  ]
+}

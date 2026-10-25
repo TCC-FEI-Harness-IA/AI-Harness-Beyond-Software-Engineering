@@ -9,7 +9,7 @@ from src.domain.interfaces.settings_interface import ISettings
 _STATEMENT_FILE = "enunciado.md"
 _ANSWER_FILE = "alternativa_correta.md"
 _OPTION_PATTERN = re.compile(r"^([A-E])\)\s+(.+)$", re.MULTILINE)
-_EXPECTED_LETTERS = list("ABCDE")
+_EXPECTED_LETTERS = (list("ABCD"), list("ABCDE"))
 _FILE_ENCODING = "utf-8"
 
 
@@ -17,7 +17,8 @@ class FileBenchmarkQuestionProvider(IBenchmarkQuestionProvider):
     """Adapter de `IBenchmarkQuestionProvider` apoiado no dataset em Markdown.
 
     Cada subpasta do diretório configurado é uma questão, com exatamente `enunciado.md` (enunciado
-    e as cinco alternativas `A)` a `E)`) e `alternativa_correta.md` (letra e texto do gabarito).
+    e quatro ou cinco alternativas consecutivas a partir de `A)`) e `alternativa_correta.md`
+    (letra e texto do gabarito).
     O dataset inteiro é validado na primeira leitura, antes de qualquer chamada ao modelo, e fica
     em cache na instância.
     """
@@ -85,7 +86,7 @@ class FileBenchmarkQuestionProvider(IBenchmarkQuestionProvider):
         """Carrega uma questão, conferindo alternativas e gabarito.
 
         Raises:
-            ValueError: Quando falta um arquivo, as alternativas não são `A` a `E` ou o gabarito
+            ValueError: Quando falta um arquivo, as alternativas não são `A` a `D` ou `E`, ou o gabarito
                 não reproduz o texto da alternativa.
         """
         try:
@@ -96,11 +97,11 @@ class FileBenchmarkQuestionProvider(IBenchmarkQuestionProvider):
 
         options = _OPTION_PATTERN.findall(statement)
         expected = _OPTION_PATTERN.fullmatch(answer)
-        if [letter for letter, _ in options] != _EXPECTED_LETTERS or expected is None:
+        if [letter for letter, _ in options] not in _EXPECTED_LETTERS or expected is None:
             raise ValueError(f"Alternativas ou gabarito inválidos: {folder.name}")
 
         mapping = dict(options)
-        if mapping[expected[1]] != expected[2]:
+        if mapping.get(expected[1]) != expected[2]:
             raise ValueError(f"Texto do gabarito difere da alternativa: {folder.name}")
         return BenchmarkQuestion(
             id=folder.name,
