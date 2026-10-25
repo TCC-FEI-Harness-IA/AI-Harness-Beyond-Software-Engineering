@@ -217,6 +217,7 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             "tokens_output": invocation.tokens_output,
             "finish_reason": invocation.finish_reason,
             "provider_response_id": invocation.provider_response_id,
+            "temperature": invocation.temperature,
         }
 
     def __failure_to_document(self, failure: SessionFailure | None) -> dict[str, Any] | None:
@@ -269,6 +270,8 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             provider_response_id=self.__required(
                 document=document, key="provider_response_id", container=_INVOCATION_CONTAINER
             ),
+            # Invocações gravadas antes do registro da temperatura efetiva não têm a chave.
+            temperature=document.get("temperature"),
         )
 
     def __failure_from_optional_document(self, document: dict[str, Any] | None) -> SessionFailure | None:

@@ -154,6 +154,7 @@ class DefaultMessageUseCase:
             context_id=None,
             model_name=user_input.model_name,
             provider=user_input.provider,
+            temperature=user_input.temperature,
         )
 
         started_at_ms = self.clock.monotonic_ms()

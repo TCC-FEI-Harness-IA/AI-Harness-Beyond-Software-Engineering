@@ -44,6 +44,7 @@ class IThinkingPhase(ABC):
         context: ContextWindow,
         variables: dict[str, str],
         validation: ValidationContext | None = None,
+        is_retry: bool = False,
     ) -> PhaseOutcome:
         """Executa a fase sobre a janela de contexto informada.
 
@@ -52,6 +53,8 @@ class IThinkingPhase(ABC):
             variables: Placeholders a substituir no template da fase.
             validation: Dados esperados pela chamada, usados para validar a saída estruturada.
                 É obrigatório nas fases de verificação.
+            is_retry: Indica que a execução repete um pedido reprovado (a nova tentativa de B.1
+                depois de B.2 reprovar): todas as suas chamadas usam a temperatura de retentativa.
 
         Returns:
             PhaseOutcome: Resultado da execução da fase.

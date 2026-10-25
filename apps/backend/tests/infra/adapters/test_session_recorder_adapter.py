@@ -431,6 +431,7 @@ async def test_start_invocation_registra_a_chamada_no_envio_e_persiste() -> None
     assert invocacao.model_name == "vendor/modelo"
     assert invocacao.provider is ModelProviderEnum.OPEN_ROUTER
     assert invocacao.started_at == _PRIMEIRO_INSTANTE
+    assert invocacao.temperature is None
     assert recorder.session.totals.total_llm_calls == 1
     gravada = await repositorio.find_by_id(session_id="sess_1")
     assert gravada is not None
@@ -585,3 +586,19 @@ async def test_finish_repetido_apos_falha_de_gravacao_pode_concluir_a_sessao() -
 
     assert repositorio.sessions[sessao.id].status is SessionStatusEnum.COMPLETED
     assert repositorio.sessions[sessao.id].final_answer == "resposta"
+
+
+async def test_start_invocation_registra_a_temperatura_efetiva_da_chamada() -> None:
+    recorder = _build_recorder()
+    await _start(recorder=recorder)
+
+    await recorder.start_invocation(
+        phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION,
+        task_id="T1",
+        context_id="ctx_1",
+        model_name="vendor/modelo",
+        provider=ModelProviderEnum.OPEN_ROUTER,
+        temperature=1.0,
+    )
+
+    assert recorder.session.invocations[0].temperature == 1.0

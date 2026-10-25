@@ -10,6 +10,15 @@ Resolva **unicamente** a tarefa descrita abaixo.
 
 {{task_acceptance_criteria}}
 
+## Aprendizados Pontuais
+
+Anotações compactas acumuladas ao longo do fluxo: os pontos de atenção do enunciado e os fatos
+registrados pelas tarefas já concluídas, na ordem em que surgiram. Use-as como contexto de apoio —
+por exemplo, para conferir alternativas, valores e unidades de medida —, sem ampliar o escopo desta
+tarefa.
+
+{{learnings}}
+
 ## Instruções
 
 Limite estrito de escopo:

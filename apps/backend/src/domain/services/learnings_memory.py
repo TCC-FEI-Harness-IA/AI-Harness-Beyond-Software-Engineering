@@ -3,15 +3,13 @@ from typing import Sequence
 from src.domain.entities.thinking.learning import Learning
 from src.domain.interfaces.learnings_memory_interface import ILearningsMemory
 
-_BLOCK_HEADING = "## Aprendizados acumulados"
-_BLOCK_SEPARATOR = "\n\n"
 _ITEM_PREFIX = "- "
 _ITEM_SEPARATOR = "\n"
-_EMPTY_BLOCK = ""
+_NO_LEARNINGS_CONTENT = "Nenhum aprendizado pontual registrado até o momento."
 
 
 class LearningsMemory(ILearningsMemory):
-    """Armazenamento em memória dos aprendizados pontuais do loop de execução."""
+    """Armazenamento em memória dos aprendizados pontuais do fluxo (A.3 e B.4)."""
 
     def __init__(self) -> None:
         """Inicializa o armazenamento vazio."""
@@ -42,14 +40,15 @@ class LearningsMemory(ILearningsMemory):
         return not self.__learnings
 
     def render(self) -> str:
-        """Renderiza os aprendizados acumulados como bloco markdown.
+        """Renderiza o conteúdo da área "Aprendizados Pontuais" dos templates das fases B e C.
+
+        O título da área pertence a cada template; aqui só se monta o que vai dentro dela.
 
         Returns:
-            str: Bloco markdown pronto para injeção no início de um novo contexto,
-            ou string vazia quando ainda não há aprendizados.
+            str: Lista markdown com um item por aprendizado, na ordem de extração, ou o aviso de
+            que ainda não há aprendizados — a área existe em todo prompt, mesmo vazia.
         """
         if self.is_empty():
-            return _EMPTY_BLOCK
+            return _NO_LEARNINGS_CONTENT
 
-        items = _ITEM_SEPARATOR.join(f"{_ITEM_PREFIX}{learning.content}" for learning in self.__learnings)
-        return f"{_BLOCK_HEADING}{_BLOCK_SEPARATOR}{items}"
+        return _ITEM_SEPARATOR.join(f"{_ITEM_PREFIX}{learning.content}" for learning in self.__learnings)

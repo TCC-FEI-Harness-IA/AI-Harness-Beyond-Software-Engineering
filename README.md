@@ -31,7 +31,7 @@ O documento apresenta a adaptação do Ralph Wiggum Loop, originalmente voltado 
 - um guia operacional para agentes de desenvolvimento CLI, derivado da metodologia;
 - a transcrição literal da seção **“Metodologia”** do paper, que detalha planejamento (A), execução em loop (B) e criação da resposta final (C).
 
-O guia operacional é uma orientação derivada, enquanto a seção identificada como transcrição preserva o texto original do paper. As regras acrescentadas depois do paper (hoje, a etapa **A.3 — Aprendizados pontuais do enunciado**) ficam numa seção própria do documento e são detalhadas, com exemplos, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md), base para atualizar o paper. O documento também explicita essa distinção e descreve as etapas, os critérios de aceite e a separação de contexto e resultados entre as tarefas.
+O guia operacional é uma orientação derivada, enquanto a seção identificada como transcrição preserva o texto original do paper. As regras acrescentadas depois do paper (hoje, a etapa **A.3 — Aprendizados pontuais do enunciado**, a área de **Aprendizados Pontuais** em todo prompt das fases B e C e a **temperatura 1 nas retentativas**) ficam numa seção própria do documento e são detalhadas, com exemplos, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md), base para atualizar o paper. O documento também explicita essa distinção e descreve as etapas, os critérios de aceite e a separação de contexto e resultados entre as tarefas.
 
 ## Como rodar com Docker
 

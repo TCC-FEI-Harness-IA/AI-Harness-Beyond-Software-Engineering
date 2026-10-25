@@ -17,6 +17,7 @@ from src.domain.entities.resilience.cost_budget import CostBudget
 from src.domain.entities.thinking.thinking_event import ThinkingEvent
 from src.domain.interfaces.cost_guard_interface import ICostGuard
 from src.domain.interfaces.llm_completions_interface import ILLMCompletions
+from src.domain.interfaces.prompt_template_provider_interface import IPromptTemplateProvider
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.services.learnings_memory import LearningsMemory
 from src.domain.services.task_queue import TaskQueue
@@ -65,6 +66,7 @@ class RalphScenario:
         max_tokens: int = _MAX_TOKENS,
         temperature: float = _TEMPERATURA,
         repository: InMemorySessionRepository | None = None,
+        template_provider: IPromptTemplateProvider | None = None,
     ) -> None:
         """Monta o grafo do caso de uso para um roteiro de respostas do modelo.
 
@@ -81,6 +83,8 @@ class RalphScenario:
             max_tokens: Teto de tokens de saída pedido ao modelo em cada chamada.
             temperature: Temperatura pedida ao modelo em cada chamada.
             repository: Repositório de sessões alternativo, para os cenários de falha de persistência.
+            template_provider: Provedor de templates alternativo; quando informado, substitui o dublê
+                que ecoa a fase, para os cenários que inspecionam os prompts reais.
         """
         self.max_tokens = max_tokens
         self.temperature = temperature
@@ -91,7 +95,7 @@ class RalphScenario:
             tokens_output=tokens_output,
             error=error,
         )
-        self.template_provider = FakePromptTemplateProvider()
+        self.template_provider = template_provider or FakePromptTemplateProvider()
         self.parser = StructuredResponseParserAdapter(logger=logger)
         self.settings = settings or FakeSettings()
         self.clock = FakeClock(

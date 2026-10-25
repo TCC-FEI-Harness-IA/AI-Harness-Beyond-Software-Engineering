@@ -10,6 +10,15 @@ Crie novas tarefas independentes **apenas** para suprir as lacunas apontadas aba
 
 {{stored_results}}
 
+## Aprendizados Pontuais
+
+Anotações compactas acumuladas ao longo do fluxo: os pontos de atenção do enunciado e os fatos
+registrados pelas tarefas já concluídas, na ordem em que surgiram. Use-as para escrever
+descrições autossuficientes: copie para a descrição de cada nova tarefa os dados do enunciado de que
+ela precisa (alternativas, valores com unidades de medida, fórmulas, condições).
+
+{{learnings}}
+
 ## Instruções
 
 As novas tarefas existem para cobrir **somente** os critérios não atendidos. Não crie tarefas que

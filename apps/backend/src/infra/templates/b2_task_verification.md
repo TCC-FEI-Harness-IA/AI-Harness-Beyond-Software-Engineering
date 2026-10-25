@@ -10,6 +10,16 @@ Avalie se o resultado preliminar abaixo atende aos critérios de aceite da taref
 
 {{task_acceptance_criteria}}
 
+## Aprendizados Pontuais
+
+Anotações compactas acumuladas ao longo do fluxo: os pontos de atenção do enunciado e os fatos
+registrados pelas tarefas já concluídas, na ordem em que surgiram. Use-as apenas como
+referência para conferir os dados envolvidos (alternativas, valores, unidades de medida).
+Os aprendizados **não são critérios** de aceite: a avaliação continua restrita aos critérios desta
+tarefa.
+
+{{learnings}}
+
 ## Instruções
 
 Percorra os critérios **um por um**. Para cada critério, decida se ele foi atendido e escreva a

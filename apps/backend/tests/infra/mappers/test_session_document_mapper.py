@@ -96,6 +96,7 @@ def _nova_sessao(com_mensagens: bool = True, final_answer: str | None = "respost
                 model_name="vendor/modelo",
                 provider=ModelProviderEnum.OPEN_ROUTER,
                 started_at=_CRIADO_EM,
+                temperature=0.3,
             )
         )
         sessao.complete_invocation(
@@ -245,6 +246,7 @@ def test_documento_carrega_uma_entrada_por_invocacao() -> None:
             "tokens_output": 1666,
             "finish_reason": "stop",
             "provider_response_id": "resp-1",
+            "temperature": 0.3,
         },
         {
             "id": "inv-2",
@@ -260,8 +262,26 @@ def test_documento_carrega_uma_entrada_por_invocacao() -> None:
             "tokens_output": None,
             "finish_reason": None,
             "provider_response_id": None,
+            "temperature": None,
         },
     ]
+
+
+def test_a_temperatura_efetiva_de_cada_invocacao_sobrevive_a_ida_e_volta() -> None:
+    mapper = _build_mapper()
+
+    sessao = mapper.from_document(document=_documento_valido())
+
+    assert [invocacao.temperature for invocacao in sessao.invocations] == [0.3, None]
+
+
+def test_invocacao_gravada_antes_do_registro_da_temperatura_e_lida_com_temperatura_desconhecida() -> None:
+    documento = _documento_valido()
+    del documento["invocations"][0]["temperature"]
+
+    sessao = _build_mapper().from_document(document=documento)
+
+    assert sessao.invocations[0].temperature is None
 
 
 def test_documento_de_sessao_nova_nao_e_legado_e_nao_tem_falha() -> None:

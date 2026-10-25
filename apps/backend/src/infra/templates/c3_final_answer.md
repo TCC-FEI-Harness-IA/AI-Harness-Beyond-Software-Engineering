@@ -10,6 +10,17 @@ Organize e apresente os resultados já produzidos como a resposta final ao usuá
 
 {{general_acceptance_criteria}}
 
+## Aprendizados Pontuais
+
+Anotações compactas acumuladas ao longo do fluxo: os pontos de atenção do enunciado e os fatos
+registrados pelas tarefas já concluídas, na ordem em que surgiram. Use-as apenas para
+conferir os dados do enunciado ao apresentar a resposta — por exemplo, a letra da alternativa que
+corresponde ao valor obtido nos resultados.
+Os aprendizados **não substituem os resultados armazenados**: o conteúdo da resposta continua vindo
+exclusivamente deles.
+
+{{learnings}}
+
 ## Instruções
 
 Escreva a resposta no **idioma** e na **estrutura** definidos pelos critérios gerais, respeitando

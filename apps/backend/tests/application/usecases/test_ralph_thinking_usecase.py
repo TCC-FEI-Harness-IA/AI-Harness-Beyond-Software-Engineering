@@ -14,6 +14,8 @@ from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.errors.budget_exceeded_error import BudgetExceededError
 from src.domain.errors.execution_interrupted_error import ExecutionInterruptedError
 from src.domain.errors.phase_parsing_error import PhaseParsingError
+from src.infra.config.settings import Settings
+from src.infra.providers.file_prompt_template_provider import FilePromptTemplateProvider
 from tests.doubles.fake_cost_guard import FakeCostGuard
 from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.in_memory_session_repository import InMemorySessionRepository
@@ -186,30 +188,43 @@ async def test_invariante_i1_a_janela_da_tarefa_seguinte_nao_carrega_a_conversa_
 
 
 # ── I2 — Injeção de aprendizados ─────────────────────────────────────────────
+#
+# Os aprendizados pontuais chegam pela área "Aprendizados Pontuais" do template de cada fase
+# (variável `learnings`), e não mais por uma mensagem avulsa no início da janela da tarefa.
+
+_SEM_APRENDIZADOS = "Nenhum aprendizado pontual registrado até o momento."
 
 
-async def test_invariante_i2_a_primeira_tarefa_nao_recebe_aprendizados() -> None:
+async def test_invariante_i2_sem_aprendizados_a_primeira_tarefa_recebe_a_area_com_o_aviso() -> None:
     cenario = _cenario_feliz()
 
     await cenario.run()
 
-    primeira_conversa = cenario.llm.texts_of(3)
-    assert len(primeira_conversa) == 1
-    assert "Aprendizados acumulados" not in primeira_conversa[0]
+    assert cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[0]["learnings"] == _SEM_APRENDIZADOS
+    assert cenario.llm.texts_of(3) == ["TEMPLATE B1"]
 
 
-async def test_invariante_i2_as_tarefas_seguintes_recebem_os_aprendizados_no_inicio() -> None:
+async def test_invariante_i2_as_tarefas_seguintes_recebem_os_aprendizados_pelo_template() -> None:
     cenario = _cenario_feliz()
 
     await cenario.run()
 
-    segunda_conversa = cenario.llm.texts_of(6)
-    terceira_conversa = cenario.llm.texts_of(9)
-    assert segunda_conversa[0].startswith("## Aprendizados acumulados")
-    assert "Um numero primo so e divisivel por 1 e por ele mesmo." in segunda_conversa[0]
-    assert segunda_conversa[1].startswith("TEMPLATE B1")
-    assert terceira_conversa[0].startswith("## Aprendizados acumulados")
-    assert "Todo numero par e divisivel por 2." in terceira_conversa[0]
+    por_resolucao = [v["learnings"] for v in cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)]
+    assert por_resolucao[1] == "- Um numero primo so e divisivel por 1 e por ele mesmo."
+    assert por_resolucao[2] == (
+        "- Um numero primo so e divisivel por 1 e por ele mesmo.\n- Todo numero par e divisivel por 2."
+    )
+
+
+async def test_invariante_i2_a_janela_da_tarefa_nao_recebe_mais_um_bloco_avulso_de_aprendizados() -> None:
+    cenario = _cenario_feliz()
+
+    await cenario.run()
+
+    for indice_da_resolucao in (3, 6, 9):
+        (prompt,) = cenario.llm.conversations[indice_da_resolucao]
+        assert prompt.text == "TEMPLATE B1"
+        assert prompt.source is MessageSourceEnum.USER
 
 
 # ── I3 — Contexto preservado entre tentativas da mesma tarefa ────────────────
@@ -281,7 +296,6 @@ async def test_invariante_i4_a_conversa_da_verificacao_traz_apenas_o_proprio_pro
     conversa_da_verificacao = cenario.llm.texts_of(7)
     assert len(conversa_da_verificacao) == 1
     assert conversa_da_verificacao[0].startswith("TEMPLATE B2")
-    assert "Aprendizados acumulados" not in conversa_da_verificacao[0]
     assert "2 e primo" not in conversa_da_verificacao[0]
 
 
@@ -322,16 +336,17 @@ async def test_invariante_i5_o_armazenamento_nao_chama_o_modelo() -> None:
 # ── I6 — Separação entre resultado e aprendizado ────────────────────────────
 
 
-async def test_invariante_i6_a_fase_c_nao_enxerga_nenhum_aprendizado() -> None:
+async def test_invariante_i6_resultados_e_aprendizados_chegam_a_fase_c_em_areas_separadas() -> None:
     cenario = _cenario_feliz()
 
     await cenario.run()
 
     for fase in (_FASE.C1_GLOBAL_VERIFICATION, _FASE.C3_FINAL_ANSWER):
-        resultados = cenario.template_provider.variables_of(fase)[0]["stored_results"]
-        assert "2 e primo" in resultados
-        assert "Um numero primo so e divisivel" not in resultados
-        assert "Aprendizados acumulados" not in resultados
+        variaveis = cenario.template_provider.variables_of(fase)[0]
+        assert "2 e primo" in variaveis["stored_results"]
+        assert "Um numero primo so e divisivel" not in variaveis["stored_results"]
+        assert "Um numero primo so e divisivel" in variaveis["learnings"]
+        assert "2 e primo" not in variaveis["learnings"]
 
 
 async def test_invariante_i6_o_loop_b_nao_enxerga_nenhum_resultado_armazenado() -> None:
@@ -340,9 +355,12 @@ async def test_invariante_i6_o_loop_b_nao_enxerga_nenhum_resultado_armazenado() 
     await cenario.run()
 
     conversa_da_terceira_tarefa = " ".join(cenario.llm.texts_of(9))
-    assert "Aprendizados acumulados" in conversa_da_terceira_tarefa
-    assert "2 e primo" not in conversa_da_terceira_tarefa
-    assert "2, 4 e 6 sao pares" not in conversa_da_terceira_tarefa
+    resolucao_da_terceira_tarefa = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[2]
+    variaveis_da_terceira_tarefa = " ".join(resolucao_da_terceira_tarefa.values())
+    assert "Todo numero par e divisivel por 2." in variaveis_da_terceira_tarefa
+    for resultado in ("2 e primo", "2, 4 e 6 sao pares"):
+        assert resultado not in conversa_da_terceira_tarefa
+        assert resultado not in variaveis_da_terceira_tarefa
 
 
 # ── I7 — C.2 insere no topo e a seleção é programática ──────────────────────
@@ -442,10 +460,9 @@ async def test_as_tarefas_de_c2_recebem_os_aprendizados_acumulados_de_todas_as_a
 
     await cenario.run()
 
-    # chamadas: 0 A1, 1 A2, 2 A3, 3-5 T1, 6 C1, 7 C2, 8 B1 de T4
-    primeira_conversa_da_t4 = cenario.llm.texts_of(8)
-    assert primeira_conversa_da_t4[0].startswith("## Aprendizados acumulados")
-    assert "Um numero primo so e divisivel por 1 e por ele mesmo." in primeira_conversa_da_t4[0]
+    resolucao_da_t4 = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[1]
+    assert "T4" in resolucao_da_t4["task_description"]
+    assert "Um numero primo so e divisivel por 1 e por ele mesmo." in resolucao_da_t4["learnings"]
 
 
 async def test_a_sintese_so_recebe_os_resultados_que_a_verificacao_global_aprovou() -> None:
@@ -1132,7 +1149,7 @@ async def test_uma_unica_tarefa_percorre_o_fluxo_completo() -> None:
     assert cenario.session.status is SessionStatusEnum.COMPLETED
 
 
-async def test_tarefa_sem_aprendizado_nao_injeta_bloco_na_tarefa_seguinte() -> None:
+async def test_tarefa_sem_aprendizado_deixa_a_area_da_tarefa_seguinte_com_o_aviso() -> None:
     cenario = RalphScenario(
         responses=[
             _criterios(),
@@ -1148,8 +1165,8 @@ async def test_tarefa_sem_aprendizado_nao_injeta_bloco_na_tarefa_seguinte() -> N
     eventos = await cenario.run()
 
     segunda_conversa = cenario.llm.texts_of(6)
-    assert len(segunda_conversa) == 1
-    assert segunda_conversa[0].startswith("TEMPLATE B1")
+    assert segunda_conversa == ["TEMPLATE B1"]
+    assert cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[1]["learnings"] == _SEM_APRENDIZADOS
     extraidos_por_tarefa = [e.content for e in eventos if e.phase is _FASE.B4_LEARNINGS_EXTRACTION]
     assert extraidos_por_tarefa[0] == "Nenhum aprendizado foi extraído desta tarefa."
 
@@ -1255,7 +1272,8 @@ async def test_a_tarefa_seguinte_recebe_so_os_aprendizados_e_nao_o_historico_amp
 
     primeira_conversa_da_t2 = " ".join(cenario.llm.texts_of(6))
     assert "Veredito do validador" not in primeira_conversa_da_t2
-    assert "Aprendizados acumulados" in primeira_conversa_da_t2
+    aprendizados_da_t2 = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[1]["learnings"]
+    assert aprendizados_da_t2 == "- Um numero primo so e divisivel por 1 e por ele mesmo."
 
 
 async def test_a_fase_c_nao_enxerga_vereditos_locais_nem_historico_de_tentativas() -> None:
@@ -1267,7 +1285,6 @@ async def test_a_fase_c_nao_enxerga_vereditos_locais_nem_historico_de_tentativas
         variaveis = cenario.template_provider.variables_of(fase)[0]
         assert "Veredito do validador" not in " ".join(variaveis.values())
         assert "primeira tentativa incompleta" not in " ".join(variaveis.values())
-        assert "Aprendizados acumulados" not in " ".join(variaveis.values())
 
 
 # ── Registro por invocação ──────────────────────────────────────────────────
@@ -1513,13 +1530,13 @@ async def test_a3_emite_um_evento_learn_com_os_aprendizados_do_enunciado() -> No
         assert f"- {anotacao}" in evento.content
 
 
-async def test_a3_sem_nada_a_anotar_emite_o_aviso_e_nao_injeta_bloco_nas_tarefas() -> None:
+async def test_a3_sem_nada_a_anotar_emite_o_aviso_e_a_primeira_tarefa_recebe_a_area_vazia() -> None:
     cenario = _cenario_feliz()
 
     eventos = await cenario.run()
 
     assert eventos[2].content == "Nenhum aprendizado foi extraído do enunciado."
-    assert "Aprendizados acumulados" not in " ".join(cenario.llm.texts_of(3))
+    assert cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[0]["learnings"] == _SEM_APRENDIZADOS
 
 
 async def test_a3_registra_a_mensagem_na_sessao_sem_tarefa_e_com_contexto_proprio() -> None:
@@ -1548,16 +1565,13 @@ async def test_a3_acumula_na_memoria_sem_tarefa_de_origem_antes_dos_aprendizados
     assert memoria[2].source_task_id == "T1"
 
 
-async def test_a3_a_primeira_tarefa_ja_recebe_as_anotacoes_do_enunciado_no_inicio_do_contexto() -> None:
+async def test_a3_a_primeira_tarefa_ja_recebe_as_anotacoes_do_enunciado() -> None:
     cenario = _cenario_com_anotacoes()
 
     await cenario.run()
 
-    primeira_conversa = cenario.llm.texts_of(3)
-    assert primeira_conversa[0].startswith("## Aprendizados acumulados")
-    for anotacao in _ANOTACOES_DO_PAPER:
-        assert f"- {anotacao}" in primeira_conversa[0]
-    assert primeira_conversa[1].startswith("TEMPLATE B1")
+    aprendizados = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[0]["learnings"]
+    assert aprendizados == "\n".join(f"- {anotacao}" for anotacao in _ANOTACOES_DO_PAPER)
 
 
 async def test_a3_toda_tarefa_seguinte_continua_recebendo_as_anotacoes_do_enunciado() -> None:
@@ -1565,12 +1579,12 @@ async def test_a3_toda_tarefa_seguinte_continua_recebendo_as_anotacoes_do_enunci
 
     await cenario.run()
 
-    for indice_da_resolucao, aprendizado_anterior in ((6, "Um numero primo"), (9, "Todo numero par")):
-        conversa = cenario.llm.texts_of(indice_da_resolucao)
-        assert conversa[0].startswith("## Aprendizados acumulados")
+    resolucoes = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)
+    for indice, aprendizado_anterior in ((1, "Um numero primo"), (2, "Todo numero par")):
+        aprendizados = resolucoes[indice]["learnings"]
         for anotacao in _ANOTACOES_DO_PAPER:
-            assert f"- {anotacao}" in conversa[0]
-        assert aprendizado_anterior in conversa[0]
+            assert f"- {anotacao}" in aprendizados
+        assert aprendizado_anterior in aprendizados
 
 
 async def test_a3_as_anotacoes_do_enunciado_vem_antes_dos_aprendizados_das_tarefas() -> None:
@@ -1578,29 +1592,28 @@ async def test_a3_as_anotacoes_do_enunciado_vem_antes_dos_aprendizados_das_taref
 
     await cenario.run()
 
-    bloco = cenario.llm.texts_of(6)[0]
-    assert bloco.index(_ANOTACOES_DO_PAPER[0]) < bloco.index(_ANOTACOES_DO_PAPER[1]) < bloco.index("Um numero primo")
+    area = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[1]["learnings"]
+    assert area.index(_ANOTACOES_DO_PAPER[0]) < area.index(_ANOTACOES_DO_PAPER[1]) < area.index("Um numero primo")
 
 
-async def test_a3_o_validador_de_tarefa_nao_recebe_as_anotacoes() -> None:
+async def test_a3_o_validador_de_tarefa_tambem_recebe_as_anotacoes() -> None:
     cenario = _cenario_com_anotacoes()
 
     await cenario.run()
 
-    conversa_do_validador = " ".join(cenario.llm.texts_of(4))
-    assert "Aprendizados acumulados" not in conversa_do_validador
-    assert _ANOTACOES_DO_PAPER[0] not in conversa_do_validador
+    for verificacao in cenario.template_provider.variables_of(_FASE.B2_TASK_VERIFICATION):
+        assert _ANOTACOES_DO_PAPER[0] in verificacao["learnings"]
 
 
-async def test_a3_as_fases_c_nao_enxergam_as_anotacoes_do_enunciado() -> None:
+async def test_a3_as_fases_c_tambem_recebem_as_anotacoes_do_enunciado() -> None:
     cenario = _cenario_com_anotacoes()
 
     await cenario.run()
 
     for fase in (_FASE.C1_GLOBAL_VERIFICATION, _FASE.C3_FINAL_ANSWER):
-        variaveis = " ".join(cenario.template_provider.variables_of(fase)[0].values())
-        assert _ANOTACOES_DO_PAPER[0] not in variaveis
-        assert "Aprendizados acumulados" not in variaveis
+        variaveis = cenario.template_provider.variables_of(fase)[0]
+        assert _ANOTACOES_DO_PAPER[0] in variaveis["learnings"]
+        assert _ANOTACOES_DO_PAPER[0] not in variaveis["stored_results"]
 
 
 async def test_a3_as_tarefas_de_c2_tambem_recebem_as_anotacoes_do_enunciado() -> None:
@@ -1608,9 +1621,8 @@ async def test_a3_as_tarefas_de_c2_tambem_recebem_as_anotacoes_do_enunciado() ->
 
     await cenario.run()
 
-    primeira_conversa_da_t4 = cenario.llm.texts_of(8)
-    assert primeira_conversa_da_t4[0].startswith("## Aprendizados acumulados")
-    assert _ANOTACOES_DO_PAPER[0] in primeira_conversa_da_t4[0]
+    resolucao_da_t4 = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[1]
+    assert _ANOTACOES_DO_PAPER[0] in resolucao_da_t4["learnings"]
 
 
 async def test_a3_nao_cria_tarefas_nem_consome_o_espaco_de_tarefas_da_sessao() -> None:
@@ -1653,3 +1665,275 @@ async def test_a3_erro_tecnico_e_atribuido_a_a3_e_encerra_a_sessao_sem_resposta(
     assert cenario.session.failure.phase is _FASE.A3_PLANNING_LEARNINGS
     assert cenario.session.final_answer is None
     assert cenario.learnings_memory.is_empty()
+
+
+# ── Aprendizados Pontuais em todo prompt das fases B e C ────────────────────
+#
+# Todo template enviado ao modelo nas fases B (B.1, B.2, B.4) e C (C.1, C.2, C.3) tem a área
+# "Aprendizados Pontuais", preenchida com todos os aprendizados acumulados até aquele momento:
+# as anotações do enunciado (A.3) seguidas dos aprendizados de cada tarefa concluída (B.4).
+
+_FASES_COM_APRENDIZADOS = (
+    _FASE.B1_TASK_RESOLUTION,
+    _FASE.B2_TASK_VERIFICATION,
+    _FASE.B4_LEARNINGS_EXTRACTION,
+    _FASE.C1_GLOBAL_VERIFICATION,
+    _FASE.C2_ADDITIONAL_PLANNING,
+    _FASE.C3_FINAL_ANSWER,
+)
+
+
+def _roteiro_completo_com_reprovacao_e_replanejamento(*anotacoes: str) -> list[str]:
+    """Passa por todas as fases B e C, inclusive uma nova tentativa de B.1 e uma rodada de C.2."""
+    return [
+        _criterios(),
+        _tarefas("T1"),
+        _anotacoes_do_enunciado(*anotacoes),
+        _resolucao("primeira tentativa incompleta"),
+        _reprovado("T1"),
+        _resolucao("2 e primo"),
+        _aprovado("T1"),
+        _aprendizados("Um numero primo so e divisivel por 1 e por ele mesmo."),
+        _global_reprovado("AC2"),
+        _tarefas("T4"),
+        *_tarefa_aprovada("T4", "4 e par", "Todo numero par e divisivel por 2."),
+        _global_aprovado(),
+        _resposta_final(),
+    ]
+
+
+async def test_todo_prompt_das_fases_b_e_c_recebe_a_area_de_aprendizados_pontuais() -> None:
+    cenario = RalphScenario(responses=_roteiro_completo_com_reprovacao_e_replanejamento(*_ANOTACOES_DO_PAPER))
+
+    await cenario.run()
+
+    renderizadas = [fase for fase, _ in cenario.template_provider.rendered]
+    assert set(_FASES_COM_APRENDIZADOS) <= set(renderizadas)
+    for fase, variaveis in cenario.template_provider.rendered:
+        if fase in _FASES_COM_APRENDIZADOS:
+            assert _ANOTACOES_DO_PAPER[0] in variaveis["learnings"], fase
+        else:
+            assert "learnings" not in variaveis, fase
+
+
+async def test_a_nova_tentativa_de_b1_tambem_recebe_os_aprendizados() -> None:
+    cenario = RalphScenario(responses=_roteiro_completo_com_reprovacao_e_replanejamento(*_ANOTACOES_DO_PAPER))
+
+    await cenario.run()
+
+    primeira, segunda, _ = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)
+    assert segunda["learnings"] == primeira["learnings"]
+    assert _ANOTACOES_DO_PAPER[1] in segunda["learnings"]
+
+
+async def test_b2_recebe_os_aprendizados_acumulados_antes_da_tarefa_verificada() -> None:
+    cenario = _cenario_com_anotacoes()
+
+    await cenario.run()
+
+    verificacoes = cenario.template_provider.variables_of(_FASE.B2_TASK_VERIFICATION)
+    assert "Um numero primo" not in verificacoes[0]["learnings"]
+    assert "Um numero primo" in verificacoes[1]["learnings"]
+    assert "Todo numero par" in verificacoes[2]["learnings"]
+
+
+async def test_b4_recebe_os_aprendizados_ja_registrados_sem_os_da_propria_tarefa() -> None:
+    cenario = _cenario_com_anotacoes()
+
+    await cenario.run()
+
+    extracao_da_t2 = cenario.template_provider.variables_of(_FASE.B4_LEARNINGS_EXTRACTION)[1]["learnings"]
+    assert _ANOTACOES_DO_PAPER[0] in extracao_da_t2
+    assert "Um numero primo" in extracao_da_t2
+    assert "Todo numero par" not in extracao_da_t2
+
+
+async def test_as_fases_c_recebem_todos_os_aprendizados_do_fluxo_na_ordem_de_extracao() -> None:
+    cenario = RalphScenario(responses=_roteiro_completo_com_reprovacao_e_replanejamento(*_ANOTACOES_DO_PAPER))
+
+    await cenario.run()
+
+    anotacoes = [f"- {anotacao}" for anotacao in _ANOTACOES_DO_PAPER]
+    ate_t1 = "\n".join([*anotacoes, "- Um numero primo so e divisivel por 1 e por ele mesmo."])
+    tudo = f"{ate_t1}\n- Todo numero par e divisivel por 2."
+    primeira_c1, segunda_c1 = cenario.template_provider.variables_of(_FASE.C1_GLOBAL_VERIFICATION)
+    assert primeira_c1["learnings"] == ate_t1
+    assert cenario.template_provider.variables_of(_FASE.C2_ADDITIONAL_PLANNING)[0]["learnings"] == ate_t1
+    assert segunda_c1["learnings"] == tudo
+    assert cenario.template_provider.variables_of(_FASE.C3_FINAL_ANSWER)[0]["learnings"] == tudo
+    assert cenario.learnings_memory.render() == tudo
+
+
+async def test_sem_nenhum_aprendizado_as_fases_c_recebem_a_area_com_o_aviso() -> None:
+    cenario = RalphScenario(
+        responses=[
+            _criterios(),
+            _tarefas("T1"),
+            _anotacoes_do_enunciado(),
+            *_tarefa_aprovada("T1", "2 e primo"),
+            _global_aprovado(),
+            _resposta_final(),
+        ]
+    )
+
+    await cenario.run()
+
+    for fase in (_FASE.C1_GLOBAL_VERIFICATION, _FASE.C3_FINAL_ANSWER):
+        assert cenario.template_provider.variables_of(fase)[0]["learnings"] == _SEM_APRENDIZADOS
+
+
+async def test_com_os_templates_reais_todo_prompt_de_b_e_c_enviado_ao_modelo_traz_os_aprendizados() -> None:
+    provider = FilePromptTemplateProvider(settings=Settings(), logger=logging.getLogger("teste.templates"))
+    cenario = RalphScenario(
+        responses=_roteiro_completo_com_reprovacao_e_replanejamento(*_ANOTACOES_DO_PAPER),
+        template_provider=provider,
+    )
+
+    await cenario.run()
+
+    fases_por_chamada = [invocacao.phase for invocacao in cenario.session.invocations]
+    assert set(_FASES_COM_APRENDIZADOS) <= set(fases_por_chamada)
+    for indice, fase in enumerate(fases_por_chamada):
+        if fase not in _FASES_COM_APRENDIZADOS:
+            continue
+        prompt_da_fase = cenario.llm.texts_of(indice)[-1]
+        if fase is _FASE.B1_TASK_RESOLUTION and "Refaça a resolução" in prompt_da_fase:
+            prompt_da_fase = cenario.llm.texts_of(indice)[-2]
+        assert "## Aprendizados Pontuais" in prompt_da_fase, fase
+        assert _ANOTACOES_DO_PAPER[0] in prompt_da_fase, fase
+
+
+# ── Temperatura das retentativas ────────────────────────────────────────────
+#
+# Toda chamada de retentativa — a nova tentativa de B.1 depois de uma reprovação em B.2 e a
+# correção de uma saída inválida ou vazia, em qualquer fase — sai com temperatura 1. Assim que as
+# retentativas acabam, as chamadas voltam à temperatura pedida pelo usuário (0.3 no cenário).
+
+_TEMPERATURA_DO_USUARIO = 0.3
+_TEMPERATURA_DE_RETENTATIVA = 1.0
+
+
+def _temperaturas(cenario: RalphScenario) -> list[object]:
+    return [chamada["temperature"] for chamada in cenario.llm.calls]
+
+
+async def test_a_nova_tentativa_depois_de_reprovacao_em_b2_usa_temperatura_1() -> None:
+    cenario = RalphScenario(responses=_roteiro_com_reprovacao())
+
+    await cenario.run()
+
+    # chamadas: 0 A1, 1 A2, 2 A3, 3-5 T1, 6 B1 de T2, 7 B2, 8 nova tentativa de B1, 9 B2, 10 B4, 11 C1, 12 C3
+    temperaturas = _temperaturas(cenario)
+    assert temperaturas[8] == _TEMPERATURA_DE_RETENTATIVA
+    assert [t for i, t in enumerate(temperaturas) if i != 8] == [_TEMPERATURA_DO_USUARIO] * 12
+
+
+async def test_a_verificacao_da_nova_tentativa_e_o_resto_do_fluxo_voltam_a_temperatura_do_usuario() -> None:
+    cenario = RalphScenario(responses=_roteiro_com_reprovacao())
+
+    await cenario.run()
+
+    fases_e_temperaturas = list(zip((i.phase for i in cenario.session.invocations), _temperaturas(cenario)))
+    depois_da_retentativa = fases_e_temperaturas[9:]
+    assert [fase for fase, _ in depois_da_retentativa] == [
+        _FASE.B2_TASK_VERIFICATION, _FASE.B4_LEARNINGS_EXTRACTION, _FASE.C1_GLOBAL_VERIFICATION, _FASE.C3_FINAL_ANSWER
+    ]
+    assert all(temperatura == _TEMPERATURA_DO_USUARIO for _, temperatura in depois_da_retentativa)
+
+
+async def test_cada_nova_tentativa_seguida_usa_temperatura_1_e_a_verificacao_entre_elas_nao() -> None:
+    cenario = RalphScenario(
+        responses=[
+            _criterios(),
+            _tarefas("T1"),
+            _anotacoes_do_enunciado(),
+            _resolucao("tentativa 1"),
+            _reprovado("T1"),
+            _resolucao("tentativa 2"),
+            _reprovado("T1"),
+            _resolucao("tentativa 3"),
+            _aprovado("T1"),
+            _aprendizados("fato"),
+            _global_aprovado(),
+            _resposta_final(),
+        ],
+        cost_guard=FakeCostGuard(max_task_attempts=3),
+    )
+
+    await cenario.run()
+
+    assert _temperaturas(cenario)[3:9] == [
+        _TEMPERATURA_DO_USUARIO,
+        _TEMPERATURA_DO_USUARIO,
+        _TEMPERATURA_DE_RETENTATIVA,
+        _TEMPERATURA_DO_USUARIO,
+        _TEMPERATURA_DE_RETENTATIVA,
+        _TEMPERATURA_DO_USUARIO,
+    ]
+
+
+async def test_saida_invalida_na_nova_tentativa_continua_sendo_corrigida_com_temperatura_1() -> None:
+    cenario = RalphScenario(
+        responses=[
+            _criterios(),
+            _tarefas("T1"),
+            _anotacoes_do_enunciado(),
+            _resolucao("tentativa 1"),
+            _reprovado("T1"),
+            "isto nao e json",
+            _resolucao("tentativa 2"),
+            _aprovado("T1"),
+            _aprendizados("fato"),
+            _global_aprovado(),
+            _resposta_final(),
+        ]
+    )
+
+    await cenario.run()
+
+    assert _temperaturas(cenario)[3:8] == [
+        _TEMPERATURA_DO_USUARIO,
+        _TEMPERATURA_DO_USUARIO,
+        _TEMPERATURA_DE_RETENTATIVA,
+        _TEMPERATURA_DE_RETENTATIVA,
+        _TEMPERATURA_DO_USUARIO,
+    ]
+
+
+async def test_correcao_de_saida_invalida_em_qualquer_fase_usa_temperatura_1_so_na_retentativa() -> None:
+    cenario = RalphScenario(
+        responses=[
+            _criterios(),
+            _tarefas("T1"),
+            "isso nao e json",
+            _anotacoes_do_enunciado("Velocidade: 20 m/s"),
+            *_tarefa_aprovada("T1", "2 e primo", "fato"),
+            "{\"decision\": \"approved\"}",
+            _global_aprovado(),
+            _resposta_final(),
+        ]
+    )
+
+    await cenario.run()
+
+    temperaturas = _temperaturas(cenario)
+    # 2 A3 inválida, 3 correção de A3, 4-6 T1, 7 C1 inválida, 8 correção de C1, 9 C3
+    assert [indice for indice, t in enumerate(temperaturas) if t == _TEMPERATURA_DE_RETENTATIVA] == [3, 8]
+    assert temperaturas[4] == temperaturas[9] == _TEMPERATURA_DO_USUARIO
+
+
+async def test_reprovacao_global_nao_e_retentativa_e_o_replanejamento_usa_a_temperatura_do_usuario() -> None:
+    cenario = RalphScenario(responses=_roteiro_com_replanejamento())
+
+    await cenario.run()
+
+    assert _temperaturas(cenario) == [_TEMPERATURA_DO_USUARIO] * cenario.llm.call_count
+
+
+async def test_a_sessao_registra_a_temperatura_efetiva_de_cada_invocacao() -> None:
+    cenario = RalphScenario(responses=_roteiro_com_reprovacao())
+
+    await cenario.run()
+
+    assert [invocacao.temperature for invocacao in cenario.session.invocations] == _temperaturas(cenario)
+    assert cenario.session.temperature == _TEMPERATURA_DO_USUARIO

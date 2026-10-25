@@ -43,6 +43,7 @@ _SETUP_TASK_LABEL = "setup"
 _SYNTHESIS_TASK_LABEL = "synthesis"
 _NO_INFERENCE_TIME_MS = 0
 _FIRST_TASK_NUMBER = 1
+_FIRST_ATTEMPT = 1
 
 _CRITERIA_HEADING = "## Critérios de aceite gerais"
 _TASKS_HEADING = "## Tarefas planejadas"
@@ -259,7 +260,8 @@ class RalphThinkingUseCase:
         alternativas, fórmulas, condições. A fase enxerga só o enunciado, numa janela própria, e o
         que ela extrai entra na memória antes de qualquer tarefa: assim as alternativas e os dados
         fornecidos chegam ao contexto novo de todas as tarefas, mesmo àquelas cuja descrição não os
-        repetiu. Como os demais aprendizados, têm escopo restrito ao loop e não chegam a C.1 nem a C.3.
+        repetiu. Como os demais aprendizados, chegam à área "Aprendizados Pontuais" de todo prompt das
+        fases B e C.
 
         Yields:
             ThinkingEvent: Evento `learn`.
@@ -323,15 +325,8 @@ class RalphThinkingUseCase:
             inference_time_ms=_NO_INFERENCE_TIME_MS,
         )
 
-        if not self.learnings_memory.is_empty():
-            context.append(
-                message=Message(
-                    creation_timestamp=self.clock.now(),
-                    text=self.learnings_memory.render(),
-                    source=MessageSourceEnum.SYSTEM,
-                )
-            )
-
+        # A janela nova não recebe um bloco avulso de aprendizados: eles chegam pela área
+        # "Aprendizados Pontuais" do próprio template de B.1, como em todo prompt das fases B e C.
         yield self.__build_event(
             event_type=ThinkingEventTypeEnum.THINKING,
             subtype=ThinkingEventSubtypeEnum.EXECUTE,
@@ -359,6 +354,9 @@ class RalphThinkingUseCase:
         última reprovação —, porque B.4 recebe o contexto completo da tarefa. A janela do
         validador continua isolada: só o seu relatório volta para cá.
 
+        Toda tentativa depois de uma reprovação é uma retentativa: B.1 é chamada com a temperatura de
+        retentativa, e a verificação dessa tentativa volta à temperatura do usuário.
+
         A função só retorna quando a última tentativa foi aprovada. Se as tentativas se esgotam,
         a tarefa não é aprovada, nada é armazenado e a execução é interrompida.
 
@@ -375,7 +373,10 @@ class RalphThinkingUseCase:
         while True:
             attempt = self.cost_guard.register_task_attempt(task_id=task.id)
             outcome = await self.__execute_phase(
-                runner=self.task_resolution_phase, context=context, variables=self.__resolution_variables(task=task)
+                runner=self.task_resolution_phase,
+                context=context,
+                variables=self.__resolution_variables(task=task),
+                is_retry=attempt > _FIRST_ATTEMPT,
             )
             preliminary = outcome.parsed["result"]
             yield await self.__record_and_build(
@@ -509,7 +510,8 @@ class RalphThinkingUseCase:
         """Extrai os aprendizados pontuais de uma tarefa (B.4).
 
         Usa a janela completa da tarefa, que contém todas as tentativas e todos os vereditos do
-        validador — é lá que fatos úteis podem ter emergido.
+        validador — é lá que fatos úteis podem ter emergido. O template recebe os aprendizados já
+        registrados, para que a extração não os repita.
 
         Args:
             task: Tarefa recém-concluída.
@@ -518,7 +520,9 @@ class RalphThinkingUseCase:
         Yields:
             ThinkingEvent: Evento `learn`.
         """
-        outcome = await self.__execute_phase(runner=self.learnings_extraction_phase, context=context, variables={})
+        outcome = await self.__execute_phase(
+            runner=self.learnings_extraction_phase, context=context, variables=self.__learnings_variables()
+        )
         learnings = self.__to_learnings(parsed=outcome.parsed, task_id=task.id)
         self.learnings_memory.append(learnings=learnings)
         yield await self.__record_and_build(
@@ -609,7 +613,11 @@ class RalphThinkingUseCase:
         outcome = await self.__execute_phase(
             runner=self.additional_planning_phase,
             context=context,
-            variables={**self.__planning_variables(report=report), **self.__planning_limits()},
+            variables={
+                **self.__planning_variables(report=report),
+                **self.__planning_limits(),
+                **self.__learnings_variables(),
+            },
             validation=self.__planning_validation(),
         )
         tasks = self.__to_tasks(parsed=outcome.parsed, origin_phase=ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING)
@@ -779,6 +787,7 @@ class RalphThinkingUseCase:
         context: ContextWindow,
         variables: dict[str, str],
         validation: ValidationContext | None = None,
+        is_retry: bool = False,
     ) -> PhaseOutcome:
         """Executa uma fase registrando qual fase e qual janela estão em andamento.
 
@@ -790,13 +799,14 @@ class RalphThinkingUseCase:
             context: Janela de contexto em que a fase roda.
             variables: Placeholders do template da fase.
             validation: Dados esperados pela chamada, repassados ao parser.
+            is_retry: Indica que a execução repete um pedido reprovado, e usa a temperatura de retentativa.
 
         Returns:
             PhaseOutcome: Resultado da execução da fase.
         """
         self.__context = context
         self.__running_phase = runner.phase
-        return await runner.execute(context=context, variables=variables, validation=validation)
+        return await runner.execute(context=context, variables=variables, validation=validation, is_retry=is_retry)
 
     def __configure_phases(self, input_dto: RalphThinkingInputDTO) -> None:
         """Fixa modelo, teto de tokens e temperatura em todas as fases.
@@ -946,11 +956,12 @@ class RalphThinkingUseCase:
             task: Tarefa a resolver.
 
         Returns:
-            dict[str, str]: Descrição da tarefa e seus critérios de aceite.
+            dict[str, str]: Descrição da tarefa, seus critérios de aceite e os aprendizados pontuais.
         """
         return {
             "task_description": self.__render_task(task=task),
             "task_acceptance_criteria": self.__render_criteria(criteria=task.acceptance_criteria),
+            **self.__learnings_variables(),
         }
 
     def __verification_variables(self, task: Task, preliminary: str) -> dict[str, str]:
@@ -961,11 +972,12 @@ class RalphThinkingUseCase:
             preliminary: Resultado preliminar produzido por B.1.
 
         Returns:
-            dict[str, str]: Resultado preliminar e critérios de aceite da tarefa.
+            dict[str, str]: Resultado preliminar, critérios de aceite da tarefa e aprendizados pontuais.
         """
         return {
             "preliminary_result": preliminary,
             "task_acceptance_criteria": self.__render_criteria(criteria=task.acceptance_criteria),
+            **self.__learnings_variables(),
         }
 
     def __synthesis_variables(self, stored_results: str) -> dict[str, str]:
@@ -975,12 +987,25 @@ class RalphThinkingUseCase:
             stored_results: Resultados aprovados, já renderizados.
 
         Returns:
-            dict[str, str]: Resultados armazenados e critérios de aceite gerais.
+            dict[str, str]: Resultados armazenados, critérios de aceite gerais e aprendizados pontuais,
+            cada um na sua área do template: os aprendizados não se misturam aos resultados.
         """
         return {
             "stored_results": stored_results,
             "general_acceptance_criteria": self.__render_criteria(criteria=self.__general_criteria),
+            **self.__learnings_variables(),
         }
+
+    def __learnings_variables(self) -> dict[str, str]:
+        """Monta a área "Aprendizados Pontuais" comum a todos os templates das fases B e C.
+
+        A área traz todos os aprendizados acumulados até o momento da chamada — as anotações do
+        enunciado (A.3) e os aprendizados de cada tarefa concluída (B.4) — e existe mesmo vazia.
+
+        Returns:
+            dict[str, str]: Aprendizados pontuais acumulados, já renderizados.
+        """
+        return {"learnings": self.learnings_memory.render()}
 
     def __planning_variables(self, report: VerificationReport) -> dict[str, str]:
         """Monta as variáveis do Template C.2.

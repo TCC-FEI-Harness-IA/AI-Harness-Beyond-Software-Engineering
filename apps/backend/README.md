@@ -311,7 +311,8 @@ resposta final.
       "tokens_input": 310,
       "tokens_output": 128,
       "finish_reason": "stop",
-      "provider_response_id": "gen-1"
+      "provider_response_id": "gen-1",
+      "temperature": 0.3
     }
   ],
   "degradations": []
@@ -320,6 +321,11 @@ resposta final.
 
 `flow` identifica o tipo da sessão: `A1` para `/v1/message/reasoning` e `DIRECT` para
 `/v1/message/default`.
+
+**Temperatura efetiva.** O `temperature` da sessão é o pedido pelo usuário. O `temperature` de cada
+invocação é o que foi de fato enviado naquela chamada: no harness, toda chamada de retentativa sai com
+temperatura `1` (ver [Garantias do harness](#garantias-do-harness-e-encerramento-sem-conclusão)).
+Invocações gravadas antes deste campo voltam com `temperature: null`.
 
 **Prompt de entrada.** `content` é a saída; `prompt_input` é a conversa exatamente como foi enviada
 ao modelo na chamada que produziu essa saída, em ordem (`source` `user` para prompts e correções,
@@ -567,11 +573,12 @@ persistida antes do evento `result`.
 
 | Situação | Comportamento |
 |---|---|
-| A.2 conclui o plano inicial | A.3 anota os pontos de atenção do enunciado (valores com unidades, alternativas, fórmulas, condições) numa janela própria; as anotações entram na memória de aprendizados antes de qualquer tarefa e são injetadas no contexto novo de todas as tarefas. Não chegam a C.1 nem a C.3. Lista vazia é válida. |
+| A.2 conclui o plano inicial | A.3 anota os pontos de atenção do enunciado (valores com unidades, alternativas, fórmulas, condições) numa janela própria; as anotações entram na memória de aprendizados antes de qualquer tarefa. Lista vazia é válida. |
+| Qualquer prompt de B.1, B.2, B.4, C.1, C.2 ou C.3 é montado | O template tem a área **Aprendizados Pontuais**, preenchida com todos os aprendizados acumulados até aquele momento (anotações de A.3 seguidas dos aprendizados de B.4), ou com o aviso de que ainda não há nenhum. Os aprendizados nunca entram nos resultados armazenados. |
 | B.2 aprova | B.3 armazena só essa resposta; B.4 roda sobre o histórico completo da tarefa. |
-| B.2 reprova e há tentativas | O veredito e a instrução de refazer entram na mesma janela da tarefa; B.1 repete. |
+| B.2 reprova e há tentativas | O veredito e a instrução de refazer entram na mesma janela da tarefa; B.1 repete com temperatura `1`. A verificação dessa tentativa e as fases seguintes voltam à temperatura do usuário. |
 | B.2 reprova e as tentativas acabam | Nada é armazenado, B.4 não roda, a execução é interrompida. |
-| B.2/C.1 devolve um relatório vazio, incompleto, duplicado, com ID desconhecido ou contraditório | O verificador é chamado de novo para corrigir a saída (chamada contada); não consome tentativa de B.1. Sem correção, a fase falha. |
+| B.2/C.1 devolve um relatório vazio, incompleto, duplicado, com ID desconhecido ou contraditório | O verificador é chamado de novo, com temperatura `1`, para corrigir a saída (chamada contada); não consome tentativa de B.1. Sem correção, a fase falha. |
 | C.1 reprova e há recursos | C.2 cria tarefas para os critérios pendentes, que entram no topo da fila. |
 | C.1 reprova e não há recursos para C.2 | A execução é interrompida; os critérios pendentes ficam em `failure`. Nunca há C.3. |
 | C.1 aprova e C.3 falha ou não pode rodar | A execução termina sem resposta final. |
@@ -639,7 +646,7 @@ Ver `.env.example` para o arquivo completo.
 | `RALPH_FINAL_ANSWER_TOKEN_RESERVE` | `4000` | Margem de tokens que só C.3 enxerga, de melhor esforço: **não garante** a síntese (C.1 também precisa de recursos antes dela). |
 | `RALPH_SESSION_TIMEOUT_SECONDS` | `600` | Tempo máximo de parede da sessão, verificado antes de cada chamada. O timeout HTTP de uma chamada (`LLM_TIMEOUT_SECONDS`) não é limitado ao tempo restante da sessão. |
 | `RALPH_PROMPT_TEMPLATES_PATH` | `src/infra/templates` | Diretório dos templates `.md`. |
-| `RALPH_JSON_PARSE_MAX_RETRIES` | `2` | Retentativas quando o modelo devolve JSON inválido, relatório de verificação inconsistente, lote de tarefas inválido ou completion vazia. Cada retentativa é uma chamada contada. |
+| `RALPH_JSON_PARSE_MAX_RETRIES` | `2` | Retentativas quando o modelo devolve JSON inválido, relatório de verificação inconsistente, lote de tarefas inválido ou completion vazia. Cada retentativa é uma chamada contada, feita com temperatura `1`; a temperatura do usuário volta na chamada seguinte às retentativas. |
 | `RALPH_WEBSOCKET_MAX_MESSAGE_BYTES` | `1048576` | Tamanho máximo do frame recebido no WebSocket (vale também para `WS /v1/benchmark/run`). |
 | `RALPH_BENCHMARK_SESSIONS_STORAGE_PATH` | `./data/benchmark-sessions` | Diretório dos JSON das baterias de benchmark, quando o backend é `json_file`. |
 | `MONGODB_BENCHMARK_SESSIONS_COLLECTION` | `benchmark_sessions` | Coleção das baterias de benchmark no MongoDB. |

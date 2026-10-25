@@ -28,6 +28,8 @@ class LLMInvocation:
         tokens_output: Tokens de saída informados pelo provedor, ou `None` se desconhecidos.
         finish_reason: Motivo de término informado pelo provedor, quando há.
         provider_response_id: Identificador da resposta no provedor, quando há.
+        temperature: Temperatura efetivamente pedida na chamada — a do usuário ou, numa
+            retentativa, a de retentativa —, ou `None` em registros anteriores a este campo.
     """
 
     id: str
@@ -43,6 +45,7 @@ class LLMInvocation:
     tokens_output: int | None = None
     finish_reason: str | None = None
     provider_response_id: str | None = None
+    temperature: float | None = None
 
     @property
     def usage_known(self) -> bool:

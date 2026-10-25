@@ -11,6 +11,16 @@ da resposta final.
 
 {{general_acceptance_criteria}}
 
+## Aprendizados Pontuais
+
+Anotações compactas acumuladas ao longo do fluxo: os pontos de atenção do enunciado e os fatos
+registrados pelas tarefas já concluídas, na ordem em que surgiram. Use-as apenas como
+referência para conferir os dados do enunciado.
+Os aprendizados **não são critérios** e **não contam como cobertura**: um critério geral só está
+atendido quando os resultados armazenados o cobrem.
+
+{{learnings}}
+
 ## Instruções
 
 A avaliação é **global**, não por tarefa: considere os resultados em conjunto e decida, critério

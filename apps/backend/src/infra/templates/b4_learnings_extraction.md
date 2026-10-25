@@ -3,6 +3,14 @@
 Compile os aprendizados pontuais descobertos ao longo desta tarefa, considerando tudo o que está
 no contexto acima, inclusive as tentativas reprovadas.
 
+## Aprendizados Pontuais
+
+Anotações compactas acumuladas ao longo do fluxo: os pontos de atenção do enunciado e os fatos
+registrados pelas tarefas já concluídas, na ordem em que surgiram. São os aprendizados
+já registrados: **não repita** nenhum deles. Registre apenas fatos novos, descobertos nesta tarefa.
+
+{{learnings}}
+
 ## Instruções
 
 Registre **exclusivamente fatos concretos**, em tópicos sucintos e secos: dados de controle,

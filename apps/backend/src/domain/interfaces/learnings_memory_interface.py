@@ -5,7 +5,7 @@ from src.domain.entities.thinking.learning import Learning
 
 
 class ILearningsMemory(ABC):
-    """Contrato do armazenamento dos aprendizados pontuais do loop de execução."""
+    """Contrato do armazenamento dos aprendizados pontuais do fluxo (A.3 e B.4)."""
 
     @abstractmethod
     def append(self, learnings: Sequence[Learning]) -> None:
@@ -36,9 +36,9 @@ class ILearningsMemory(ABC):
 
     @abstractmethod
     def render(self) -> str:
-        """Renderiza os aprendizados acumulados como bloco markdown.
+        """Renderiza o conteúdo da área "Aprendizados Pontuais" dos templates das fases B e C.
 
         Returns:
-            str: Bloco markdown pronto para injeção no início de um novo contexto.
+            str: Lista markdown dos aprendizados acumulados, ou o aviso de que ainda não há nenhum.
         """
         raise NotImplementedError

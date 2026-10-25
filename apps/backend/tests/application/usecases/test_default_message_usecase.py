@@ -191,6 +191,7 @@ async def test_a_chamada_unica_vira_uma_invocacao_registrada() -> None:
     assert invocacao.duration_ms == 812
     assert invocacao.finish_reason == "stop"
     assert invocacao.provider_response_id == "resp-1"
+    assert invocacao.temperature == 0.3
 
 
 async def test_tempo_de_inferencia_e_medido_por_mensagem() -> None:

@@ -110,6 +110,7 @@ class ISessionRecorder(ABC):
         context_id: str | None,
         model_name: str,
         provider: ModelProviderEnum,
+        temperature: float | None = None,
     ) -> str:
         """Registra o envio de uma chamada ao modelo, que já conta nos totais da sessão.
 
@@ -121,6 +122,7 @@ class ISessionRecorder(ABC):
             context_id: Janela de contexto associada, quando houver.
             model_name: Modelo solicitado.
             provider: Provedor que atende a chamada.
+            temperature: Temperatura efetivamente pedida na chamada.
 
         Returns:
             str: Identificador da invocação, para `complete_invocation`.

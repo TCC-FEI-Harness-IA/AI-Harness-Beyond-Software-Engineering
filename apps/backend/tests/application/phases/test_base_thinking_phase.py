@@ -846,3 +846,149 @@ async def test_a_auditoria_da_saida_invalida_guarda_o_prompt_que_a_produziu(reco
 
     (auditoria,) = _auditorias(recorder)
     assert [mensagem.text for mensagem in auditoria.prompt_input] == llm.texts_of(0)
+
+
+# ── Temperatura das retentativas ─────────────────────────────────────────────
+#
+# Uma retentativa repete um pedido que acabou de falhar. Com a temperatura do usuário — em
+# geral baixa —, o modelo tende a devolver a mesma saída e a falhar do mesmo jeito até esgotar
+# as tentativas. Por isso toda chamada de retentativa sai com temperatura 1, e a temperatura do
+# usuário volta a valer assim que as retentativas acabam.
+
+_TEMPERATURA_DO_USUARIO = 0.3
+_TEMPERATURA_DE_RETENTATIVA = 1.0
+
+
+def _fase_configurada(
+    llm: ScriptedLLMCompletions,
+    recorder: SessionRecorderAdapter,
+    parser: IStructuredResponseParser | None = None,
+    retentativas: int = 2,
+) -> GeneralCriteriaPhase:
+    fase = _fase(
+        llm_completions=llm,
+        recorder=recorder,
+        parser=parser,
+        settings=FakeSettings(ralph_json_parse_max_retries=retentativas),
+    )
+    fase.configure(
+        model_name="vendor/modelo",
+        max_tokens=1200,
+        temperature=_TEMPERATURA_DO_USUARIO,
+        provider=ModelProviderEnum.OPENAI,
+    )
+    return fase
+
+
+def _temperaturas(llm: ScriptedLLMCompletions) -> list[object]:
+    return [chamada["temperature"] for chamada in llm.calls]
+
+
+async def test_a_correcao_de_saida_invalida_e_pedida_com_temperatura_1(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=["isto nao e json", _SAIDA_VALIDA])
+
+    await _fase_configurada(llm=llm, recorder=recorder).execute(context=_janela(), variables={})
+
+    assert _temperaturas(llm) == [_TEMPERATURA_DO_USUARIO, _TEMPERATURA_DE_RETENTATIVA]
+
+
+async def test_todas_as_correcoes_seguidas_usam_temperatura_1(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=["ruim 1", "ruim 2", _SAIDA_VALIDA])
+
+    await _fase_configurada(llm=llm, recorder=recorder).execute(context=_janela(), variables={})
+
+    assert _temperaturas(llm) == [
+        _TEMPERATURA_DO_USUARIO,
+        _TEMPERATURA_DE_RETENTATIVA,
+        _TEMPERATURA_DE_RETENTATIVA,
+    ]
+
+
+async def test_saida_que_contradiz_a_validacao_tambem_e_corrigida_com_temperatura_1(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    llm = ScriptedLLMCompletions(responses=["relatorio incoerente", _SAIDA_VALIDA])
+    parser = FakeStructuredParser(
+        outcomes=[
+            PhaseParsingError(phase=_FASE, raw_output="relatorio incoerente", reason="faltam avaliações"),
+            _CRITERIOS_VALIDOS,
+        ]
+    )
+
+    await _fase_configurada(llm=llm, recorder=recorder, parser=parser).execute(context=_janela(), variables={})
+
+    assert _temperaturas(llm) == [_TEMPERATURA_DO_USUARIO, _TEMPERATURA_DE_RETENTATIVA]
+
+
+async def test_a_repeticao_depois_de_completion_vazia_usa_temperatura_1(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=[EmptyCompletionError(finish_reason="length"), _SAIDA_VALIDA])
+
+    await _fase_configurada(llm=llm, recorder=recorder).execute(context=_janela(), variables={})
+
+    assert _temperaturas(llm) == [_TEMPERATURA_DO_USUARIO, _TEMPERATURA_DE_RETENTATIVA]
+
+
+async def test_a_validacao_local_da_retentativa_recebe_a_temperatura_1(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=["isto nao e json", _SAIDA_VALIDA])
+
+    await _fase_configurada(llm=llm, recorder=recorder).execute(context=_janela(), variables={})
+
+    assert [validacao["temperature"] for validacao in llm.validations] == [
+        _TEMPERATURA_DO_USUARIO,
+        _TEMPERATURA_DE_RETENTATIVA,
+    ]
+
+
+async def test_a_temperatura_do_usuario_volta_na_execucao_seguinte_a_das_retentativas(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    llm = ScriptedLLMCompletions(responses=["isto nao e json", _SAIDA_VALIDA, _SAIDA_VALIDA])
+    fase = _fase_configurada(llm=llm, recorder=recorder)
+
+    await fase.execute(context=_janela(), variables={})
+    await fase.execute(context=_janela(), variables={})
+
+    assert _temperaturas(llm) == [_TEMPERATURA_DO_USUARIO, _TEMPERATURA_DE_RETENTATIVA, _TEMPERATURA_DO_USUARIO]
+    assert fase.temperature == _TEMPERATURA_DO_USUARIO
+
+
+async def test_execucao_sem_falha_nunca_usa_a_temperatura_de_retentativa(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA])
+
+    await _fase_configurada(llm=llm, recorder=recorder).execute(context=_janela(), variables={})
+
+    assert _temperaturas(llm) == [_TEMPERATURA_DO_USUARIO]
+
+
+async def test_execucao_marcada_como_retentativa_ja_comeca_com_temperatura_1(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    llm = ScriptedLLMCompletions(responses=["isto nao e json", _SAIDA_VALIDA])
+
+    await _fase_configurada(llm=llm, recorder=recorder).execute(context=_janela(), variables={}, is_retry=True)
+
+    assert _temperaturas(llm) == [_TEMPERATURA_DE_RETENTATIVA, _TEMPERATURA_DE_RETENTATIVA]
+
+
+async def test_a_invocacao_registra_a_temperatura_efetiva_de_cada_chamada(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=["isto nao e json", _SAIDA_VALIDA])
+
+    await _fase_configurada(llm=llm, recorder=recorder).execute(context=_janela(), variables={})
+
+    assert [invocacao.temperature for invocacao in recorder.session.invocations] == [
+        _TEMPERATURA_DO_USUARIO,
+        _TEMPERATURA_DE_RETENTATIVA,
+    ]
+
+
+async def test_sem_configure_a_invocacao_registra_a_temperatura_padrao_das_configuracoes(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    llm = ScriptedLLMCompletions(responses=["isto nao e json", _SAIDA_VALIDA])
+
+    await _fase(
+        llm_completions=llm, recorder=recorder, settings=FakeSettings(ralph_json_parse_max_retries=1)
+    ).execute(context=_janela(), variables={})
+
+    assert _temperaturas(llm) == [None, _TEMPERATURA_DE_RETENTATIVA]
+    assert [invocacao.temperature for invocacao in recorder.session.invocations] == [0.7, _TEMPERATURA_DE_RETENTATIVA]

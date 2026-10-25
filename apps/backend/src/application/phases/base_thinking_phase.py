@@ -37,6 +37,9 @@ _INVALID_OUTPUT_AUDIT_TEMPLATE = (
 _NO_TOKENS = 0
 _NO_ELAPSED_MS = 0
 _NO_RETRIES_LEFT = 0
+# Temperatura de toda chamada de retentativa. Repetir um pedido que falhou com a temperatura do usuário
+# — em geral baixa — tende a reproduzir a mesma saída e a mesma falha até esgotar as tentativas.
+_RETRY_TEMPERATURE = 1.0
 
 
 @dataclass
@@ -137,6 +140,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         context: ContextWindow,
         variables: dict[str, str],
         validation: ValidationContext | None = None,
+        is_retry: bool = False,
     ) -> PhaseOutcome:
         """Executa a fase sobre a janela de contexto informada.
 
@@ -152,10 +156,15 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         Cada saída recusada pelo parser fica registrada na sessão no momento da recusa, inclusive a
         última, que encerra a fase com erro: a auditoria independe de a fase terminar bem.
 
+        Toda chamada de retentativa sai com a temperatura de retentativa (1), e não com a do usuário:
+        tanto as correções de saída inválida ou vazia quanto, quando `is_retry` é verdadeiro, todas as
+        chamadas da execução. A temperatura configurada não muda; a próxima execução volta a usá-la.
+
         Args:
             context: Janela de contexto em que a fase é executada.
             variables: Placeholders a substituir no template da fase.
             validation: Dados esperados pela chamada, repassados ao parser.
+            is_retry: Indica que a execução inteira repete um pedido reprovado.
 
         Returns:
             PhaseOutcome: Resultado da execução da fase.
@@ -176,16 +185,18 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         retries_left = self.settings.ralph_json_parse_max_retries
         accounting = _PhaseAccounting()
         invalid_outputs: list[InvalidOutput] = []
+        temperature = _RETRY_TEMPERATURE if is_retry else self.temperature
 
         while True:
             # A janela é a conversa enviada nesta chamada; a resposta só entra nela depois do envio.
             prompt_input = tuple(context.messages)
             try:
-                llm_message = await self.__call_model(context=context, accounting=accounting)
+                llm_message = await self.__call_model(context=context, accounting=accounting, temperature=temperature)
             except EmptyCompletionError as error:
                 # Sem conteúdo não há mensagem a acrescentar à janela: a única correção possível
                 # é pedir de novo, com o mesmo contexto. O custo da chamada já foi registrado.
                 retries_left = self.__consume_retry(retries_left=retries_left, error=error)
+                temperature = _RETRY_TEMPERATURE
                 continue
 
             raw_output = llm_message.output_message.text
@@ -208,6 +219,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                         source=MessageSourceEnum.USER,
                     )
                 )
+                temperature = _RETRY_TEMPERATURE
                 continue
 
             return PhaseOutcome(
@@ -267,7 +279,9 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             raise error
         return retries_left - 1
 
-    async def __call_model(self, context: ContextWindow, accounting: _PhaseAccounting) -> LLMMessage:
+    async def __call_model(
+        self, context: ContextWindow, accounting: _PhaseAccounting, temperature: float | None
+    ) -> LLMMessage:
         """Valida, autoriza, registra, chama o modelo cronometrando e contabiliza o consumo.
 
         A requisição é validada localmente primeiro: uma recusa anterior ao envio não é uma chamada,
@@ -280,6 +294,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         Args:
             context: Janela de contexto enviada integralmente ao modelo.
             accounting: Agregação do consumo da fase, atualizada com esta chamada.
+            temperature: Temperatura desta chamada: a configurada ou, numa retentativa, a de retentativa.
 
         Returns:
             LLMMessage: Resultado da chamada.
@@ -293,7 +308,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             conversation=context.messages,
             model_name=self.model_name,
             max_tokens=self.max_tokens,
-            temperature=self.temperature,
+            temperature=temperature,
             provider=self.provider,
         )
         verdict = self.cost_guard.begin_call(
@@ -308,6 +323,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             context_id=context.context_id,
             model_name=self.model_name or self.settings.llm_model,
             provider=self.provider or self.settings.llm_provider,
+            temperature=self.settings.llm_temperature if temperature is None else temperature,
         )
 
         started_at_ms = self.clock.monotonic_ms()
@@ -316,7 +332,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                 conversation=context.messages,
                 model_name=self.model_name,
                 max_tokens=self.max_tokens,
-                temperature=self.temperature,
+                temperature=temperature,
                 provider=self.provider,
             )
         except EmptyCompletionError as error:
