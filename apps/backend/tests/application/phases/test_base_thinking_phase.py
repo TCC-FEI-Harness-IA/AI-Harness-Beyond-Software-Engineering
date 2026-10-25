@@ -800,3 +800,49 @@ async def test_erro_do_provedor_depois_do_envio_continua_contando_como_chamada(
     (invocacao,) = recorder.session.invocations
     assert invocacao.outcome is InvocationOutcomeEnum.PROVIDER_ERROR
     assert recorder.session.totals.total_llm_calls == 1
+
+
+# ── Prompt de entrada ────────────────────────────────────────────────────────
+
+
+async def test_o_resultado_carrega_a_conversa_enviada_ao_modelo(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA])
+    provider = FakePromptTemplateProvider(templates={_FASE: "prompt da fase"})
+
+    resultado = await _fase(llm_completions=llm, recorder=recorder, template_provider=provider).execute(
+        context=_janela(), variables={}
+    )
+
+    assert [mensagem.text for mensagem in resultado.prompt_input] == llm.texts_of(0) == ["prompt da fase"]
+    assert resultado.prompt_input[0].source is MessageSourceEnum.USER
+
+
+async def test_apos_correcao_o_prompt_de_entrada_e_o_da_chamada_que_produziu_a_saida_valida(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    llm = ScriptedLLMCompletions(responses=["saida ruim", _SAIDA_VALIDA])
+    parser = FakeStructuredParser(
+        outcomes=[
+            PhaseParsingError(phase=_FASE, raw_output="saida ruim", reason="json ausente"),
+            _CRITERIOS_VALIDOS,
+        ]
+    )
+
+    resultado = await _fase(llm_completions=llm, recorder=recorder, parser=parser).execute(
+        context=_janela(), variables={}
+    )
+
+    assert [mensagem.text for mensagem in resultado.prompt_input] == llm.texts_of(1)
+    assert _SAIDA_VALIDA not in [mensagem.text for mensagem in resultado.prompt_input]
+
+
+async def test_a_auditoria_da_saida_invalida_guarda_o_prompt_que_a_produziu(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=["ruim", _SAIDA_VALIDA])
+    parser = FakeStructuredParser(
+        outcomes=[PhaseParsingError(phase=_FASE, raw_output="ruim", reason="json ausente"), _CRITERIOS_VALIDOS]
+    )
+
+    await _fase(llm_completions=llm, recorder=recorder, parser=parser).execute(context=_janela(), variables={})
+
+    (auditoria,) = _auditorias(recorder)
+    assert [mensagem.text for mensagem in auditoria.prompt_input] == llm.texts_of(0)

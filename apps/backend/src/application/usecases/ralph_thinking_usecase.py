@@ -886,6 +886,7 @@ class RalphThinkingUseCase:
             inference_time_ms=outcome.inference_time_ms,
             task_id=task_id,
             context_id=context.context_id,
+            prompt_input=outcome.prompt_input,
         )
         return self.__build_event(
             event_type=ThinkingEventTypeEnum.THINKING,

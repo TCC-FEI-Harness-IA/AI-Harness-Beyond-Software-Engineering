@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 
+from src.domain.entities.llm.message import Message
 from src.domain.entities.session.benchmark_details import BenchmarkDetails
 from src.domain.enums.benchmark_inference_mode_enum import BenchmarkInferenceModeEnum
 
@@ -71,6 +72,9 @@ def _nova_sessao(com_mensagens: bool = True, final_answer: str | None = "respost
                 tokens_output=1666,
                 inference_time_ms=18422,
                 model_name="vendor/modelo",
+                prompt_input=(
+                    Message(creation_timestamp=_CRIADO_EM, text="prompt da fase B.1", source=MessageSourceEnum.USER),
+                ),
             )
         )
         # Degradações só existem em sessões gravadas por versões anteriores do fluxo.
@@ -184,8 +188,25 @@ def test_documento_carrega_o_historico_completo_de_mensagens() -> None:
         "total_tokens": 0,
         "inference_time_ms": 0,
         "model_name": None,
+        "prompt_input": [],
     }
     assert documento["messages"][1]["total_tokens"] == 4786
+
+
+def test_documento_carrega_o_prompt_de_entrada_de_cada_mensagem() -> None:
+    documento = _documento_valido()
+
+    assert documento["messages"][1]["content"] == "resposta do modelo"
+    assert documento["messages"][1]["prompt_input"] == [
+        {"source": "user", "text": "prompt da fase B.1", "creation_timestamp": "2026-08-31T12:00:00+00:00"}
+    ]
+
+
+def test_mensagem_legada_sem_prompt_de_entrada_volta_com_conversa_vazia() -> None:
+    documento = _documento_valido()
+    del documento["messages"][1]["prompt_input"]
+
+    assert _build_mapper().from_document(document=documento).messages[1].prompt_input == ()
 
 
 def test_documento_carrega_as_degradacoes() -> None:
@@ -381,6 +402,7 @@ def test_enums_reconstruidos_voltam_como_enum() -> None:
     assert reconstruida.flow is ThinkingPhaseEnum.DIRECT_INFERENCE
     assert reconstruida.messages[0].source is MessageSourceEnum.USER
     assert reconstruida.messages[1].phase is ThinkingPhaseEnum.B1_TASK_RESOLUTION
+    assert reconstruida.messages[1].prompt_input[0].source is MessageSourceEnum.USER
     assert reconstruida.degradations[0].limit is BudgetLimitEnum.TASK_ATTEMPTS
     assert reconstruida.provider is ModelProviderEnum.OPEN_ROUTER
     assert reconstruida.invocations[0].outcome is InvocationOutcomeEnum.SUCCESS
@@ -401,6 +423,7 @@ def test_enums_reconstruidos_voltam_como_enum() -> None:
         (("invocations", 0, "outcome"), "talvez"),
         (("invocations", 0, "phase"), "Z9"),
         (("invocations", 0, "provider"), "nuvem_x"),
+        (("messages", 1, "prompt_input", 0, "source"), "robo"),
     ],
 )
 def test_valor_de_enum_desconhecido_e_recusado(caminho: tuple[Any, ...], valor: str) -> None:
@@ -447,6 +470,15 @@ def test_totais_sem_chave_obrigatoria_sao_recusados(chave: str) -> None:
 def test_mensagem_sem_chave_obrigatoria_e_recusada(chave: str) -> None:
     documento = _documento_valido()
     del documento["messages"][0][chave]
+
+    with pytest.raises(ValueError, match="obrigatória"):
+        _build_mapper().from_document(document=documento)
+
+
+@pytest.mark.parametrize("chave", ["source", "text", "creation_timestamp"])
+def test_prompt_de_entrada_sem_chave_obrigatoria_e_recusado(chave: str) -> None:
+    documento = _documento_valido()
+    del documento["messages"][1]["prompt_input"][0][chave]
 
     with pytest.raises(ValueError, match="obrigatória"):
         _build_mapper().from_document(document=documento)
@@ -507,6 +539,7 @@ def test_degradacao_sem_chave_obrigatoria_e_recusada(chave: str) -> None:
         (("messages", 0, "timestamp"), "2026-08-31T12:00:00"),
         (("degradations", 0, "occurred_at"), "2026-08-31T12:00:00"),
         (("invocations", 0, "started_at"), "2026-08-31T12:00:00"),
+        (("messages", 1, "prompt_input", 0, "creation_timestamp"), "2026-08-31T12:00:00"),
     ],
 )
 def test_data_sem_fuso_horario_e_recusada(caminho: tuple[Any, ...], valor: str) -> None:

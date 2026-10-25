@@ -178,6 +178,8 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         invalid_outputs: list[InvalidOutput] = []
 
         while True:
+            # A janela é a conversa enviada nesta chamada; a resposta só entra nela depois do envio.
+            prompt_input = tuple(context.messages)
             try:
                 llm_message = await self.__call_model(context=context, accounting=accounting)
             except EmptyCompletionError as error:
@@ -195,7 +197,9 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                 invalid_outputs.append(invalid_output)
                 # A auditoria não pode depender de a fase terminar bem: é justamente quando as correções
                 # se esgotam que o intercâmbio com o modelo precisa ter ficado na sessão.
-                await self.__audit_invalid_output(context=context, invalid_output=invalid_output)
+                await self.__audit_invalid_output(
+                    context=context, invalid_output=invalid_output, prompt_input=prompt_input
+                )
                 retries_left = self.__consume_retry(retries_left=retries_left, error=error)
                 context.append(
                     message=Message(
@@ -219,9 +223,12 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                 inference_time_ms=accounting.inference_time_ms,
                 context_id=context.context_id,
                 invalid_outputs=tuple(invalid_outputs),
+                prompt_input=prompt_input,
             )
 
-    async def __audit_invalid_output(self, context: ContextWindow, invalid_output: InvalidOutput) -> None:
+    async def __audit_invalid_output(
+        self, context: ContextWindow, invalid_output: InvalidOutput, prompt_input: tuple[Message, ...]
+    ) -> None:
         """Registra na sessão uma saída recusada pelo parser, com o motivo da recusa.
 
         O registro é uma etapa programática, sem consumo: o custo da chamada que a produziu já
@@ -230,6 +237,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         Args:
             context: Janela de contexto em que a fase roda.
             invalid_output: Saída recusada e motivo.
+            prompt_input: Conversa enviada ao modelo na chamada que produziu a saída recusada.
         """
         await self.session_recorder.record_programmatic_step(
             phase=self.phase,
@@ -238,6 +246,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             ),
             task_id=context.task_id,
             context_id=context.context_id,
+            prompt_input=prompt_input,
         )
 
     def __consume_retry(self, retries_left: int, error: RalphError) -> int:

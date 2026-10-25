@@ -3,6 +3,7 @@ from dataclasses import asdict
 from enum import StrEnum
 from typing import Any, TypeVar
 
+from src.domain.entities.llm.message import Message
 from src.domain.entities.session.llm_invocation import LLMInvocation
 from src.domain.entities.session.session import Session
 from src.domain.entities.session.benchmark_details import BenchmarkDetails
@@ -27,6 +28,7 @@ _MESSAGE_CONTAINER = "mensagem da sessão"
 _DEGRADATION_CONTAINER = "degradação da sessão"
 _INVOCATION_CONTAINER = "invocação da sessão"
 _FAILURE_CONTAINER = "falha da sessão"
+_PROMPT_INPUT_CONTAINER = "prompt de entrada da mensagem"
 
 TEnum = TypeVar("TEnum", bound=StrEnum)
 
@@ -38,9 +40,10 @@ class SessionDocumentMapper(ISessionDocumentMapper):
     enums viram os respectivos `value`. É o mesmo documento que um repositório de
     MongoDB gravaria, por isso a chave primária é `_id`, espelhada em `id`.
 
-    Documentos gravados antes do registro por invocação, da falha estruturada e do provedor
-    continuam legíveis: as chaves novas são opcionais na leitura, e a ausência de
-    `invocations` marca os totais como legados em vez de inventar chamadas passadas.
+    Documentos gravados antes do registro por invocação, da falha estruturada, do provedor e do
+    prompt de entrada das mensagens continuam legíveis: as chaves novas são opcionais na leitura,
+    a ausência de `prompt_input` vira uma conversa vazia e a ausência de `invocations` marca os
+    totais como legados em vez de inventar chamadas passadas.
     """
 
     def to_document(self, session: Session) -> dict[str, Any]:
@@ -177,6 +180,15 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             "total_tokens": message.total_tokens,
             "inference_time_ms": message.inference_time_ms,
             "model_name": message.model_name,
+            "prompt_input": [self.__prompt_message_to_document(message=item) for item in message.prompt_input],
+        }
+
+    def __prompt_message_to_document(self, message: Message) -> dict[str, Any]:
+        """Converte uma mensagem da conversa enviada ao modelo no seu documento."""
+        return {
+            "source": message.source.value,
+            "text": message.text,
+            "creation_timestamp": message.creation_timestamp.isoformat(),
         }
 
     def __degradation_to_document(self, degradation: SessionDegradation) -> dict[str, Any]:
@@ -325,6 +337,21 @@ class SessionDocumentMapper(ISessionDocumentMapper):
                 document=document, key="inference_time_ms", container=_MESSAGE_CONTAINER
             ),
             model_name=self.__required(document=document, key="model_name", container=_MESSAGE_CONTAINER),
+            prompt_input=tuple(
+                self.__prompt_message_from_document(document=item) for item in document.get("prompt_input", [])
+            ),
+        )
+
+    def __prompt_message_from_document(self, document: dict[str, Any]) -> Message:
+        """Reconstrói uma mensagem da conversa enviada ao modelo a partir do documento."""
+        return Message(
+            creation_timestamp=self.__datetime_from_document(
+                document=document, key="creation_timestamp", container=_PROMPT_INPUT_CONTAINER
+            ),
+            text=self.__required(document=document, key="text", container=_PROMPT_INPUT_CONTAINER),
+            source=self.__enum_from_document(
+                document=document, key="source", container=_PROMPT_INPUT_CONTAINER, enum_type=MessageSourceEnum
+            ),
         )
 
     def __degradation_from_document(self, document: dict[str, Any]) -> SessionDegradation:

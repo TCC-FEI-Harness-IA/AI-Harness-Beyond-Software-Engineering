@@ -271,7 +271,30 @@ resposta final.
       "tokens_output": 0,
       "total_tokens": 0,
       "inference_time_ms": 0,
-      "model_name": null
+      "model_name": null,
+      "prompt_input": []
+    },
+    {
+      "id": "msg_02",
+      "order": 1,
+      "timestamp": "2026-09-11T23:18:07.150000+00:00",
+      "phase": "A1",
+      "source": "llm_agent",
+      "content": "{\"general_acceptance_criteria\": [...]}",
+      "task_id": null,
+      "context_id": "b5a9c2e",
+      "tokens_input": 310,
+      "tokens_output": 128,
+      "total_tokens": 438,
+      "inference_time_ms": 812,
+      "model_name": "openai/gpt-4o-mini",
+      "prompt_input": [
+        {
+          "source": "user",
+          "text": "Template A.1 já preenchido com a pergunta...",
+          "creation_timestamp": "2026-09-11T23:18:06.325000+00:00"
+        }
+      ]
     }
   ],
   "invocations": [
@@ -297,6 +320,13 @@ resposta final.
 
 `flow` identifica o tipo da sessão: `A1` para `/v1/message/reasoning` e `DIRECT` para
 `/v1/message/default`.
+
+**Prompt de entrada.** `content` é a saída; `prompt_input` é a conversa exatamente como foi enviada
+ao modelo na chamada que produziu essa saída, em ordem (`source` `user` para prompts e correções,
+`llm_agent` para respostas anteriores da mesma janela). Quando a fase precisou de correção de JSON, é
+a conversa da última chamada, já com a mensagem de correção; a auditoria de uma saída inválida
+(`source` `system`) guarda a conversa da chamada que a produziu. A pergunta do usuário e as etapas
+programáticas têm `prompt_input` vazio, assim como sessões gravadas antes deste campo existir.
 
 **Totais e invocações.** `total_llm_calls`, `tokens_*` e `inference_time_ms` vêm exclusivamente
 das `invocations`: cada chamada enviada ao modelo é registrada depois da autorização e antes do

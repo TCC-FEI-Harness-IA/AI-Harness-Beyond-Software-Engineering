@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+from src.domain.entities.llm.message import Message
 from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.thinking.invalid_output import InvalidOutput
 
@@ -19,6 +20,7 @@ class PhaseOutcome:
         inference_time_ms: Tempo agregado das chamadas da fase, em milissegundos.
         context_id: Identidade da janela de contexto usada na chamada.
         invalid_outputs: Saídas recusadas pelo parser e corrigidas antes da saída válida.
+        prompt_input: Conversa enviada ao modelo na chamada que produziu `raw_output`.
     """
 
     raw_output: str
@@ -27,3 +29,4 @@ class PhaseOutcome:
     inference_time_ms: int
     context_id: str
     invalid_outputs: tuple[InvalidOutput, ...] = ()
+    prompt_input: tuple[Message, ...] = ()

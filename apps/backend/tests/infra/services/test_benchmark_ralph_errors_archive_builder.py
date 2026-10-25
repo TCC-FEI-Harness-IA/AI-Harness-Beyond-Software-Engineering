@@ -73,6 +73,20 @@ def test_execucao_traz_o_desfecho_e_a_sessao_completa_do_ralph() -> None:
     assert documento["session"]["messages"][0]["content"] == "Pergunta com acentuação"
 
 
+def test_cada_mensagem_da_sessao_exportada_traz_o_prompt_de_entrada() -> None:
+    arquivo = BenchmarkRalphErrorsArchiveBuilder(session_mapper=SessionDocumentMapper()).build("bench_1", [_erro()])
+
+    with _abrir(arquivo.content) as zip_:
+        mensagens = _json(zip_, "questao-Q1/execucao-ralph-loop.json")["session"]["messages"]
+
+    assert all("prompt_input" in mensagem for mensagem in mensagens)
+    assert mensagens[0]["prompt_input"] == []
+    assert mensagens[1]["content"] == '{"general_acceptance_criteria": []}'
+    assert mensagens[1]["prompt_input"] == [
+        {"source": "user", "text": "Prompt A.1 com acentuação", "creation_timestamp": "2026-10-25T12:00:00+00:00"}
+    ]
+
+
 def test_resposta_esperada_traz_letra_texto_e_alternativa_completa() -> None:
     arquivo = BenchmarkRalphErrorsArchiveBuilder(session_mapper=SessionDocumentMapper()).build("bench_1", [_erro()])
 

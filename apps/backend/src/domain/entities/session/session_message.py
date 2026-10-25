@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from src.domain.entities.llm.message import Message
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 
@@ -22,6 +23,8 @@ class SessionMessage:
         tokens_output: Tokens de saída consumidos pela mensagem.
         inference_time_ms: Tempo da chamada ao modelo, em milissegundos.
         model_name: Nome do modelo usado, quando aplicável.
+        prompt_input: Conversa enviada ao modelo na chamada que produziu `content`, em ordem;
+            vazia quando a mensagem não resulta de uma chamada ao modelo.
     """
 
     id: str
@@ -36,6 +39,7 @@ class SessionMessage:
     tokens_output: int
     inference_time_ms: int
     model_name: str | None
+    prompt_input: tuple[Message, ...] = ()
 
     @property
     def total_tokens(self) -> int:

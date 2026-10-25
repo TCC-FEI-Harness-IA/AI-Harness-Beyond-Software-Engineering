@@ -229,6 +229,20 @@ async def test_envia_a_pergunta_como_mensagem_do_usuario_em_utc() -> None:
     assert enviada.creation_timestamp == _INSTANTE
 
 
+async def test_a_resposta_gravada_guarda_a_pergunta_enviada_como_prompt_de_entrada() -> None:
+    repositorio = InMemorySessionRepository()
+    completions = FakeLLMCompletions(result=_build_llm_message(output_message=_build_output_message()))
+
+    await _build_usecase(completions=completions, repository=repositorio).execute(user_input=_ENTRADA)
+
+    sessao = await repositorio.find_by_id(session_id="sess_1")
+    assert sessao is not None
+    pergunta, resposta = sessao.messages
+    assert pergunta.prompt_input == ()
+    assert resposta.prompt_input == tuple(completions.conversations[0])
+    assert [mensagem.text for mensagem in resposta.prompt_input] == ["pergunta do usuario"]
+
+
 async def test_resultado_nulo_do_provedor_e_recusado() -> None:
     repositorio = InMemorySessionRepository()
     completions = FakeLLMCompletions(result=None)

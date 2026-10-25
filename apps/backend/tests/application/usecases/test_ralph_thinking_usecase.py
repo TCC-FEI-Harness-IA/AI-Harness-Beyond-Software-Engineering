@@ -5,6 +5,7 @@ import pytest
 
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
+from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.session_failure_reason_enum import SessionFailureReasonEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.thinking_event_subtype_enum import ThinkingEventSubtypeEnum
@@ -128,6 +129,18 @@ async def test_toda_mensagem_de_tarefa_carrega_fase_tarefa_contexto_tokens_e_tem
         assert mensagem.task_id
         assert mensagem.context_id
         assert mensagem.inference_time_ms > 0
+
+
+async def test_toda_mensagem_do_modelo_guarda_a_conversa_enviada_na_chamada() -> None:
+    cenario = _cenario_feliz()
+
+    await cenario.run()
+
+    mensagens_do_modelo = [m for m in cenario.session.messages if m.source is MessageSourceEnum.LLM_AGENT]
+    assert len(mensagens_do_modelo) == cenario.llm.call_count
+    for indice, mensagem in enumerate(mensagens_do_modelo):
+        assert [entrada.text for entrada in mensagem.prompt_input] == cenario.llm.texts_of(indice)
+    assert all(m.prompt_input == () for m in cenario.session.messages if m.source is not MessageSourceEnum.LLM_AGENT)
 
 
 async def test_a_selecao_da_tarefa_e_o_armazenamento_nao_chamam_o_modelo() -> None:

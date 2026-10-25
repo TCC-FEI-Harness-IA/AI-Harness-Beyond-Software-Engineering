@@ -1,6 +1,7 @@
 """Construtores de sessões persistidas usados pelos testes da exportação de benchmark."""
 from datetime import UTC, datetime
 
+from src.domain.entities.llm.message import Message
 from src.domain.entities.session.benchmark_details import BenchmarkDetails
 from src.domain.entities.session.session import Session
 from src.domain.entities.session.session_message import SessionMessage
@@ -14,7 +15,7 @@ _INSTANTE = datetime(2026, 10, 25, 12, 0, tzinfo=UTC)
 
 
 def sessao_ralph(identificador: str = "sess_1", questao: str = "Q1") -> Session:
-    """Sessão concluída do Ralph Loop, com uma mensagem e a resposta final do benchmark."""
+    """Sessão concluída do Ralph Loop, com a pergunta, uma resposta do modelo e a resposta final do benchmark."""
     sessao = Session(
         id=identificador,
         user_question="Pergunta com acentuação",
@@ -54,6 +55,25 @@ def sessao_ralph(identificador: str = "sess_1", questao: str = "Q1") -> Session:
             tokens_output=0,
             inference_time_ms=0,
             model_name=None,
+        )
+    )
+    sessao.add_message(
+        SessionMessage(
+            id="msg-1",
+            order=1,
+            timestamp=_INSTANTE,
+            phase=ThinkingPhaseEnum.A1_GENERAL_CRITERIA,
+            source=MessageSourceEnum.LLM_AGENT,
+            content='{"general_acceptance_criteria": []}',
+            task_id=None,
+            context_id="ctx-1",
+            tokens_input=7,
+            tokens_output=3,
+            inference_time_ms=120,
+            model_name="vendor/modelo",
+            prompt_input=(
+                Message(creation_timestamp=_INSTANTE, text="Prompt A.1 com acentuação", source=MessageSourceEnum.USER),
+            ),
         )
     )
     sessao.finish(status=SessionStatusEnum.COMPLETED, final_answer="RESPOSTA_FINAL: B")

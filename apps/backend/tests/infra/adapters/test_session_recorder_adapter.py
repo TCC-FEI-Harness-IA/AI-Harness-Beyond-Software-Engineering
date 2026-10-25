@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock
 from src.domain.entities.session.benchmark_details import BenchmarkDetails
 
 from src.domain.entities.llm.genai_model import GenaiModel
+from src.domain.entities.llm.message import Message
 from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
@@ -38,6 +39,10 @@ _FALHA = SessionFailure(
     limit=BudgetLimitEnum.TASK_ATTEMPTS,
     task_id="T2",
     pending_criteria_ids=("AC1",),
+)
+_PROMPT = (
+    Message(creation_timestamp=_PRIMEIRO_INSTANTE, text="prompt da fase", source=MessageSourceEnum.USER),
+    Message(creation_timestamp=_SEGUNDO_INSTANTE, text="saida anterior", source=MessageSourceEnum.LLM_AGENT),
 )
 
 
@@ -150,6 +155,7 @@ async def test_record_llm_message_antes_de_start_e_recusado() -> None:
             inference_time_ms=500,
             task_id=None,
             context_id=None,
+            prompt_input=_PROMPT,
         )
 
 
@@ -208,6 +214,7 @@ async def test_record_user_input_registra_mensagem_do_usuario_sem_consumo() -> N
     assert mensagem.tokens_output == 0
     assert mensagem.inference_time_ms == 0
     assert mensagem.model_name is None
+    assert mensagem.prompt_input == ()
     assert recorder.session.messages == [mensagem]
 
 
@@ -222,6 +229,7 @@ async def test_record_llm_message_registra_consumo_tempo_e_modelo() -> None:
         inference_time_ms=812,
         task_id="T1",
         context_id="ctx_1",
+        prompt_input=_PROMPT,
     )
 
     assert mensagem.source is MessageSourceEnum.LLM_AGENT
@@ -232,6 +240,8 @@ async def test_record_llm_message_registra_consumo_tempo_e_modelo() -> None:
     assert mensagem.task_id == "T1"
     assert mensagem.context_id == "ctx_1"
     assert mensagem.model_name == "vendor/modelo"
+    assert mensagem.content == "resposta do modelo"
+    assert mensagem.prompt_input == _PROMPT
 
 
 async def test_record_programmatic_step_registra_etapa_do_sistema_sem_consumo() -> None:
@@ -250,6 +260,44 @@ async def test_record_programmatic_step_registra_etapa_do_sistema_sem_consumo() 
     assert mensagem.tokens_output == 0
     assert mensagem.inference_time_ms == 0
     assert mensagem.model_name is None
+    assert mensagem.prompt_input == ()
+
+
+async def test_record_programmatic_step_guarda_o_prompt_quando_registra_saida_do_modelo() -> None:
+    recorder = _build_recorder()
+    await _start(recorder=recorder)
+
+    mensagem = await recorder.record_programmatic_step(
+        phase=ThinkingPhaseEnum.A1_GENERAL_CRITERIA,
+        content="saida invalida descartada",
+        task_id=None,
+        context_id="ctx_1",
+        prompt_input=_PROMPT,
+    )
+
+    assert mensagem.source is MessageSourceEnum.SYSTEM
+    assert mensagem.prompt_input == _PROMPT
+
+
+async def test_prompt_de_entrada_e_persistido_com_a_mensagem() -> None:
+    repositorio = InMemorySessionRepository()
+    recorder = _build_recorder(repository=repositorio, flush_every_message=False)
+    await _start(recorder=recorder)
+
+    await recorder.record_llm_message(
+        phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION,
+        content="resposta do modelo",
+        tokens=_TOKENS,
+        inference_time_ms=812,
+        task_id="T1",
+        context_id="ctx_1",
+        prompt_input=list(_PROMPT),
+    )
+    await recorder.finish(status=SessionStatusEnum.COMPLETED, final_answer="resposta final")
+
+    gravada = await repositorio.find_by_id(session_id="sess_1")
+    assert gravada is not None
+    assert gravada.messages[0].prompt_input == _PROMPT
 
 
 async def test_ordem_das_mensagens_e_sequencial_e_os_totais_agregam() -> None:
@@ -264,6 +312,7 @@ async def test_ordem_das_mensagens_e_sequencial_e_os_totais_agregam() -> None:
         inference_time_ms=812,
         task_id=None,
         context_id=None,
+        prompt_input=_PROMPT,
     )
     await recorder.record_programmatic_step(
         phase=ThinkingPhaseEnum.B3_RESULT_STORAGE,

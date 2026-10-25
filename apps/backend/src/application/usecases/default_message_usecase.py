@@ -72,7 +72,12 @@ class DefaultMessageUseCase:
         )
         try:
             await self.session_recorder.record_user_input(content=user_input.user_input)
-            llm_response, inference_time_ms = await self.__infer(user_input=user_input)
+            input_message = Message(
+                creation_timestamp=self.clock.now(),
+                text=user_input.user_input,
+                source=MessageSourceEnum.USER,
+            )
+            llm_response, inference_time_ms = await self.__infer(user_input=user_input, input_message=input_message)
             response_text = self.__extract_output_text(llm_response=llm_response)
             tokens = self.__resolve_tokens(llm_response=llm_response, user_input=user_input)
 
@@ -83,6 +88,7 @@ class DefaultMessageUseCase:
                 inference_time_ms=inference_time_ms,
                 task_id=None,
                 context_id=None,
+                prompt_input=(input_message,),
             )
             await self.session_recorder.finish(
                 status=SessionStatusEnum.COMPLETED,
@@ -113,7 +119,9 @@ class DefaultMessageUseCase:
         except Exception:
             self.logger.exception("Não foi possível encerrar a sessão como falha")
 
-    async def __infer(self, user_input: DefaultMessageInputDTO) -> tuple[LLMMessage, int]:
+    async def __infer(
+        self, user_input: DefaultMessageInputDTO, input_message: Message
+    ) -> tuple[LLMMessage, int]:
         """Chama o modelo uma única vez, cronometrando e registrando a invocação.
 
         A requisição é validada localmente antes de tudo: uma recusa anterior ao envio não é uma
@@ -123,6 +131,7 @@ class DefaultMessageUseCase:
 
         Args:
             user_input: Pergunta do usuário e parâmetros do modelo.
+            input_message: Mensagem enviada ao modelo, única da conversa.
 
         Returns:
             tuple[LLMMessage, int]: Resultado da chamada e sua duração em milissegundos.
@@ -132,11 +141,6 @@ class DefaultMessageUseCase:
                 provedor não devolve resultado.
             EmptyCompletionError: Quando o provedor responde sem conteúdo utilizável.
         """
-        input_message = Message(
-            creation_timestamp=self.clock.now(),
-            text=user_input.user_input,
-            source=MessageSourceEnum.USER,
-        )
         self.llm_completions.validate_conversation(
             conversation=[input_message],
             model_name=user_input.model_name,

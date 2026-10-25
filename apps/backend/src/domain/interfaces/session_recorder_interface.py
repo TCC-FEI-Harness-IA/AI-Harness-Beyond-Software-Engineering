@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from src.domain.entities.llm.message import Message
 from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.session.session import Session
 from src.domain.entities.session.session_failure import SessionFailure
@@ -59,6 +60,7 @@ class ISessionRecorder(ABC):
         inference_time_ms: int,
         task_id: str | None,
         context_id: str | None,
+        prompt_input: tuple[Message, ...],
     ) -> SessionMessage:
         """Registra o resultado de uma chamada ao modelo no histórico da sessão.
 
@@ -69,6 +71,7 @@ class ISessionRecorder(ABC):
             inference_time_ms: Tempo da chamada ao modelo, em milissegundos.
             task_id: Tarefa associada, quando houver.
             context_id: Janela de contexto associada, quando houver.
+            prompt_input: Conversa enviada ao modelo na chamada que produziu `content`.
 
         Returns:
             SessionMessage: Mensagem registrada.
@@ -82,6 +85,7 @@ class ISessionRecorder(ABC):
         content: str,
         task_id: str | None,
         context_id: str | None,
+        prompt_input: tuple[Message, ...] = (),
     ) -> SessionMessage:
         """Registra uma etapa programática (sem chamada ao modelo) no histórico.
 
@@ -90,6 +94,8 @@ class ISessionRecorder(ABC):
             content: Conteúdo da etapa.
             task_id: Tarefa associada, quando houver.
             context_id: Janela de contexto associada, quando houver.
+            prompt_input: Conversa enviada ao modelo, quando a etapa registra a saída de uma chamada
+                (como uma saída descartada pelo parser); vazia nas demais etapas.
 
         Returns:
             SessionMessage: Mensagem registrada.

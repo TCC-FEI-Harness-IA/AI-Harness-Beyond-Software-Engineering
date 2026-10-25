@@ -1,5 +1,6 @@
 import logging
 
+from src.domain.entities.llm.message import Message
 from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.session.session import Session
 from src.domain.entities.session.benchmark_details import BenchmarkDetails
@@ -123,6 +124,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             tokens_output=_NO_TOKENS,
             inference_time_ms=_NO_INFERENCE_TIME_MS,
             model_name=None,
+            prompt_input=(),
         )
 
     async def record_llm_message(
@@ -133,6 +135,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         inference_time_ms: int,
         task_id: str | None,
         context_id: str | None,
+        prompt_input: tuple[Message, ...],
     ) -> SessionMessage:
         """Registra o resultado de uma chamada ao modelo no histórico da sessão.
 
@@ -143,6 +146,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             inference_time_ms: Tempo da chamada ao modelo, em milissegundos.
             task_id: Tarefa associada, quando houver.
             context_id: Janela de contexto associada, quando houver.
+            prompt_input: Conversa enviada ao modelo na chamada que produziu `content`.
 
         Returns:
             SessionMessage: Mensagem registrada.
@@ -160,6 +164,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             tokens_output=tokens.tokens_output,
             inference_time_ms=inference_time_ms,
             model_name=tokens.llm_model.model_name,
+            prompt_input=prompt_input,
         )
 
     async def record_programmatic_step(
@@ -168,6 +173,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         content: str,
         task_id: str | None,
         context_id: str | None,
+        prompt_input: tuple[Message, ...] = (),
     ) -> SessionMessage:
         """Registra uma etapa programática (sem chamada ao modelo) no histórico.
 
@@ -176,6 +182,8 @@ class SessionRecorderAdapter(ISessionRecorder):
             content: Conteúdo da etapa.
             task_id: Tarefa associada, quando houver.
             context_id: Janela de contexto associada, quando houver.
+            prompt_input: Conversa enviada ao modelo, quando a etapa registra a saída de uma chamada
+                (como uma saída descartada pelo parser); vazia nas demais etapas.
 
         Returns:
             SessionMessage: Mensagem registrada.
@@ -193,6 +201,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             tokens_output=_NO_TOKENS,
             inference_time_ms=_NO_INFERENCE_TIME_MS,
             model_name=None,
+            prompt_input=prompt_input,
         )
 
     async def start_invocation(
@@ -342,6 +351,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         tokens_output: int,
         inference_time_ms: int,
         model_name: str | None,
+        prompt_input: tuple[Message, ...],
     ) -> SessionMessage:
         """Monta, anexa e persiste uma mensagem no histórico da sessão corrente.
 
@@ -369,6 +379,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             tokens_output=tokens_output,
             inference_time_ms=inference_time_ms,
             model_name=model_name,
+            prompt_input=tuple(prompt_input),
         )
         session.add_message(message=message)
         await self.__flush(session=session)
