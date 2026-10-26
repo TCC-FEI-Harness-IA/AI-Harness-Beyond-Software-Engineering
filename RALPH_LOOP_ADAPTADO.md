@@ -2,7 +2,7 @@
 
 ## Resumo
 
-Este documento contextualiza uma adaptação do **Ralph Wiggum Loop**, originalmente empregado em engenharia de software, para responder perguntas gerais em linguagem natural, incluindo questões de múltipla escolha. A arquitetura utiliza planejamento, decomposição em tarefas atômicas, execução e validação iterativas, reinicialização de contexto entre tarefas (*Fresh Context*) e síntese final sujeita a critérios de aceite globais. A seção **Metodologia original** abaixo é uma transcrição literal do trecho fornecido no paper, sem correções ou reformulações. Depois da transcrição do paper, o fluxo implementado recebeu três extensões: a etapa **A.3 — Aprendizados pontuais do enunciado**, a área de **Aprendizados Pontuais em todo prompt das fases B e C** e a **temperatura 1 nas retentativas**. Elas estão descritas na seção **Extensões ao método do paper** e detalhadas, com exemplos, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+Este documento contextualiza uma adaptação do **Ralph Wiggum Loop**, originalmente empregado em engenharia de software, para responder perguntas gerais em linguagem natural, incluindo questões de múltipla escolha. A arquitetura utiliza planejamento, decomposição em tarefas atômicas, execução e validação iterativas, reinicialização de contexto entre tarefas (*Fresh Context*) e síntese final sujeita a critérios de aceite globais. A seção **Metodologia original** abaixo é uma transcrição literal do trecho fornecido no paper, sem correções ou reformulações. Depois da transcrição do paper, o fluxo implementado recebeu quatro extensões: a etapa **A.3 — Aprendizados pontuais do enunciado**, a área de **Aprendizados Pontuais em todo prompt das fases B e C**, a **temperatura 1 nas retentativas** e as **regras de redação das tarefas em A.2 e C.2** (sem entradas e saída declaradas, critérios complementares entre si e resultado sempre acompanhado da explicação). Elas estão descritas na seção **Extensões ao método do paper** e detalhadas, com exemplos, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
 
 ## O que é o Ralph Wiggum Loop?
 
@@ -12,10 +12,10 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 
 ## Guia de implementação para agentes de desenvolvimento CLI
 
-> **Nota de procedência:** esta seção é uma orientação operacional derivada da Metodologia, não faz parte da transcrição literal. Em caso de divergência, prevalece a Metodologia original abaixo, com as exceções da seção **Extensões ao método do paper**: a etapa **A.3** (item 3), a área de **Aprendizados Pontuais** em todo prompt das fases B e C (itens 4 a 11) e a **temperatura das retentativas** (item 12). Todas são posteriores ao paper e estão registradas em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+> **Nota de procedência:** esta seção é uma orientação operacional derivada da Metodologia, não faz parte da transcrição literal. Em caso de divergência, prevalece a Metodologia original abaixo, com as exceções da seção **Extensões ao método do paper**: a etapa **A.3** (item 3), a área de **Aprendizados Pontuais** em todo prompt das fases B e C (itens 4 a 11), a **temperatura das retentativas** (item 12) e as **regras de redação das tarefas** (itens 2 e 10). Todas são posteriores ao paper e estão registradas em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
 
 1. **A.1 — Critérios gerais:** receber a pergunta original e executar um prompt fixo `Template A.1` para definir idioma, formato, restrições e condições da resposta final; persistir esses critérios.
-2. **A.2 — Planejamento:** executar `Template A.2` sobre a pergunta original para criar uma lista ordenada de tarefas de objetivo único, cada uma com descrição, escopo, entradas/saídas esperadas e critérios individuais de aceite; persistir a lista.
+2. **A.2 — Planejamento:** executar `Template A.2` sobre a pergunta original para criar uma lista ordenada de tarefas de objetivo único, cada uma com título, descrição autossuficiente e critérios individuais de aceite; persistir a lista. *(Regras de redação, extensão:)* a tarefa **não** declara entradas e saída esperadas; seus critérios são **complementares entre si**, nunca mutuamente exclusivos; e a tarefa exige que o resultado venha **acompanhado da explicação** (fórmulas, substituição de valores com unidades, convenções e justificativa de cada passo), com um critério de aceite que verifique isso.
 3. **A.3 — Aprendizados pontuais do enunciado (extensão):** executar `Template A.3` sobre a pergunta original, em janela própria, para anotar os pontos que chamam a atenção no enunciado: valores com unidades de medida, alternativas, fórmulas, condições e restrições. Acrescentar essas anotações à memória de aprendizados **antes** de qualquer tarefa; uma lista vazia é válida. Não resolver a pergunta.
 4. **B.1 — Seleção e resolução:** selecionar programaticamente a próxima tarefa; iniciar um contexto novo com a tarefa e `Template B.1`, cuja área **Aprendizados Pontuais** traz os aprendizados compactos acumulados (as anotações de A.3 e os aprendizados de B.4 das tarefas anteriores, ou o aviso de que ainda não há nenhum). Não antecipar a solução global.
 5. **B.2 — Validação:** avaliar a resposta preliminar contra todos os critérios individuais usando `Template B.2`, que também traz a área **Aprendizados Pontuais**, só como referência para conferir dados (os aprendizados não são critérios). Se reprovar, reenviar o feedback e repetir **no mesmo contexto da tarefa**, preservando tentativas anteriores.
@@ -23,7 +23,7 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 7. **B.4 — Aprendizados pontuais:** executar `Template B.4` sobre o histórico completo da tarefa e extrair fatos compactos úteis para tarefas seguintes. A área **Aprendizados Pontuais** do template mostra os aprendizados já registrados, para que não sejam repetidos. Os aprendizados nunca se misturam aos resultados armazenados.
 8. **Fresh Context:** ao avançar para outra tarefa, descartar o histórico da tarefa anterior e criar uma nova chamada/contexto. Os aprendizados compactos (inclusive as anotações de A.3) chegam à tarefa seguinte pela área **Aprendizados Pontuais** do `Template B.1`. A checagem de existência de tarefas pendentes é programática.
 9. **C.1 — Validação global:** reunir apenas os resultados aprovados e os critérios gerais de A.1; executar `Template C.1` para verificar a suficiência do conjunto. A área **Aprendizados Pontuais** traz todos os aprendizados do fluxo, como referência: eles não contam como cobertura de critério.
-10. **Planejamento adicional:** se a validação global reprovar, identificar critérios pendentes, gerar novas tarefas específicas e retornar ao loop de execução. O `Template C.2` traz a área **Aprendizados Pontuais**, para que as descrições das novas tarefas repitam os dados do enunciado de que precisam.
+10. **Planejamento adicional:** se a validação global reprovar, identificar critérios pendentes, gerar novas tarefas específicas e retornar ao loop de execução. O `Template C.2` traz a área **Aprendizados Pontuais**, para que as descrições das novas tarefas repitam os dados do enunciado de que precisam. As novas tarefas seguem as mesmas **regras de redação** de A.2 (item 2).
 11. **Resposta final:** após aprovação global, sintetizar a resposta a partir dos resultados aprovados, obedecendo idioma, formato e restrições gerais. O `Template C.3` traz a área **Aprendizados Pontuais** só para conferir dados do enunciado (por exemplo, a letra da alternativa); o conteúdo da resposta continua vindo apenas dos resultados aprovados.
 12. **Temperatura das retentativas (extensão):** toda chamada de retentativa sai com temperatura `1`: a nova tentativa de B.1 depois de uma reprovação em B.2 e a correção de uma saída inválida (JSON ilegível, relatório inconsistente, lote de tarefas inválido) ou vazia, em qualquer fase. Assim que as retentativas acabam, as chamadas voltam à temperatura pedida pelo usuário.
 
@@ -88,9 +88,32 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 - O número de retentativas não muda: os limites de tentativas por tarefa e de correções de saída continuam valendo.
 - Cada invocação registra na sessão a temperatura efetivamente enviada (`temperature`), o que permite auditar quais chamadas foram retentativas.
 
+### Regras de redação das tarefas (A.2 e C.2)
+
+**Problema observado.** Três pontos dos templates de planejamento prejudicavam as tarefas geradas:
+
+1. A diretriz "declarar as **entradas** de que precisa e a **saída** que produz" levava o modelo a preencher os campos `expected_input` e `expected_output`. Como cada tarefa é autossuficiente e roda em contexto novo, a "entrada" já está na descrição, e a "saída" competia com os critérios de aceite como definição do que a tarefa deve entregar. Em especial, uma "saída esperada" curta, como "a lista de primos, por exemplo [2, 3, 5, 7]", sugeria uma resposta sem justificativa.
+2. Nada impedia critérios **mutuamente exclusivos** na mesma tarefa, como "responda somente a alternativa" e "a resposta deve conter explicações". Nenhum resultado atende aos dois ao mesmo tempo, e a tarefa fica reprovada em B.2 a cada tentativa, até esgotar o limite.
+3. Nada exigia que o resultado da tarefa viesse **justificado**. Um resultado que só traz o valor final, sem a fórmula, as unidades ou o porquê de cada passo, não permite que B.2, C.1 e C.3 confiram de onde ele veio.
+
+**Regra.** Cada tarefa criada por A.2 ou C.2 deve:
+
+1. Ter **um único objetivo**, resolvível de forma independente das demais *(inalterado)*.
+2. Trazer os **próprios critérios de aceite individuais**, com identificadores no formato `T1-AC1`, **complementares entre si e nunca mutuamente exclusivos**: tem de ser possível que uma única resposta atenda a todos os critérios ao mesmo tempo. O modelo confere os critérios aos pares antes de fechar a lista.
+3. Trazer, entre os critérios, **restrições de escopo** que impeçam a resolução precoce da questão principal *(inalterado)*.
+4. Exigir que o resultado venha **acompanhado da explicação de por que ele é válido**, nunca isolado. Numa conta: as fórmulas usadas, a substituição dos valores com unidades de medida, as convenções adotadas (sinais, referenciais, aproximações) e a justificativa de cada passo. Numa classificação ou escolha: o raciocínio que a sustenta. A exigência aparece na descrição da tarefa **e** num critério de aceite, para que B.2 a verifique.
+
+- A diretriz de **entradas e saída** foi removida. A tarefa passa a ter só `id`, `title`, `description` e `acceptance_criteria`; o bloco da tarefa enviado a B.1 deixa de ter as linhas "Entrada esperada" e "Saída esperada".
+- Se o modelo ainda enviar `expected_input` ou `expected_output`, o lote **não** é recusado: os campos são ignorados.
+- As regras valem para A.2 e C.2. A fórmula de cada etapa não muda:
+
+> *Pergunta do usuário* + *Template A.2* → *Resultado Fase A.2*
+>
+> *Critérios Não Atendidos* + *Resultados Armazenados* + *Aprendizados Pontuais* + *Template C.2* → *Novas Tarefas*
+
 ## Metodologia original — transcrição literal
 
-> **Atenção:** o bloco abaixo descreve o Planejamento em duas etapas (A.1 e A.2), afirma que a primeira tarefa não tem aprendizados acumulados, restringe os aprendizados à Execução em Loop (B.1) e não trata da temperatura das retentativas. Essas afirmações valem para o paper, mas **não** para o fluxo implementado, que inclui a etapa A.3, a área de Aprendizados Pontuais em todo prompt das fases B e C e a temperatura `1` nas retentativas (ver **Extensões ao método do paper**). O texto abaixo permanece inalterado de propósito.
+> **Atenção:** o bloco abaixo descreve o Planejamento em duas etapas (A.1 e A.2), afirma que a primeira tarefa não tem aprendizados acumulados, restringe os aprendizados à Execução em Loop (B.1), não trata da temperatura das retentativas e descreve tarefas com entradas e saídas esperadas. Essas afirmações valem para o paper, mas **não** para o fluxo implementado, que inclui a etapa A.3, a área de Aprendizados Pontuais em todo prompt das fases B e C, a temperatura `1` nas retentativas e as regras de redação das tarefas, sem entradas e saída declaradas, com critérios complementares e resultado sempre justificado (ver **Extensões ao método do paper**). O texto abaixo permanece inalterado de propósito.
 
 O bloco abaixo preserva exatamente os caracteres do trecho original enviado, inclusive marcação LaTeX/Markdown, fórmulas, exemplos, referências a figuras e eventuais erros tipográficos. Referências a imagens permanecem como caminhos do documento de origem; os arquivos das figuras não foram fornecidos. A seção separada **“Métodologia de avaliação”** não foi incluída, pois não faz parte da seção intitulada **“Metodologia”** no arquivo original.
 

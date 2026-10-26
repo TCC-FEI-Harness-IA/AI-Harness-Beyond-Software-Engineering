@@ -11,8 +11,6 @@ def _tarefa(task_id: str) -> Task:
         id=task_id,
         title=f"titulo de {task_id}",
         description=f"descricao de {task_id}",
-        expected_input="entrada esperada",
-        expected_output="saida esperada",
         acceptance_criteria=(AcceptanceCriterion(id=f"{task_id}-AC1", description="criterio"),),
     )
 

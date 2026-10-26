@@ -15,8 +15,6 @@ class Task:
         id: Identificador único da tarefa.
         title: Título curto da tarefa.
         description: Descrição da responsabilidade única da tarefa.
-        expected_input: Entradas esperadas para a resolução da tarefa.
-        expected_output: Saída esperada da resolução da tarefa.
         acceptance_criteria: Critérios de aceite individuais da tarefa.
         status: Estado atual da tarefa no loop de execução.
         origin_phase: Fase que originou a tarefa (A.2 ou C.2).
@@ -26,8 +24,6 @@ class Task:
     id: str
     title: str
     description: str
-    expected_input: str
-    expected_output: str
     acceptance_criteria: tuple[AcceptanceCriterion, ...]
     status: TaskStatusEnum = TaskStatusEnum.PENDING
     origin_phase: ThinkingPhaseEnum = ThinkingPhaseEnum.A2_TASK_DECOMPOSITION

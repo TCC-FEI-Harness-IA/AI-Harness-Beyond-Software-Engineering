@@ -21,8 +21,6 @@ _TAREFA_VALIDA: dict[str, Any] = {
     "id": "T1",
     "title": "titulo",
     "description": "descricao",
-    "expected_input": "entrada",
-    "expected_output": "saida",
     "acceptance_criteria": [{"id": "T1-AC1", "description": "criterio"}],
 }
 _VERIFICACAO_VALIDA: dict[str, Any] = {
@@ -150,6 +148,13 @@ def test_decomposicao_valida(fase: ThinkingPhaseEnum) -> None:
     assert _parser().parse(raw_output=json.dumps(payload), phase=fase) == payload
 
 
+def test_decomposicao_com_entrada_e_saida_ainda_e_aceita() -> None:
+    # Os campos deixaram de ser pedidos, mas um modelo que ainda os envie não tem o lote recusado.
+    payload = {"tasks": [{**_TAREFA_VALIDA, "expected_input": "entrada", "expected_output": "saida"}]}
+
+    assert _parser().parse(raw_output=json.dumps(payload), phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION) == payload
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -158,7 +163,7 @@ def test_decomposicao_valida(fase: ThinkingPhaseEnum) -> None:
         {"tasks": []},
         {"tasks": ["T1"]},
         {"tasks": [{**_TAREFA_VALIDA, "title": ""}]},
-        {"tasks": [{k: v for k, v in _TAREFA_VALIDA.items() if k != "expected_input"}]},
+        {"tasks": [{k: v for k, v in _TAREFA_VALIDA.items() if k != "description"}]},
         {"tasks": [{**_TAREFA_VALIDA, "acceptance_criteria": []}]},
         {"tasks": [{**_TAREFA_VALIDA, "acceptance_criteria": "criterio"}]},
         {"tasks": [{**_TAREFA_VALIDA, "acceptance_criteria": [{"id": "T1-AC1"}]}]},

@@ -30,8 +30,6 @@ _TAREFA = {
     "id": "T1",
     "title": "Resolver",
     "description": "Escolher alternativa",
-    "expected_input": "Questão",
-    "expected_output": "Alternativa",
     "acceptance_criteria": [{"id": "AC1", "description": "Escolher uma alternativa"}],
 }
 

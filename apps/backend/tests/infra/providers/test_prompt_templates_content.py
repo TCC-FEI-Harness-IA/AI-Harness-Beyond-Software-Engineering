@@ -181,3 +181,37 @@ def test_a_extracao_de_aprendizados_nao_repete_os_ja_registrados() -> None:
     template = _provider().get(phase=ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION).lower()
 
     assert "não repita" in template
+
+
+# ── Regras de redação das tarefas em A.2 e C.2 ──────────────────────────────
+
+
+def test_templates_de_planejamento_nao_pedem_mais_entradas_e_saida_das_tarefas() -> None:
+    provider = _provider()
+
+    for fase in _FASES_DE_PLANEJAMENTO:
+        template = provider.get(phase=fase)
+        assert "**entradas**" not in template, fase
+        assert "expected_input" not in template, fase
+        assert "expected_output" not in template, fase
+
+
+def test_templates_de_planejamento_exigem_criterios_complementares_entre_si() -> None:
+    provider = _provider()
+
+    for fase in _FASES_DE_PLANEJAMENTO:
+        template = " ".join(provider.get(phase=fase).lower().split())
+        assert "complementares, nunca mutuamente exclusivos" in template, fase
+        assert "atenda a todos eles ao mesmo tempo" in template, fase
+        assert '"responda somente a alternativa"' in template, fase
+
+
+def test_templates_de_planejamento_exigem_resultado_com_explicacao() -> None:
+    provider = _provider()
+
+    for fase in _FASES_DE_PLANEJAMENTO:
+        template = " ".join(provider.get(phase=fase).lower().split())
+        assert "acompanhado da explicação" in template, fase
+        assert "nunca o resultado isolado" in template, fase
+        assert "fórmulas usadas" in template and "convenções adotadas" in template, fase
+        assert "inclua um critério de aceite que a verifique" in template, fase

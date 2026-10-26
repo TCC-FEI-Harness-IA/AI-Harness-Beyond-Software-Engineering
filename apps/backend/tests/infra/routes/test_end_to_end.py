@@ -48,8 +48,6 @@ def _tarefas(*ids: str) -> str:
                     "id": task_id,
                     "title": f"titulo de {task_id}",
                     "description": f"descricao de {task_id}",
-                    "expected_input": "entrada esperada",
-                    "expected_output": "saida esperada",
                     "acceptance_criteria": [{"id": f"{task_id}-AC1", "description": f"criterio de {task_id}"}],
                 }
                 for task_id in ids

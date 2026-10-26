@@ -28,8 +28,6 @@ _TAREFA = {
     "id": "T1",
     "title": "titulo",
     "description": "descricao",
-    "expected_input": "entrada",
-    "expected_output": "saida",
     "acceptance_criteria": [{"id": "T1-AC1", "description": "criterio"}],
 }
 _VERIFICACAO = json.dumps(

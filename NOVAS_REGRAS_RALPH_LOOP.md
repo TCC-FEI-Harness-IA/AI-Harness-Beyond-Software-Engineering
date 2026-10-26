@@ -13,8 +13,9 @@ A explicação geral do fluxo está em [`RALPH_LOOP_ADAPTADO.md`](RALPH_LOOP_ADA
 | 1 | Nova etapa **A.3 — Aprendizados pontuais do enunciado** | A. Planejamento | Dados importantes da pergunta (valores com unidades, alternativas, fórmulas, condições) deixam de depender de a descrição das tarefas os repetir. |
 | 2 | Área **Aprendizados Pontuais** em todo prompt das fases B e C | B. Execução em Loop e C. Criação da Resposta Final | Todos os aprendizados do fluxo chegam a B.1, B.2, B.4, C.1, C.2 e C.3, e não só a B.1. |
 | 3 | **Temperatura 1 nas retentativas** | B e todas as fases com correção de saída | Retentativas deixam de repetir a mesma saída reprovada até esgotar as tentativas. |
+| 4 | **Regras de redação das tarefas** (A.2 e C.2) | A. Planejamento e C. Planejamento Adicional | As tarefas deixam de declarar entradas e saída, têm critérios de aceite complementares (nunca mutuamente exclusivos) e exigem resultado acompanhado da explicação. |
 
-As alterações 2 e 3 vieram de uma segunda rodada de testes. A alteração 2 **substitui** a regra de escopo da alteração 1 (e do paper), segundo a qual os aprendizados ficavam restritos a B.1; os pontos afetados da seção 1 estão marcados com *(atualizado pela alteração 2)*.
+As alterações 2 e 3 vieram de uma segunda rodada de testes. A alteração 2 **substitui** a regra de escopo da alteração 1 (e do paper), segundo a qual os aprendizados ficavam restritos a B.1; os pontos afetados da seção 1 estão marcados com *(atualizado pela alteração 2)*. A alteração 4 muda apenas o que os templates A.2 e C.2 pedem de cada tarefa; não muda a ordem das etapas nem as expressões de entrada e saída.
 
 ---
 
@@ -499,3 +500,238 @@ Arquivos principais:
 | `apps/backend/src/domain/interfaces/thinking_phase_interface.py` | Parâmetro `is_retry` de `execute`. |
 | `apps/backend/src/application/usecases/ralph_thinking_usecase.py` | Marca como retentativa toda tentativa de B.1 depois da primeira. |
 | `apps/backend/src/domain/entities/session/llm_invocation.py`, `apps/backend/src/infra/adapters/session_recorder_adapter.py`, `apps/backend/src/infra/mappers/session_document_mapper.py` | Registro e persistência da temperatura efetiva de cada invocação. |
+
+---
+
+## 4. Regras de redação das tarefas em A.2 e C.2
+
+### 4.1 Problema
+
+Os templates de planejamento (A.2 e, de forma resumida, C.2) pediam que cada tarefa:
+
+> 1. Ter **um único objetivo**, resolvível de forma independente das demais.
+> 2. Declarar as **entradas** de que precisa e a **saída** que produz.
+> 3. Trazer os **próprios critérios de aceite individuais**, que permitam julgar isoladamente se a tarefa foi bem resolvida. Os identificadores dos critérios seguem a forma `T1-AC1`.
+> 4. Trazer, entre os critérios, **restrições de escopo que impeçam a resolução precoce da questão principal**.
+
+Três problemas foram identificados nessa redação:
+
+1. **Entradas e saída eram redundantes e induziam respostas curtas.** Cada tarefa já precisa ser autossuficiente (o contexto não é compartilhado), então tudo o que ela recebe está na descrição. A "saída esperada" competia com os critérios de aceite como definição do que entregar. Nas sessões gravadas, a saída esperada costumava ser só o produto final, como "Lista de números primos entre 0 e 10, por exemplo: [2, 3, 5, 7]", o que sugere ao resolvedor (B.1) uma resposta sem justificativa.
+2. **Critérios mutuamente exclusivos.** Nada impedia o decompositor de escrever, na mesma tarefa, critérios que não podem ser atendidos juntos, como "responda somente a alternativa" e "a resposta deve conter explicações". Qualquer resultado viola um dos dois. B.2 reprova a tentativa, B.1 tenta de novo e falha no outro critério, e a tarefa consome todas as tentativas sem chance de aprovação. A temperatura 1 nas retentativas (alteração 3) não resolve isso: o problema está nos critérios, não na resposta.
+3. **Resultado sem justificativa.** Nada exigia que a tarefa mostrasse **como** chegou ao resultado. Um resultado como "v = 20,8 m/s" não permite a B.2 conferir se a fórmula, a conversão de unidades e o arredondamento estão corretos. Também não dá a C.1 e C.3 o material necessário para justificar a resposta final.
+
+### 4.2 Regra nova
+
+A lista de diretrizes de A.2 e C.2 passa a ser:
+
+1. Ter **um único objetivo**, resolvível de forma independente das demais. *(inalterada)*
+2. Trazer os **próprios critérios de aceite individuais**, que permitam julgar isoladamente se a tarefa foi bem resolvida, com identificadores na forma `T1-AC1`. Os critérios de uma mesma tarefa devem ser **complementares, nunca mutuamente exclusivos**: tem de ser possível que uma única resposta atenda a todos eles ao mesmo tempo. Antes de fechar a lista, o modelo confere os critérios aos pares e elimina qualquer contradição. *(ampliada)*
+3. Trazer, entre os critérios, **restrições de escopo que impeçam a resolução precoce da questão principal**. *(inalterada)*
+4. Exigir que a resposta da tarefa traga o **resultado acompanhado da explicação de por que ele é válido**, nunca o resultado isolado. Se a tarefa envolve uma conta, a resposta apresenta as fórmulas usadas, a substituição dos valores com unidades de medida, as convenções adotadas (sinais, referenciais, aproximações) e a justificativa de cada passo até o valor final. Se envolve uma classificação ou escolha, apresenta o raciocínio que a sustenta. A exigência é escrita na descrição da tarefa **e** num critério de aceite que a verifique. *(nova)*
+
+A antiga diretriz 2 ("declarar as **entradas** de que precisa e a **saída** que produz") foi **removida**.
+
+As expressões das etapas não mudam:
+
+> *Pergunta do usuário* + *Template A.2* → *Resultado Fase A.2*
+>
+> *Critérios Não Atendidos* + *Resultados Armazenados* + *Aprendizados Pontuais* + *Template C.2* → *Novas Tarefas*
+
+O que muda é o conteúdo de cada tarefa em *Resultado Fase A.2* e em *Novas Tarefas*: descrição autossuficiente e critérios complementares, entre os quais pelo menos um exige o resultado justificado e pelo menos um restringe o escopo.
+
+### 4.3 Formato da tarefa
+
+O formato de saída de A.2 e C.2 deixa de ter os campos `expected_input` e `expected_output`:
+
+```text
+// Antes
+{"tasks": [{"id": "T1", "title": "...", "description": "...", "expected_input": "...",
+"expected_output": "...", "acceptance_criteria": [{"id": "T1-AC1", "description": "..."}]}]}
+
+// Depois
+{"tasks": [{"id": "T1", "title": "...", "description": "...",
+"acceptance_criteria": [{"id": "T1-AC1", "description": "..."}]}]}
+```
+
+Consequências no fluxo:
+
+- O bloco da tarefa enviado a B.1 (área "Tarefa" do Template B.1) e exibido na sessão perde as linhas **Entrada esperada** e **Saída esperada**. Fica com título, descrição e critérios de aceite.
+- Um modelo que ainda envie `expected_input` ou `expected_output` **não** tem o lote recusado: os campos extras são ignorados. Isso evita gastar correções de saída (e chamadas com temperatura 1) por um campo que não é mais usado.
+- Sessões gravadas antes da alteração continuam legíveis: o frontend já tratava os dois campos como opcionais e só os mostra quando existem.
+
+### 4.4 Exemplo com o *input* de referência do paper
+
+**Input**
+
+> Qual dos seguintes números é simultaneamente primo, par e maior que 2?
+> A) 2 B) 4 C) 6 D) Nenhuma das anteriores
+
+**Antes — Tarefa 1 como podia chegar a B.1** *(variação hipotética do exemplo do paper, gerada sem o critério de explicação)*
+
+```markdown
+### T1 — Identificar os primos entre as opções
+
+Dadas as opções (2, 4, 6), identifique quais desses números são primos.
+
+**Entrada esperada:** As opções 2, 4 e 6.
+
+**Saída esperada:** A lista dos números primos, por exemplo: [2]
+
+**Critérios de aceite:**
+- `T1-AC1`: Deve retornar a lista de números primos encontrados nas alternativas.
+- `T1-AC2`: A resposta não deve tentar resolver a questão final.
+- `T1-AC3`: A resposta não deve avaliar nenhuma outra condição.
+```
+
+Os critérios desse exemplo não se contradizem, mas nenhum exige justificativa, e a "saída esperada" incentiva responder só "[2]". Um resultado "[2]" seria aprovado por B.2, embora não diga **por que** 4 e 6 não são primos.
+
+**Depois — saída de A.2**
+
+```json
+{"tasks": [{
+  "id": "T1",
+  "title": "Identificar os primos entre as opções",
+  "description": "Dadas as opções 2, 4 e 6, identifique quais desses números são primos. Para cada número, aplique a definição de número primo (inteiro maior que 1 com exatamente dois divisores positivos distintos, 1 e ele mesmo), liste os divisores encontrados e conclua se ele é primo. Apresente a lista final dos primos acompanhada dessa justificativa.",
+  "acceptance_criteria": [
+    {"id": "T1-AC1", "description": "Deve retornar a lista dos números primos entre 2, 4 e 6."},
+    {"id": "T1-AC2", "description": "Deve justificar a classificação de cada um dos três números, citando a definição de número primo e os divisores encontrados."},
+    {"id": "T1-AC3", "description": "A resposta não deve tentar resolver a questão final."},
+    {"id": "T1-AC4", "description": "A resposta não deve avaliar nenhuma outra condição além da primalidade."}
+  ]
+}]}
+```
+
+**Bloco enviado a B.1**
+
+```markdown
+### T1 — Identificar os primos entre as opções
+
+Dadas as opções 2, 4 e 6, identifique quais desses números são primos. Para cada número, aplique a definição […] Apresente a lista final dos primos acompanhada dessa justificativa.
+
+**Critérios de aceite:**
+- `T1-AC1`: Deve retornar a lista dos números primos entre 2, 4 e 6.
+- `T1-AC2`: Deve justificar a classificação de cada um dos três números, citando a definição de número primo e os divisores encontrados.
+- `T1-AC3`: A resposta não deve tentar resolver a questão final.
+- `T1-AC4`: A resposta não deve avaliar nenhuma outra condição além da primalidade.
+```
+
+**Resultado aprovado por B.2**
+
+> "Um número primo é um inteiro maior que 1 com exatamente dois divisores positivos distintos. 2: divisores {1, 2}, logo é primo. 4: divisores {1, 2, 4}, logo não é primo. 6: divisores {1, 2, 3, 6}, logo não é primo. Resultado: [2]."
+
+O resultado "[2]" sozinho agora é **reprovado** em `T1-AC2`. Os quatro critérios são complementares: listar o resultado (AC1), justificá-lo (AC2) e ficar dentro do escopo (AC3 e AC4) cabem numa única resposta.
+
+### 4.5 Exemplo de critérios mutuamente exclusivos
+
+Questão de múltipla escolha de física, com uma tarefa que calcula a velocidade média. Um decompositor sem a regra nova poderia gerar:
+
+```markdown
+- `T2-AC1`: A resposta deve conter somente a alternativa correspondente ao valor calculado.
+- `T2-AC2`: A resposta deve conter a explicação do cálculo.
+- `T2-AC3`: A resposta não deve tentar resolver a questão final.
+```
+
+`T2-AC1` e `T2-AC2` se excluem: uma resposta "somente a alternativa" não tem explicação, e uma resposta com explicação não é "somente a alternativa". Além disso, `T2-AC1` (escolher a alternativa) contradiz `T2-AC3` (não resolver a questão final). Toda tentativa é reprovada em pelo menos um critério, e a tarefa esgota as tentativas.
+
+Com a regra nova, o decompositor confere os critérios aos pares e reescreve a lista:
+
+```markdown
+- `T2-AC1`: Deve apresentar o valor da velocidade média em m/s.
+- `T2-AC2`: Deve apresentar a fórmula usada, a substituição dos valores com unidades, as conversões de unidade e a justificativa de cada passo até o valor final.
+- `T2-AC3`: A resposta não deve tentar resolver a questão final nem indicar qual alternativa é a correta.
+```
+
+Outros pares que a regra proíbe e a forma complementar correspondente:
+
+| Par mutuamente exclusivo | Forma complementar |
+|---|---|
+| "Responda somente a alternativa" × "A resposta deve conter explicações" | "Deve indicar o valor obtido" + "Deve explicar como o valor foi obtido" |
+| "A resposta deve ter uma única linha" × "Mostre todos os passos do cálculo" | "Deve terminar com uma linha com o valor final" + "Deve mostrar todos os passos do cálculo antes dessa linha" |
+| "Não use fórmulas" × "Apresente a fórmula utilizada" | "Deve apresentar a fórmula utilizada" (a primeira é removida) |
+| "Liste apenas os números primos" × "Avalie cada número do intervalo" | "Deve avaliar cada número do intervalo, com justificativa" + "Deve terminar com a lista apenas dos primos" |
+
+Critérios **complementares** podem ser bem exigentes, desde que uma única resposta consiga atender a todos ao mesmo tempo.
+
+### 4.6 Exemplo de conta: resultado acompanhado da explicação
+
+Tarefa (já no formato novo):
+
+```markdown
+### T2 — Calcular a velocidade média do carro
+
+Um carro percorre 150 km em 2 h. Calcule a velocidade média do carro em m/s. Apresente a fórmula usada, a substituição dos valores com unidades de medida, as conversões necessárias e a justificativa de cada passo até o valor final.
+
+**Critérios de aceite:**
+- `T2-AC1`: Deve apresentar o valor da velocidade média em m/s.
+- `T2-AC2`: Deve apresentar a fórmula usada, a substituição dos valores com unidades, as conversões de unidade e a justificativa de cada passo até o valor final.
+- `T2-AC3`: A resposta não deve tentar resolver a questão final nem indicar qual alternativa é a correta.
+```
+
+**Resultado reprovado** (só o valor):
+
+> "A velocidade média é 20,8 m/s."
+
+B.2: `T2-AC1` atendido; `T2-AC2` **não atendido**, porque não há fórmula, substituição nem conversão; `T2-AC3` atendido. Decisão: **reprovado**.
+
+**Resultado aprovado** (valor com explicação):
+
+> "A velocidade média é definida por vₘ = Δs / Δt. Substituindo os valores: vₘ = 150 km / 2 h = 75 km/h. Para converter km/h em m/s, usa-se 1 km = 1000 m e 1 h = 3600 s, ou seja, divide-se por 3,6: vₘ = 75 / 3,6 ≈ 20,83 m/s. Convenção: o valor foi arredondado para duas casas decimais; a velocidade média considera só o deslocamento total e o tempo total, sem supor velocidade constante no percurso. Resultado: vₘ ≈ 20,83 m/s."
+
+Nesse resultado, B.2 consegue conferir cada passo. Se o modelo tivesse multiplicado por 3,6 em vez de dividir, o erro estaria visível na própria resposta, e não escondido atrás de um valor final.
+
+### 4.7 Relação com a resposta final
+
+A exigência de explicação vale para o **resultado de cada tarefa**, que é um insumo interno do fluxo. Ela não muda o formato da resposta final, que continua definido pelos critérios gerais de A.1 e aplicado por C.3. Exemplo: no benchmark, o enunciado pede que a resposta termine com a linha `RESPOSTA_FINAL: LETRA`. C.3 continua obedecendo a esse formato. Os resultados justificados das tarefas dão a C.3 o material para apresentar a resolução, quando os critérios gerais permitirem, e a C.1 a base para conferir se os critérios gerais estão cobertos.
+
+Da mesma forma, a regra de critérios complementares vale **dentro de cada tarefa**. Os critérios gerais de A.1 não fazem parte da alteração.
+
+### 4.8 O que muda no texto do paper
+
+| Trecho atual da Metodologia | Ajuste necessário |
+|---|---|
+| Seção A.2: "O template orienta a caracterização detalhada de cada tarefa (como as respectivas entradas e saídas esperadas)" | Remover a menção a entradas e saídas esperadas. A caracterização passa a ser a descrição autossuficiente da tarefa e seus critérios. |
+| Seção A.2: "exige-se que cada tarefa traga seus próprios critérios de aceite individuais e restrições de escopo que evitem resoluções precoces do problema principal" | Acrescentar que os critérios de uma tarefa devem ser complementares, nunca mutuamente exclusivos, e que a tarefa exige o resultado acompanhado da explicação de por que ele é válido. |
+| Seção A.2: "“Resultado Fase A.2” é o cronograma resultante contendo a lista ordenada de tarefas e as condições de aceitação individuais de cada uma delas" | Mantém-se. |
+| Exemplo de A.2 (Tarefas 1 a 3) | Já é compatível: cada tarefa tem um critério de explicação ("Deve incluir uma breve explicação da regra…") e os critérios não se contradizem. Opcionalmente, deixar mais explícito que a explicação deve cobrir cada número avaliado. |
+| Seção C.2: "As novas tarefas, estruturadas com critérios individuais de aceite próprios" | Acrescentar que seguem as mesmas regras de A.2: critérios complementares e resultado justificado. |
+| Exemplo de C.2 (Tarefa 4) | Já é compatível: o critério "Deve apresentar justificativa explicitando a presença ou ausência de cada candidato em cada lista" cumpre a regra do resultado justificado. |
+
+Parágrafo sugerido para substituir o segundo parágrafo da seção A.2 no paper, no estilo da Metodologia:
+
+> Esta etapa é operacionalizada ao submeter a pergunta do usuário juntamente com o Template A.2, cuja finalidade é instruir o modelo a realizar a decomposição em tarefas de responsabilidade única. O template orienta a redação de uma descrição autossuficiente para cada tarefa, deixando explícito que o contexto não será compartilhado diretamente entre as iterações subsequentes para mitigar o *context rot*. Adicionalmente, exige-se que cada tarefa traga seus próprios critérios de aceite individuais e restrições de escopo que evitem resoluções precoces do problema principal. Os critérios de uma mesma tarefa devem ser complementares entre si, e não mutuamente exclusivos, de modo que uma única resposta possa satisfazê-los simultaneamente; critérios como "responda somente a alternativa" e "a resposta deve conter explicações" não podem coexistir. Por fim, cada tarefa exige que seu resultado seja acompanhado da explicação que o sustenta — as fórmulas, convenções e justificativas empregadas até o valor final —, e não apenas do resultado isolado, o que permite que as verificações subsequentes confiram o raciocínio, e não somente a conclusão.
+
+### 4.9 Decisões de projeto
+
+| Decisão | Justificativa |
+|---|---|
+| Remover os campos `expected_input` e `expected_output` do formato, e não apenas a diretriz. | Manter os campos no formato JSON continuaria pedindo ao modelo que declarasse entradas e saída, e a diretriz removida voltaria por esse caminho. |
+| Aceitar, sem recusar, um lote que ainda traga os dois campos. | Recusar custaria uma correção de saída (com temperatura 1) por um dado que o fluxo não usa mais. |
+| A exigência de explicação aparece na descrição **e** num critério de aceite. | B.1 lê a descrição; B.2 só julga critérios. Sem o critério, um resultado sem explicação seria aprovado. |
+| Pedir ao modelo que confira os critérios aos pares, com o exemplo do par proibido no próprio template. | Um exemplo concreto deixa claro o que é "mutuamente exclusivo". A conferência aos pares é a forma mais simples de detectar a contradição antes de entregar o lote. |
+| C.2 recebe o texto completo das diretrizes, e não uma versão resumida. | Antes, C.2 tinha só "Trazer os próprios critérios de aceite individuais". As tarefas do Planejamento Adicional passam por B.1 e B.2 como as de A.2 e precisam seguir as mesmas regras. |
+| A regra não se aplica aos critérios gerais de A.1. | O pedido trata das tarefas. Os critérios gerais definem a resposta final, cujo formato (por exemplo, `RESPOSTA_FINAL: LETRA`) pode ser deliberadamente curto. |
+
+### 4.10 Limitações
+
+- A complementaridade dos critérios é verificada só pelo próprio modelo, por instrução do prompt. O parser não detecta critérios contraditórios: um lote com critérios exclusivos continua sendo aceito e só falha em B.2.
+- Resultados justificados são mais longos, o que aumenta os tokens de saída de B.1 e os de entrada de B.2, B.4, C.1 e C.3 (que recebem os resultados armazenados).
+- A exigência de explicação pode entrar em tensão com o teto de `max_tokens` das baterias de benchmark em tarefas com contas longas.
+- O ganho em acurácia não foi medido: os testes verificam o texto dos templates e o formato aceito, não a qualidade das tarefas geradas.
+
+### 4.11 Validação na implementação
+
+A suíte do backend passa por completo (1462 testes, cobertura de 100%, exigida pelo projeto) e o código passa no lint (`flake8`). Os testes cobrem:
+
+- **Templates reais:** A.2 e C.2 não pedem mais entradas e saída (nem `expected_input`/`expected_output` no formato), exigem critérios "complementares, nunca mutuamente exclusivos", que uma resposta "atenda a todos eles ao mesmo tempo", trazem o exemplo "responda somente a alternativa" e exigem o resultado "acompanhado da explicação", "nunca o resultado isolado", com fórmulas e convenções e "um critério de aceite que a verifique".
+- **Parser:** uma tarefa só com `id`, `title`, `description` e `acceptance_criteria` é aceita; uma tarefa sem `description` é recusada; uma tarefa que ainda traga `expected_input` e `expected_output` é aceita.
+- **Fluxo completo e entidades:** todos os roteiros de teste (fases, caso de uso, ponta a ponta, benchmark) passaram a usar tarefas sem os dois campos; a entidade `Task` não os tem mais.
+
+Arquivos principais:
+
+| Arquivo | Papel |
+|---|---|
+| `apps/backend/src/infra/templates/a2_task_decomposition.md`, `c2_additional_planning.md` | Novas diretrizes e formato de saída sem entradas e saída. |
+| `apps/backend/src/domain/entities/thinking/task.py` | Entidade `Task` sem `expected_input` e `expected_output`. |
+| `apps/backend/src/infra/adapters/structured_response_parser_adapter.py` | Campos de texto obrigatórios da tarefa reduzidos a `id`, `title` e `description`. |
+| `apps/backend/src/application/usecases/ralph_thinking_usecase.py` | Bloco da tarefa sem as linhas "Entrada esperada" e "Saída esperada". |
+| `apps/backend/tests/infra/providers/test_prompt_templates_content.py`, `tests/infra/adapters/test_structured_response_parser_adapter.py` | Testes das novas diretrizes e do formato aceito. |

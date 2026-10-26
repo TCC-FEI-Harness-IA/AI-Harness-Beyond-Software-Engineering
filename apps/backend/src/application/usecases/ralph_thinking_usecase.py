@@ -53,8 +53,6 @@ _NO_PLANNING_LEARNINGS_CONTENT = "Nenhum aprendizado foi extraído do enunciado.
 _RESET_CONTENT = "Contexto reinicializado para a tarefa `{task_id}`. Nova janela: `{context_id}`."
 _TASK_CONTENT = (
     "### {task_id} — {title}\n\n{description}\n\n"
-    "**Entrada esperada:** {expected_input}\n\n"
-    "**Saída esperada:** {expected_output}\n\n"
     "**Critérios de aceite:**\n{criteria}"
 )
 _STORE_CONTENT = "Resultado da tarefa `{task_id}` armazenado."
@@ -1055,8 +1053,6 @@ class RalphThinkingUseCase:
                 id=task["id"],
                 title=task["title"],
                 description=task["description"],
-                expected_input=task["expected_input"],
-                expected_output=task["expected_output"],
                 acceptance_criteria=tuple(
                     AcceptanceCriterion(id=criterion["id"], description=criterion["description"])
                     for criterion in task["acceptance_criteria"]
@@ -1121,14 +1117,12 @@ class RalphThinkingUseCase:
             task: Tarefa a renderizar.
 
         Returns:
-            str: Bloco markdown com descrição, entradas, saídas e critérios.
+            str: Bloco markdown com descrição e critérios.
         """
         return _TASK_CONTENT.format(
             task_id=task.id,
             title=task.title,
             description=task.description,
-            expected_input=task.expected_input,
-            expected_output=task.expected_output,
             criteria=self.__render_criteria(criteria=task.acceptance_criteria),
         )
 

@@ -18,8 +18,6 @@ def _nova_tarefa() -> Task:
         id="t1",
         title="titulo",
         description="descricao",
-        expected_input="entrada esperada",
-        expected_output="saida esperada",
         acceptance_criteria=(_CRITERIO,),
     )
 
@@ -30,8 +28,6 @@ def test_carrega_os_campos_obrigatorios() -> None:
     assert tarefa.id == "t1"
     assert tarefa.title == "titulo"
     assert tarefa.description == "descricao"
-    assert tarefa.expected_input == "entrada esperada"
-    assert tarefa.expected_output == "saida esperada"
     assert tarefa.acceptance_criteria == (_CRITERIO,)
 
 
