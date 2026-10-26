@@ -21,12 +21,14 @@ class FakeStructuredParser(IStructuredResponseParser):
         self.outcomes = list(outcomes) if outcomes else []
         self.parsed: list[tuple[str, ThinkingPhaseEnum]] = []
         self.validations: list[ValidationContext | None] = []
+        self.finish_reasons: list[str | None] = []
 
     def parse(
         self,
         raw_output: str,
         phase: ThinkingPhaseEnum,
         validation: ValidationContext | None = None,
+        finish_reason: str | None = None,
     ) -> dict[str, Any]:
         """Registra a chamada e devolve, ou levanta, o próximo resultado programado.
 
@@ -36,6 +38,7 @@ class FakeStructuredParser(IStructuredResponseParser):
         """
         self.parsed.append((raw_output, phase))
         self.validations.append(validation)
+        self.finish_reasons.append(finish_reason)
 
         if not self.outcomes:
             raise AssertionError(f"Parsing nº {len(self.parsed)} sem resultado programado.")

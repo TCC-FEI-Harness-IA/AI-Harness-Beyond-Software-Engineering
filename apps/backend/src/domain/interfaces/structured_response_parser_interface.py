@@ -14,6 +14,7 @@ class IStructuredResponseParser(ABC):
         raw_output: str,
         phase: ThinkingPhaseEnum,
         validation: ValidationContext | None = None,
+        finish_reason: str | None = None,
     ) -> dict[str, Any]:
         """Extrai e valida o JSON produzido pelo modelo para a fase informada.
 
@@ -23,6 +24,10 @@ class IStructuredResponseParser(ABC):
             validation: Dados esperados pela chamada. É obrigatório nas fases de verificação
                 (B.2 e C.1), que precisam avaliar exatamente os critérios informados; nas fases
                 de planejamento, restringe o tamanho e os identificadores do lote.
+            finish_reason: Motivo de término informado pelo provedor, quando há. Um JSON que só
+                deixou de fechar as últimas chaves ou colchetes é reparado, exceto quando a
+                saída foi cortada pelo limite de tokens (`"length"`): aí o que falta pode ser
+                conteúdo, e não apenas fechamentos.
 
         Returns:
             dict[str, Any]: Estrutura JSON já validada contra o schema da fase.

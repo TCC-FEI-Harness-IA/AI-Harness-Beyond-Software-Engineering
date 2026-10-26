@@ -992,3 +992,39 @@ async def test_sem_configure_a_invocacao_registra_a_temperatura_padrao_das_confi
 
     assert _temperaturas(llm) == [None, _TEMPERATURA_DE_RETENTATIVA]
     assert [invocacao.temperature for invocacao in recorder.session.invocations] == [0.7, _TEMPERATURA_DE_RETENTATIVA]
+
+
+# ── Reparo automático de JSON incompleto ─────────────────────────────────────
+#
+# Toda fase que espera JSON passa a saída pelo parser junto com o motivo de término da chamada:
+# é ele que decide se faltam só fechamentos (reparáveis) ou conteúdo (corte por limite de tokens).
+
+
+async def test_repassa_ao_parser_o_motivo_de_termino_da_chamada(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA], finish_reason="stop")
+    parser = FakeStructuredParser(outcomes=[_CRITERIOS_VALIDOS])
+
+    await _fase(llm_completions=llm, recorder=recorder, parser=parser).execute(context=_janela(), variables={})
+
+    assert parser.finish_reasons == ["stop"]
+
+
+async def test_json_sem_o_fechamento_final_e_aceito_sem_retentativa(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA[:-1]], finish_reason="stop")
+
+    resultado = await _fase(llm_completions=llm, recorder=recorder).execute(context=_janela(), variables={})
+
+    assert llm.call_count == 1
+    assert resultado.parsed == json.loads(_SAIDA_VALIDA)
+    assert resultado.raw_output == _SAIDA_VALIDA[:-1]
+    assert resultado.invalid_outputs == ()
+
+
+async def test_json_cortado_pelo_limite_de_tokens_ainda_pede_retentativa(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA[:-1], _SAIDA_VALIDA], finish_reason="length")
+
+    resultado = await _fase(llm_completions=llm, recorder=recorder).execute(context=_janela(), variables={})
+
+    assert llm.call_count == 2
+    assert resultado.parsed == json.loads(_SAIDA_VALIDA)
+    assert [saida.raw_output for saida in resultado.invalid_outputs] == [_SAIDA_VALIDA[:-1]]

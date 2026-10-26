@@ -202,7 +202,12 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             raw_output = llm_message.output_message.text
 
             try:
-                parsed = self.parser.parse(raw_output=raw_output, phase=self.phase, validation=validation)
+                parsed = self.parser.parse(
+                    raw_output=raw_output,
+                    phase=self.phase,
+                    validation=validation,
+                    finish_reason=llm_message.finish_reason,
+                )
             except PhaseParsingError as error:
                 invalid_output = InvalidOutput(raw_output=raw_output, reason=error.reason)
                 invalid_outputs.append(invalid_output)

@@ -19,15 +19,23 @@ _TASK_TEXT_FIELDS = ("id", "title", "description")
 _CRITERION_TEXT_FIELDS = ("id", "description")
 _NOT_FOUND = -1
 _ID_LIST_SEPARATOR = ", "
+# Strings JSON completas, com escapes: o que está dentro delas não conta como estrutura.
+_STRING_LITERAL_PATTERN = re.compile(r'"(?:[^"\\]|\\.)*"', re.DOTALL)
+_STRING_DELIMITER = '"'
+_CLOSING_BY_OPENING = {"{": "}", "[": "]"}
+_CLOSINGS = frozenset(_CLOSING_BY_OPENING.values())
+# Motivos de término em que a saída foi cortada: o que falta pode ser conteúdo, não só fechamentos.
+_TRUNCATED_FINISH_REASONS = frozenset({"length"})
 
 
 class StructuredResponseParserAdapter(IStructuredResponseParser):
     """Adapter de `IStructuredResponseParser` apoiado em `json.loads`.
 
     A extração é tolerante ao que os modelos realmente produzem: JSON puro,
-    JSON dentro de cerca de código, ou JSON cercado por texto solto. Já a
-    validação de schema é estrita — a fase seguinte do fluxo só recebe uma
-    estrutura que sabidamente confere com o contrato daquela etapa.
+    JSON dentro de cerca de código, JSON cercado por texto solto, ou JSON que
+    terminou sem fechar as últimas chaves e colchetes. Já a validação de schema
+    é estrita — a fase seguinte do fluxo só recebe uma estrutura que sabidamente
+    confere com o contrato daquela etapa.
     """
 
     def __init__(self, logger: logging.Logger) -> None:
@@ -43,6 +51,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         raw_output: str,
         phase: ThinkingPhaseEnum,
         validation: ValidationContext | None = None,
+        finish_reason: str | None = None,
     ) -> dict[str, Any]:
         """Extrai e valida o JSON produzido pelo modelo para a fase informada.
 
@@ -50,6 +59,8 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             raw_output: Saída bruta devolvida pelo modelo.
             phase: Fase de thinking que produziu a saída.
             validation: Dados esperados pela chamada; obrigatório nas fases de verificação.
+            finish_reason: Motivo de término informado pelo provedor; uma saída cortada pelo
+                limite de tokens não tem os fechamentos ausentes reparados.
 
         Returns:
             dict[str, Any]: Estrutura JSON já validada contra o schema da fase.
@@ -68,7 +79,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
                 reason="A fase não produz saída estruturada.",
             )
 
-        parsed = self.__extract(raw_output=raw_output, phase=phase)
+        parsed = self.__extract(raw_output=raw_output, phase=phase, finish_reason=finish_reason)
         validator(parsed, phase, raw_output, validation)
         return parsed
 
@@ -92,12 +103,13 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             ThinkingPhaseEnum.C3_FINAL_ANSWER: self.__validate_final_answer,
         }
 
-    def __extract(self, raw_output: str, phase: ThinkingPhaseEnum) -> dict[str, Any]:
-        """Obtém o objeto JSON da saída bruta, tolerando cerca e texto solto.
+    def __extract(self, raw_output: str, phase: ThinkingPhaseEnum, finish_reason: str | None) -> dict[str, Any]:
+        """Obtém o objeto JSON da saída bruta, tolerando cerca, texto solto e fechamentos ausentes.
 
         Args:
             raw_output: Saída bruta devolvida pelo modelo.
             phase: Fase de thinking que produziu a saída.
+            finish_reason: Motivo de término informado pelo provedor, quando há.
 
         Returns:
             dict[str, Any]: Objeto JSON extraído.
@@ -107,6 +119,11 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         """
         for candidate in self.__candidates(raw_output=raw_output):
             parsed = self.__load_object(candidate=candidate)
+            if parsed is not None:
+                return parsed
+
+        if finish_reason not in _TRUNCATED_FINISH_REASONS:
+            parsed = self.__repair_missing_closings(raw_output=raw_output, phase=phase)
             if parsed is not None:
                 return parsed
 
@@ -130,6 +147,76 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             candidates.append(raw_output[opening: closing + 1])
 
         return candidates
+
+    def __repair_missing_closings(self, raw_output: str, phase: ThinkingPhaseEnum) -> dict[str, Any] | None:
+        """Completa o JSON que terminou sem fechar as últimas chaves e colchetes.
+
+        Só acrescenta fechamentos ao fim: uma saída que termina dentro de uma string, com
+        fechamento trocado ou a mais, ou com qualquer outro defeito continua inválida.
+
+        Args:
+            raw_output: Saída bruta devolvida pelo modelo.
+            phase: Fase de thinking que produziu a saída.
+
+        Returns:
+            dict[str, Any] | None: Objeto reparado, ou `None` quando nenhum candidato é reparável.
+        """
+        for candidate in self.__repair_candidates(raw_output=raw_output):
+            missing = self.__missing_closings(candidate=candidate)
+            if not missing:
+                continue
+
+            parsed = self.__load_object(candidate=candidate + missing)
+            if parsed is not None:
+                self.logger.warning(
+                    "Saída da fase '%s' reparada: fechamento(s) ausente(s) '%s' acrescentado(s) ao final.",
+                    phase.value,
+                    missing,
+                )
+                return parsed
+
+        return None
+
+    def __repair_candidates(self, raw_output: str) -> list[str]:
+        """Lista os trechos que podem ser um objeto JSON sem os fechamentos finais.
+
+        Args:
+            raw_output: Saída bruta devolvida pelo modelo.
+
+        Returns:
+            list[str]: Conteúdo das cercas e o trecho do primeiro `{` até o fim da saída.
+        """
+        candidates = [match.group(1).rstrip() for match in _FENCE_PATTERN.finditer(raw_output)]
+
+        opening = raw_output.find(_OBJECT_OPENING)
+        if opening != _NOT_FOUND:
+            candidates.append(raw_output[opening:].rstrip())
+
+        return candidates
+
+    def __missing_closings(self, candidate: str) -> str:
+        """Calcula os fechamentos que faltam no fim do candidato, na ordem em que devem entrar.
+
+        Args:
+            candidate: Trecho candidato a objeto JSON.
+
+        Returns:
+            str: Fechamentos ausentes, ou vazio quando não há o que reparar com segurança —
+            estrutura já fechada, saída terminada dentro de uma string, ou fechamento que não
+            corresponde à abertura pendente.
+        """
+        structure = _STRING_LITERAL_PATTERN.sub("", candidate)
+        if _STRING_DELIMITER in structure:
+            return ""
+
+        pending: list[str] = []
+        for char in structure:
+            if char in _CLOSING_BY_OPENING:
+                pending.append(_CLOSING_BY_OPENING[char])
+            elif char in _CLOSINGS and (not pending or pending.pop() != char):
+                return ""
+
+        return "".join(reversed(pending))
 
     def __load_object(self, candidate: str) -> dict[str, Any] | None:
         """Tenta interpretar um candidato como objeto JSON.

@@ -491,3 +491,168 @@ def test_c3_invalido_e_recusado(payload: dict[str, Any]) -> None:
             raw_output=json.dumps(payload),
             phase=ThinkingPhaseEnum.C3_FINAL_ANSWER,
         )
+
+
+# ── Reparo de fechamentos ausentes ───────────────────────────────────────────
+#
+# Alguns modelos encerram a resposta (`finish_reason == "stop"`) um ou dois caracteres antes do
+# fim, deixando de fechar as últimas chaves e colchetes de um JSON que, no resto, está completo.
+# O parser acrescenta só esses fechamentos; a validação de schema da fase continua estrita.
+
+_PAYLOAD_VALIDO_POR_FASE: dict[ThinkingPhaseEnum, dict[str, Any]] = {
+    ThinkingPhaseEnum.A1_GENERAL_CRITERIA: _CRITERIOS_VALIDOS,
+    ThinkingPhaseEnum.A2_TASK_DECOMPOSITION: {"tasks": [_TAREFA_VALIDA]},
+    ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: {"learnings": ["Velocidade: 20 m/s"]},
+    ThinkingPhaseEnum.B1_TASK_RESOLUTION: {"task_id": "T1", "result": "markdown da resolucao"},
+    ThinkingPhaseEnum.B2_TASK_VERIFICATION: _VERIFICACAO_VALIDA,
+    ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: {"learnings": ["fato seco"]},
+    ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: _VERIFICACAO_VALIDA,
+    ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING: {"tasks": [_TAREFA_VALIDA]},
+    ThinkingPhaseEnum.C3_FINAL_ANSWER: {"final_answer": "D) 450 N"},
+}
+_FASES_SEM_SAIDA_ESTRUTURADA = {ThinkingPhaseEnum.B3_RESULT_STORAGE, ThinkingPhaseEnum.DIRECT_INFERENCE}
+_FASES_COM_SAIDA_ESTRUTURADA = [fase for fase in ThinkingPhaseEnum if fase not in _FASES_SEM_SAIDA_ESTRUTURADA]
+_VALIDACAO_POR_FASE: dict[ThinkingPhaseEnum, ValidationContext] = {
+    ThinkingPhaseEnum.B2_TASK_VERIFICATION: _esperando("T1-AC1"),
+    ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: _esperando("T1-AC1"),
+}
+
+
+def _sem_fechamentos_finais(payload: dict[str, Any]) -> str:
+    """Serializa o payload e remove todas as chaves e colchetes do fim, como o modelo faz."""
+    return json.dumps(payload, ensure_ascii=False).rstrip("]}")
+
+
+def _parse_a1_com_motivo(raw_output: str, finish_reason: str | None) -> dict[str, Any]:
+    return _parser().parse(raw_output=raw_output, phase=_FASE_A1, finish_reason=finish_reason)
+
+
+def test_toda_fase_que_espera_json_tem_payload_de_reparo_coberto() -> None:
+    # Uma fase nova que produza JSON precisa entrar neste mapa — e, com isso, nos testes de reparo.
+    assert set(_PAYLOAD_VALIDO_POR_FASE) == set(_FASES_COM_SAIDA_ESTRUTURADA)
+
+
+@pytest.mark.parametrize("fase", _FASES_COM_SAIDA_ESTRUTURADA)
+def test_toda_fase_que_espera_json_repara_os_fechamentos_ausentes(fase: ThinkingPhaseEnum) -> None:
+    payload = _PAYLOAD_VALIDO_POR_FASE[fase]
+
+    parsed = _parser().parse(
+        raw_output=_sem_fechamentos_finais(payload),
+        phase=fase,
+        validation=_VALIDACAO_POR_FASE.get(fase),
+        finish_reason="stop",
+    )
+
+    assert parsed == payload
+
+
+@pytest.mark.parametrize("cortados", [1, 2, 3])
+def test_repara_qualquer_quantidade_de_fechamentos_ausentes_no_fim(cortados: int) -> None:
+    payload = {"tasks": [_TAREFA_VALIDA]}
+    bruto = json.dumps(payload)[:-cortados]
+
+    assert _parser().parse(raw_output=bruto, phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION) == payload
+
+
+def test_repara_a_saida_real_da_fase_a2_que_terminou_sem_fechar_a_lista_e_o_objeto() -> None:
+    # Reprodução da sessão sess_5afb86331ce34ceda424347b21b9f3a6: o JSON termina em `}]}` e falta `]}`.
+    payload = {
+        "tasks": [
+            {**_TAREFA_VALIDA, "id": "T1", "acceptance_criteria": [{"id": "T1-AC1", "description": "720 N"}]},
+            {**_TAREFA_VALIDA, "id": "T2", "acceptance_criteria": [{"id": "T2-AC1", "description": "900 N"}]},
+        ]
+    }
+    bruto = json.dumps(payload, ensure_ascii=False)[:-2]
+    assert bruto.endswith('"}]}')
+
+    assert _parser().parse(raw_output=bruto, phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION) == payload
+
+
+def test_repara_json_precedido_por_texto_solto() -> None:
+    bruto = "Segue a resposta:\n" + _sem_fechamentos_finais(_CRITERIOS_VALIDOS) + "\n"
+
+    assert _parse(bruto) == _CRITERIOS_VALIDOS
+
+
+def test_repara_json_dentro_de_cerca_de_codigo() -> None:
+    bruto = "```json\n" + _sem_fechamentos_finais(_CRITERIOS_VALIDOS) + "\n```"
+
+    assert _parse(bruto) == _CRITERIOS_VALIDOS
+
+
+def test_repara_json_dentro_de_cerca_que_nao_foi_fechada() -> None:
+    bruto = "```json\n" + _sem_fechamentos_finais(_CRITERIOS_VALIDOS)
+
+    assert _parse(bruto) == _CRITERIOS_VALIDOS
+
+
+def test_chaves_colchetes_e_aspas_escapadas_dentro_de_strings_nao_contam_como_estrutura() -> None:
+    payload = {
+        "task_id": "T1",
+        "result": 'Use $\\frac{a}{b}$, o vetor [1, 2} e a "citação \\" com aspas" {[',
+    }
+    bruto = json.dumps(payload, ensure_ascii=False)[:-1]
+
+    assert _parser().parse(raw_output=bruto, phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION) == payload
+
+
+def test_motivo_de_termino_desconhecido_ainda_permite_o_reparo() -> None:
+    assert _parse_a1_com_motivo(_sem_fechamentos_finais(_CRITERIOS_VALIDOS), finish_reason=None) == _CRITERIOS_VALIDOS
+
+
+def test_saida_cortada_pelo_limite_de_tokens_nao_e_reparada() -> None:
+    # Com `finish_reason == "length"` o que falta pode ser conteúdo — tarefas ou critérios inteiros —,
+    # e não só fechamentos: completar a estrutura aceitaria um lote silenciosamente incompleto.
+    with pytest.raises(PhaseParsingError):
+        _parse_a1_com_motivo(_sem_fechamentos_finais(_CRITERIOS_VALIDOS), finish_reason="length")
+
+
+def test_saida_cortada_pelo_limite_de_tokens_ainda_aceita_json_completo() -> None:
+    assert _parse_a1_com_motivo(json.dumps(_CRITERIOS_VALIDOS), finish_reason="length") == _CRITERIOS_VALIDOS
+
+
+def test_saida_que_termina_dentro_de_uma_string_nao_e_reparada() -> None:
+    with pytest.raises(PhaseParsingError):
+        _parse('{"general_acceptance_criteria": [{"id": "AC1", "description": "responder em')
+
+
+def test_saida_que_termina_em_virgula_pendente_nao_e_reparada() -> None:
+    with pytest.raises(PhaseParsingError):
+        _parse('{"general_acceptance_criteria": [{"id": "AC1", "description": "d"},')
+
+
+def test_fechamento_trocado_nao_e_reparado() -> None:
+    with pytest.raises(PhaseParsingError):
+        _parse('{"general_acceptance_criteria": [{"id": "AC1", "description": "d"}}')
+
+
+def test_fechamento_a_mais_nao_e_reparado() -> None:
+    with pytest.raises(PhaseParsingError):
+        _parse('{"general_acceptance_criteria": [{"id": "AC1", "description": "d"}]}}')
+
+
+def test_texto_depois_do_json_incompleto_nao_e_reparado() -> None:
+    with pytest.raises(PhaseParsingError):
+        _parse(_sem_fechamentos_finais(_CRITERIOS_VALIDOS) + "\nEspero ter ajudado.")
+
+
+def test_json_reparado_continua_sujeito_ao_schema_da_fase() -> None:
+    with pytest.raises(PhaseParsingError):
+        _parse('{"general_acceptance_criteria": [{"id": "AC1"')
+
+
+def test_reparo_e_registrado_como_aviso_no_log(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.WARNING, logger="teste.parser"):
+        _parse(json.dumps(_CRITERIOS_VALIDOS)[:-2])
+
+    avisos = [registro.getMessage() for registro in caplog.records if registro.levelno == logging.WARNING]
+    assert len(avisos) == 1
+    assert "A1" in avisos[0]
+    assert "]}" in avisos[0]
+
+
+def test_json_completo_nao_gera_aviso_de_reparo(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.WARNING, logger="teste.parser"):
+        _parse(json.dumps(_CRITERIOS_VALIDOS))
+
+    assert not [registro for registro in caplog.records if registro.levelno == logging.WARNING]

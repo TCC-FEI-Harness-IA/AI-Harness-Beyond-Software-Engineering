@@ -22,6 +22,7 @@ from src.domain.interfaces.session_repository_interface import ISessionRepositor
 from src.domain.interfaces.structured_response_parser_interface import IStructuredResponseParser
 from src.domain.interfaces.task_queue_interface import ITaskQueue
 from src.domain.interfaces.thinking_phase_interface import IThinkingPhase
+from src.infra.adapters.structured_response_parser_adapter import StructuredResponseParserAdapter
 from src.infra.routes.v1.message.dtos.reasoning_event_dto import ReasoningEventDTO
 from src.infra.routes.v1.message.dtos.reasoning_input_dto import ReasoningInputDTO
 from src.infra.startups.ralph_thinking_startup import RalphThinkingStartup
@@ -150,6 +151,15 @@ def test_injeta_a_mesma_porta_de_completions_em_todas_as_fases() -> None:
 
     for atributo in _PHASE_ATTRIBUTES:
         assert getattr(startup, atributo).llm_completions is startup.llm_completions
+
+
+def test_injeta_o_mesmo_parser_com_reparo_automatico_em_todas_as_fases() -> None:
+    """Toda fase que espera JSON interpreta a saída pelo mesmo parser, que repara fechamentos ausentes."""
+    startup = RalphThinkingStartup()
+
+    assert isinstance(startup.parser, StructuredResponseParserAdapter)
+    for atributo in _PHASE_ATTRIBUTES:
+        assert getattr(startup, atributo).parser is startup.parser
 
 
 def test_injeta_as_pecas_de_estado_da_sessao_no_caso_de_uso() -> None:
