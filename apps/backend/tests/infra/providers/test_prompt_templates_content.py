@@ -215,3 +215,22 @@ def test_templates_de_planejamento_exigem_resultado_com_explicacao() -> None:
         assert "nunca o resultado isolado" in template, fase
         assert "fórmulas usadas" in template and "convenções adotadas" in template, fase
         assert "inclua um critério de aceite que a verifique" in template, fase
+
+
+def test_template_a2_orienta_decomposicao_parcimoniosa_e_por_condicoes() -> None:
+    template = " ".join(_provider().get(phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION).lower().split())
+
+    assert "menor número possível de tarefas" in template
+    assert "nunca por alternativa" in template
+    assert "evite tarefas burocráticas ou redundantes" in template
+
+
+def test_template_b4_proibe_metadados_da_tarefa_e_do_validador_nos_aprendizados() -> None:
+    template = " ".join(_provider().get(phase=ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION).lower().split())
+
+    assert "conteúdo do problema" in template
+    assert "menções à própria tarefa" in template
+    assert "veredito de aprovação" in template
+    assert "dados de controle, metadados operacionais" not in template
+
+

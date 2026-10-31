@@ -1937,3 +1937,16 @@ async def test_a_sessao_registra_a_temperatura_efetiva_de_cada_invocacao() -> No
 
     assert [invocacao.temperature for invocacao in cenario.session.invocations] == _temperaturas(cenario)
     assert cenario.session.temperature == _TEMPERATURA_DO_USUARIO
+
+
+async def test_b1_nao_duplica_os_criterios_de_aceite_dentro_de_task_description() -> None:
+    cenario = _cenario_feliz()
+
+    await cenario.run()
+
+    variaveis_b1 = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[0]
+    assert "### T1 —" in variaveis_b1["task_description"]
+    assert "**Critérios de aceite:**" not in variaveis_b1["task_description"]
+    assert "T1-AC1" not in variaveis_b1["task_description"]
+    assert "T1-AC1" in variaveis_b1["task_acceptance_criteria"]
+

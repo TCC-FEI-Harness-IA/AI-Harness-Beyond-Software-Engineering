@@ -51,8 +51,9 @@ _LEARNINGS_HEADING = "## Aprendizados extraídos"
 _NO_LEARNINGS_CONTENT = "Nenhum aprendizado foi extraído desta tarefa."
 _NO_PLANNING_LEARNINGS_CONTENT = "Nenhum aprendizado foi extraído do enunciado."
 _RESET_CONTENT = "Contexto reinicializado para a tarefa `{task_id}`. Nova janela: `{context_id}`."
+_TASK_HEADER_CONTENT = "### {task_id} — {title}\n\n{description}"
 _TASK_CONTENT = (
-    "### {task_id} — {title}\n\n{description}\n\n"
+    f"{_TASK_HEADER_CONTENT}\n\n"
     "**Critérios de aceite:**\n{criteria}"
 )
 _STORE_CONTENT = "Resultado da tarefa `{task_id}` armazenado."
@@ -954,10 +955,13 @@ class RalphThinkingUseCase:
             task: Tarefa a resolver.
 
         Returns:
-            dict[str, str]: Descrição da tarefa, seus critérios de aceite e os aprendizados pontuais.
+            dict[str, str]: Descrição da tarefa (sem duplicar os critérios), seus critérios de
+            aceite e os aprendizados pontuais.
         """
         return {
-            "task_description": self.__render_task(task=task),
+            "task_description": _TASK_HEADER_CONTENT.format(
+                task_id=task.id, title=task.title, description=task.description
+            ),
             "task_acceptance_criteria": self.__render_criteria(criteria=task.acceptance_criteria),
             **self.__learnings_variables(),
         }

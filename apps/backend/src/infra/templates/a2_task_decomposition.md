@@ -30,14 +30,32 @@ Cada tarefa deve:
 **O contexto não será compartilhado entre as tarefas.** Cada tarefa será executada isoladamente,
 sem acesso ao enunciado original, às demais tarefas ou aos resultados delas. Portanto a descrição
 de cada tarefa precisa ser autossuficiente: tudo o que for necessário para resolvê-la deve estar
-escrito nela.
+escrito nela, mas de forma enxuta — inclua apenas os dados, trechos ou condições pertinentes àquela
+tarefa, sem copiar o enunciado inteiro repetidamente sem necessidade.
+
+## Diretrizes de parcimônia e eficiência
+
+Planeje **o menor número possível de tarefas** capaz de gerar os insumos necessários (tipicamente de
+**2 a 4 tarefas**). Decomponha com parcimônia:
+
+- **Decomponha por condições ou etapas lógicas, nunca por alternativa.** Em questões de múltipla
+  escolha, **não** crie uma tarefa separada para cada alternativa (`A`, `B`, `C`, `D`, `E`). Avaliar
+  uma mesma condição, propriedade ou critério sobre o conjunto de opções aplicáveis constitui um
+  único objetivo e deve ficar em uma única tarefa.
+- **Evite tarefas burocráticas ou redundantes.** Não crie tarefas apenas para transcrever dados
+  literais do texto sem analisá-los, nem tarefas finais para "sintetizar tarefas anteriores",
+  "escolher a alternativa final" ou "redigir a resposta final" — a consolidação dos resultados e a
+  redação da resposta final pertencem a uma fase posterior própria do fluxo.
+- **Mantenha os critérios concisos.** Defina apenas os critérios essenciais para validar a tarefa
+  (tipicamente de 2 a 4 critérios por tarefa), sem desdobrar a mesma exigência em vários itens.
 
 Em conjunto, as tarefas precisam gerar insumos suficientes para sustentar a resposta final ao
 enunciado.
 
-**Limite do lote:** a sessão comporta no máximo {{max_tasks}} tarefas. Não ultrapasse esse número
-e não funda tarefas independentes em uma só apenas para caber: mantenha cada uma autônoma e de
-objetivo único. Um lote acima do limite é recusado e devolvido a você para correção.
+**Limite do lote:** a sessão comporta no máximo {{max_tasks}} tarefas (teto de segurança, e **não**
+uma meta a atingir). Não ultrapasse esse número e não funda tarefas genuinamente independentes em
+uma só apenas para caber: mantenha cada uma autônoma e de objetivo único. Um lote acima do limite é
+recusado e devolvido a você para correção.
 
 Numere as tarefas a partir de `T1`.
 
