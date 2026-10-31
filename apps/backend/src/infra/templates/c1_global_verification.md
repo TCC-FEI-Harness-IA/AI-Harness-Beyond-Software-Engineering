@@ -44,6 +44,18 @@ recusado e devolvido a você para correção:
 **Não construa a resposta final aqui.** Esta etapa apenas julga a suficiência do material
 disponível.
 
+Lembre-se de que os resultados armazenados são o **insumo analítico** para a síntese final (`C.3`), e
+não a resposta final já formatada:
+
+- Critérios gerais de formatação da resposta final (por exemplo, "responder apenas com a letra da
+  alternativa, sem justificativas") devem ser marcados como **atendidos (`met: true`)** desde que os
+  resultados armazenados permitam identificar qual é a resposta a ser formatada em `C.3` (o fato de
+  os resultados das tarefas conterem explicações não viola esse critério).
+- Em questões de múltipla escolha, considere atendidos os critérios de aderência e sustentação pelo
+  enunciado quando os resultados apontarem a **alternativa relativamente mais coerente por
+  eliminação das demais**, admitindo paráfrases, sínteses ou inferências interpretativas razoáveis
+  sem exigir correspondência 100% literal palavra por palavra.
+
 ## Formato de saída
 
 Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de

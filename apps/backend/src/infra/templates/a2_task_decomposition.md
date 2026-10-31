@@ -39,9 +39,16 @@ Planeje **o menor número possível de tarefas** capaz de gerar os insumos neces
 **2 a 4 tarefas**). Decomponha com parcimônia:
 
 - **Decomponha por condições ou etapas lógicas, nunca por alternativa.** Em questões de múltipla
-  escolha, **não** crie uma tarefa separada para cada alternativa (`A`, `B`, `C`, `D`, `E`). Avaliar
-  uma mesma condição, propriedade ou critério sobre o conjunto de opções aplicáveis constitui um
+  escolha, **não** crie uma tarefa separada para cada alternativa (`A`, `B`, `C`, `D`, `E`), nem
+  disfarce cada alternativa como uma tarefa individual para validar isoladamente a frase ou o tema
+  daquela opção. Avaliar e comparar as opções frente ao enunciado ou a uma condição constitui um
   único objetivo e deve ficar em uma única tarefa.
+- **Avalie opções por melhor aderência relativa (eliminação), sem hiper-literalismo.** Em questões
+  interpretativas ou de múltipla escolha, a alternativa correta frequentemente sintetiza, parafraseia
+  ou faz uma inferência razoável a partir do texto. Não escreva descrições nem critérios de aceite
+  que exijam presença 100% literal palavra por palavra ou que pré-julguem conceitos das opções como
+  ausentes; oriente a comparar as afirmações e identificar a mais coerente por eliminação dos
+  distratores mais graves.
 - **Evite tarefas burocráticas ou redundantes.** Não crie tarefas apenas para transcrever dados
   literais do texto sem analisá-los, nem tarefas finais para "sintetizar tarefas anteriores",
   "escolher a alternativa final" ou "redigir a resposta final" — a consolidação dos resultados e a

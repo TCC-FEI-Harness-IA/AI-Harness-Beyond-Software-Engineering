@@ -28,6 +28,10 @@ Limite estrito de escopo:
 - **Não** antecipe conclusões que dependam de resultados que você não tem.
 
 Produza apenas o que esta tarefa pede, satisfazendo cada um dos critérios de aceite listados.
+Quando a tarefa envolver avaliar ou comparar afirmações ou opções frente a um texto, avalie por
+**melhor aderência relativa (eliminação)**: diferencie contradições ou extrapolações graves de
+paráfrases, sínteses e inferências razoáveis, sem descartar todas as opções por exigir
+correspondência 100% literal palavra por palavra.
 A resolução vai no campo `result`, em markdown.
 
 ## Formato de saída

@@ -42,6 +42,11 @@ A avaliação é **local**: julgue apenas os critérios desta tarefa. Não julgu
 responde à questão final do usuário, não julgue a qualidade da resposta final e não considere
 nada além dos critérios listados acima.
 
+Evite o **hiper-literalismo**: quando um critério exigir que uma análise, conclusão ou opção seja
+sustentada pelo texto ou enunciado, considere o critério **atendido** se o resultado demonstrar a
+**melhor aderência relativa (por eliminação dos distratores mais graves)** ou uma paráfrase e
+inferência interpretativa coerente, sem exigir correspondência 100% literal palavra por palavra.
+
 ## Formato de saída
 
 Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de

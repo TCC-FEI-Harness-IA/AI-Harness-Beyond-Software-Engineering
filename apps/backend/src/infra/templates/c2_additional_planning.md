@@ -40,7 +40,17 @@ Cada tarefa deve:
    as fórmulas usadas, a substituição dos valores com unidades de medida, as convenções adotadas
    (sinais, referenciais, aproximações) e a justificativa de cada passo até o valor final; se
    envolve uma classificação ou escolha, deve apresentar o raciocínio que a sustenta. Escreva essa
-   exigência na descrição da tarefa e inclua um critério de aceite que a verifique.
+   exigência na descrição da tarefa e inclua um critério de aceite que a verifique. Mesmo quando um
+   critério geral pendente pedir que a resposta final ao usuário contenha "apenas a letra da
+   alternativa, sem justificativa", **nunca** transponha essa restrição de formato para a tarefa:
+   a formatação enxuta pertence exclusivamente à síntese final (`C.3`), enquanto toda tarefa precisa
+   explicitar a justificativa do resultado para ser verificável.
+
+Em **questões de múltipla escolha** (especialmente quando os resultados anteriores descartaram todas
+as opções por rigor literal), crie uma única tarefa comparativa que avalie as opções por **melhor
+aderência relativa e eliminação dos distratores mais graves**, admitindo paráfrases, sínteses ou
+inferências interpretativas razoáveis, sem repetir proibições hiper-literais que inviabilizem todas
+as alternativas.
 
 **O contexto não será compartilhado entre as tarefas.** Cada descrição precisa ser autossuficiente.
 

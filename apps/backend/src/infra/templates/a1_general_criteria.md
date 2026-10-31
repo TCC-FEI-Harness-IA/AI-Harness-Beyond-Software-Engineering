@@ -23,7 +23,14 @@ Os critérios descrevem **a resposta final**, não o processo de resolução. N�
 sobre como raciocinar, quais passos seguir ou como dividir o trabalho.
 
 **Não resolva a pergunta nesta etapa.** Nenhum critério pode conter, sugerir ou antecipar a
-resposta ao enunciado.
+resposta ao enunciado, nem listar conceitos, termos ou afirmações das alternativas para
+aprová-los ou descartá-los de antemão.
+
+Em **questões de múltipla escolha**, defina que a alternativa correta deve ser aquela
+**relativamente mais coerente e melhor sustentada** pelo enunciado em comparação às demais
+(melhor ajuste por eliminação). Não exija correspondência 100% literal palavra por palavra nem
+proíba paráfrases, sínteses ou inferências interpretativas razoáveis que tornem todas as opções
+inválidas.
 
 Cada critério recebe um identificador próprio, na forma `AC1`, `AC2`, e assim por diante.
 

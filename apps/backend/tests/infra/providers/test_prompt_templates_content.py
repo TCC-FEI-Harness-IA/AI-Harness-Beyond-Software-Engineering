@@ -234,3 +234,23 @@ def test_template_b4_proibe_metadados_da_tarefa_e_do_validador_nos_aprendizados(
     assert "dados de controle, metadados operacionais" not in template
 
 
+def test_templates_orientam_avaliacao_relativa_por_eliminacao_sem_hiper_literalismo() -> None:
+    provider = _provider()
+
+    a1 = " ".join(provider.get(phase=ThinkingPhaseEnum.A1_GENERAL_CRITERIA).lower().split())
+    assert "melhor ajuste por eliminação" in a1
+    assert "aprová-los ou descartá-los de antemão" in a1
+
+    for fase in (
+        ThinkingPhaseEnum.A2_TASK_DECOMPOSITION,
+        ThinkingPhaseEnum.B1_TASK_RESOLUTION,
+        ThinkingPhaseEnum.B2_TASK_VERIFICATION,
+        ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION,
+        ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING,
+    ):
+        template = " ".join(provider.get(phase=fase).lower().split())
+        assert "eliminação" in template, fase
+        assert "100% literal" in template or "hiper-litera" in template, fase
+
+
+
