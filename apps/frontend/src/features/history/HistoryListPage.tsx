@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/primitives/EmptyState'
 import { ErrorState } from '@/components/primitives/ErrorState'
 import { SegmentedControl } from '@/components/primitives/SegmentedControl'
 import { Skeleton } from '@/components/primitives/Skeleton'
+import { TextInput } from '@/components/primitives/TextInput'
 import { formatTokens } from '@/domain/services/formatters'
 import { useSessionList } from '@/hooks/useSessionList'
 import { ROUTES } from '@/router/routes'
@@ -133,7 +134,7 @@ export function HistoryListPage(): JSX.Element {
 
       {hasAnySession ? (
         <div className={styles.controls}>
-          <input
+          <TextInput
             type="search"
             aria-label="Buscar no histórico"
             placeholder="Buscar…"

@@ -18,8 +18,18 @@ dd {
   margin: 0;
 }
 
+/* O color-scheme acompanha o tema escolhido (e não só o sistema) para que controles
+   nativos — select, option, scrollbars, inputs — sigam o mesmo tema do restante da UI. */
 html {
   color-scheme: light dark;
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 body {
@@ -46,6 +56,13 @@ textarea,
 select {
   font: inherit;
   color: inherit;
+}
+
+select,
+option,
+optgroup {
+  background-color: var(--color-surface);
+  color: var(--color-text);
 }
 
 ul,

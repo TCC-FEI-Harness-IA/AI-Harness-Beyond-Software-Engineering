@@ -30,23 +30,10 @@
   gap: var(--space-3);
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  min-width: 0;
-}
-
-.field select,
-.field input {
-  font: inherit;
-  color: var(--color-text);
-  max-width: 100%;
-}
-
 .staticValue {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
   color: var(--color-text);
   font-size: var(--text-sm);
 }

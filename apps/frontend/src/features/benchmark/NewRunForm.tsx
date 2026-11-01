@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Button } from '@/components/primitives/Button'
+import { Field } from '@/components/primitives/Field'
+import { TextInput } from '@/components/primitives/TextInput'
 import type { BenchmarkDataset } from '@/domain/types/benchmarkSession'
 import { formatTokens } from '@/domain/services/formatters'
 import { RunConfigBar } from '@/features/home/RunConfigBar'
@@ -51,9 +53,11 @@ export function NewRunForm({ dataset, disabled, onStart }: NewRunFormProps): JSX
   return (
     <form className={styles.form} onSubmit={handleSubmit} aria-label="Nova bateria de benchmark">
       <div className={styles.fields}>
-        <label className={styles.field}>
-          <span>Quantidade de questões</span>
-          <input
+        <Field
+          label="Quantidade de questões"
+          hint={`As ${clamp(questionCount, available)} primeiras de ${available} disponíveis, na ordem do dataset.`}
+        >
+          <TextInput
             type="number"
             min={MIN_VALUE}
             max={available}
@@ -63,14 +67,12 @@ export function NewRunForm({ dataset, disabled, onStart }: NewRunFormProps): JSX
             onChange={(event) => setQuestionCount(event.target.value)}
             onBlur={() => setQuestionCount(String(clamp(questionCount, available)))}
           />
-          <small>
-            As {clamp(questionCount, available)} primeiras de {available} disponíveis, na ordem do
-            dataset.
-          </small>
-        </label>
-        <label className={styles.field}>
-          <span>Questões em paralelo</span>
-          <input
+        </Field>
+        <Field
+          label="Questões em paralelo"
+          hint={`Até ${dataset.max_parallel_limit}. Cada questão roda a inferência simples e depois o Ralph.`}
+        >
+          <TextInput
             type="number"
             min={MIN_VALUE}
             max={dataset.max_parallel_limit}
@@ -80,11 +82,7 @@ export function NewRunForm({ dataset, disabled, onStart }: NewRunFormProps): JSX
             onChange={(event) => setMaxParallel(event.target.value)}
             onBlur={() => setMaxParallel(String(clamp(maxParallel, dataset.max_parallel_limit)))}
           />
-          <small>
-            Até {dataset.max_parallel_limit}. Cada questão roda a inferência simples e depois o
-            Ralph.
-          </small>
-        </label>
+        </Field>
       </div>
 
       <RunConfigBar />

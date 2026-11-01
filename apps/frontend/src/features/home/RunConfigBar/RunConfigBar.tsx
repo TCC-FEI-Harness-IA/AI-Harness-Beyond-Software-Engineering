@@ -1,4 +1,8 @@
 import { Button } from '@/components/primitives/Button'
+import { Field } from '@/components/primitives/Field'
+import { RangeInput } from '@/components/primitives/RangeInput'
+import { Select } from '@/components/primitives/Select'
+import { TextInput } from '@/components/primitives/TextInput'
 import { env } from '@/config/env'
 import { PROVIDER_LABELS, providerLabel } from '@/domain/enums/modelProvider'
 import { formatTemperature } from '@/domain/services/formatters'
@@ -33,58 +37,53 @@ export function RunConfigBar(): JSX.Element {
       </div>
 
       <div className={styles.fields}>
-        <label className={styles.field}>
-          <span>Provedor</span>
+        <Field label="Provedor">
           {hasProviderChoice ? (
-            <select value={config.provider} onChange={(event) => setProvider(event.target.value)}>
+            <Select value={config.provider} onChange={(event) => setProvider(event.target.value)}>
               {env.availableProviders.map((provider) => (
                 <option key={provider} value={provider}>
                   {PROVIDER_LABELS[provider]}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : (
             <span className={styles.staticValue}>{providerLabel(config.provider)}</span>
           )}
-        </label>
+        </Field>
 
-        <label className={styles.field}>
-          <span>Modelo</span>
+        <Field label="Modelo">
           {hasModelChoice ? (
-            <select value={config.modelName} onChange={(event) => setModelName(event.target.value)}>
+            <Select value={config.modelName} onChange={(event) => setModelName(event.target.value)}>
               {env.availableModels.map((model) => (
                 <option key={model} value={model}>
                   {model}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : (
             <span className={styles.staticValue}>{modelSummary}</span>
           )}
-        </label>
+        </Field>
 
-        <label className={styles.field}>
-          <span>Máximo de tokens</span>
-          <input
+        <Field label="Máximo de tokens">
+          <TextInput
             type="number"
             min={MAX_TOKENS_MIN}
             step={1}
             value={config.maxTokens}
             onChange={(event) => setMaxTokens(Number(event.target.value))}
           />
-        </label>
+        </Field>
 
-        <label className={styles.field}>
-          <span>Temperatura ({formatTemperature(config.temperature)})</span>
-          <input
-            type="range"
+        <Field label={`Temperatura (${formatTemperature(config.temperature)})`}>
+          <RangeInput
             min={TEMPERATURE_MIN}
             max={TEMPERATURE_MAX}
             step={TEMPERATURE_STEP}
             value={config.temperature}
             onChange={(event) => setTemperature(Number(event.target.value))}
           />
-        </label>
+        </Field>
       </div>
     </div>
   )
