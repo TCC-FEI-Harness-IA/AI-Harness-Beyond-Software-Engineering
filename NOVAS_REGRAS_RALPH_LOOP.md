@@ -1512,7 +1512,7 @@ Regras complementares:
 - **Aceitação separada do desfecho do provedor.** O `outcome` da invocação continua descrevendo só o provedor (`success`, `empty_completion`, `provider_error`). A aceitação do conteúdo fica em `content_accepted` (`true`, `false` ou `null` quando desconhecida), derivada do diagnóstico.
 - **Recuperação ligada à invocação original.** Quando uma saída é recusada, a invocação recebe `recovery`:
   - `strategy`: `correction_prompt` (ainda havia retentativa: a correção é pedida na mesma janela, com temperatura 1) ou `none` (a recusa esgotou as retentativas);
-  - `result`: `pending` enquanto a correção não volta; `recovered` quando uma chamada posterior da mesma execução teve a saída aceita (em `resolved_by_invocation_id`); `failed` quando a execução termina sem saída aceita (retentativas esgotadas, orçamento negado, erro do provedor ou respostas vazias seguidas).
+  - `result`: `pending` enquanto a correção não volta; `recovered` quando uma chamada posterior da mesma execução teve a saída aceita (em `resolved_by_invocation_id`); `failed` quando a execução termina sem saída aceita (retentativas esgotadas, orçamento negado, erro do provedor, respostas vazias seguidas ou cancelamento controlado).
   - Cada nova chamada da execução aponta a **invocação original** (a primeira recusa) em `recovers_invocation_id`, inclusive uma repetição por resposta vazia no meio da recuperação.
 - **Auditoria preservada.** A mensagem de sistema "Saída inválida descartada..." continua trazendo o motivo legível e a saída bruta completa; agora também traz uma linha de diagnóstico e aponta a invocação em `messages[].invocation_id`.
 - **Truncamento é informação independente.** Uma saída pode estar truncada e ter sintaxe inválida (Q056), ou terminar com `length` e formar JSON válido — nesse caso ela é **aceita**, com `length_interruption: "confirmed"`, sem garantia de completude semântica (o parser registra um aviso no log).
@@ -1626,7 +1626,8 @@ Parágrafo sugerido, se o paper descrever o tratamento de saídas inválidas (fo
 - O parser para no primeiro problema: uma saída com dois defeitos de contrato registra só o primeiro encontrado.
 - `suspected` é heurístico: uma saída malformada sem `finish_reason` pode parecer cortada.
 - Um JSON válido terminado por `length` é aceito sem garantia de que o conteúdo esteja completo; o diagnóstico só torna o caso visível.
-- Uma execução cancelada (por exemplo, encerramento do processo) pode deixar uma recuperação em `pending`.
+- Em cancelamento controlado (`asyncio.CancelledError`), todas as recuperações pendentes da execução são persistidas como `failed` antes de propagar o mesmo cancelamento. Isso não gera nova chamada nem altera os totais. Sem recusa anterior, não se cria uma recuperação artificial.
+- Um encerramento abrupto do processo, uma nova interrupção durante a limpeza ou uma falha de persistência ainda pode impedir o registro final. Falhas de persistência são registradas sem encobrir o cancelamento original.
 - Sessões antigas não ganham diagnóstico retroativo: as ocorrências Q056, Q042, Q163 e Q037 já gravadas continuam só com o texto da auditoria.
 
 ### 8.10 Validação na implementação
@@ -1635,7 +1636,7 @@ A alteração foi feita com TDD, em worktree e branch próprias (`fix/phase-outp
 
 - **Domínio:** estados e códigos; classificação do corte (`confirmed` só com `length`; `suspected` só sem `finish_reason`); invariantes do diagnóstico, da recuperação e da invocação; contagem de recusas sem duplicidade e totais inalterados.
 - **Parser:** as quatro classes do benchmark (Q056, Q042, Q163, Q037); reparo local (`valid_after_repair`, com e sem `finish_reason`); JSON válido com `length` aceito; reprovação válida de B.2 aceita; código, campo e identificadores de cada violação de contrato (A.1, A.2/C.2, B.1, B.2/C.1, A.3/B.4, C.3, teto e reutilização de tarefas, fase sem saída estruturada).
-- **Fase base:** diagnóstico associado à invocação de origem; recuperação bem-sucedida (uma e duas recusas, resposta vazia no meio); falha terminal (retentativas esgotadas, sem retentativa, orçamento negado, respostas vazias, erro do provedor); auditoria com `invocation_id`, motivo e saída bruta; recusa sem diagnóstico como `unclassified`; falha ao registrar a recuperação sem encobrir o erro original.
+- **Fase base:** diagnóstico associado à invocação de origem; recuperação bem-sucedida (uma e duas recusas, resposta vazia no meio); falha terminal (retentativas esgotadas, sem retentativa, orçamento negado, respostas vazias, erro do provedor e cancelamento controlado); auditoria com `invocation_id`, motivo e saída bruta; recusa sem diagnóstico como `unclassified`; falha ao registrar a recuperação sem encobrir o erro original.
 - **Persistência e consulta:** recorder; mapper (ida e volta, documento JSON, valores e chaves inválidos, documentos antigos); repositórios JSON e MongoDB; `GET /v1/sessions/{id}`; exportação ZIP dos erros do benchmark.
 
 Arquivos principais:

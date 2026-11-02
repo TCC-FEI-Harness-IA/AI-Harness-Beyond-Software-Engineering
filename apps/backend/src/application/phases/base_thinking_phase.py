@@ -1,5 +1,6 @@
 import logging
 from abc import ABC
+from asyncio import CancelledError
 from dataclasses import dataclass, field
 
 from src.domain.entities.llm.context_window import ContextWindow
@@ -231,6 +232,9 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         ou como falha, qualquer que seja o erro que encerre a execução. Esse registro é operacional:
         não muda as retentativas, o orçamento nem o que o fluxo faz com a saída.
 
+        Um cancelamento controlado também encerra as recuperações pendentes como falha antes de
+        ser propagado; não é convertido em resposta, erro de parsing ou nova tentativa.
+
         Toda chamada de retentativa sai com a temperatura de retentativa (1), e não com a do usuário:
         tanto as correções de saída inválida ou vazia quanto, quando `is_retry` é verdadeiro, todas as
         chamadas da execução. A temperatura configurada não muda; a próxima execução volta a usá-la.
@@ -271,7 +275,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                 invalid_outputs=invalid_outputs,
                 chain=chain,
             )
-        except Exception:
+        except (Exception, CancelledError):
             await self.__close_failed_recovery(chain=chain)
             raise
         await self.__close_recovery(

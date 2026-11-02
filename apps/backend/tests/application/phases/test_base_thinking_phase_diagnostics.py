@@ -4,6 +4,7 @@ O diagnóstico é tratamento operacional: não muda o fluxo analítico nem a pol
 Cada saída avaliada pelo parser ganha um diagnóstico na invocação que a produziu; uma saída recusada
 recebe também o registro da recuperação, e cada nova chamada de correção aponta a invocação original.
 """
+import asyncio
 import json
 import logging
 
@@ -284,6 +285,51 @@ async def test_recuperacao_fica_pendente_enquanto_a_correcao_nao_volta(recorder:
 
 
 # ── Falha terminal ───────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("recusas", [0, 1, 2])
+async def test_cancelamento_persiste_falha_das_recuperacoes_e_propaga(
+    recorder: SessionRecorderAdapter, recusas: int,
+) -> None:
+    chamada_em_andamento = asyncio.Event()
+
+    class _LLMBloqueado(ScriptedLLMCompletions):
+        async def send_conversation(self, **kwargs):
+            if not self.responses:
+                chamada_em_andamento.set()
+                await asyncio.Event().wait()
+            return await super().send_conversation(**kwargs)
+
+    llm = _LLMBloqueado(responses=[_SEM_VIRGULA] * recusas)
+    execucao = asyncio.create_task(_fase(llm, recorder).execute(context=_janela(), variables={}))
+    try:
+        await asyncio.wait_for(chamada_em_andamento.wait(), timeout=2)
+        totais_antes = (
+            recorder.session.totals.total_llm_calls, recorder.session.totals.total_tokens,
+        )
+        assert all(i.recovery.result is RecoveryResultEnum.PENDING for i in _invocacoes(recorder)[:recusas])
+
+        execucao.cancel("cliente desconectou")
+        with pytest.raises(asyncio.CancelledError, match="cliente desconectou"):
+            await execucao
+    finally:
+        if not execucao.done():
+            execucao.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await execucao
+
+    persistida = await recorder.repository.find_by_id(session_id=recorder.session.id)
+    assert persistida is not None
+    assert persistida.invocations == recorder.session.invocations
+    assert len(persistida.invocations) == recusas + 1
+    for invocacao in persistida.invocations[:recusas]:
+        assert invocacao.recovery == OutputRecovery(
+            strategy=RecoveryStrategyEnum.CORRECTION_PROMPT, result=RecoveryResultEnum.FAILED,
+        )
+    assert persistida.invocations[-1].recovery is None
+    assert persistida.invocations[-1].recovers_invocation_id == ("inv_1" if recusas else None)
+    assert (persistida.totals.total_llm_calls, persistida.totals.total_tokens) == totais_antes
+    assert persistida.rejected_output_count == recusas
 
 
 async def test_falha_terminal_registra_a_recuperacao_como_falha(recorder: SessionRecorderAdapter) -> None:
