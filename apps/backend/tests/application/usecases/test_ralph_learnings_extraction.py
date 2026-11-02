@@ -276,7 +276,7 @@ async def test_a_conclusao_numerica_chega_a_proxima_tarefa_com_grandeza_valor_un
 
 
 async def test_aprendizados_ja_registrados_sao_descartados_e_so_o_fato_novo_entra_na_memoria() -> None:
-    repetido_com_outra_forma = "  a afirmação I é VERDADEIRA: C ⊆ A implica A ∩ C = C, pela distributividade. "
+    repetido_com_outra_forma = "  A afirmação I é  verdadeira: C ⊆ A implica A ∩ C = C, pela distributividade. "
     cenario = _cenario_q037(aprendizados_da_t2=(repetido_com_outra_forma, _ANOTACOES_Q037[0], _APRENDIZADO_T2))
 
     eventos = await cenario.run()

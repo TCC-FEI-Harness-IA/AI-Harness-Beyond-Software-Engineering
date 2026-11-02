@@ -1223,7 +1223,7 @@ Exemplo de **relação**: "A velocidade média é vₘ = Δs/Δt, com Δs o desl
 
 ### 6.7 Duplicatas e ausência legítima de fatos novos
 
-Além da instrução do template, a memória de aprendizados descarta, de forma programática, todo aprendizado **em branco** ou **igual a um já registrado** (inclusive no mesmo lote), a menos de maiúsculas e espaços. A regra vale para A.3 e B.4. O evento `learn` mostra o que entrou e, numa seção à parte, o que foi descartado:
+Além da instrução do template, a memória de aprendizados descarta, de forma programática, todo aprendizado **em branco** ou **igual a um já registrado** (inclusive no mesmo lote), normalizando apenas espaços e preservando maiúsculas e minúsculas. A regra vale para A.3 e B.4. Diferenças de caixa podem mudar o significado de símbolos: “CO” e “Co”, “Mm” e “mm” ou “r” e “R” são preservados como fatos distintos, tanto no mesmo lote quanto entre tarefas. O evento `learn` mostra o que entrou e, numa seção à parte, o que foi descartado:
 
 ```markdown
 ## Aprendizados extraídos
@@ -1232,7 +1232,7 @@ Além da instrução do template, a memória de aprendizados descarta, de forma 
 
 ## Aprendizados repetidos descartados
 
-- a afirmação I é VERDADEIRA: C ⊆ A implica A ∩ C = C, pela distributividade.
+- A afirmação I é verdadeira: C ⊆ A implica A ∩ C = C, pela distributividade.
 - Hipótese: A, B, C ⊆ ℝ com C ⊆ A.
 ```
 
@@ -1262,13 +1262,13 @@ Parágrafo sugerido para substituir o segundo parágrafo da seção B.4 no paper
 | Separar *Resultado aprovado* e *Histórico da tarefa* em áreas próprias, sem repetir o resultado aprovado no histórico. | Torna explícita a prioridade da conclusão aprovada e evita mandar o mesmo texto duas vezes. |
 | Não enviar os critérios de aceite da tarefa a B.4. | Critérios não são fatos do problema e não devem virar aprendizados; os vereditos do histórico já identificam o que foi reprovado. |
 | Exigir o fato compacto **e** a breve explicação numa única string. | Mantém o contrato `learnings: list[str]` e a área de aprendizados igual para todas as fases. |
-| Descartar duplicatas na memória (normalização de maiúsculas e espaços), além da instrução do template. | Repetições literais são detectáveis com segurança; reformulações não, e continuam a cargo do template. O evento `learn` mostra os descartados, para auditoria. |
+| Descartar duplicatas na memória (normalização apenas de espaços), além da instrução do template. | Repetições literais são detectáveis com segurança; reformulações não, e continuam a cargo do template. O evento `learn` mostra os descartados, para auditoria. |
 | A.3 não muda. | A.3 continua anotando os dados do enunciado sem resolver; só B.4 registra resultados. A deduplicação apenas impede que B.4 repita um dado já anotado por A.3. |
 
 ### 6.10 Limitações
 
 - Os testes usam respostas simuladas: verificam o prompt enviado, a fiação, a persistência e o descarte de repetições, mas **não comprovam** que um LLM real nunca omitirá uma conclusão. O ganho precisa ser medido nas baterias de benchmark (por exemplo, reexecutando a Q037).
-- A deduplicação programática só reconhece repetições literais, a menos de maiúsculas e espaços. Uma reformulação do mesmo fato não é detectada.
+- A deduplicação programática só reconhece repetições literais, normalizando apenas espaços e preservando maiúsculas e minúsculas. Uma reformulação do mesmo fato não é detectada.
 - A breve explicação aumenta um pouco o tamanho da memória e, portanto, os tokens de entrada de todas as fases B e C.
 - O prompt de B.4 passa a incluir o resultado aprovado e o histórico como texto, em vez de reaproveitar a conversa já enviada; em tarefas com muitas tentativas longas, o prompt continua proporcional ao histórico.
 
@@ -1279,7 +1279,7 @@ A suíte do backend passa por completo (1524 testes, cobertura de 100%, exigida 
 - **Prompt efetivamente enviado a B.4** (templates reais): uma única mensagem numa janela nova, diferente da janela de B.1, sem o template de B.1 nem a instrução de refazer; a tarefa, o resultado aprovado dentro de `<resultado_aprovado>` (uma única vez), o histórico com a tentativa reprovada, a aprovada e os vereditos dentro de `<historico_da_tarefa>`, e a memória na área **Aprendizados Pontuais**. As saídas inválidas do validador entram no histórico antes do veredito.
 - **Classificação (Q037):** o aprendizado da afirmação I é persistido na memória (com a tarefa de origem) e na mensagem da sessão; chega à B.1 da tarefa seguinte, cuja conversa não contém a tentativa refutada, o resultado completo, os vereditos nem o prompt de B.4; os aprendizados não entram nos resultados armazenados que C.3 recebe.
 - **Conclusão numérica:** o aprendizado com grandeza, valor, unidade e condição chega intacto à tarefa seguinte, sem o resultado completo.
-- **Duplicatas:** repetições da memória (com outra caixa e outros espaços) e anotações de A.3 são descartadas; só o fato novo entra; o evento lista os descartados; quando tudo já consta, o evento diz que nada foi extraído e a memória não duplica o fato. Aprendizados em branco não entram nem são listados.
+- **Duplicatas:** repetições da memória (com outros espaços) e anotações de A.3 são descartadas; só o fato novo entra; o evento lista os descartados; quando tudo já consta, o evento diz que nada foi extraído e a memória não duplica o fato. Aprendizados em branco não entram nem são listados.
 - **Ausência legítima de fatos novos:** `{"learnings": []}` mantém a memória e o fluxo segue até a resposta final.
 - **Template real:** áreas delimitadas antes das instruções; registro de todo resultado parcial novo "sem o histórico anterior"; regras para valores, classificações e relações; fato compacto e breve explicação com o exemplo da afirmação I; prioridade da conclusão aprovada; proibição de instruções, critérios, vereditos, relatos e duplicatas; lista vazia só sem fato novo.
 

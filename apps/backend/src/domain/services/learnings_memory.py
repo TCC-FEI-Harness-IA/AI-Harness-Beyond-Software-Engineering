@@ -19,7 +19,7 @@ class LearningsMemory(ILearningsMemory):
         """Acumula novos aprendizados extraídos por A.3 ou B.4, descartando os já registrados.
 
         Um aprendizado em branco, ou igual a um já registrado (inclusive no mesmo lote) a menos de
-        maiúsculas e espaços, não entra na memória: a área "Aprendizados Pontuais" não repete fatos.
+        espaços, não entra na memória: a área "Aprendizados Pontuais" não repete fatos.
         Reformulações com outras palavras não são detectadas aqui; evitá-las cabe ao template de B.4.
 
         Args:
@@ -77,6 +77,6 @@ class LearningsMemory(ILearningsMemory):
             content: Conteúdo do aprendizado.
 
         Returns:
-            str: Conteúdo sem diferenças de maiúsculas e de espaços.
+            str: Conteúdo com espaços normalizados, preservando maiúsculas e símbolos.
         """
-        return " ".join(content.split()).casefold()
+        return " ".join(content.split())

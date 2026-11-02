@@ -159,7 +159,7 @@ Os únicos reparos locais são os que não alteram conteúdo: a extração de de
 
 - **Valores:** grandeza, valor, unidade e condições relevantes. **Classificações:** a afirmação, a classificação e um motivo breve. **Relações:** a fórmula ou relação e as hipóteses necessárias.
 - Prevalece a **conclusão finalmente aprovada**: valores ou classificações refutados ou substituídos nas tentativas reprovadas não viram aprendizados vigentes.
-- Não se registram instruções da tarefa, critérios, vereditos, relatos do processo nem fatos que já constam na memória. A memória também descarta, de forma programática, aprendizados em branco ou repetidos (a menos de maiúsculas e espaços); o evento `learn` lista os descartados.
+- Não se registram instruções da tarefa, critérios, vereditos, relatos do processo nem fatos que já constam na memória. A memória também descarta, de forma programática, aprendizados em branco ou repetidos (normalizando apenas espaços, sem ignorar maiúsculas e minúsculas); o evento `learn` lista os descartados.
 - `{"learnings": []}` só é válido quando a tarefa não trouxe fato novo ou quando todas as conclusões já estão registradas. A simplicidade de uma conclusão nova não justifica omiti-la.
 - **Isolamento de contexto:** B.4 roda numa janela própria e não herda a conversa de B.1. O histórico da tarefa exigido pelo paper continua disponível, mas como **dado delimitado** do template, separado da memória de aprendizados. O resultado aprovado é o mesmo que B.3 armazenou; B.4 só o lê. Os aprendizados continuam fora dos resultados armazenados, e nenhuma resposta completa passa de uma tarefa para outra.
 
