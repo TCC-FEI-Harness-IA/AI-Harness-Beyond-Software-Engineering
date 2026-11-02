@@ -48,6 +48,7 @@ _FIRST_ATTEMPT = 1
 _CRITERIA_HEADING = "## Critérios de aceite gerais"
 _TASKS_HEADING = "## Tarefas planejadas"
 _LEARNINGS_HEADING = "## Aprendizados extraídos"
+_DISCARDED_LEARNINGS_HEADING = "## Aprendizados repetidos descartados"
 _NO_LEARNINGS_CONTENT = "Nenhum aprendizado foi extraído desta tarefa."
 _NO_PLANNING_LEARNINGS_CONTENT = "Nenhum aprendizado foi extraído do enunciado."
 _RESET_CONTENT = "Contexto reinicializado para a tarefa `{task_id}`. Nova janela: `{context_id}`."
@@ -71,6 +72,12 @@ _RETRY_INSTRUCTION_CONTENT = (
     "Refaça a resolução da tarefa corrigindo exatamente esses pontos."
 )
 _RESULT_BLOCK = "## {task_id} — {title}\n\n{content}"
+_HISTORY_ATTEMPT_HEADER = "### Tentativa {attempt} — {status}"
+_HISTORY_OUTPUT_CONTENT = "**Resultado preliminar:**\n\n{output}"
+_HISTORY_APPROVED_OUTPUT_CONTENT = "**Resultado preliminar:** é o resultado aprovado, apresentado na área própria."
+_HISTORY_REPORT_CONTENT = "**Veredito do validador:**\n\n{report}"
+_APPROVED_ATTEMPT_LABEL = "aprovada"
+_REPROVED_ATTEMPT_LABEL = "reprovada"
 _ERROR_CONTENT = "**Erro:** {reason}"
 _CONSUMPTION_DETAIL = "Consumo conhecido: {tokens} tokens em {calls} chamadas ao modelo."
 _DISCARDED_DETAIL = "Tarefas descartadas: {tasks}."
@@ -269,13 +276,15 @@ class RalphThinkingUseCase:
         outcome = await self.__execute_phase(
             runner=self.planning_learnings_phase, context=context, variables={"user_question": self.__user_question}
         )
-        learnings = self.__to_learnings(parsed=outcome.parsed, task_id=None)
-        self.learnings_memory.append(learnings=learnings)
+        extracted = self.__to_learnings(parsed=outcome.parsed, task_id=None)
+        learnings = self.learnings_memory.append(learnings=extracted)
         yield await self.__record_and_build(
             subtype=ThinkingEventSubtypeEnum.LEARN,
             phase=ThinkingPhaseEnum.A3_PLANNING_LEARNINGS,
             task=_SETUP_TASK_LABEL,
-            content=self.__render_learnings(learnings=learnings, empty_content=_NO_PLANNING_LEARNINGS_CONTENT),
+            content=self.__render_learnings(
+                extracted=extracted, stored=learnings, empty_content=_NO_PLANNING_LEARNINGS_CONTENT
+            ),
             context=context,
             outcome=outcome,
             task_id=None,
@@ -340,7 +349,7 @@ class RalphThinkingUseCase:
             yield event
         async for event in self.__store_result(task=task, context=context):
             yield event
-        async for event in self.__extract_learnings(task=task, context=context):
+        async for event in self.__extract_learnings(task=task):
             yield event
         self.__active_task_id = None
 
@@ -349,9 +358,10 @@ class RalphThinkingUseCase:
 
         A janela da tarefa é a mesma em toda retentativa: a tentativa reprovada e o veredito do
         validador permanecem no contexto e guiam a correção. Cada veredito é anexado a essa
-        janela assim que existe, antes de qualquer decisão — inclusive o da aprovação e o da
-        última reprovação —, porque B.4 recebe o contexto completo da tarefa. A janela do
-        validador continua isolada: só o seu relatório volta para cá.
+        janela assim que existe, antes de qualquer decisão. A janela do validador continua
+        isolada: só o seu relatório volta para cá. Cada tentativa fica registrada na tarefa, com
+        as saídas inválidas que o validador corrigiu, e é desse registro — e não desta janela —
+        que B.4 monta o histórico da tarefa.
 
         Toda tentativa depois de uma reprovação é uma retentativa: B.1 é chamada com a temperatura de
         retentativa, e a verificação dessa tentativa volta à temperatura do usuário.
@@ -400,7 +410,14 @@ class RalphThinkingUseCase:
                 ),
             )
             report = self.__to_report(parsed=outcome.parsed)
-            task.attempts.append(TaskAttempt(number=attempt, output=preliminary, report=report))
+            task.attempts.append(
+                TaskAttempt(
+                    number=attempt,
+                    output=preliminary,
+                    report=report,
+                    invalid_verifier_outputs=outcome.invalid_outputs,
+                )
+            )
             self.__record_verification_in_task_context(
                 context=context, attempt=attempt, report=report, invalid_outputs=outcome.invalid_outputs
             )
@@ -505,30 +522,32 @@ class RalphThinkingUseCase:
             inference_time_ms=_NO_INFERENCE_TIME_MS,
         )
 
-    async def __extract_learnings(self, task: Task, context: ContextWindow) -> AsyncGenerator[ThinkingEvent, None]:
-        """Extrai os aprendizados pontuais de uma tarefa (B.4).
+    async def __extract_learnings(self, task: Task) -> AsyncGenerator[ThinkingEvent, None]:
+        """Extrai os aprendizados pontuais de uma tarefa (B.4), numa janela de contexto própria.
 
-        Usa a janela completa da tarefa, que contém todas as tentativas e todos os vereditos do
-        validador — é lá que fatos úteis podem ter emergido. O template recebe os aprendizados já
-        registrados, para que a extração não os repita.
+        B.4 não herda a conversa de B.1: tudo o que a extração precisa chega como entrada explícita
+        do template — a tarefa, o resultado aprovado (o mesmo que B.3 armazenou), o histórico de
+        todas as tentativas com as interações com o validador e os aprendizados já registrados,
+        para que a extração não os repita. A memória descarta o que já constava nela, e o evento
+        mostra o que entrou e o que foi descartado por repetição.
 
         Args:
-            task: Tarefa recém-concluída.
-            context: Janela de contexto da tarefa.
+            task: Tarefa recém-aprovada.
 
         Yields:
             ThinkingEvent: Evento `learn`.
         """
+        context = self.__new_context(phase=ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION, task_id=task.id)
         outcome = await self.__execute_phase(
-            runner=self.learnings_extraction_phase, context=context, variables=self.__learnings_variables()
+            runner=self.learnings_extraction_phase, context=context, variables=self.__extraction_variables(task=task)
         )
-        learnings = self.__to_learnings(parsed=outcome.parsed, task_id=task.id)
-        self.learnings_memory.append(learnings=learnings)
+        extracted = self.__to_learnings(parsed=outcome.parsed, task_id=task.id)
+        learnings = self.learnings_memory.append(learnings=extracted)
         yield await self.__record_and_build(
             subtype=ThinkingEventSubtypeEnum.LEARN,
             phase=ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION,
             task=task.id,
-            content=self.__render_learnings(learnings=learnings),
+            content=self.__render_learnings(extracted=extracted, stored=learnings),
             context=context,
             outcome=outcome,
             task_id=task.id,
@@ -790,8 +809,8 @@ class RalphThinkingUseCase:
     ) -> PhaseOutcome:
         """Executa uma fase registrando qual fase e qual janela estão em andamento.
 
-        O diagnóstico de uma falha técnica precisa apontar a fase que realmente falhou, e não a
-        origem da janela corrente: B.2 roda numa janela própria e B.4 reaproveita a janela de B.1.
+        O diagnóstico de uma falha técnica precisa apontar a fase que realmente falhou; por isso a
+        fase em andamento é registrada aqui, e não deduzida da janela corrente.
 
         Args:
             runner: Fase a executar.
@@ -979,6 +998,26 @@ class RalphThinkingUseCase:
         return {
             "preliminary_result": preliminary,
             "task_acceptance_criteria": self.__render_criteria(criteria=task.acceptance_criteria),
+            **self.__learnings_variables(),
+        }
+
+    def __extraction_variables(self, task: Task) -> dict[str, str]:
+        """Monta as variáveis do Template B.4.
+
+        Args:
+            task: Tarefa recém-aprovada.
+
+        Returns:
+            dict[str, str]: Tarefa (sem os critérios, que não são fatos do problema), resultado
+            aprovado, histórico das tentativas e aprendizados pontuais já registrados, cada um na
+            sua área do template.
+        """
+        return {
+            "task_description": _TASK_HEADER_CONTENT.format(
+                task_id=task.id, title=task.title, description=task.description
+            ),
+            "approved_result": self.__results[task.id].content,
+            "task_history": self.__render_history(task=task),
             **self.__learnings_variables(),
         }
 
@@ -1182,20 +1221,82 @@ class RalphThinkingUseCase:
         )
         return _REPORT_CONTENT.format(decision=report.decision.value, evaluations=evaluations)
 
-    def __render_learnings(self, learnings: Sequence[Learning], empty_content: str = _NO_LEARNINGS_CONTENT) -> str:
+    def __render_history(self, task: Task) -> str:
+        """Renderiza o histórico da tarefa entregue a B.4: todas as tentativas, em ordem.
+
+        Cada tentativa traz o resultado preliminar, as saídas inválidas que o validador corrigiu e o
+        veredito. O resultado da tentativa aprovada não é repetido: ele tem área própria no template.
+
+        Args:
+            task: Tarefa recém-aprovada.
+
+        Returns:
+            str: Um bloco markdown por tentativa.
+        """
+        blocks = []
+        for attempt, report in task.verified_attempts():
+            parts = [
+                _HISTORY_ATTEMPT_HEADER.format(
+                    attempt=attempt.number,
+                    status=_APPROVED_ATTEMPT_LABEL if report.approved else _REPROVED_ATTEMPT_LABEL,
+                ),
+                (
+                    _HISTORY_APPROVED_OUTPUT_CONTENT
+                    if report.approved
+                    else _HISTORY_OUTPUT_CONTENT.format(output=attempt.output)
+                ),
+                *(
+                    _INVALID_VERIFIER_OUTPUT_CONTENT.format(raw_output=invalid.raw_output, reason=invalid.reason)
+                    for invalid in attempt.invalid_verifier_outputs
+                ),
+                _HISTORY_REPORT_CONTENT.format(report=self.__render_report(report=report)),
+            ]
+            blocks.append(_BLOCK_SEPARATOR.join(parts))
+        return _BLOCK_SEPARATOR.join(blocks)
+
+    def __render_learnings(
+        self,
+        extracted: Sequence[Learning],
+        stored: Sequence[Learning],
+        empty_content: str = _NO_LEARNINGS_CONTENT,
+    ) -> str:
         """Renderiza os aprendizados extraídos de uma tarefa ou do enunciado.
 
         Args:
-            learnings: Aprendizados a renderizar.
-            empty_content: Aviso exibido quando nada foi extraído.
+            extracted: Aprendizados devolvidos pelo modelo.
+            stored: Aprendizados que de fato entraram na memória.
+            empty_content: Aviso exibido quando nada entrou na memória.
 
         Returns:
-            str: Bloco markdown, ou o aviso de que nada foi extraído.
+            str: Bloco markdown com os aprendizados acumulados (ou o aviso de que nada foi extraído),
+            seguido, quando houver, dos que foram descartados por repetirem a memória.
         """
-        if not learnings:
-            return empty_content
-        items = _ITEM_SEPARATOR.join(f"- {learning.content}" for learning in learnings)
-        return f"{_LEARNINGS_HEADING}\n\n{items}"
+        blocks = [
+            f"{_LEARNINGS_HEADING}\n\n{self.__render_items(learnings=stored)}" if stored else empty_content
+        ]
+        # A memória devolve os aceitos na ordem recebida: o que não casa com o próximo aceito foi descartado.
+        discarded: list[Learning] = []
+        pending = iter(stored)
+        next_stored = next(pending, None)
+        for learning in extracted:
+            if learning == next_stored:
+                next_stored = next(pending, None)
+            elif learning.content.strip():
+                discarded.append(learning)
+        if discarded:
+            blocks.append(f"{_DISCARDED_LEARNINGS_HEADING}\n\n{self.__render_items(learnings=discarded)}")
+        return _BLOCK_SEPARATOR.join(blocks)
+
+    def __render_items(self, learnings: Sequence[Learning]) -> str:
+        """Renderiza aprendizados como lista markdown.
+
+        Args:
+            learnings: Aprendizados a renderizar.
+
+        Returns:
+            str: Um item por aprendizado.
+        """
+        return _ITEM_SEPARATOR.join(f"- {learning.content.strip()}" for learning in learnings)
 
     def __render_results(self) -> str:
         """Renderiza os resultados armazenados em B.3.

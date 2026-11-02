@@ -15,13 +15,30 @@ class LearningsMemory(ILearningsMemory):
         """Inicializa o armazenamento vazio."""
         self.__learnings: list[Learning] = []
 
-    def append(self, learnings: Sequence[Learning]) -> None:
-        """Acumula novos aprendizados extraídos por A.3 ou B.4.
+    def append(self, learnings: Sequence[Learning]) -> tuple[Learning, ...]:
+        """Acumula novos aprendizados extraídos por A.3 ou B.4, descartando os já registrados.
+
+        Um aprendizado em branco, ou igual a um já registrado (inclusive no mesmo lote) a menos de
+        maiúsculas e espaços, não entra na memória: a área "Aprendizados Pontuais" não repete fatos.
+        Reformulações com outras palavras não são detectadas aqui; evitá-las cabe ao template de B.4.
 
         Args:
             learnings: Aprendizados a acumular.
+
+        Returns:
+            tuple[Learning, ...]: Aprendizados efetivamente acumulados, na ordem recebida.
         """
-        self.__learnings.extend(learnings)
+        known = {self.__normalize(content=learning.content) for learning in self.__learnings}
+        accepted: list[Learning] = []
+        for learning in learnings:
+            key = self.__normalize(content=learning.content)
+            if not key or key in known:
+                continue
+            known.add(key)
+            accepted.append(learning)
+
+        self.__learnings.extend(accepted)
+        return tuple(accepted)
 
     def all(self) -> tuple[Learning, ...]:
         """Devolve todos os aprendizados acumulados até o momento.
@@ -52,3 +69,14 @@ class LearningsMemory(ILearningsMemory):
             return _NO_LEARNINGS_CONTENT
 
         return _ITEM_SEPARATOR.join(f"{_ITEM_PREFIX}{learning.content}" for learning in self.__learnings)
+
+    def __normalize(self, content: str) -> str:
+        """Reduz um aprendizado à forma usada para detectar repetições.
+
+        Args:
+            content: Conteúdo do aprendizado.
+
+        Returns:
+            str: Conteúdo sem diferenças de maiúsculas e de espaços.
+        """
+        return " ".join(content.split()).casefold()
