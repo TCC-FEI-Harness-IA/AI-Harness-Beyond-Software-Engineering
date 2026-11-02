@@ -14,6 +14,7 @@ A explicação geral do fluxo está em [`RALPH_LOOP_ADAPTADO.md`](RALPH_LOOP_ADA
 | 2 | Área **Aprendizados Pontuais** em todo prompt das fases B e C | B. Execução em Loop e C. Criação da Resposta Final | Todos os aprendizados do fluxo chegam a B.1, B.2, B.4, C.1, C.2 e C.3, e não só a B.1. |
 | 3 | **Temperatura 1 nas retentativas** | B e todas as fases com correção de saída | Retentativas deixam de repetir a mesma saída reprovada até esgotar as tentativas. |
 | 4 | **Regras de redação das tarefas** (A.2 e C.2) | A. Planejamento e C. Planejamento Adicional | As tarefas deixam de declarar entradas e saída, têm critérios de aceite complementares (nunca mutuamente exclusivos) e exigem resultado acompanhado da explicação. |
+| 5 | **Separação entre escopo, suficiência e apresentação** | A.1, A.2, B.2, C.1, C.2 e C.3 | Reforço dos prompts: restrições reais, limites sobre ações, suficiência de conteúdo antes da apresentação e tratamento de lacunas reais. |
 
 As alterações 2 e 3 vieram de uma segunda rodada de testes. A alteração 2 **substitui** a regra de escopo da alteração 1 (e do paper), segundo a qual os aprendizados ficavam restritos a B.1; os pontos afetados da seção 1 estão marcados com *(atualizado pela alteração 2)*. A alteração 4 muda apenas o que os templates A.2 e C.2 pedem de cada tarefa; não muda a ordem das etapas nem as expressões de entrada e saída.
 
@@ -735,3 +736,160 @@ Arquivos principais:
 | `apps/backend/src/infra/adapters/structured_response_parser_adapter.py` | Campos de texto obrigatórios da tarefa reduzidos a `id`, `title` e `description`. |
 | `apps/backend/src/application/usecases/ralph_thinking_usecase.py` | Bloco da tarefa sem as linhas "Entrada esperada" e "Saída esperada". |
 | `apps/backend/tests/infra/providers/test_prompt_templates_content.py`, `tests/infra/adapters/test_structured_response_parser_adapter.py` | Testes das novas diretrizes e do formato aceito. |
+
+
+## 5. Separação entre escopo, suficiência e apresentação
+
+### 5.1 Problema e alcance
+
+O benchmark apresentou reprovações em C.1 por explicações nos resultados internos ou ausência da
+linha `RESPOSTA_FINAL: LETRA`, embora o conteúdo já permitisse produzir a resposta. O template já
+distinguia parcialmente essas responsabilidades, mas precisava de exemplos e limites explícitos.
+No cenário relatado de Química ENEM 2024 Q097, uma menção a “colheres” foi interpretada como
+violação de escopo; em Q135 apareceram duas linhas e justificativa obrigatória sem suporte no pedido.
+Esses relatos motivam a correção; não constituem resultados de uma nova execução do benchmark.
+
+A correção altera somente os seis templates existentes. Não altera o orquestrador, os contratos JSON,
+a quantidade pretendida de tarefas nem os limites existentes. Não implementa reconciliação de
+conclusões, revisão de critérios ou validação posterior à síntese. As regras de contexto permanecem.
+
+### 5.2 Responsabilidade de cada etapa
+
+| Etapa | Regra reforçada | Erro a evitar |
+|---|---|---|
+| A.1 | Extrair obrigações reais do pedido; diferenciar conteúdo e apresentação. | Inventar limites numéricos ou tornar justificativa opcional em obrigatória. |
+| A.2 | Gerar critérios sobre ações fora do objetivo, exigindo resultado explicado. | Confundir referência contextual com resolução de outro subproblema. |
+| B.2 | Verificar todos os critérios locais exatamente como recebidos. | Ignorar ou substituir um critério por julgá-lo inadequado. |
+| C.1 | Julgar se os resultados aprovados permitem satisfazer cada critério na resposta a construir. | Exigir formato final nos insumos ou aprovar conteúdo ausente por ser possível formatar uma letra. |
+| C.2 | Planejar tarefas explicadas para suprir conteúdo pendente. | Criar tarefas de apresentação ou proibir a análise necessária para cobrir a lacuna. |
+| C.3 | Aplicar idioma, formato e restrições finais aos resultados aprovados. | Introduzir nova análise para completar a resposta. |
+
+As expressões conceituais permanecem:
+
+> *Pergunta do usuário* + *Template A.1* → *Critérios Gerais*
+>
+> *Resultados Aprovados* + *Critérios Gerais* + *Template C.1* → *Decisão de Suficiência*
+>
+> *Critérios Pendentes* + *Resultados Aprovados* + *Template C.2* → *Tarefas para Conteúdo Ausente*
+>
+> *Resultados Aprovados em C.1* + *Critérios Gerais* + *Template C.3* → *Resposta Final*
+
+A área separada de aprendizados acompanha B e C conforme a regra 2. Não é resultado aprovado,
+não conta como cobertura de critério e não autoriza C.3 a completar uma análise que falta.
+
+### 5.3 Restrições reais e justificativa opcional ou obrigatória
+
+| Pedido | Critério válido | Critério indevido |
+|---|---|---|
+| “Seja objetivo; pode justificar.” | Resposta objetiva, justificativa opcional. | Exatamente duas linhas, com justificativa obrigatória. |
+| “Em duas linhas, justifique.” | Preservar as duas linhas e a fundamentação exigida. | Dispensar a justificativa por se tratar de resposta curta. |
+| “Apenas a letra.” | A resposta final deve conter apenas a letra. | Proibir explicação no resultado interno da tarefa. |
+
+A explicação é obrigatória nos resultados das tarefas para permitir a verificação local. Essa regra
+interna não torna a justificativa obrigatória na resposta ao usuário. Inversamente, um pedido explícito
+de fundamentação deve ser mantido por A.1 e coberto nos resultados, para que C.3 possa apresentá-la.
+
+### 5.4 Referência contextual, antecipação e violação de escopo
+
+Considere uma tarefa que calcula a massa total e tem o critério “não calcular a massa por colher”.
+
+- Resultado permitido: “O enunciado cita colheres; a massa total é 2 g + 4 g = 6 g”. A referência
+  contextual não realiza o cálculo posterior, e o resultado local está explicado.
+- Violação real: “A massa total é 6 g; dividindo por duas colheres, são 3 g por colher”. Foi
+  executada uma ação externa ao objetivo e explicitamente proibida pelo critério.
+- Critério que o planejador deve evitar: “não mencionar colheres”. É uma proibição lexical mais
+  ampla que o limite de resolução pretendido. Se ainda assim for recebida, B.2 deve avaliá-la,
+  inclusive reprovando a menção; não pode substituí-la por outro critério.
+
+Uma conclusão fundamentada sobre o objetivo da própria tarefa não é antecipação indevida.
+Executar condições externas ou anunciar a solução global quando o critério o proíbe continua
+sendo violação. Se a tarefa tem por objetivo realizar uma análise conjunta pendente, seus critérios
+não podem proibir essa mesma análise nem sua conclusão fundamentada. A redação final continua em C.3.
+
+### 5.5 Formato realizável e conteúdo ausente
+
+**Conteúdo suficiente sem linha final.** Resultados aprovados identificam inequivocamente C,
+com cálculo e explicação. O pedido exige terminar com `RESPOSTA_FINAL: LETRA`. C.1 aprova a
+possibilidade de apresentação; a falta literal de `RESPOSTA_FINAL: C` nos insumos não é lacuna.
+C.3 aplica a linha com base na identificação já aprovada, sem cálculo ou seleção novos.
+
+**Conteúdo explicado para resposta enxuta.** Os mesmos resultados podem sustentar um pedido
+“apenas a letra, sem justificativa”. C.1 não reprova pela explicação interna; C.3 apresenta `C`.
+Copiar a justificativa interna para essa resposta violaria a apresentação solicitada.
+
+**Lacuna real de análise conjunta.** Há três listas aprovadas: primos [2], pares [2, 4, 6] e maiores
+que 2 [4, 6]. O critério geral exige verificação explícita de quais candidatos satisfazem todas as
+condições simultaneamente. As listas isoladas não cobrem esse critério. C.1 reprova mesmo que a
+formatação seja simples; não realiza a interseção para considerar a lacuna resolvida. Um aprendizado
+que afirme a conclusão também não a cobre. C.2 cria tarefa autossuficiente para determinar e explicar
+a interseção. Após B.2/B.3 aprovarem esse resultado, uma nova C.1 pode aprovar e liberar C.3.
+
+**Fundamentação exigida.** Quando a justificativa é obrigatória e falta nos resultados, C.1 reprova
+o critério correspondente. Quando é opcional, sua ausência na apresentação não é motivo autônomo
+de reprovação, desde que o conteúdo já sustente a conclusão. C.3 não inventa uma prova para preencher
+conteúdo que deveria ter sido produzido e verificado antes.
+
+### 5.6 Entradas explícitas e isolamento preservados
+
+A implementação continua montando entradas próprias em cada chamada:
+
+| Etapa | Entradas próprias |
+|---|---|
+| A.1 / A.2 / A.3 | Enunciado original em janelas separadas; A.2 também recebe o limite do lote. |
+| B.1 | Descrição autossuficiente, critérios locais e aprendizados anteriores à tarefa. |
+| B.2 | Resultado preliminar, todos os critérios locais e aprendizados como referência, em janela própria. |
+| B.4 | Histórico completo da tarefa e aprendizados anteriores, para extrair fatos sem duplicação. |
+| C.1 | Apenas resultados aprovados, todos os critérios gerais e aprendizados em área separada. |
+| C.2 | Critérios pendentes de C.1, resultados aprovados, aprendizados, numeração e limite do lote. |
+| C.3 | O conjunto de resultados aprovado por C.1, critérios gerais e aprendizados em área separada. |
+
+Uma nova tarefa começa em fresh context, inclusive se foi criada por C.2. A mudança entre etapas
+independentes reinicializa a janela. Retentativas de resolução preservam o histórico da própria
+tarefa, e B.4 recebe esse histórico para extração, como antes. Nenhuma tentativa reprovada entra
+nos resultados que alimentam C.1/C.3; aprendizados continuam sendo memória transversal distinta.
+
+### 5.7 TDD, integração e limites da evidência
+
+Antes da alteração dos prompts, foram escritos cinco cenários em
+`apps/backend/tests/application/usecases/test_ralph_scope_sufficiency_integration.py`; eles falharam
+pela ausência dos reforços esperados nos prompts renderizados. Depois da alteração, passaram.
+Um sexto cenário complementa a cobertura: B.2 recebe uma proibição literal mal formulada e o fluxo
+preserva esse critério, reprova e solicita correção, em vez de ignorá-lo.
+
+Os testes usam templates de arquivo reais, fases reais, parser, orquestrador, fila, memória e
+persistência em repositório de teste. Inspecionam as conversas enviadas ao provedor, não apenas o
+texto bruto dos templates. Verificam:
+
+- C.1 → C.3 para conteúdo suficiente sem linha final e para resultados explicados com saída enxuta;
+- C.1 → C.2 → B → C.1 → C.3 para análise conjunta explicitamente exigida e ausente;
+- aprovação de referência contextual e reprovação de cálculo fora do escopo;
+- manutenção de todos os critérios de B.2 e feedback na retentativa;
+- contextos separados, entrada autossuficiente da tarefa adicional e descarte de tentativas reprovadas;
+- igualdade do conjunto aprovado em C.1 com o recebido em C.3 e separação da memória transversal.
+
+Os vereditos são simulados: esses testes comprovam contratos de integração e presença das instruções
+nos prompts enviados, **não comprovam melhora semântica do LLM**. A correção não implementa um
+interpretador determinístico de escopo ou suficiência. Também não impede por código que um modelo
+gere um critério artificial; reforça as instruções e exemplos para evitá-lo na origem.
+
+Para avaliar o efeito semântico, é necessária uma comparação com modelo real antes/depois, mantendo
+modelo, parâmetros e perguntas, incluindo Q097/Q135 e os pares contrastantes acima. Deve-se guardar
+prompts, critérios gerados, justificativas dos vereditos, resultados aprovados e saída de C.3; repetir
+as execuções e analisar reprovações indevidas de formato, violações reais de escopo e detecção de
+lacunas reais separadamente da acurácia final. Essa comparação não foi executada nesta correção;
+não se atribui ganho de acurácia ou redução de reprovações às respostas roteirizadas.
+
+Verificação final na worktree desta correção: **1505 testes passaram**, com **100% de cobertura**
+de `src` (incluindo branches), `flake8 src tests` sem erros e `git diff --check` sem erros.
+Foram removidas apenas linhas vazias excedentes no fim de dois arquivos de testes preexistentes
+para eliminar os avisos W391 de lint. A transcrição original foi comparada byte a byte com o commit
+base e permaneceu idêntica.
+
+### 5.8 Orientação para atualização do paper
+
+O texto literal da Metodologia em `RALPH_LOOP_ADAPTADO.md` permanece preservado. Na futura revisão
+do paper, explicitar em A.1 a origem das restrições; em A.2/C.2 os limites sobre ações e a obrigação
+de explicação interna; em B.2 a avaliação integral sem revisão de critérios; em C.1 a suficiência
+para construir a resposta e a preservação de exigências reais de conteúdo; em C.3 a aplicação da
+apresentação sem novo raciocínio. Essas clarificações não demandam novas etapas ou novas expressões
+de controle do fluxo.

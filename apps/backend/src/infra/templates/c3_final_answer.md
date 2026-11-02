@@ -35,6 +35,24 @@ Esta etapa é de **apresentação, não de raciocínio**. É terminantemente pro
 Use exclusivamente o material dos resultados armazenados. A resposta final vai no campo
 `final_answer`, em markdown.
 
+Aplique idioma, formato e restrições finais sem novo raciocínio analítico. Os resultados internos
+podem conter explicações mesmo quando o pedido final só admite a letra. Omita ou apresente a
+justificativa conforme os critérios gerais: opcional não significa obrigatória, e uma justificativa
+explicitamente exigida deve vir da fundamentação já aprovada. Não invente limites de linhas ou
+palavras a partir de uma orientação genérica de objetividade.
+
+## Exemplos de apresentação válida e inválida
+
+- Resultados já identificam C e explicam o cálculo; pedido "apenas a letra". Válido: `C`.
+  Inválido: copiar a explicação interna para a resposta apesar dessa restrição.
+- Mesmos resultados; pedido "termine com RESPOSTA_FINAL: LETRA". Válido: aplicar a linha
+  `RESPOSTA_FINAL: C`, ainda que ela não apareça literalmente nos resultados internos.
+- Pedido "justifique": apresentar a fundamentação aprovada. Pedido "pode justificar": ela é
+  opcional, respeitadas as demais restrições. Inválido: inventar uma prova ou um cálculo para
+  preencher justificativa ausente.
+- Inválido: realizar a interseção de condições só verificadas isoladamente ou selecionar uma
+  alternativa ainda não sustentada. Isso seria novo conteúdo analítico, não formatação.
+
 ## Formato de saída
 
 Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de

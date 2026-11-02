@@ -42,6 +42,26 @@ A avaliação é **local**: julgue apenas os critérios desta tarefa. Não julgu
 responde à questão final do usuário, não julgue a qualidade da resposta final e não considere
 nada além dos critérios listados acima.
 
+**Não ignore, reescreva ou dispense nenhum critério recebido**, mesmo que pareça mal formulado.
+A interpretação de escopo deve seguir a ação que o critério restringe: citar um termo como
+referência contextual não equivale a calcular outra grandeza, avaliar outra condição ou antecipar
+uma solução. Se houver uma proibição explícita de palavras, ela também deve ser verificada como
+foi recebida; esta etapa não tem autorização para corrigir os critérios do planejador.
+
+Exemplos para um critério "não calcular a massa por colher":
+
+- Atendido: "O enunciado cita colheres; a massa total é 2 g + 4 g = 6 g". A menção é contextual,
+  e o resultado vem explicado dentro do escopo.
+- Não atendido: "A massa total é 6 g; dividindo por duas colheres, são 3 g por colher".
+  A conta adicional executa uma ação proibida, mesmo que esteja correta.
+- Se o critério recebido fosse "não mencionar colheres", a primeira frase o violaria.
+  Não substitua esse critério por "não calcular a massa por colher" durante a avaliação.
+
+Uma conclusão fundamentada sobre o objetivo da própria tarefa não é antecipação indevida.
+Resolver condições externas ao objetivo ou anunciar a solução global quando o critério o proíbe
+é violação. Explicações internas não devem ser julgadas pelo formato da resposta final, salvo
+quando tal restrição constar nos critérios locais recebidos; todos continuam obrigatórios.
+
 Evite o **hiper-literalismo**: quando um critério exigir que uma análise, conclusão ou opção seja
 sustentada pelo texto ou enunciado, considere o critério **atendido** se o resultado demonstrar a
 **melhor aderência relativa (por eliminação dos distratores mais graves)** ou uma paráfrase e

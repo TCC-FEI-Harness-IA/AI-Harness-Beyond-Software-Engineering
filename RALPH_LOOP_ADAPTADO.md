@@ -14,7 +14,7 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 
 > **Nota de procedência:** esta seção é uma orientação operacional derivada da Metodologia, não faz parte da transcrição literal. Em caso de divergência, prevalece a Metodologia original abaixo, com as exceções da seção **Extensões ao método do paper**: a etapa **A.3** (item 3), a área de **Aprendizados Pontuais** em todo prompt das fases B e C (itens 4 a 11), a **temperatura das retentativas** (item 12) e as **regras de redação das tarefas** (itens 2 e 10). Todas são posteriores ao paper e estão registradas em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
 
-1. **A.1 — Critérios gerais:** receber a pergunta original e executar um prompt fixo `Template A.1` para definir idioma, formato, restrições e condições da resposta final; persistir esses critérios.
+1. **A.1 — Critérios gerais:** receber a pergunta original e executar um prompt fixo `Template A.1` para definir idioma, formato, restrições e condições reais da resposta final; persistir esses critérios. Objetividade genérica não autoriza inventar limites de linhas ou palavras; justificativa opcional não se torna obrigatória.
 2. **A.2 — Planejamento:** executar `Template A.2` sobre a pergunta original para criar uma lista ordenada de tarefas de objetivo único, cada uma com título, descrição autossuficiente e critérios individuais de aceite; persistir a lista. *(Regras de redação, extensão:)* a tarefa **não** declara entradas e saída esperadas; seus critérios são **complementares entre si**, nunca mutuamente exclusivos; e a tarefa exige que o resultado venha **acompanhado da explicação** (fórmulas, substituição de valores com unidades, convenções e justificativa de cada passo), com um critério de aceite que verifique isso.
 3. **A.3 — Aprendizados pontuais do enunciado (extensão):** executar `Template A.3` sobre a pergunta original, em janela própria, para anotar os pontos que chamam a atenção no enunciado: valores com unidades de medida, alternativas, fórmulas, condições e restrições. Acrescentar essas anotações à memória de aprendizados **antes** de qualquer tarefa; uma lista vazia é válida. Não resolver a pergunta.
 4. **B.1 — Seleção e resolução:** selecionar programaticamente a próxima tarefa; iniciar um contexto novo com a tarefa e `Template B.1`, cuja área **Aprendizados Pontuais** traz os aprendizados compactos acumulados (as anotações de A.3 e os aprendizados de B.4 das tarefas anteriores, ou o aviso de que ainda não há nenhum). Não antecipar a solução global.
@@ -22,7 +22,7 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 6. **B.3 — Resultado aprovado:** persistir somente a resposta aprovada, indexada pelo identificador da tarefa. Não enviar tentativas reprovadas para a síntese final.
 7. **B.4 — Aprendizados pontuais:** executar `Template B.4` sobre o histórico completo da tarefa e extrair fatos compactos úteis para tarefas seguintes. A área **Aprendizados Pontuais** do template mostra os aprendizados já registrados, para que não sejam repetidos. Os aprendizados nunca se misturam aos resultados armazenados.
 8. **Fresh Context:** ao avançar para outra tarefa, descartar o histórico da tarefa anterior e criar uma nova chamada/contexto. Os aprendizados compactos (inclusive as anotações de A.3) chegam à tarefa seguinte pela área **Aprendizados Pontuais** do `Template B.1`. A checagem de existência de tarefas pendentes é programática.
-9. **C.1 — Validação global:** reunir apenas os resultados aprovados e os critérios gerais de A.1; executar `Template C.1` para verificar a suficiência do conjunto. A área **Aprendizados Pontuais** traz todos os aprendizados do fluxo, como referência: eles não contam como cobertura de critério.
+9. **C.1 — Validação global:** reunir apenas os resultados aprovados e os critérios gerais de A.1; executar `Template C.1` para verificar se o conteúdo permite construir a resposta solicitada. Explicações internas e ausência da linha final formatada não são lacunas quando C.3 pode aplicar a apresentação sem nova análise. Exigências de conteúdo, como análise conjunta explícita, precisam estar cobertas nos resultados. A área **Aprendizados Pontuais** traz todos os aprendizados do fluxo, como referência: eles não contam como cobertura de critério.
 10. **Planejamento adicional:** se a validação global reprovar, identificar critérios pendentes, gerar novas tarefas específicas e retornar ao loop de execução. O `Template C.2` traz a área **Aprendizados Pontuais**, para que as descrições das novas tarefas repitam os dados do enunciado de que precisam. As novas tarefas seguem as mesmas **regras de redação** de A.2 (item 2).
 11. **Resposta final:** após aprovação global, sintetizar a resposta a partir dos resultados aprovados, obedecendo idioma, formato e restrições gerais. O `Template C.3` traz a área **Aprendizados Pontuais** só para conferir dados do enunciado (por exemplo, a letra da alternativa); o conteúdo da resposta continua vindo apenas dos resultados aprovados.
 12. **Temperatura das retentativas (extensão):** toda chamada de retentativa sai com temperatura `1`: a nova tentativa de B.1 depois de uma reprovação em B.2 e a correção de uma saída inválida (JSON ilegível, relatório inconsistente, lote de tarefas inválido) ou vazia, em qualquer fase. Assim que as retentativas acabam, as chamadas voltam à temperatura pedida pelo usuário.
@@ -110,6 +110,36 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 > *Pergunta do usuário* + *Template A.2* → *Resultado Fase A.2*
 >
 > *Critérios Não Atendidos* + *Resultados Armazenados* + *Aprendizados Pontuais* + *Template C.2* → *Novas Tarefas*
+
+### Reforço da separação entre escopo, suficiência e apresentação
+
+Este ajuste reforça os templates existentes, sem acrescentar fases, alterar a política de quantidade
+de tarefas, reconciliar conclusões, revisar critérios recebidos ou verificar a resposta depois de C.3.
+O detalhamento e os exemplos estão na seção 5 de [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+- **A.1:** registrar restrições reais. "Seja objetivo; pode justificar" não significa "duas linhas
+  e justificativa obrigatória". Se o pedido explicita duas linhas e justificativa, ambas são preservadas.
+- **A.2/C.2:** restringir ações analíticas externas ao objetivo, preservando resultado explicado.
+  "Não calcular a massa por colher" limita a resolução; "não mencionar colheres" proíbe uma palavra
+  sem necessidade. A referência contextual é permitida; efetuar a conta proibida viola o escopo.
+  Análise conjunta que constitui o objetivo da tarefa deve ser permitida com conclusão fundamentada.
+- **B.2:** avaliar todos os critérios recebidos sem ignorar, dispensar ou reescrever nenhum.
+  A distinção entre referência e resolução interpreta a ação restringida; não permite desconsiderar
+  uma proibição literal de palavras se o planejador ainda a produzir.
+- **C.1:** verificar suficiência para a resposta a construir. Se os resultados explicados já
+  identificam inequivocamente C, não é preciso que contenham `RESPOSTA_FINAL: C`; C.3 pode aplicar
+  essa linha ou apresentar só `C`. Em contrapartida, listas isoladas não cobrem uma exigência
+  explícita de análise conjunta. C.1 não executa a análise ausente para declará-la atendida.
+- **C.2:** suprir lacunas de conteúdo de C.1 com tarefas autossuficientes e explicadas. Proibir a
+  justificativa ou criar tarefa só para imprimir uma linha final confundiria conteúdo com apresentação.
+- **C.3:** aplicar idioma, formato e restrições finais exclusivamente aos resultados aprovados,
+  sem novo raciocínio analítico. Justificativa opcional pode ser omitida; a obrigatória deve usar a
+  fundamentação já aprovada. A memória transversal não completa conteúdo ausente.
+
+As entradas continuam sendo montadas explicitamente para cada etapa, com janelas próprias no
+planejamento, nas verificações e em C.1, C.2 e C.3. Cada nova tarefa inicia em *fresh context*;
+retentativas mantêm o histórico da própria tarefa e B.4 o recebe para extração. Aprendizados
+permanecem em memória transversal, renderizada em área separada dos resultados aprovados.
 
 ## Metodologia original — transcrição literal
 

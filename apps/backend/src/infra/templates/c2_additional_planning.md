@@ -1,6 +1,6 @@
 # C.2 — Planejamento adicional
 
-Crie novas tarefas independentes **apenas** para suprir as lacunas apontadas abaixo.
+Crie novas tarefas independentes **apenas** para suprir as lacunas de conteúdo apontadas abaixo.
 
 ## Critérios gerais ainda não atendidos
 
@@ -34,7 +34,10 @@ Cada tarefa deve:
    por exemplo, "responda somente a alternativa" e "a resposta deve conter explicações" se excluem
    e não podem coexistir.
 3. Trazer, entre os critérios, **restrições de escopo que impeçam a resolução precoce da questão
-   principal**.
+   principal**: limite ações analíticas externas ao objetivo, sem proibir palavras ou referências
+   contextuais ao enunciado. Não proíba a própria análise necessária para cobrir a lacuna, como
+   uma comparação ou análise conjunta explicitamente exigida. Sua conclusão fundamentada é
+   conteúdo verificável; a redação da resposta final ao usuário pertence a C.3.
 4. Exigir que a resposta da tarefa traga o **resultado acompanhado da explicação de por que ele é
    válido**, nunca o resultado isolado. Se a tarefa envolve uma conta, a resposta deve apresentar
    as fórmulas usadas, a substituição dos valores com unidades de medida, as convenções adotadas
@@ -45,6 +48,24 @@ Cada tarefa deve:
    alternativa, sem justificativa", **nunca** transponha essa restrição de formato para a tarefa:
    a formatação enxuta pertence exclusivamente à síntese final (`C.3`), enquanto toda tarefa precisa
    explicitar a justificativa do resultado para ser verificável.
+
+Não transforme idioma, formato ou concisão finais em tarefas de apresentação. A ausência de uma
+linha final formatada ou a presença de explicações internas não são, sozinhas, lacunas de conteúdo.
+Use os critérios pendentes para identificar qual informação ainda falta, sem os reescrever ou
+revisar. Toda nova tarefa continua exigindo resultado explicado, mesmo para resposta final enxuta.
+
+## Exemplos de planejamento válido e inválido
+
+- Lacuna real: exige-se análise conjunta, mas há apenas verificações isoladas. Válido: tarefa
+  autossuficiente com os dados já obtidos, para determinar e explicar a interseção das condições.
+  Inválido: pedir só uma letra, proibir a justificativa ou proibir a análise conjunta que falta.
+- Se a alternativa C já está sustentada e só falta `RESPOSTA_FINAL: C`, criar uma tarefa para
+  escrever a linha seria indevido: C.3 aplica o formato. Se falta identificar a alternativa,
+  a tarefa deve produzir a análise e a identificação explicada, não apenas a linha final.
+- Válido para massa total: "não calcular a massa por colher". Inválido: "não mencionar colheres".
+  A referência contextual é permitida; executar o cálculo adicional é uma violação real de escopo.
+- "Seja objetivo" não autoriza impor duas linhas ou limite de palavras. Uma justificativa
+  opcional na resposta final não elimina a explicação obrigatória do resultado interno.
 
 Em **questões de múltipla escolha** (especialmente quando os resultados anteriores descartaram todas
 as opções por rigor literal), crie uma única tarefa comparativa que avalie as opções por **melhor
