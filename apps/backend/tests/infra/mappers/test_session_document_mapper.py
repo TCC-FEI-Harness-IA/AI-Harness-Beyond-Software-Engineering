@@ -190,6 +190,7 @@ def test_documento_carrega_o_historico_completo_de_mensagens() -> None:
         "inference_time_ms": 0,
         "model_name": None,
         "prompt_input": [],
+        "invocation_id": None,
     }
     assert documento["messages"][1]["total_tokens"] == 4786
 
@@ -247,6 +248,10 @@ def test_documento_carrega_uma_entrada_por_invocacao() -> None:
             "finish_reason": "stop",
             "provider_response_id": "resp-1",
             "temperature": 0.3,
+            "recovers_invocation_id": None,
+            "content_accepted": None,
+            "output_diagnostic": None,
+            "recovery": None,
         },
         {
             "id": "inv-2",
@@ -263,6 +268,10 @@ def test_documento_carrega_uma_entrada_por_invocacao() -> None:
             "finish_reason": None,
             "provider_response_id": None,
             "temperature": None,
+            "recovers_invocation_id": None,
+            "content_accepted": None,
+            "output_diagnostic": None,
+            "recovery": None,
         },
     ]
 

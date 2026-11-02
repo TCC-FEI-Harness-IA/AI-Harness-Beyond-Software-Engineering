@@ -1,17 +1,22 @@
 import logging
 from abc import ABC
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from src.domain.entities.llm.context_window import ContextWindow
 from src.domain.entities.llm.llm_message import LLMMessage
 from src.domain.entities.llm.message import Message
 from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.thinking.invalid_output import InvalidOutput
+from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
+from src.domain.entities.thinking.output_recovery import OutputRecovery
+from src.domain.entities.thinking.parsed_output import ParsedOutput
 from src.domain.entities.thinking.phase_outcome import PhaseOutcome
 from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.recovery_result_enum import RecoveryResultEnum
+from src.domain.enums.recovery_strategy_enum import RecoveryStrategyEnum
 from src.domain.errors.budget_exceeded_error import BudgetExceededError
 from src.domain.errors.empty_completion_error import EmptyCompletionError
 from src.domain.errors.phase_parsing_error import PhaseParsingError
@@ -31,9 +36,12 @@ _CORRECTION_TEMPLATE = (
     "sem texto antes ou depois e sem cerca de código."
 )
 _INVALID_OUTPUT_AUDIT_TEMPLATE = (
-    "Saída inválida descartada na fase {phase}: {reason}\n\n"
+    "Saída inválida descartada na fase {phase}: {reason}\n"
+    "Diagnóstico: invocação {invocation_id}; problema {code}; sintaxe {syntax}; contrato {contract}; "
+    "término {finish_reason}; interrupção por comprimento {length}.\n\n"
     "Saída bruta do modelo:\n\n{raw_output}"
 )
+_UNKNOWN_VALUE = "desconhecido"
 _NO_TOKENS = 0
 _NO_ELAPSED_MS = 0
 _NO_RETRIES_LEFT = 0
@@ -69,6 +77,35 @@ class _PhaseAccounting:
         self.inference_time_ms += elapsed_ms
         self.input_known = self.input_known and tokens_input is not None
         self.output_known = self.output_known and tokens_output is not None
+
+
+@dataclass
+class _RecoveryChain:
+    """Saídas recusadas da execução corrente da fase, à espera do resultado da recuperação.
+
+    A primeira recusa é a invocação original: toda chamada seguinte da mesma execução a aponta.
+    Cada recusa guarda a estratégia aplicada a ela — correção, quando ainda havia retentativa, ou
+    nenhuma, quando a recusa esgotou as retentativas.
+    """
+
+    rejected: list[tuple[str, RecoveryStrategyEnum]] = field(default_factory=list)
+
+    @property
+    def origin_invocation_id(self) -> str | None:
+        """Invocação original da cadeia, ou `None` quando nenhuma saída foi recusada."""
+        if not self.rejected:
+            return None
+        return self.rejected[0][0]
+
+
+@dataclass(frozen=True)
+class _AcceptedCall:
+    """Chamada cuja saída o parser aceitou, com o que a fase precisa para montar o resultado."""
+
+    llm_message: LLMMessage
+    invocation_id: str
+    parsed_output: ParsedOutput
+    prompt_input: tuple[Message, ...]
 
 
 class BaseThinkingPhase(IThinkingPhase, ABC):
@@ -156,6 +193,12 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         Cada saída recusada pelo parser fica registrada na sessão no momento da recusa, inclusive a
         última, que encerra a fase com erro: a auditoria independe de a fase terminar bem.
 
+        Cada saída avaliada pelo parser recebe um diagnóstico na invocação que a produziu, aceita ou
+        não. Uma recusa abre a recuperação: as chamadas seguintes da execução apontam a invocação
+        original, e cada recusa termina marcada como recuperada (pela invocação cuja saída foi aceita)
+        ou como falha, qualquer que seja o erro que encerre a execução. Esse registro é operacional:
+        não muda as retentativas, o orçamento nem o que o fluxo faz com a saída.
+
         Toda chamada de retentativa sai com a temperatura de retentativa (1), e não com a do usuário:
         tanto as correções de saída inválida ou vazia quanto, quando `is_retry` é verdadeiro, todas as
         chamadas da execução. A temperatura configurada não muda; a próxima execução volta a usá-la.
@@ -182,16 +225,83 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             )
         )
 
-        retries_left = self.settings.ralph_json_parse_max_retries
         accounting = _PhaseAccounting()
         invalid_outputs: list[InvalidOutput] = []
-        temperature = _RETRY_TEMPERATURE if is_retry else self.temperature
+        chain = _RecoveryChain()
+        try:
+            accepted = await self.__run_until_accepted(
+                context=context,
+                validation=validation,
+                temperature=_RETRY_TEMPERATURE if is_retry else self.temperature,
+                accounting=accounting,
+                invalid_outputs=invalid_outputs,
+                chain=chain,
+            )
+        except Exception:
+            await self.__close_failed_recovery(chain=chain)
+            raise
+        await self.__close_recovery(
+            chain=chain, result=RecoveryResultEnum.RECOVERED, resolved_by_invocation_id=accepted.invocation_id
+        )
+
+        return PhaseOutcome(
+            raw_output=accepted.llm_message.output_message.text,
+            parsed=accepted.parsed_output.parsed,
+            tokens=TokensUsage(
+                tokens_input=accounting.tokens_input,
+                tokens_output=accounting.tokens_output,
+                llm_model=accepted.llm_message.tokens.llm_model,
+                input_known=accounting.input_known,
+                output_known=accounting.output_known,
+            ),
+            inference_time_ms=accounting.inference_time_ms,
+            context_id=context.context_id,
+            invalid_outputs=tuple(invalid_outputs),
+            prompt_input=accepted.prompt_input,
+        )
+
+    async def __run_until_accepted(
+        self,
+        context: ContextWindow,
+        validation: ValidationContext | None,
+        temperature: float | None,
+        accounting: _PhaseAccounting,
+        invalid_outputs: list[InvalidOutput],
+        chain: _RecoveryChain,
+    ) -> _AcceptedCall:
+        """Chama o modelo até o parser aceitar a saída ou as retentativas se esgotarem.
+
+        Cada saída avaliada ganha um diagnóstico na invocação que a produziu; cada saída recusada
+        entra na cadeia de recuperação, e as chamadas seguintes apontam a invocação original.
+
+        Args:
+            context: Janela de contexto em que a fase é executada.
+            validation: Dados esperados pela chamada, repassados ao parser.
+            temperature: Temperatura da primeira chamada; as retentativas usam a de retentativa.
+            accounting: Agregação do consumo da fase.
+            invalid_outputs: Saídas recusadas da execução, acrescentadas à medida que surgem.
+            chain: Cadeia de recuperação da execução.
+
+        Returns:
+            _AcceptedCall: Chamada cuja saída foi aceita.
+
+        Raises:
+            BudgetExceededError: Quando o guardião de custo nega a chamada.
+            PhaseParsingError: Quando o limite de retentativas de parsing se esgota.
+            EmptyCompletionError: Quando o provedor insiste em responder sem conteúdo.
+        """
+        retries_left = self.settings.ralph_json_parse_max_retries
 
         while True:
             # A janela é a conversa enviada nesta chamada; a resposta só entra nela depois do envio.
             prompt_input = tuple(context.messages)
             try:
-                llm_message = await self.__call_model(context=context, accounting=accounting, temperature=temperature)
+                llm_message, invocation_id = await self.__call_model(
+                    context=context,
+                    accounting=accounting,
+                    temperature=temperature,
+                    recovers_invocation_id=chain.origin_invocation_id,
+                )
             except EmptyCompletionError as error:
                 # Sem conteúdo não há mensagem a acrescentar à janela: a única correção possível
                 # é pedir de novo, com o mesmo contexto. O custo da chamada já foi registrado.
@@ -202,19 +312,31 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             raw_output = llm_message.output_message.text
 
             try:
-                parsed = self.parser.parse(
+                parsed_output = self.parser.parse_output(
                     raw_output=raw_output,
                     phase=self.phase,
                     validation=validation,
                     finish_reason=llm_message.finish_reason,
                 )
             except PhaseParsingError as error:
-                invalid_output = InvalidOutput(raw_output=raw_output, reason=error.reason)
+                # Um parser que não classifica a recusa não autoriza presumir nada sobre ela.
+                diagnostic = error.diagnostic or OutputDiagnostic.unclassified(
+                    reason=error.reason, finish_reason=llm_message.finish_reason
+                )
+                await self.session_recorder.record_output_diagnostic(
+                    invocation_id=invocation_id, diagnostic=diagnostic
+                )
+                invalid_output = InvalidOutput(
+                    raw_output=raw_output, reason=error.reason, invocation_id=invocation_id, diagnostic=diagnostic
+                )
                 invalid_outputs.append(invalid_output)
                 # A auditoria não pode depender de a fase terminar bem: é justamente quando as correções
                 # se esgotam que o intercâmbio com o modelo precisa ter ficado na sessão.
                 await self.__audit_invalid_output(
                     context=context, invalid_output=invalid_output, prompt_input=prompt_input
+                )
+                await self.__open_recovery(
+                    chain=chain, invocation_id=invocation_id, has_retry=retries_left > _NO_RETRIES_LEFT
                 )
                 retries_left = self.__consume_retry(retries_left=retries_left, error=error)
                 context.append(
@@ -227,29 +349,80 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                 temperature = _RETRY_TEMPERATURE
                 continue
 
-            return PhaseOutcome(
-                raw_output=raw_output,
-                parsed=parsed,
-                tokens=TokensUsage(
-                    tokens_input=accounting.tokens_input,
-                    tokens_output=accounting.tokens_output,
-                    llm_model=llm_message.tokens.llm_model,
-                    input_known=accounting.input_known,
-                    output_known=accounting.output_known,
-                ),
-                inference_time_ms=accounting.inference_time_ms,
-                context_id=context.context_id,
-                invalid_outputs=tuple(invalid_outputs),
+            await self.session_recorder.record_output_diagnostic(
+                invocation_id=invocation_id, diagnostic=parsed_output.diagnostic
+            )
+            return _AcceptedCall(
+                llm_message=llm_message,
+                invocation_id=invocation_id,
+                parsed_output=parsed_output,
                 prompt_input=prompt_input,
+            )
+
+    async def __open_recovery(self, chain: _RecoveryChain, invocation_id: str, has_retry: bool) -> None:
+        """Acrescenta uma saída recusada à cadeia, com a estratégia que será aplicada a ela.
+
+        Com retentativa disponível, a correção é pedida e a recuperação fica pendente até a execução
+        terminar; sem retentativa, não há estratégia e o resultado será registrado como falha.
+
+        Args:
+            chain: Cadeia de recuperação da execução.
+            invocation_id: Invocação que produziu a saída recusada.
+            has_retry: Indica se ainda há retentativa de saída inválida na execução.
+        """
+        if not has_retry:
+            chain.rejected.append((invocation_id, RecoveryStrategyEnum.NONE))
+            return
+
+        chain.rejected.append((invocation_id, RecoveryStrategyEnum.CORRECTION_PROMPT))
+        await self.session_recorder.record_output_recovery(
+            invocation_id=invocation_id,
+            recovery=OutputRecovery(
+                strategy=RecoveryStrategyEnum.CORRECTION_PROMPT, result=RecoveryResultEnum.PENDING
+            ),
+        )
+
+    async def __close_recovery(
+        self,
+        chain: _RecoveryChain,
+        result: RecoveryResultEnum,
+        resolved_by_invocation_id: str | None = None,
+    ) -> None:
+        """Registra o resultado final da recuperação em cada saída recusada da execução.
+
+        Args:
+            chain: Cadeia de recuperação da execução.
+            result: Resultado final: recuperada ou falha.
+            resolved_by_invocation_id: Invocação cuja saída foi aceita, quando houve recuperação.
+        """
+        for invocation_id, strategy in chain.rejected:
+            await self.session_recorder.record_output_recovery(
+                invocation_id=invocation_id,
+                recovery=OutputRecovery(
+                    strategy=strategy, result=result, resolved_by_invocation_id=resolved_by_invocation_id
+                ),
+            )
+
+    async def __close_failed_recovery(self, chain: _RecoveryChain) -> None:
+        """Registra a falha da recuperação sem encobrir o erro que encerrou a execução.
+
+        Args:
+            chain: Cadeia de recuperação da execução.
+        """
+        try:
+            await self.__close_recovery(chain=chain, result=RecoveryResultEnum.FAILED)
+        except Exception:
+            self.logger.exception(
+                "Fase '%s' não conseguiu registrar a falha da recuperação de saída inválida", self.phase.value
             )
 
     async def __audit_invalid_output(
         self, context: ContextWindow, invalid_output: InvalidOutput, prompt_input: tuple[Message, ...]
     ) -> None:
-        """Registra na sessão uma saída recusada pelo parser, com o motivo da recusa.
+        """Registra na sessão uma saída recusada pelo parser, com o motivo e o diagnóstico da recusa.
 
-        O registro é uma etapa programática, sem consumo: o custo da chamada que a produziu já
-        consta na invocação correspondente.
+        O registro é uma etapa programática, sem consumo, ligada à invocação que produziu a saída: o
+        custo da chamada já consta nessa invocação, que também guarda o diagnóstico estruturado.
 
         Args:
             context: Janela de contexto em que a fase roda.
@@ -258,12 +431,33 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         """
         await self.session_recorder.record_programmatic_step(
             phase=self.phase,
-            content=_INVALID_OUTPUT_AUDIT_TEMPLATE.format(
-                phase=self.phase.value, reason=invalid_output.reason, raw_output=invalid_output.raw_output
-            ),
+            content=self.__render_audit(invalid_output=invalid_output),
             task_id=context.task_id,
             context_id=context.context_id,
             prompt_input=prompt_input,
+            invocation_id=invalid_output.invocation_id,
+        )
+
+    def __render_audit(self, invalid_output: InvalidOutput) -> str:
+        """Monta o texto da auditoria: motivo legível, diagnóstico estruturado e saída bruta.
+
+        Args:
+            invalid_output: Saída recusada, com a invocação de origem e o diagnóstico.
+
+        Returns:
+            str: Texto da etapa programática de auditoria.
+        """
+        diagnostic = invalid_output.diagnostic
+        return _INVALID_OUTPUT_AUDIT_TEMPLATE.format(
+            phase=self.phase.value,
+            reason=invalid_output.reason,
+            invocation_id=invalid_output.invocation_id,
+            code=diagnostic.problem.code.value,
+            syntax=diagnostic.syntax_status.value if diagnostic.syntax_status is not None else _UNKNOWN_VALUE,
+            contract=diagnostic.contract_status.value,
+            finish_reason=diagnostic.finish_reason or _UNKNOWN_VALUE,
+            length=diagnostic.length_interruption.value,
+            raw_output=invalid_output.raw_output,
         )
 
     def __consume_retry(self, retries_left: int, error: RalphError) -> int:
@@ -285,8 +479,12 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         return retries_left - 1
 
     async def __call_model(
-        self, context: ContextWindow, accounting: _PhaseAccounting, temperature: float | None
-    ) -> LLMMessage:
+        self,
+        context: ContextWindow,
+        accounting: _PhaseAccounting,
+        temperature: float | None,
+        recovers_invocation_id: str | None,
+    ) -> tuple[LLMMessage, str]:
         """Valida, autoriza, registra, chama o modelo cronometrando e contabiliza o consumo.
 
         A requisição é validada localmente primeiro: uma recusa anterior ao envio não é uma chamada,
@@ -300,9 +498,10 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             context: Janela de contexto enviada integralmente ao modelo.
             accounting: Agregação do consumo da fase, atualizada com esta chamada.
             temperature: Temperatura desta chamada: a configurada ou, numa retentativa, a de retentativa.
+            recovers_invocation_id: Invocação original cuja saída recusada esta chamada tenta recuperar.
 
         Returns:
-            LLMMessage: Resultado da chamada.
+            tuple[LLMMessage, str]: Resultado da chamada e identificador da invocação registrada.
 
         Raises:
             ValueError: Quando a requisição é recusada localmente, antes de qualquer envio.
@@ -329,6 +528,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             model_name=self.model_name or self.settings.llm_model,
             provider=self.provider or self.settings.llm_provider,
             temperature=self.settings.llm_temperature if temperature is None else temperature,
+            recovers_invocation_id=recovers_invocation_id,
         )
 
         started_at_ms = self.clock.monotonic_ms()
@@ -384,4 +584,4 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             finish_reason=llm_message.finish_reason,
             provider_response_id=llm_message.provider_response_id,
         )
-        return llm_message
+        return llm_message, invocation_id

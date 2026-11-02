@@ -1,6 +1,9 @@
 from typing import Any
 
+from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
+from src.domain.entities.thinking.parsed_output import ParsedOutput
 from src.domain.entities.thinking.validation_context import ValidationContext
+from src.domain.enums.length_interruption_enum import LengthInterruptionEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.interfaces.structured_response_parser_interface import IStructuredResponseParser
 
@@ -10,26 +13,27 @@ class FakeStructuredParser(IStructuredResponseParser):
 
     Cada item da fila é devolvido como saída parseada ou, quando é uma exceção,
     levantado — o que permite programar falhas de parsing e a recuperação delas.
+    Um dicionário programado sai com diagnóstico de aceite derivado do `finish_reason`.
     """
 
-    def __init__(self, outcomes: list[dict[str, Any] | Exception] | None = None) -> None:
+    def __init__(self, outcomes: list[dict[str, Any] | ParsedOutput | Exception] | None = None) -> None:
         """Configura o dublê.
 
         Args:
-            outcomes: Fila de resultados, um por chamada de `parse`.
+            outcomes: Fila de resultados, um por chamada de `parse_output`.
         """
         self.outcomes = list(outcomes) if outcomes else []
         self.parsed: list[tuple[str, ThinkingPhaseEnum]] = []
         self.validations: list[ValidationContext | None] = []
         self.finish_reasons: list[str | None] = []
 
-    def parse(
+    def parse_output(
         self,
         raw_output: str,
         phase: ThinkingPhaseEnum,
         validation: ValidationContext | None = None,
         finish_reason: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ParsedOutput:
         """Registra a chamada e devolve, ou levanta, o próximo resultado programado.
 
         Raises:
@@ -46,4 +50,12 @@ class FakeStructuredParser(IStructuredResponseParser):
         outcome = self.outcomes.pop(0)
         if isinstance(outcome, Exception):
             raise outcome
-        return outcome
+        if isinstance(outcome, ParsedOutput):
+            return outcome
+        return ParsedOutput(
+            parsed=outcome,
+            diagnostic=OutputDiagnostic.accepted(
+                finish_reason=finish_reason,
+                length_interruption=LengthInterruptionEnum.classify(finish_reason=finish_reason, ends_incomplete=False),
+            ),
+        )

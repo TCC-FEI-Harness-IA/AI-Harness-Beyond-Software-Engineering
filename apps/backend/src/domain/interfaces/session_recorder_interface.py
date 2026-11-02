@@ -5,6 +5,8 @@ from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.session.session import Session
 from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
+from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
+from src.domain.entities.thinking.output_recovery import OutputRecovery
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
@@ -86,6 +88,7 @@ class ISessionRecorder(ABC):
         task_id: str | None,
         context_id: str | None,
         prompt_input: tuple[Message, ...] = (),
+        invocation_id: str | None = None,
     ) -> SessionMessage:
         """Registra uma etapa programática (sem chamada ao modelo) no histórico.
 
@@ -96,6 +99,7 @@ class ISessionRecorder(ABC):
             context_id: Janela de contexto associada, quando houver.
             prompt_input: Conversa enviada ao modelo, quando a etapa registra a saída de uma chamada
                 (como uma saída descartada pelo parser); vazia nas demais etapas.
+            invocation_id: Invocação a que a etapa se refere, como a que produziu a saída auditada.
 
         Returns:
             SessionMessage: Mensagem registrada.
@@ -111,6 +115,7 @@ class ISessionRecorder(ABC):
         model_name: str,
         provider: ModelProviderEnum,
         temperature: float | None = None,
+        recovers_invocation_id: str | None = None,
     ) -> str:
         """Registra o envio de uma chamada ao modelo, que já conta nos totais da sessão.
 
@@ -123,6 +128,7 @@ class ISessionRecorder(ABC):
             model_name: Modelo solicitado.
             provider: Provedor que atende a chamada.
             temperature: Temperatura efetivamente pedida na chamada.
+            recovers_invocation_id: Invocação original cuja saída recusada esta chamada tenta recuperar.
 
         Returns:
             str: Identificador da invocação, para `complete_invocation`.
@@ -150,6 +156,26 @@ class ISessionRecorder(ABC):
             tokens_output: Tokens de saída informados, ou `None` se desconhecidos.
             finish_reason: Motivo de término informado pelo provedor, quando há.
             provider_response_id: Identificador da resposta no provedor, quando há.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def record_output_diagnostic(self, invocation_id: str, diagnostic: OutputDiagnostic) -> None:
+        """Associa o diagnóstico de uma saída à invocação que a produziu, sem alterar os totais.
+
+        Args:
+            invocation_id: Identificador da invocação de origem.
+            diagnostic: Diagnóstico da saída avaliada pelo parser.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def record_output_recovery(self, invocation_id: str, recovery: OutputRecovery) -> None:
+        """Registra a estratégia e o resultado da recuperação de uma saída recusada.
+
+        Args:
+            invocation_id: Identificador da invocação que produziu a saída recusada.
+            recovery: Estratégia e resultado da recuperação.
         """
         raise NotImplementedError
 

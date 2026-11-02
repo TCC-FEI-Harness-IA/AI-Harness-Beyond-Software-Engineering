@@ -2,7 +2,7 @@
 
 ## Resumo
 
-Este documento contextualiza uma adaptação do **Ralph Wiggum Loop**, originalmente empregado em engenharia de software, para responder perguntas gerais em linguagem natural, incluindo questões de múltipla escolha. A arquitetura utiliza planejamento, decomposição em tarefas atômicas, execução e validação iterativas, reinicialização de contexto entre tarefas (*Fresh Context*) e síntese final sujeita a critérios de aceite globais. A seção **Metodologia original** abaixo é uma transcrição literal do trecho fornecido no paper, sem correções ou reformulações. Depois da transcrição do paper, o fluxo implementado recebeu quatro extensões: a etapa **A.3 — Aprendizados pontuais do enunciado**, a área de **Aprendizados Pontuais em todo prompt das fases B e C**, a **temperatura 1 nas retentativas** e as **regras de redação das tarefas em A.2 e C.2** (sem entradas e saída declaradas, critérios complementares entre si e resultado sempre acompanhado da explicação). Elas estão descritas na seção **Extensões ao método do paper** e detalhadas, com exemplos, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+Este documento contextualiza uma adaptação do **Ralph Wiggum Loop**, originalmente empregado em engenharia de software, para responder perguntas gerais em linguagem natural, incluindo questões de múltipla escolha. A arquitetura utiliza planejamento, decomposição em tarefas atômicas, execução e validação iterativas, reinicialização de contexto entre tarefas (*Fresh Context*) e síntese final sujeita a critérios de aceite globais. A seção **Metodologia original** abaixo é uma transcrição literal do trecho fornecido no paper, sem correções ou reformulações. Depois da transcrição do paper, o fluxo implementado recebeu quatro extensões: a etapa **A.3 — Aprendizados pontuais do enunciado**, a área de **Aprendizados Pontuais em todo prompt das fases B e C**, a **temperatura 1 nas retentativas** e as **regras de redação das tarefas em A.2 e C.2** (sem entradas e saída declaradas, critérios complementares entre si e resultado sempre acompanhado da explicação). Elas estão descritas na seção **Extensões ao método do paper** e detalhadas, com exemplos, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md). A implementação também registra um **diagnóstico estruturado de cada saída avaliada pelo parser**; trata-se de tratamento operacional, não de uma nova etapa de raciocínio, e aparece numa subseção própria das extensões.
 
 ## O que é o Ralph Wiggum Loop?
 
@@ -110,6 +110,28 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 > *Pergunta do usuário* + *Template A.2* → *Resultado Fase A.2*
 >
 > *Critérios Não Atendidos* + *Resultados Armazenados* + *Aprendizados Pontuais* + *Template C.2* → *Novas Tarefas*
+
+### Diagnóstico estruturado das saídas do modelo (tratamento operacional)
+
+> **Natureza da regra:** isto **não** é uma etapa de raciocínio nem altera o fluxo do paper. Nenhum template, critério, tarefa ou decisão muda; o número de retentativas e a política de orçamento também não. É o registro, na sessão, de *por que* o parser aceitou ou recusou cada saída do modelo, para auditar falhas de protocolo sem confundi-las com resultados semânticos.
+
+**Problema observado.** O parser já validava JSON, tipos, campos, identificadores de critérios e a coerência dos vereditos, e a sessão guardava a saída recusada, o consumo e o `finish_reason`. Mas a recusa só existia como texto livre: não dava para separar, no benchmark, uma string cortada pelo limite de comprimento (Q056, Química ITA), um JSON inválido terminado com `stop` (Q042, Matemática ITA), um campo com tipo errado (Q163) e uma decisão incompatível com as avaliações (Q037). Além disso, o desfecho `success` de uma invocação dizia só que o provedor respondeu, não que o conteúdo foi aceito.
+
+**Regra.** Toda saída avaliada pelo parser — aceita ou recusada — recebe um diagnóstico gravado **na invocação que a produziu** (`invocations[].output_diagnostic`):
+
+| Campo | Valores | Significado |
+|---|---|---|
+| `syntax_status` | `valid`, `invalid`, `valid_after_repair` (ou `null` = não avaliada) | Havia um objeto JSON? `valid_after_repair` quando o reparo local só acrescentou chaves/colchetes finais (`repaired_closings`). |
+| `contract_status` | `valid`, `invalid`, `not_evaluated` | O objeto confere com o contrato da fase (schema e coerência)? `not_evaluated` quando não havia objeto. |
+| `problem` | `code`, `reason`, `field`, `affected_ids` | Um único problema por saída recusada: código (`json_syntax`, `schema_type`, `missing_field`, `empty_value`, `invalid_value`, `duplicate_id`, `criteria_ids`, `decision_consistency`, `task_ids`, `task_limit`, `unsupported_phase`, `unclassified`), motivo legível (o mesmo da mensagem de correção), campo e critérios/tarefas afetados. |
+| `finish_reason` | texto do provedor | Motivo de término original, sem reinterpretação. |
+| `length_interruption` | `confirmed`, `suspected`, `not_detected`, `unknown` | Corte por comprimento, **independente da sintaxe**. Só o provedor confirma (`finish_reason == "length"`); sem motivo de término, uma saída que termina dentro de string ou com estruturas abertas é apenas **indício** (`suspected`). |
+
+- A invocação ganha `content_accepted` (`true`/`false`; `null` = desconhecido), separado do desfecho do provedor (`outcome`), que continua com o mesmo significado: uma chamada `success` pode ter conteúdo recusado.
+- **Recuperação:** a invocação recusada guarda `recovery` (`strategy`: `correction_prompt` ou `none`; `result`: `pending`, `recovered` ou `failed`; `resolved_by_invocation_id`). Cada nova chamada da mesma execução de fase aponta a invocação original em `recovers_invocation_id`. A auditoria da saída recusada (mensagem de sistema com motivo e saída bruta) aponta a invocação em `invocation_id`.
+- **Sem dupla contagem:** uma saída com dois diagnósticos (por exemplo, truncada **e** com sintaxe inválida) é uma recusa só; os totais de chamadas, tokens e tempo não mudam com o diagnóstico.
+- **Validação estrita mantida:** avaliações ausentes não são preenchidas, tipos não são convertidos (`"true"` não vira `true`) e a decisão nunca é forçada. Uma reprovação **válida** de B.2 ou C.1 é resultado semântico normal: conteúdo aceito, sem problema nem recuperação.
+- **Sessões antigas:** documentos sem os campos novos são lidos com diagnóstico, recuperação e vínculo ausentes (`content_accepted: null`), nunca como sucesso presumido. Os campos aparecem na consulta `GET /v1/sessions/{id}` e na exportação ZIP dos erros do benchmark.
 
 ## Metodologia original — transcrição literal
 

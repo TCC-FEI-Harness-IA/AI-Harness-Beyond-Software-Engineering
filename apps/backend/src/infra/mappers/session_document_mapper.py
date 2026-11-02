@@ -12,10 +12,19 @@ from src.domain.entities.session.session_degradation import SessionDegradation
 from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
 from src.domain.entities.session.session_totals import SessionTotals
+from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
+from src.domain.entities.thinking.output_problem import OutputProblem
+from src.domain.entities.thinking.output_recovery import OutputRecovery
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
+from src.domain.enums.length_interruption_enum import LengthInterruptionEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.output_contract_status_enum import OutputContractStatusEnum
+from src.domain.enums.output_problem_code_enum import OutputProblemCodeEnum
+from src.domain.enums.output_syntax_status_enum import OutputSyntaxStatusEnum
+from src.domain.enums.recovery_result_enum import RecoveryResultEnum
+from src.domain.enums.recovery_strategy_enum import RecoveryStrategyEnum
 from src.domain.enums.session_failure_reason_enum import SessionFailureReasonEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
@@ -29,6 +38,9 @@ _DEGRADATION_CONTAINER = "degradação da sessão"
 _INVOCATION_CONTAINER = "invocação da sessão"
 _FAILURE_CONTAINER = "falha da sessão"
 _PROMPT_INPUT_CONTAINER = "prompt de entrada da mensagem"
+_DIAGNOSTIC_CONTAINER = "diagnóstico da saída da invocação"
+_PROBLEM_CONTAINER = "problema da saída da invocação"
+_RECOVERY_CONTAINER = "recuperação da saída da invocação"
 
 TEnum = TypeVar("TEnum", bound=StrEnum)
 
@@ -43,7 +55,9 @@ class SessionDocumentMapper(ISessionDocumentMapper):
     Documentos gravados antes do registro por invocação, da falha estruturada, do provedor e do
     prompt de entrada das mensagens continuam legíveis: as chaves novas são opcionais na leitura,
     a ausência de `prompt_input` vira uma conversa vazia e a ausência de `invocations` marca os
-    totais como legados em vez de inventar chamadas passadas.
+    totais como legados em vez de inventar chamadas passadas. Invocações gravadas antes do diagnóstico
+    de saída voltam sem diagnóstico, recuperação ou vínculo — aceitação desconhecida, nunca presumida.
+    `content_accepted` é gravado só para leitura humana: na leitura, ele é derivado do diagnóstico.
     """
 
     def to_document(self, session: Session) -> dict[str, Any]:
@@ -181,6 +195,7 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             "inference_time_ms": message.inference_time_ms,
             "model_name": message.model_name,
             "prompt_input": [self.__prompt_message_to_document(message=item) for item in message.prompt_input],
+            "invocation_id": message.invocation_id,
         }
 
     def __prompt_message_to_document(self, message: Message) -> dict[str, Any]:
@@ -218,6 +233,43 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             "finish_reason": invocation.finish_reason,
             "provider_response_id": invocation.provider_response_id,
             "temperature": invocation.temperature,
+            "recovers_invocation_id": invocation.recovers_invocation_id,
+            "content_accepted": invocation.content_accepted,
+            "output_diagnostic": self.__diagnostic_to_document(diagnostic=invocation.output_diagnostic),
+            "recovery": self.__recovery_to_document(recovery=invocation.recovery),
+        }
+
+    def __diagnostic_to_document(self, diagnostic: OutputDiagnostic | None) -> dict[str, Any] | None:
+        """Converte o diagnóstico da saída no seu documento, ou nulo quando não há diagnóstico."""
+        if diagnostic is None:
+            return None
+        problem = diagnostic.problem
+        return {
+            "syntax_status": diagnostic.syntax_status.value if diagnostic.syntax_status is not None else None,
+            "contract_status": diagnostic.contract_status.value,
+            "finish_reason": diagnostic.finish_reason,
+            "length_interruption": diagnostic.length_interruption.value,
+            "repaired_closings": diagnostic.repaired_closings,
+            "problem": (
+                {
+                    "code": problem.code.value,
+                    "reason": problem.reason,
+                    "field": problem.field,
+                    "affected_ids": list(problem.affected_ids),
+                }
+                if problem is not None
+                else None
+            ),
+        }
+
+    def __recovery_to_document(self, recovery: OutputRecovery | None) -> dict[str, Any] | None:
+        """Converte a recuperação da saída no seu documento, ou nulo quando não houve recusa."""
+        if recovery is None:
+            return None
+        return {
+            "strategy": recovery.strategy.value,
+            "result": recovery.result.value,
+            "resolved_by_invocation_id": recovery.resolved_by_invocation_id,
         }
 
     def __failure_to_document(self, failure: SessionFailure | None) -> dict[str, Any] | None:
@@ -272,6 +324,77 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             ),
             # Invocações gravadas antes do registro da temperatura efetiva não têm a chave.
             temperature=document.get("temperature"),
+            # Invocações gravadas antes do diagnóstico de saída não têm as chaves: desconhecido.
+            recovers_invocation_id=document.get("recovers_invocation_id"),
+            output_diagnostic=self.__diagnostic_from_optional_document(document=document.get("output_diagnostic")),
+            recovery=self.__recovery_from_optional_document(document=document.get("recovery")),
+        )
+
+    def __diagnostic_from_optional_document(self, document: dict[str, Any] | None) -> OutputDiagnostic | None:
+        """Reconstrói o diagnóstico da saída, ausente em documentos anteriores ao registro.
+
+        Raises:
+            ValueError: Quando falta uma chave, um enum é desconhecido ou o diagnóstico se contradiz.
+        """
+        if document is None:
+            return None
+        has_syntax = self.__required(document=document, key="syntax_status", container=_DIAGNOSTIC_CONTAINER)
+        problem = self.__required(document=document, key="problem", container=_DIAGNOSTIC_CONTAINER)
+        return OutputDiagnostic(
+            syntax_status=(
+                self.__enum_from_document(
+                    document=document,
+                    key="syntax_status",
+                    container=_DIAGNOSTIC_CONTAINER,
+                    enum_type=OutputSyntaxStatusEnum,
+                )
+                if has_syntax is not None
+                else None
+            ),
+            contract_status=self.__enum_from_document(
+                document=document,
+                key="contract_status",
+                container=_DIAGNOSTIC_CONTAINER,
+                enum_type=OutputContractStatusEnum,
+            ),
+            finish_reason=self.__required(document=document, key="finish_reason", container=_DIAGNOSTIC_CONTAINER),
+            length_interruption=self.__enum_from_document(
+                document=document,
+                key="length_interruption",
+                container=_DIAGNOSTIC_CONTAINER,
+                enum_type=LengthInterruptionEnum,
+            ),
+            problem=self.__problem_from_document(document=problem) if problem is not None else None,
+            repaired_closings=self.__required(
+                document=document, key="repaired_closings", container=_DIAGNOSTIC_CONTAINER
+            ),
+        )
+
+    def __problem_from_document(self, document: dict[str, Any]) -> OutputProblem:
+        """Reconstrói o problema que motivou a recusa da saída."""
+        return OutputProblem(
+            code=self.__enum_from_document(
+                document=document, key="code", container=_PROBLEM_CONTAINER, enum_type=OutputProblemCodeEnum
+            ),
+            reason=self.__required(document=document, key="reason", container=_PROBLEM_CONTAINER),
+            field=self.__required(document=document, key="field", container=_PROBLEM_CONTAINER),
+            affected_ids=tuple(self.__required(document=document, key="affected_ids", container=_PROBLEM_CONTAINER)),
+        )
+
+    def __recovery_from_optional_document(self, document: dict[str, Any] | None) -> OutputRecovery | None:
+        """Reconstrói a recuperação da saída, ausente sem recusa ou em documentos anteriores ao registro."""
+        if document is None:
+            return None
+        return OutputRecovery(
+            strategy=self.__enum_from_document(
+                document=document, key="strategy", container=_RECOVERY_CONTAINER, enum_type=RecoveryStrategyEnum
+            ),
+            result=self.__enum_from_document(
+                document=document, key="result", container=_RECOVERY_CONTAINER, enum_type=RecoveryResultEnum
+            ),
+            resolved_by_invocation_id=self.__required(
+                document=document, key="resolved_by_invocation_id", container=_RECOVERY_CONTAINER
+            ),
         )
 
     def __failure_from_optional_document(self, document: dict[str, Any] | None) -> SessionFailure | None:
@@ -343,6 +466,7 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             prompt_input=tuple(
                 self.__prompt_message_from_document(document=item) for item in document.get("prompt_input", [])
             ),
+            invocation_id=document.get("invocation_id"),
         )
 
     def __prompt_message_from_document(self, document: dict[str, Any]) -> Message:
