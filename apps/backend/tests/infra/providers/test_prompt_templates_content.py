@@ -10,7 +10,7 @@ _PLACEHOLDERS_POR_FASE = {
     ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: {"user_question"},
     ThinkingPhaseEnum.B1_TASK_RESOLUTION: {"task_description", "task_acceptance_criteria", "learnings"},
     ThinkingPhaseEnum.B2_TASK_VERIFICATION: {"preliminary_result", "task_acceptance_criteria", "learnings"},
-    ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: {"learnings"},
+    ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: {"task_description", "approved_result", "task_history", "learnings"},
     ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: {"stored_results", "general_acceptance_criteria", "learnings"},
     ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING: {
         "unmet_criteria", "stored_results", "next_task_number", "max_tasks", "learnings"
@@ -232,6 +232,77 @@ def test_template_b4_proibe_metadados_da_tarefa_e_do_validador_nos_aprendizados(
     assert "menções à própria tarefa" in template
     assert "veredito de aprovação" in template
     assert "dados de controle, metadados operacionais" not in template
+
+
+# ── B.4 — Resultados parciais da tarefa aprovada ────────────────────────────
+
+
+def _b4() -> str:
+    return " ".join(_provider().get(phase=ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION).split())
+
+
+def test_template_b4_recebe_o_material_da_extracao_em_areas_delimitadas_e_nao_da_conversa() -> None:
+    template = _provider().get(phase=ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION)
+
+    assert "<resultado_aprovado>\n{{approved_result}}\n</resultado_aprovado>" in template
+    assert "<historico_da_tarefa>\n{{task_history}}\n</historico_da_tarefa>" in template
+    assert "janela de contexto própria" in _b4()
+    assert "contexto acima" not in _b4()
+    # O histórico é material da extração: as áreas da tarefa vêm antes das instruções.
+    assert template.index("{{task_history}}") < template.index("## Instruções")
+
+
+def test_template_b4_exige_registrar_todo_resultado_parcial_novo_com_significado_autonomo() -> None:
+    template = _b4().lower()
+
+    assert "registre todo resultado parcial novo do resultado aprovado" in template
+    assert "sem o histórico anterior" in template
+    assert "a simplicidade de uma conclusão não justifica omiti-la" in template
+    assert "percorra o resultado aprovado conclusão por conclusão" in template
+
+
+def test_template_b4_define_o_que_preservar_para_valores_classificacoes_e_relacoes() -> None:
+    template = _b4().lower()
+
+    assert "**valores:** preserve a grandeza" in template
+    assert "o valor, a unidade de medida e as condições relevantes" in template
+    assert "**classificações:** identifique a afirmação" in template
+    assert "sua classificação" in template and "um motivo breve" in template
+    assert "**relações:** preserve a fórmula ou relação e as hipóteses necessárias" in template
+
+
+def test_template_b4_distingue_o_fato_compacto_da_breve_explicacao_sem_copiar_a_resolucao() -> None:
+    template = _b4()
+
+    assert "**fato compacto**" in template and "**breve explicação**" in template
+    assert "Não copie a resolução completa" in template
+    assert '"A afirmação I é verdadeira: C ⊆ A implica A ∩ C = C, pela distributividade."' in template
+
+
+def test_template_b4_prioriza_a_conclusao_aprovada_e_descarta_valores_refutados() -> None:
+    template = _b4().lower()
+
+    assert "priorize a conclusão finalmente aprovada" in template
+    assert "refutados, corrigidos ou substituídos" in template
+    assert "não são aprendizados vigentes" in template
+
+
+def test_template_b4_proibe_instrucoes_criterios_vereditos_relatos_e_duplicatas() -> None:
+    template = _b4().lower()
+
+    assert "instruções da tarefa" in template
+    assert "critérios de aceite" in template
+    assert "vereditos" in template
+    assert "relatos do processo" in template
+    assert "fatos que já constam em **aprendizados pontuais**, mesmo com outras palavras" in template
+
+
+def test_template_b4_so_admite_lista_vazia_sem_fato_novo() -> None:
+    template = _b4()
+
+    assert '`{"learnings": []}` **somente**' in template
+    assert "nenhum fato novo" in template
+    assert "todas as suas conclusões já constarem em **Aprendizados Pontuais**" in template
 
 
 def test_templates_orientam_avaliacao_relativa_por_eliminacao_sem_hiper_literalismo() -> None:

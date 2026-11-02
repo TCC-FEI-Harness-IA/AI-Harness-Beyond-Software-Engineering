@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from src.domain.entities.thinking.acceptance_criterion import AcceptanceCriterion
 from src.domain.entities.thinking.task_attempt import TaskAttempt
 from src.domain.entities.thinking.task_result import TaskResult
+from src.domain.entities.thinking.verification_report import VerificationReport
 from src.domain.enums.task_status_enum import TaskStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 
@@ -47,3 +48,11 @@ class Task:
             raise ValueError(f"A tarefa '{self.id}' não tem um relatório aprovado na última tentativa.")
 
         return TaskResult(task_id=self.id, task_title=self.title, content=last_attempt.output)
+
+    def verified_attempts(self) -> tuple[tuple[TaskAttempt, VerificationReport], ...]:
+        """Devolve as tentativas já verificadas, cada uma com o seu relatório: o histórico que B.4 recebe.
+
+        Returns:
+            tuple[tuple[TaskAttempt, VerificationReport], ...]: Tentativas com relatório, em ordem.
+        """
+        return tuple((attempt, attempt.report) for attempt in self.attempts if attempt.report is not None)

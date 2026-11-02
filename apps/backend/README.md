@@ -575,7 +575,7 @@ persistida antes do evento `result`.
 |---|---|
 | A.2 conclui o plano inicial | A.3 anota os pontos de atenção do enunciado (valores com unidades, alternativas, fórmulas, condições) numa janela própria; as anotações entram na memória de aprendizados antes de qualquer tarefa. Lista vazia é válida. |
 | Qualquer prompt de B.1, B.2, B.4, C.1, C.2 ou C.3 é montado | O template tem a área **Aprendizados Pontuais**, preenchida com todos os aprendizados acumulados até aquele momento (anotações de A.3 seguidas dos aprendizados de B.4), ou com o aviso de que ainda não há nenhum. Os aprendizados nunca entram nos resultados armazenados. |
-| B.2 aprova | B.3 armazena só essa resposta; B.4 roda sobre o histórico completo da tarefa. |
+| B.2 aprova | B.3 armazena só essa resposta; B.4 roda numa janela própria e recebe, como entradas explícitas, a tarefa, o resultado aprovado, o histórico de todas as tentativas (com os vereditos do validador) e os aprendizados já registrados. A memória descarta aprendizados em branco ou repetidos (a menos de maiúsculas e espaços). |
 | B.2 reprova e há tentativas | O veredito e a instrução de refazer entram na mesma janela da tarefa; B.1 repete com temperatura `1`. A verificação dessa tentativa e as fases seguintes voltam à temperatura do usuário. |
 | B.2 reprova e as tentativas acabam | Nada é armazenado, B.4 não roda, a execução é interrompida. |
 | B.2/C.1 devolve um relatório vazio, incompleto, duplicado, com ID desconhecido ou contraditório | O verificador é chamado de novo, com temperatura `1`, para corrigir a saída (chamada contada); não consome tentativa de B.1. Sem correção, a fase falha. |

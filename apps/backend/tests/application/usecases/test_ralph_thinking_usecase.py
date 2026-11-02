@@ -1191,8 +1191,8 @@ async def test_a_instrucao_de_refazer_so_aparece_quando_ha_nova_tentativa() -> N
 
     segunda_tentativa = cenario.llm.texts_of(8)
     assert sum("Refaça a resolução da tarefa" in texto for texto in segunda_tentativa) == 1
-    historico_de_b4 = cenario.llm.texts_of(10)
-    assert sum("Refaça a resolução da tarefa" in texto for texto in historico_de_b4) == 1
+    # B.4 roda em janela própria: a instrução de refazer é parte da conversa de B.1, não do histórico.
+    assert not any("Refaça a resolução da tarefa" in texto for texto in cenario.llm.texts_of(10))
 
 
 async def test_a_resposta_reprovada_nao_e_duplicada_na_mensagem_de_correcao() -> None:
@@ -1209,10 +1209,11 @@ async def test_b4_recebe_o_veredito_de_aprovacao_mesmo_quando_aprovado_de_primei
 
     await cenario.run()
 
-    contexto_de_b4 = " ".join(cenario.llm.texts_of(5))
-    assert "Veredito do validador (tentativa 1)" in contexto_de_b4
-    assert "`approved`" in contexto_de_b4
-    assert "atende" in contexto_de_b4
+    historico_de_b4 = cenario.template_provider.variables_of(_FASE.B4_LEARNINGS_EXTRACTION)[0]["task_history"]
+    assert "### Tentativa 1 — aprovada" in historico_de_b4
+    assert "**Veredito do validador:**" in historico_de_b4
+    assert "`approved`" in historico_de_b4
+    assert "atende" in historico_de_b4
 
 
 async def test_b4_recebe_a_reprovacao_e_tambem_a_aprovacao_de_uma_tarefa_com_retry() -> None:
@@ -1220,38 +1221,11 @@ async def test_b4_recebe_a_reprovacao_e_tambem_a_aprovacao_de_uma_tarefa_com_ret
 
     await cenario.run()
 
-    contexto_de_b4 = cenario.llm.texts_of(10)
-    vereditos = [texto for texto in contexto_de_b4 if texto.startswith("## Veredito do validador")]
-    assert len(vereditos) == 2
-    assert "tentativa 1" in vereditos[0] and "`reproved`" in vereditos[0]
-    assert "tentativa 2" in vereditos[1] and "`approved`" in vereditos[1]
-
-
-async def test_b4_recebe_a_correcao_de_saida_estruturada_do_validador_identificada_como_invalida() -> None:
-    saida_invalida_do_validador = json.dumps(
-        {"decision": "approved", "criteria_evaluation": [], "unmet_criteria_ids": []}
-    )
-    cenario = RalphScenario(
-        responses=[
-            _criterios(),
-            _tarefas("T1"),
-            _anotacoes_do_enunciado(),
-            _resolucao("2 e primo"),
-            saida_invalida_do_validador,
-            _aprovado("T1"),
-            _aprendizados("fato"),
-            _global_aprovado(),
-            _resposta_final(),
-        ]
-    )
-
-    await cenario.run()
-
-    contexto_de_b4 = cenario.llm.texts_of(6)
-    indice_da_invalida = next(i for i, texto in enumerate(contexto_de_b4) if "saída inválida" in texto)
-    indice_do_veredito = next(i for i, texto in enumerate(contexto_de_b4) if texto.startswith("## Veredito"))
-    assert indice_da_invalida < indice_do_veredito
-    assert "Faltam avaliações" in contexto_de_b4[indice_da_invalida]
+    historico_de_b4 = cenario.template_provider.variables_of(_FASE.B4_LEARNINGS_EXTRACTION)[1]["task_history"]
+    reprovada, aprovada = historico_de_b4.split("### Tentativa 2 — aprovada")
+    assert "### Tentativa 1 — reprovada" in reprovada and "`reproved`" in reprovada
+    assert "primeira tentativa incompleta" in reprovada
+    assert "`approved`" in aprovada
 
 
 async def test_a_janela_do_validador_continua_isolada_da_da_tarefa() -> None:

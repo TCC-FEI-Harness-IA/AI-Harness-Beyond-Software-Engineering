@@ -108,3 +108,18 @@ def test_tarefa_marcada_aprovada_com_ultimo_relatorio_reprovado_nao_gera_resulta
 
     with pytest.raises(ValueError, match="relatório aprovado"):
         tarefa.approved_result()
+
+
+def test_tentativas_verificadas_trazem_cada_tentativa_com_o_seu_relatorio_em_ordem() -> None:
+    reprovado, aprovado = _relatorio(False), _relatorio(True)
+    tarefa = _tarefa_com_tentativas(TaskStatusEnum.APPROVED, reprovado, aprovado)
+
+    verificadas = tarefa.verified_attempts()
+
+    assert verificadas == ((tarefa.attempts[0], reprovado), (tarefa.attempts[1], aprovado))
+
+
+def test_tentativas_verificadas_ignoram_a_tentativa_ainda_sem_relatorio() -> None:
+    tarefa = _tarefa_com_tentativas(TaskStatusEnum.IN_PROGRESS, _relatorio(False), None)
+
+    assert [tentativa.number for tentativa, _ in tarefa.verified_attempts()] == [1]

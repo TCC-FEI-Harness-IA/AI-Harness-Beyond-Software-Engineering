@@ -8,11 +8,14 @@ class ILearningsMemory(ABC):
     """Contrato do armazenamento dos aprendizados pontuais do fluxo (A.3 e B.4)."""
 
     @abstractmethod
-    def append(self, learnings: Sequence[Learning]) -> None:
-        """Acumula novos aprendizados extraídos por A.3 ou B.4.
+    def append(self, learnings: Sequence[Learning]) -> tuple[Learning, ...]:
+        """Acumula novos aprendizados extraídos por A.3 ou B.4, descartando os já registrados.
 
         Args:
             learnings: Aprendizados a acumular.
+
+        Returns:
+            tuple[Learning, ...]: Aprendizados efetivamente acumulados, na ordem recebida.
         """
         raise NotImplementedError
 
