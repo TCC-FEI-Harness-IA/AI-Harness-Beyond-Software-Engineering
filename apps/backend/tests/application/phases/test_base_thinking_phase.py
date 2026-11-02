@@ -6,7 +6,6 @@ import pytest
 from src.application.phases.general_criteria_phase import GeneralCriteriaPhase
 from src.application.phases.task_verification_phase import TaskVerificationPhase
 from src.domain.entities.llm.context_window import ContextWindow
-from src.domain.entities.thinking.invalid_output import InvalidOutput
 from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
@@ -226,10 +225,10 @@ async def test_saidas_recusadas_e_corrigidas_ficam_expostas_no_resultado(recorde
         context=_janela(), variables={}
     )
 
-    assert resultado.invalid_outputs == (
-        InvalidOutput(raw_output="primeira ruim", reason="json ausente"),
-        InvalidOutput(raw_output="segunda ruim", reason="campo faltando"),
-    )
+    assert [(saida.raw_output, saida.reason, saida.invocation_id) for saida in resultado.invalid_outputs] == [
+        ("primeira ruim", "json ausente", "inv_1"),
+        ("segunda ruim", "campo faltando", "inv_2"),
+    ]
 
 
 async def test_falha_de_parsing_alem_do_limite_repropaga_o_erro(recorder: SessionRecorderAdapter) -> None:

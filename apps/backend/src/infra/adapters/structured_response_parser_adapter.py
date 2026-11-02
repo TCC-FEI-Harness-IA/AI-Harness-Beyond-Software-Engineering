@@ -1,11 +1,18 @@
 import json
 import logging
 import re
+from dataclasses import dataclass
 from typing import Any, Callable
 
+from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
+from src.domain.entities.thinking.output_problem import OutputProblem
+from src.domain.entities.thinking.parsed_output import ParsedOutput
 from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
-from src.domain.enums.output_defect_enum import OutputDefectEnum
+from src.domain.enums.length_interruption_enum import LengthInterruptionEnum
+from src.domain.enums.output_contract_status_enum import OutputContractStatusEnum
+from src.domain.enums.output_problem_code_enum import OutputProblemCodeEnum
+from src.domain.enums.output_syntax_status_enum import OutputSyntaxStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.enums.verification_decision_enum import VerificationDecisionEnum
 from src.domain.errors.phase_parsing_error import PhaseParsingError
@@ -20,6 +27,8 @@ _TASK_TEXT_FIELDS = ("id", "title", "description")
 _CRITERION_TEXT_FIELDS = ("id", "description")
 _NOT_FOUND = -1
 _ID_LIST_SEPARATOR = ", "
+_ITEM_SUFFIX = "[]"
+_FIELD_SEPARATOR = "."
 # Strings JSON completas, com escapes: o que está dentro delas não conta como estrutura.
 _STRING_LITERAL_PATTERN = re.compile(r'"(?:[^"\\]|\\.)*"', re.DOTALL)
 _STRING_DELIMITER = '"'
@@ -31,6 +40,40 @@ _NO_JSON_REASON = "Nenhum objeto JSON válido foi encontrado na saída."
 _TRUNCATED_REASON = (
     "A saída foi interrompida pelo limite de comprimento antes de formar um objeto JSON completo."
 )
+_UNSUPPORTED_PHASE_REASON = "A fase não produz saída estruturada."
+
+
+@dataclass(frozen=True)
+class _Structure:
+    """Leitura estrutural de um trecho: string aberta, fechamentos pendentes e fechamento trocado."""
+
+    open_string: bool
+    pending_closings: str
+    mismatched: bool
+
+
+@dataclass(frozen=True)
+class _Extraction:
+    """Objeto extraído da saída e os fechamentos acrescentados pelo reparo, quando houve."""
+
+    parsed: dict[str, Any]
+    repaired_closings: str | None
+
+
+class _ContractViolation(Exception):
+    """Violação do contrato da fase, convertida em `PhaseParsingError` com diagnóstico."""
+
+    def __init__(
+        self,
+        code: OutputProblemCodeEnum,
+        reason: str,
+        field: str | None = None,
+        affected_ids: tuple[str, ...] = (),
+        limit: BudgetLimitEnum | None = None,
+    ) -> None:
+        super().__init__(reason)
+        self.problem = OutputProblem(code=code, reason=reason, field=field, affected_ids=affected_ids)
+        self.limit = limit
 
 
 class StructuredResponseParserAdapter(IStructuredResponseParser):
@@ -46,6 +89,11 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
     inequívoco, que não alteram conteúdo. Nada aqui inventa campos, completa strings
     interrompidas, preenche explicações ou muda o veredito de um relatório. Toda recusa é
     classificada (`OutputDefectEnum`) para que a correção pedida ao modelo seja a adequada.
+
+    Toda saída avaliada ganha um diagnóstico estruturado: estado da sintaxe (válida,
+    inválida ou válida após reparo), estado do contrato (válido, inválido ou não avaliado),
+    código do problema com o campo e os identificadores afetados, motivo de término original
+    e interrupção por comprimento — confirmada só pelo provedor; sem ele, no máximo um indício.
     """
 
     def __init__(self, logger: logging.Logger) -> None:
@@ -56,14 +104,14 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         """
         self.logger = logger
 
-    def parse(
+    def parse_output(
         self,
         raw_output: str,
         phase: ThinkingPhaseEnum,
         validation: ValidationContext | None = None,
         finish_reason: str | None = None,
-    ) -> dict[str, Any]:
-        """Extrai e valida o JSON produzido pelo modelo para a fase informada.
+    ) -> ParsedOutput:
+        """Extrai e valida o JSON produzido pelo modelo, devolvendo também o diagnóstico da saída.
 
         Args:
             raw_output: Saída bruta devolvida pelo modelo.
@@ -73,30 +121,92 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
                 limite de tokens não tem os fechamentos ausentes reparados.
 
         Returns:
-            dict[str, Any]: Estrutura JSON já validada contra o schema da fase.
+            ParsedOutput: Estrutura validada e diagnóstico de aceite.
 
         Raises:
-            PhaseParsingError: Quando não há JSON válido (defeito de sintaxe, ou de interrupção
-                quando a saída foi cortada pelo limite de comprimento), quando a fase não produz
-                saída estruturada, quando o schema não confere ou quando a saída contradiz o
-                contexto de validação (violação de contrato).
+            PhaseParsingError: Quando não há JSON válido, quando a fase não produz saída
+                estruturada, quando o schema não confere ou quando a saída contradiz o contexto
+                de validação. O erro carrega o diagnóstico da recusa.
             ValueError: Quando uma fase de verificação é chamada sem os critérios esperados.
         """
+        length_interruption = LengthInterruptionEnum.classify(
+            finish_reason=finish_reason, ends_incomplete=self.__ends_incomplete(raw_output=raw_output)
+        )
         validator = self.__validators().get(phase)
         if validator is None:
-            raise PhaseParsingError(
+            self.__fail(
                 phase=phase,
-                raw_output=self.__truncate(raw_output=raw_output),
-                reason="A fase não produz saída estruturada.",
+                raw_output=raw_output,
+                diagnostic=OutputDiagnostic(
+                    syntax_status=None,
+                    contract_status=OutputContractStatusEnum.NOT_EVALUATED,
+                    finish_reason=finish_reason,
+                    length_interruption=length_interruption,
+                    problem=OutputProblem(
+                        code=OutputProblemCodeEnum.UNSUPPORTED_PHASE, reason=_UNSUPPORTED_PHASE_REASON
+                    ),
+                ),
             )
 
-        parsed = self.__extract(raw_output=raw_output, phase=phase, finish_reason=finish_reason)
-        validator(parsed, phase, raw_output, validation)
-        return parsed
+        extraction = self.__extract(raw_output=raw_output, phase=phase, finish_reason=finish_reason)
+        if extraction is None:
+            self.__fail(
+                phase=phase,
+                raw_output=raw_output,
+                diagnostic=OutputDiagnostic(
+                    syntax_status=OutputSyntaxStatusEnum.INVALID,
+                    contract_status=OutputContractStatusEnum.NOT_EVALUATED,
+                    finish_reason=finish_reason,
+                    length_interruption=length_interruption,
+                    problem=OutputProblem(
+                        code=OutputProblemCodeEnum.JSON_SYNTAX,
+                        reason=(
+                            _TRUNCATED_REASON
+                            if length_interruption is LengthInterruptionEnum.CONFIRMED
+                            else _NO_JSON_REASON
+                        ),
+                    ),
+                ),
+            )
+
+        try:
+            validator(extraction.parsed, phase, validation)
+        except _ContractViolation as violation:
+            self.__fail(
+                phase=phase,
+                raw_output=raw_output,
+                diagnostic=OutputDiagnostic(
+                    syntax_status=(
+                        OutputSyntaxStatusEnum.REPAIRED
+                        if extraction.repaired_closings
+                        else OutputSyntaxStatusEnum.VALID
+                    ),
+                    contract_status=OutputContractStatusEnum.INVALID,
+                    finish_reason=finish_reason,
+                    length_interruption=length_interruption,
+                    problem=violation.problem,
+                    repaired_closings=extraction.repaired_closings,
+                ),
+                limit=violation.limit,
+            )
+
+        if length_interruption is LengthInterruptionEnum.CONFIRMED:
+            self.logger.warning(
+                "Saída da fase '%s' aceita, mas terminada pelo limite de comprimento: sem garantia de completude.",
+                phase.value,
+            )
+        return ParsedOutput(
+            parsed=extraction.parsed,
+            diagnostic=OutputDiagnostic.accepted(
+                finish_reason=finish_reason,
+                length_interruption=length_interruption,
+                repaired_closings=extraction.repaired_closings,
+            ),
+        )
 
     def __validators(
         self,
-    ) -> dict[ThinkingPhaseEnum, Callable[[dict[str, Any], ThinkingPhaseEnum, str, ValidationContext | None], None]]:
+    ) -> dict[ThinkingPhaseEnum, Callable[[dict[str, Any], ThinkingPhaseEnum, ValidationContext | None], None]]:
         """Mapa de fase para o validador de schema correspondente.
 
         Returns:
@@ -114,7 +224,9 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             ThinkingPhaseEnum.C3_FINAL_ANSWER: self.__validate_final_answer,
         }
 
-    def __extract(self, raw_output: str, phase: ThinkingPhaseEnum, finish_reason: str | None) -> dict[str, Any]:
+    # ── Extração e sintaxe ───────────────────────────────────────────────────
+
+    def __extract(self, raw_output: str, phase: ThinkingPhaseEnum, finish_reason: str | None) -> _Extraction | None:
         """Obtém o objeto JSON da saída bruta, tolerando cerca, texto solto e fechamentos ausentes.
 
         Args:
@@ -123,27 +235,16 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             finish_reason: Motivo de término informado pelo provedor, quando há.
 
         Returns:
-            dict[str, Any]: Objeto JSON extraído.
-
-        Raises:
-            PhaseParsingError: Quando nenhuma estratégia devolve um objeto JSON: defeito de
-                interrupção se a saída foi cortada pelo limite de comprimento, de sintaxe no demais.
+            _Extraction | None: Objeto extraído, ou `None` quando nenhuma estratégia devolve um objeto.
         """
         for candidate in self.__candidates(raw_output=raw_output):
             parsed = self.__load_object(candidate=candidate)
             if parsed is not None:
-                return parsed
+                return _Extraction(parsed=parsed, repaired_closings=None)
 
-        if finish_reason in _TRUNCATED_FINISH_REASONS:
-            self.__fail(
-                phase=phase, raw_output=raw_output, reason=_TRUNCATED_REASON, defect=OutputDefectEnum.TRUNCATED
-            )
-
-        parsed = self.__repair_missing_closings(raw_output=raw_output, phase=phase)
-        if parsed is not None:
-            return parsed
-
-        self.__fail(phase=phase, raw_output=raw_output, reason=_NO_JSON_REASON, defect=OutputDefectEnum.SYNTAX)
+        if finish_reason not in _TRUNCATED_FINISH_REASONS:
+            return self.__repair_missing_closings(raw_output=raw_output, phase=phase)
+        return None
 
     def __candidates(self, raw_output: str) -> list[str]:
         """Lista os trechos candidatos a objeto JSON, na ordem de tentativa.
@@ -164,7 +265,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
 
         return candidates
 
-    def __repair_missing_closings(self, raw_output: str, phase: ThinkingPhaseEnum) -> dict[str, Any] | None:
+    def __repair_missing_closings(self, raw_output: str, phase: ThinkingPhaseEnum) -> _Extraction | None:
         """Completa o JSON que terminou sem fechar as últimas chaves e colchetes.
 
         Só acrescenta fechamentos ao fim: uma saída que termina dentro de uma string, com
@@ -175,21 +276,21 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             phase: Fase de thinking que produziu a saída.
 
         Returns:
-            dict[str, Any] | None: Objeto reparado, ou `None` quando nenhum candidato é reparável.
+            _Extraction | None: Objeto reparado, ou `None` quando nenhum candidato é reparável.
         """
         for candidate in self.__repair_candidates(raw_output=raw_output):
-            missing = self.__missing_closings(candidate=candidate)
-            if not missing:
+            structure = self.__structure(candidate=candidate)
+            if structure.open_string or structure.mismatched or not structure.pending_closings:
                 continue
 
-            parsed = self.__load_object(candidate=candidate + missing)
+            parsed = self.__load_object(candidate=candidate + structure.pending_closings)
             if parsed is not None:
                 self.logger.warning(
                     "Saída da fase '%s' reparada: fechamento(s) ausente(s) '%s' acrescentado(s) ao final.",
                     phase.value,
-                    missing,
+                    structure.pending_closings,
                 )
-                return parsed
+                return _Extraction(parsed=parsed, repaired_closings=structure.pending_closings)
 
         return None
 
@@ -204,35 +305,61 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         """
         candidates = [match.group(1).rstrip() for match in _FENCE_PATTERN.finditer(raw_output)]
 
-        opening = raw_output.find(_OBJECT_OPENING)
-        if opening != _NOT_FOUND:
-            candidates.append(raw_output[opening:].rstrip())
+        tail = self.__tail_from_first_opening(raw_output=raw_output)
+        if tail is not None:
+            candidates.append(tail)
 
         return candidates
 
-    def __missing_closings(self, candidate: str) -> str:
-        """Calcula os fechamentos que faltam no fim do candidato, na ordem em que devem entrar.
+    def __tail_from_first_opening(self, raw_output: str) -> str | None:
+        """Recorta a saída do primeiro `{` até o fim, sem os espaços finais.
+
+        Returns:
+            str | None: Trecho recortado, ou `None` quando a saída não abre nenhum objeto.
+        """
+        opening = raw_output.find(_OBJECT_OPENING)
+        if opening == _NOT_FOUND:
+            return None
+        return raw_output[opening:].rstrip()
+
+    def __ends_incomplete(self, raw_output: str) -> bool:
+        """Indica se a saída termina estruturalmente incompleta, o indício de um corte.
+
+        Considera o trecho do primeiro `{` até o fim: terminar dentro de uma string ou com
+        chaves e colchetes abertos é indício de corte — nunca confirmação, que só o provedor dá.
+
+        Returns:
+            bool: `True` quando a saída termina com string ou estrutura aberta.
+        """
+        tail = self.__tail_from_first_opening(raw_output=raw_output)
+        if tail is None:
+            return False
+        structure = self.__structure(candidate=tail)
+        return structure.open_string or bool(structure.pending_closings)
+
+    def __structure(self, candidate: str) -> _Structure:
+        """Lê a estrutura do candidato, ignorando o conteúdo das strings completas.
 
         Args:
             candidate: Trecho candidato a objeto JSON.
 
         Returns:
-            str: Fechamentos ausentes, ou vazio quando não há o que reparar com segurança —
-            estrutura já fechada, saída terminada dentro de uma string, ou fechamento que não
-            corresponde à abertura pendente.
+            _Structure: String aberta, fechamentos pendentes na ordem em que devem entrar e
+            presença de fechamento que não corresponde à abertura pendente.
         """
         structure = _STRING_LITERAL_PATTERN.sub("", candidate)
-        if _STRING_DELIMITER in structure:
-            return ""
+        open_string = _STRING_DELIMITER in structure
+        if open_string:
+            structure = structure[: structure.index(_STRING_DELIMITER)]
 
         pending: list[str] = []
         for char in structure:
             if char in _CLOSING_BY_OPENING:
                 pending.append(_CLOSING_BY_OPENING[char])
             elif char in _CLOSINGS and (not pending or pending.pop() != char):
-                return ""
+                return _Structure(open_string=open_string, pending_closings="", mismatched=True)
 
-        return "".join(reversed(pending))
+        return _Structure(open_string=open_string, pending_closings="".join(reversed(pending)), mismatched=False)
 
     def __load_object(self, candidate: str) -> dict[str, Any] | None:
         """Tenta interpretar um candidato como objeto JSON.
@@ -254,80 +381,73 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
 
         return parsed
 
+    # ── Contrato de cada fase ────────────────────────────────────────────────
+
     def __validate_general_criteria(
-        self,
-        parsed: dict[str, Any],
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
-        validation: ValidationContext | None,
+        self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None
     ) -> None:
         """Valida o schema de A.1.
 
         Raises:
-            PhaseParsingError: Quando a lista de critérios gerais não confere ou repete identificadores.
+            _ContractViolation: Quando a lista de critérios gerais não confere ou repete identificadores.
         """
-        criteria = self.__require_list(
-            parsed=parsed, field="general_acceptance_criteria", phase=phase, raw_output=raw_output, allow_empty=False
-        )
+        field = "general_acceptance_criteria"
+        criteria = self.__require_list(source=parsed, key=field, label=field, allow_empty=False)
         for criterion in criteria:
-            self.__validate_criterion(criterion=criterion, phase=phase, raw_output=raw_output)
+            self.__validate_criterion(criterion=criterion, container=field)
         self.__require_unique_ids(
             ids=[criterion["id"] for criterion in criteria],
             what="critérios gerais",
-            phase=phase,
-            raw_output=raw_output,
+            field=self.__item_field(field, "id"),
         )
 
     def __validate_tasks(
-        self,
-        parsed: dict[str, Any],
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
-        validation: ValidationContext | None,
+        self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None
     ) -> None:
         """Valida o schema de A.2 e C.2 e o lote contra o contexto de validação.
 
         Raises:
-            PhaseParsingError: Quando a lista de tarefas não confere, repete identificadores,
+            _ContractViolation: Quando a lista de tarefas não confere, repete identificadores,
                 reutiliza o de uma tarefa já criada ou excede o teto de tarefas do lote.
         """
-        tasks = self.__require_list(
-            parsed=parsed, field="tasks", phase=phase, raw_output=raw_output, allow_empty=False
-        )
+        tasks = self.__require_list(source=parsed, key="tasks", label="tasks", allow_empty=False)
+        criteria_container = self.__item_field("tasks", "acceptance_criteria")
         for task in tasks:
             if not isinstance(task, dict):
-                self.__fail(phase=phase, raw_output=raw_output, reason="Cada item de 'tasks' deve ser um objeto.")
-            for field in _TASK_TEXT_FIELDS:
-                self.__require_text(source=task, field=f"tasks.{field}", value=task.get(field), phase=phase,
-                                    raw_output=raw_output)
+                raise _ContractViolation(
+                    code=OutputProblemCodeEnum.SCHEMA_TYPE,
+                    reason="Cada item de 'tasks' deve ser um objeto.",
+                    field=f"tasks{_ITEM_SUFFIX}",
+                )
+            for key in _TASK_TEXT_FIELDS:
+                self.__require_text(
+                    source=task, key=key, label=f"tasks.{key}", field=self.__item_field("tasks", key),
+                    owner_id=task.get("id"),
+                )
             criteria = self.__require_list(
-                parsed=task, field="acceptance_criteria", phase=phase, raw_output=raw_output, allow_empty=False
+                source=task, key="acceptance_criteria", label="acceptance_criteria", allow_empty=False,
+                field=criteria_container, owner_id=task["id"],
             )
             for criterion in criteria:
-                self.__validate_criterion(criterion=criterion, phase=phase, raw_output=raw_output)
+                self.__validate_criterion(criterion=criterion, container=criteria_container)
             self.__require_unique_ids(
                 ids=[criterion["id"] for criterion in criteria],
                 what=f"critérios da tarefa '{task['id']}'",
-                phase=phase,
-                raw_output=raw_output,
+                field=self.__item_field(criteria_container, "id"),
             )
 
         self.__require_unique_ids(
-            ids=[task["id"] for task in tasks], what="tarefas do lote", phase=phase, raw_output=raw_output
+            ids=[task["id"] for task in tasks], what="tarefas do lote", field=self.__item_field("tasks", "id")
         )
-        self.__validate_batch_against_session(tasks=tasks, phase=phase, raw_output=raw_output, validation=validation)
+        self.__validate_batch_against_session(tasks=tasks, validation=validation)
 
     def __validate_batch_against_session(
-        self,
-        tasks: list[dict[str, Any]],
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
-        validation: ValidationContext | None,
+        self, tasks: list[dict[str, Any]], validation: ValidationContext | None
     ) -> None:
         """Confronta o lote de tarefas com o que a sessão já tem e com o teto de tarefas.
 
         Raises:
-            PhaseParsingError: Quando o lote reutiliza o identificador de uma tarefa já criada
+            _ContractViolation: Quando o lote reutiliza o identificador de uma tarefa já criada
                 ou tem mais tarefas do que a sessão ainda comporta.
         """
         if validation is None:
@@ -335,53 +455,46 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
 
         reused = sorted(task["id"] for task in tasks if task["id"] in validation.known_task_ids)
         if reused:
-            self.__fail(
-                phase=phase,
-                raw_output=raw_output,
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.TASK_IDS,
                 reason=f"Os identificadores de tarefa {_ID_LIST_SEPARATOR.join(reused)} já foram usados na sessão.",
+                field=self.__item_field("tasks", "id"),
+                affected_ids=tuple(reused),
             )
 
         if validation.max_tasks is not None and len(tasks) > validation.max_tasks:
-            self.__fail(
-                phase=phase,
-                raw_output=raw_output,
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.TASK_LIMIT,
                 reason=(
                     f"O lote tem {len(tasks)} tarefas, mas a sessão comporta no máximo {validation.max_tasks}. "
                     "Reduza o lote preservando tarefas autônomas e de objetivo único."
                 ),
+                field="tasks",
                 limit=BudgetLimitEnum.TASKS_PER_SESSION,
             )
 
     def __validate_task_result(
-        self,
-        parsed: dict[str, Any],
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
-        validation: ValidationContext | None,
+        self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None
     ) -> None:
         """Valida o schema de B.1.
 
         Raises:
-            PhaseParsingError: Quando 'result' não é uma string não vazia.
+            _ContractViolation: Quando 'result' não é uma string não vazia.
         """
-        self.__require_text(source=parsed, field="result", value=parsed.get("result"), phase=phase,
-                            raw_output=raw_output)
+        self.__require_text(source=parsed, key="result", label="result", field="result")
 
     def __validate_verification(
-        self,
-        parsed: dict[str, Any],
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
-        validation: ValidationContext | None,
+        self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None
     ) -> None:
         """Valida o schema e a coerência de B.2 e C.1 contra os critérios esperados.
 
         O relatório só é aceito quando avalia cada critério esperado exatamente uma vez e
         quando decisão, avaliações e pendências não se contradizem. Nada aqui julga a
-        veracidade semântica das avaliações: isso continua sendo do modelo verificador.
+        veracidade semântica das avaliações: isso continua sendo do modelo verificador. Uma
+        reprovação coerente é um resultado semântico normal, aceito como qualquer aprovação.
 
         Raises:
-            PhaseParsingError: Quando o schema não confere, a cobertura dos critérios é
+            _ContractViolation: Quando o schema não confere, a cobertura dos critérios é
                 incompleta ou a decisão é incoerente com as avaliações e as pendências.
             ValueError: Quando o contexto de validação não informa os critérios esperados.
         """
@@ -390,273 +503,362 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
                 f"A fase '{phase.value}' exige um contexto de validação com os critérios esperados."
             )
 
-        decision = parsed.get("decision")
-        if decision not in tuple(VerificationDecisionEnum):
-            self.__fail(
-                phase=phase,
-                raw_output=raw_output,
-                reason=f"O campo 'decision' deve ser um veredito conhecido. Valor: '{decision}'.",
-            )
+        decision = self.__require_decision(parsed=parsed)
 
         evaluations = self.__require_list(
-            parsed=parsed, field="criteria_evaluation", phase=phase, raw_output=raw_output, allow_empty=True
+            source=parsed, key="criteria_evaluation", label="criteria_evaluation", allow_empty=True
         )
         for evaluation in evaluations:
-            self.__validate_evaluation(evaluation=evaluation, phase=phase, raw_output=raw_output)
+            self.__validate_evaluation(evaluation=evaluation)
 
         unmet = self.__require_list(
-            parsed=parsed, field="unmet_criteria_ids", phase=phase, raw_output=raw_output, allow_empty=True
+            source=parsed, key="unmet_criteria_ids", label="unmet_criteria_ids", allow_empty=True
         )
         for criterion_id in unmet:
             if not isinstance(criterion_id, str):
-                self.__fail(
-                    phase=phase,
-                    raw_output=raw_output,
+                raise _ContractViolation(
+                    code=OutputProblemCodeEnum.SCHEMA_TYPE,
                     reason="Cada item de 'unmet_criteria_ids' deve ser uma string.",
+                    field=f"unmet_criteria_ids{_ITEM_SUFFIX}",
                 )
 
         self.__require_exact_coverage(
             evaluated_ids=[evaluation["criterion_id"] for evaluation in evaluations],
             expected_ids=validation.expected_criteria_ids,
-            phase=phase,
-            raw_output=raw_output,
         )
         failed_ids = [evaluation["criterion_id"] for evaluation in evaluations if not evaluation["met"]]
-        self.__require_coherent_decision(
-            decision=decision, failed_ids=failed_ids, unmet=unmet, phase=phase, raw_output=raw_output
-        )
-        self.__require_unique_ids(ids=unmet, what="pendências", phase=phase, raw_output=raw_output)
+        self.__require_coherent_decision(decision=decision, failed_ids=failed_ids, unmet=unmet)
+        self.__require_unique_ids(ids=unmet, what="pendências", field="unmet_criteria_ids")
         if set(unmet) != set(failed_ids):
-            self.__fail(
-                phase=phase,
-                raw_output=raw_output,
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.DECISION_CONSISTENCY,
                 reason=(
                     "As pendências em 'unmet_criteria_ids' devem ser exatamente os critérios avaliados com "
                     f"met=false. Avaliados com met=false: [{_ID_LIST_SEPARATOR.join(failed_ids)}]; "
                     f"pendências informadas: [{_ID_LIST_SEPARATOR.join(unmet)}]."
                 ),
+                field="unmet_criteria_ids",
+                affected_ids=tuple(sorted(set(unmet) ^ set(failed_ids))),
             )
 
-    def __require_exact_coverage(
-        self,
-        evaluated_ids: list[str],
-        expected_ids: tuple[str, ...],
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
-    ) -> None:
+    def __require_decision(self, parsed: dict[str, Any]) -> str:
+        """Exige um veredito conhecido no campo 'decision', sem converter valores por suposição.
+
+        Returns:
+            str: Veredito informado.
+
+        Raises:
+            _ContractViolation: Quando o campo falta, não é string ou não é um veredito conhecido.
+        """
+        decision = parsed.get("decision")
+        if decision in tuple(VerificationDecisionEnum):
+            return decision
+
+        if "decision" not in parsed:
+            code = OutputProblemCodeEnum.MISSING_FIELD
+        elif not isinstance(decision, str):
+            code = OutputProblemCodeEnum.SCHEMA_TYPE
+        else:
+            code = OutputProblemCodeEnum.INVALID_VALUE
+        raise _ContractViolation(
+            code=code,
+            reason=f"O campo 'decision' deve ser um veredito conhecido. Valor: '{decision}'.",
+            field="decision",
+        )
+
+    def __require_exact_coverage(self, evaluated_ids: list[str], expected_ids: tuple[str, ...]) -> None:
         """Exige uma avaliação para cada critério esperado, sem omissões, repetições ou extras.
 
         Raises:
-            PhaseParsingError: Quando algum critério esperado não foi avaliado, foi avaliado
+            _ContractViolation: Quando algum critério esperado não foi avaliado, foi avaliado
                 mais de uma vez ou há avaliação de um critério desconhecido.
         """
+        field = self.__item_field("criteria_evaluation", "criterion_id")
         self.__require_unique_ids(
-            ids=evaluated_ids, what="avaliações (cada critério deve ser avaliado uma vez)", phase=phase,
-            raw_output=raw_output, repeated_message="foi avaliado mais de uma vez",
+            ids=evaluated_ids, what="avaliações (cada critério deve ser avaliado uma vez)", field=field,
+            repeated_message="foi avaliado mais de uma vez", code=OutputProblemCodeEnum.CRITERIA_IDS,
         )
         unknown = [criterion_id for criterion_id in evaluated_ids if criterion_id not in expected_ids]
         if unknown:
-            self.__fail(
-                phase=phase,
-                raw_output=raw_output,
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.CRITERIA_IDS,
                 reason=(
                     f"Há avaliações de critérios desconhecidos: {_ID_LIST_SEPARATOR.join(unknown)}. "
                     f"Avalie somente: {_ID_LIST_SEPARATOR.join(expected_ids)}."
                 ),
+                field=field,
+                affected_ids=tuple(unknown),
             )
         missing = [criterion_id for criterion_id in expected_ids if criterion_id not in evaluated_ids]
         if missing:
-            self.__fail(
-                phase=phase,
-                raw_output=raw_output,
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.CRITERIA_IDS,
                 reason=f"Faltam avaliações para os critérios: {_ID_LIST_SEPARATOR.join(missing)}.",
+                field=field,
+                affected_ids=tuple(missing),
             )
 
-    def __require_coherent_decision(
-        self,
-        decision: str,
-        failed_ids: list[str],
-        unmet: list[str],
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
-    ) -> None:
+    def __require_coherent_decision(self, decision: str, failed_ids: list[str], unmet: list[str]) -> None:
         """Exige que a decisão não contradiga as avaliações nem as pendências.
 
+        A decisão nunca é corrigida aqui: uma contradição recusa a saída inteira.
+
         Raises:
-            PhaseParsingError: Quando uma aprovação convive com critério não atendido ou
+            _ContractViolation: Quando uma aprovação convive com critério não atendido ou
                 uma reprovação não aponta nenhuma pendência.
         """
         approved = decision == VerificationDecisionEnum.APPROVED
         if approved and (failed_ids or unmet):
-            self.__fail(
-                phase=phase,
-                raw_output=raw_output,
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.DECISION_CONSISTENCY,
                 reason=(
                     f"A decisão '{decision}' é incoerente com as avaliações: aprovar exige todos os critérios "
                     "com met=true e 'unmet_criteria_ids' vazia."
                 ),
+                field="decision",
+                affected_ids=tuple(sorted({*failed_ids, *unmet})),
             )
         if not approved and not unmet:
-            self.__fail(
-                phase=phase,
-                raw_output=raw_output,
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.DECISION_CONSISTENCY,
                 reason=(
                     f"A decisão '{decision}' é incoerente com 'unmet_criteria_ids': "
                     "reprovar exige ao menos um critério pendente."
                 ),
+                field="decision",
             )
 
     def __require_unique_ids(
         self,
         ids: list[str],
         what: str,
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
+        field: str,
         repeated_message: str = "se repete",
+        code: OutputProblemCodeEnum = OutputProblemCodeEnum.DUPLICATE_ID,
     ) -> None:
         """Exige que uma lista de identificadores não tenha repetições.
 
         Raises:
-            PhaseParsingError: Quando algum identificador aparece mais de uma vez.
+            _ContractViolation: Quando algum identificador aparece mais de uma vez.
         """
         repeated = sorted({identifier for identifier in ids if ids.count(identifier) > 1})
         if repeated:
-            self.__fail(
-                phase=phase,
-                raw_output=raw_output,
+            raise _ContractViolation(
+                code=code,
                 reason=f"Em {what}, o identificador {_ID_LIST_SEPARATOR.join(repeated)} {repeated_message}.",
+                field=field,
+                affected_ids=tuple(repeated),
             )
 
     def __validate_learnings(
-        self,
-        parsed: dict[str, Any],
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
-        validation: ValidationContext | None,
+        self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None
     ) -> None:
         """Valida o schema de A.3 e B.4, onde a lista vazia é legítima.
 
         Raises:
-            PhaseParsingError: Quando 'learnings' não é uma lista de strings.
+            _ContractViolation: Quando 'learnings' não é uma lista de strings.
         """
-        learnings = self.__require_list(
-            parsed=parsed, field="learnings", phase=phase, raw_output=raw_output, allow_empty=True
-        )
+        learnings = self.__require_list(source=parsed, key="learnings", label="learnings", allow_empty=True)
         for learning in learnings:
             if not isinstance(learning, str):
-                self.__fail(
-                    phase=phase,
-                    raw_output=raw_output,
+                raise _ContractViolation(
+                    code=OutputProblemCodeEnum.SCHEMA_TYPE,
                     reason="Cada item de 'learnings' deve ser uma string.",
+                    field=f"learnings{_ITEM_SUFFIX}",
                 )
 
     def __validate_final_answer(
-        self,
-        parsed: dict[str, Any],
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
-        validation: ValidationContext | None,
+        self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None
     ) -> None:
         """Valida o schema de C.3.
 
         Raises:
-            PhaseParsingError: Quando 'final_answer' não é uma string não vazia.
+            _ContractViolation: Quando 'final_answer' não é uma string não vazia.
         """
-        self.__require_text(source=parsed, field="final_answer", value=parsed.get("final_answer"), phase=phase,
-                            raw_output=raw_output)
+        self.__require_text(source=parsed, key="final_answer", label="final_answer", field="final_answer")
 
-    def __validate_criterion(self, criterion: Any, phase: ThinkingPhaseEnum, raw_output: str) -> None:
+    def __validate_criterion(self, criterion: Any, container: str) -> None:
         """Valida um critério de aceite individual.
 
+        Args:
+            criterion: Item da lista de critérios.
+            container: Caminho da lista que contém o critério, para o campo afetado.
+
         Raises:
-            PhaseParsingError: Quando o critério não traz 'id' e 'description' preenchidos.
+            _ContractViolation: Quando o critério não traz 'id' e 'description' preenchidos.
         """
         if not isinstance(criterion, dict):
-            self.__fail(phase=phase, raw_output=raw_output, reason="Cada critério de aceite deve ser um objeto.")
-        for field in _CRITERION_TEXT_FIELDS:
-            self.__require_text(source=criterion, field=f"criterio.{field}", value=criterion.get(field), phase=phase,
-                                raw_output=raw_output)
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.SCHEMA_TYPE,
+                reason="Cada critério de aceite deve ser um objeto.",
+                field=f"{container}{_ITEM_SUFFIX}",
+            )
+        for key in _CRITERION_TEXT_FIELDS:
+            self.__require_text(
+                source=criterion, key=key, label=f"criterio.{key}", field=self.__item_field(container, key),
+                owner_id=criterion.get("id"),
+            )
 
-    def __validate_evaluation(self, evaluation: Any, phase: ThinkingPhaseEnum, raw_output: str) -> None:
+    def __validate_evaluation(self, evaluation: Any) -> None:
         """Valida o veredito de um critério dentro de uma verificação.
 
         Raises:
-            PhaseParsingError: Quando o veredito não traz os campos esperados.
+            _ContractViolation: Quando o veredito não traz os campos esperados. O valor de 'met'
+                nunca é convertido: a string "true" é recusada como tipo errado.
         """
+        container = "criteria_evaluation"
         if not isinstance(evaluation, dict):
-            self.__fail(
-                phase=phase, raw_output=raw_output, reason="Cada item de 'criteria_evaluation' deve ser um objeto."
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.SCHEMA_TYPE,
+                reason="Cada item de 'criteria_evaluation' deve ser um objeto.",
+                field=f"{container}{_ITEM_SUFFIX}",
             )
-        self.__require_text(source=evaluation, field="criterion_id", value=evaluation.get("criterion_id"), phase=phase,
-                            raw_output=raw_output)
-        self.__require_text(source=evaluation, field="justification", value=evaluation.get("justification"),
-                            phase=phase, raw_output=raw_output)
+        self.__require_text(
+            source=evaluation, key="criterion_id", label="criterion_id",
+            field=self.__item_field(container, "criterion_id"),
+        )
+        criterion_id = evaluation["criterion_id"]
+        self.__require_text(
+            source=evaluation, key="justification", label="justification",
+            field=self.__item_field(container, "justification"), owner_id=criterion_id,
+        )
         if not isinstance(evaluation.get("met"), bool):
-            self.__fail(phase=phase, raw_output=raw_output, reason="O campo 'met' deve ser booleano.")
+            raise _ContractViolation(
+                code=self.__absence_or_type(source=evaluation, key="met"),
+                reason="O campo 'met' deve ser booleano.",
+                field=self.__item_field(container, "met"),
+                affected_ids=(criterion_id,),
+            )
 
     def __require_list(
         self,
-        parsed: dict[str, Any],
-        field: str,
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
+        source: dict[str, Any],
+        key: str,
+        label: str,
         allow_empty: bool,
+        field: str | None = None,
+        owner_id: Any = None,
     ) -> list[Any]:
         """Exige que um campo seja uma lista, opcionalmente não vazia.
+
+        Args:
+            source: Objeto que deve conter o campo.
+            key: Chave do campo no objeto.
+            label: Nome do campo no motivo legível.
+            allow_empty: Indica se a lista vazia é legítima.
+            field: Caminho do campo afetado; por padrão, a própria chave.
+            owner_id: Identificador do item dono do campo, quando conhecido.
 
         Returns:
             list[Any]: Lista encontrada no campo.
 
         Raises:
-            PhaseParsingError: Quando o campo não é lista ou está indevidamente vazio.
+            _ContractViolation: Quando o campo falta, não é lista ou está indevidamente vazio.
         """
-        value = parsed.get(field)
+        value = source.get(key)
         if not isinstance(value, list):
-            self.__fail(phase=phase, raw_output=raw_output, reason=f"O campo '{field}' deve ser uma lista.")
+            raise _ContractViolation(
+                code=self.__absence_or_type(source=source, key=key),
+                reason=f"O campo '{label}' deve ser uma lista.",
+                field=field or key,
+                affected_ids=self.__owner(owner_id=owner_id),
+            )
         if not allow_empty and not value:
-            self.__fail(phase=phase, raw_output=raw_output, reason=f"O campo '{field}' não pode ser uma lista vazia.")
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.EMPTY_VALUE,
+                reason=f"O campo '{label}' não pode ser uma lista vazia.",
+                field=field or key,
+                affected_ids=self.__owner(owner_id=owner_id),
+            )
         return value
 
     def __require_text(
-        self,
-        source: dict[str, Any],
-        field: str,
-        value: Any,
-        phase: ThinkingPhaseEnum,
-        raw_output: str,
+        self, source: dict[str, Any], key: str, label: str, field: str, owner_id: Any = None
     ) -> None:
         """Exige que um campo seja uma string com conteúdo.
 
+        Args:
+            source: Objeto que deve conter o campo.
+            key: Chave do campo no objeto.
+            label: Nome do campo no motivo legível.
+            field: Caminho do campo afetado.
+            owner_id: Identificador do item dono do campo, quando conhecido.
+
         Raises:
-            PhaseParsingError: Quando o campo não é string ou está em branco.
+            _ContractViolation: Quando o campo falta, não é string ou está em branco.
         """
-        if not isinstance(value, str) or not value.strip():
-            self.__fail(
-                phase=phase,
-                raw_output=raw_output,
-                reason=f"O campo '{field}' deve ser uma string não vazia.",
-            )
+        value = source.get(key)
+        if isinstance(value, str) and value.strip():
+            return
+
+        code = (
+            OutputProblemCodeEnum.EMPTY_VALUE
+            if isinstance(value, str)
+            else self.__absence_or_type(source=source, key=key)
+        )
+        raise _ContractViolation(
+            code=code,
+            reason=f"O campo '{label}' deve ser uma string não vazia.",
+            field=field,
+            affected_ids=self.__owner(owner_id=owner_id),
+        )
+
+    def __absence_or_type(self, source: dict[str, Any], key: str) -> OutputProblemCodeEnum:
+        """Distingue o campo ausente do campo presente com tipo errado.
+
+        Returns:
+            OutputProblemCodeEnum: `missing_field` quando a chave falta; `schema_type` caso contrário.
+        """
+        if key not in source:
+            return OutputProblemCodeEnum.MISSING_FIELD
+        return OutputProblemCodeEnum.SCHEMA_TYPE
+
+    def __owner(self, owner_id: Any) -> tuple[str, ...]:
+        """Identificador do item dono do campo, quando é um texto utilizável.
+
+        Returns:
+            tuple[str, ...]: O identificador, ou vazio quando ele não é conhecido.
+        """
+        if isinstance(owner_id, str) and owner_id.strip():
+            return (owner_id,)
+        return ()
+
+    def __item_field(self, container: str, key: str) -> str:
+        """Caminho de um campo dentro dos itens de uma lista, como `tasks[].id`.
+
+        Returns:
+            str: Caminho do campo.
+        """
+        return f"{container}{_ITEM_SUFFIX}{_FIELD_SEPARATOR}{key}"
 
     def __fail(
         self,
         phase: ThinkingPhaseEnum,
         raw_output: str,
-        reason: str,
+        diagnostic: OutputDiagnostic,
         limit: BudgetLimitEnum | None = None,
-        defect: OutputDefectEnum = OutputDefectEnum.CONTRACT,
     ) -> None:
-        """Registra e levanta a falha de parsing da fase.
+        """Registra e levanta a falha de parsing da fase, com o diagnóstico da recusa.
 
         Raises:
             PhaseParsingError: Sempre; por padrão, como violação do contrato da fase.
         """
-        self.logger.warning("Saída da fase '%s' recusada pelo parser (%s): %s", phase.value, defect.value, reason)
+        problem = diagnostic.problem
+        self.logger.warning(
+            "Saída da fase '%s' recusada pelo parser [%s; sintaxe=%s; contrato=%s; corte=%s]: %s",
+            phase.value,
+            problem.code.value,
+            diagnostic.syntax_status.value if diagnostic.syntax_status is not None else None,
+            diagnostic.contract_status.value,
+            diagnostic.length_interruption.value,
+            problem.reason,
+        )
         raise PhaseParsingError(
             phase=phase,
             raw_output=self.__truncate(raw_output=raw_output),
-            reason=reason,
+            reason=problem.reason,
             limit=limit,
-            defect=defect,
+            diagnostic=diagnostic,
         )
 
     def __truncate(self, raw_output: str) -> str:

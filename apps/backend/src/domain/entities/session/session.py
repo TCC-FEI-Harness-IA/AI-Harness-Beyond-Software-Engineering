@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
@@ -7,6 +8,8 @@ from src.domain.entities.session.session_degradation import SessionDegradation
 from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
 from src.domain.entities.session.session_totals import SessionTotals
+from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
+from src.domain.entities.thinking.output_recovery import OutputRecovery
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
@@ -105,19 +108,88 @@ class Session:
         Raises:
             ValueError: Quando a invocação não existe ou já foi concluída.
         """
+        completed = self.__replace_invocation(
+            invocation_id=invocation_id,
+            change=lambda invocation: invocation.complete(
+                outcome=outcome,
+                duration_ms=duration_ms,
+                tokens_input=tokens_input,
+                tokens_output=tokens_output,
+                finish_reason=finish_reason,
+                provider_response_id=provider_response_id,
+            ),
+        )
+        self.totals.add_usage(tokens_input=tokens_input, tokens_output=tokens_output, duration_ms=duration_ms)
+        return completed
+
+    def record_output_diagnostic(self, invocation_id: str, diagnostic: OutputDiagnostic) -> LLMInvocation:
+        """Associa o diagnóstico de uma saída à invocação que a produziu.
+
+        O diagnóstico não altera chamadas, consumo nem tempo: a chamada já foi contada quando enviada.
+
+        Args:
+            invocation_id: Identificador da invocação de origem.
+            diagnostic: Diagnóstico da saída avaliada pelo parser.
+
+        Returns:
+            LLMInvocation: Invocação diagnosticada, já substituída no registro.
+
+        Raises:
+            ValueError: Quando a invocação não existe ou não pode receber o diagnóstico.
+        """
+        return self.__replace_invocation(
+            invocation_id=invocation_id, change=lambda invocation: invocation.with_output_diagnostic(diagnostic)
+        )
+
+    def record_output_recovery(self, invocation_id: str, recovery: OutputRecovery) -> LLMInvocation:
+        """Registra a estratégia e o resultado da recuperação de uma saída recusada.
+
+        Args:
+            invocation_id: Identificador da invocação que produziu a saída recusada.
+            recovery: Estratégia e resultado da recuperação.
+
+        Returns:
+            LLMInvocation: Invocação atualizada, já substituída no registro.
+
+        Raises:
+            ValueError: Quando a invocação não existe ou não pode receber a recuperação.
+        """
+        return self.__replace_invocation(
+            invocation_id=invocation_id, change=lambda invocation: invocation.with_recovery(recovery)
+        )
+
+    @property
+    def rejected_output_count(self) -> int:
+        """Quantidade de saídas recusadas pelo parser, uma por invocação.
+
+        Uma saída com dois diagnósticos — por exemplo, truncada e com sintaxe inválida — conta uma
+        vez só. Invocações sem diagnóstico (sem saída, ou gravadas antes do registro) não contam.
+
+        Returns:
+            int: Invocações cujo conteúdo foi recusado.
+        """
+        return sum(1 for invocation in self.invocations if invocation.content_accepted is False)
+
+    def __replace_invocation(
+        self, invocation_id: str, change: Callable[[LLMInvocation], LLMInvocation]
+    ) -> LLMInvocation:
+        """Substitui no registro a invocação informada pela versão alterada.
+
+        Args:
+            invocation_id: Identificador da invocação.
+            change: Transformação da invocação, que valida a mudança.
+
+        Returns:
+            LLMInvocation: Invocação alterada.
+
+        Raises:
+            ValueError: Quando a invocação não pertence à sessão ou a transformação a recusa.
+        """
         for index, invocation in enumerate(self.invocations):
             if invocation.id == invocation_id:
-                completed = invocation.complete(
-                    outcome=outcome,
-                    duration_ms=duration_ms,
-                    tokens_input=tokens_input,
-                    tokens_output=tokens_output,
-                    finish_reason=finish_reason,
-                    provider_response_id=provider_response_id,
-                )
-                self.invocations[index] = completed
-                self.totals.add_usage(tokens_input=tokens_input, tokens_output=tokens_output, duration_ms=duration_ms)
-                return completed
+                changed = change(invocation)
+                self.invocations[index] = changed
+                return changed
 
         raise ValueError(f"A invocação '{invocation_id}' não pertence à sessão '{self.id}'.")
 

@@ -7,6 +7,8 @@ from src.domain.entities.session.benchmark_details import BenchmarkDetails
 from src.domain.entities.session.llm_invocation import LLMInvocation
 from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
+from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
+from src.domain.entities.thinking.output_recovery import OutputRecovery
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
@@ -125,6 +127,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             inference_time_ms=_NO_INFERENCE_TIME_MS,
             model_name=None,
             prompt_input=(),
+            invocation_id=None,
         )
 
     async def record_llm_message(
@@ -165,6 +168,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             inference_time_ms=inference_time_ms,
             model_name=tokens.llm_model.model_name,
             prompt_input=prompt_input,
+            invocation_id=None,
         )
 
     async def record_programmatic_step(
@@ -174,6 +178,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         task_id: str | None,
         context_id: str | None,
         prompt_input: tuple[Message, ...] = (),
+        invocation_id: str | None = None,
     ) -> SessionMessage:
         """Registra uma etapa programática (sem chamada ao modelo) no histórico.
 
@@ -184,6 +189,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             context_id: Janela de contexto associada, quando houver.
             prompt_input: Conversa enviada ao modelo, quando a etapa registra a saída de uma chamada
                 (como uma saída descartada pelo parser); vazia nas demais etapas.
+            invocation_id: Invocação a que a etapa se refere, como a que produziu a saída auditada.
 
         Returns:
             SessionMessage: Mensagem registrada.
@@ -202,6 +208,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             inference_time_ms=_NO_INFERENCE_TIME_MS,
             model_name=None,
             prompt_input=prompt_input,
+            invocation_id=invocation_id,
         )
 
     async def start_invocation(
@@ -212,6 +219,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         model_name: str,
         provider: ModelProviderEnum,
         temperature: float | None = None,
+        recovers_invocation_id: str | None = None,
     ) -> str:
         """Registra o envio de uma chamada ao modelo, que já conta nos totais da sessão.
 
@@ -222,6 +230,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             model_name: Modelo solicitado.
             provider: Provedor que atende a chamada.
             temperature: Temperatura efetivamente pedida na chamada.
+            recovers_invocation_id: Invocação original cuja saída recusada esta chamada tenta recuperar.
 
         Returns:
             str: Identificador da invocação, para `complete_invocation`.
@@ -239,6 +248,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             provider=provider,
             started_at=self.clock.now(),
             temperature=temperature,
+            recovers_invocation_id=recovers_invocation_id,
         )
         session.start_invocation(invocation=invocation)
         await self.__flush(session=session)
@@ -278,6 +288,34 @@ class SessionRecorderAdapter(ISessionRecorder):
             finish_reason=finish_reason,
             provider_response_id=provider_response_id,
         )
+        await self.__flush(session=session)
+
+    async def record_output_diagnostic(self, invocation_id: str, diagnostic: OutputDiagnostic) -> None:
+        """Associa o diagnóstico de uma saída à invocação que a produziu, sem alterar os totais.
+
+        Args:
+            invocation_id: Identificador da invocação de origem.
+            diagnostic: Diagnóstico da saída avaliada pelo parser.
+
+        Raises:
+            ValueError: Quando a sessão não foi iniciada ou a invocação não pode receber o diagnóstico.
+        """
+        session = self.session
+        session.record_output_diagnostic(invocation_id=invocation_id, diagnostic=diagnostic)
+        await self.__flush(session=session)
+
+    async def record_output_recovery(self, invocation_id: str, recovery: OutputRecovery) -> None:
+        """Registra a estratégia e o resultado da recuperação de uma saída recusada.
+
+        Args:
+            invocation_id: Identificador da invocação que produziu a saída recusada.
+            recovery: Estratégia e resultado da recuperação.
+
+        Raises:
+            ValueError: Quando a sessão não foi iniciada ou a invocação não pode receber a recuperação.
+        """
+        session = self.session
+        session.record_output_recovery(invocation_id=invocation_id, recovery=recovery)
         await self.__flush(session=session)
 
     async def finish(
@@ -355,6 +393,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         inference_time_ms: int,
         model_name: str | None,
         prompt_input: tuple[Message, ...],
+        invocation_id: str | None,
     ) -> SessionMessage:
         """Monta, anexa e persiste uma mensagem no histórico da sessão corrente.
 
@@ -383,6 +422,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             inference_time_ms=inference_time_ms,
             model_name=model_name,
             prompt_input=tuple(prompt_input),
+            invocation_id=invocation_id,
         )
         session.add_message(message=message)
         await self.__flush(session=session)

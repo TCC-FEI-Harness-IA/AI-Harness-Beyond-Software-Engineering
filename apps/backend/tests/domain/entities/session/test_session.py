@@ -7,10 +7,19 @@ from src.domain.entities.session.llm_invocation import LLMInvocation
 from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
 from src.domain.entities.session.session_totals import SessionTotals
+from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
+from src.domain.entities.thinking.output_problem import OutputProblem
+from src.domain.entities.thinking.output_recovery import OutputRecovery
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
+from src.domain.enums.length_interruption_enum import LengthInterruptionEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.output_contract_status_enum import OutputContractStatusEnum
+from src.domain.enums.output_problem_code_enum import OutputProblemCodeEnum
+from src.domain.enums.output_syntax_status_enum import OutputSyntaxStatusEnum
+from src.domain.enums.recovery_result_enum import RecoveryResultEnum
+from src.domain.enums.recovery_strategy_enum import RecoveryStrategyEnum
 from src.domain.enums.session_failure_reason_enum import SessionFailureReasonEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
@@ -276,3 +285,90 @@ def test_reopen_de_sessao_em_execucao_e_recusado() -> None:
 
     with pytest.raises(ValueError, match="não há encerramento a desfazer"):
         sessao.reopen(updated_at=_CRIADO_EM)
+
+
+# ── Diagnóstico das saídas e recuperação ─────────────────────────────────────
+
+_TRUNCADA_E_INVALIDA = OutputDiagnostic(
+    syntax_status=OutputSyntaxStatusEnum.INVALID,
+    contract_status=OutputContractStatusEnum.NOT_EVALUATED,
+    finish_reason="length",
+    length_interruption=LengthInterruptionEnum.CONFIRMED,
+    problem=OutputProblem(code=OutputProblemCodeEnum.JSON_SYNTAX, reason="string não terminada"),
+)
+_ACEITA = OutputDiagnostic.accepted(finish_reason="stop", length_interruption=LengthInterruptionEnum.NOT_DETECTED)
+
+
+def _sessao_com_chamada_concluida(invocation_id: str = "inv-1") -> Session:
+    sessao = _nova_sessao()
+    sessao.start_invocation(invocation=_nova_invocacao(invocation_id=invocation_id))
+    sessao.complete_invocation(
+        invocation_id=invocation_id, outcome=InvocationOutcomeEnum.SUCCESS, duration_ms=10,
+        tokens_input=5, tokens_output=7, finish_reason="length",
+    )
+    return sessao
+
+
+def test_record_output_diagnostic_associa_o_diagnostico_a_invocacao_de_origem() -> None:
+    sessao = _sessao_com_chamada_concluida()
+
+    diagnosticada = sessao.record_output_diagnostic(invocation_id="inv-1", diagnostic=_TRUNCADA_E_INVALIDA)
+
+    assert sessao.invocations == [diagnosticada]
+    assert diagnosticada.output_diagnostic == _TRUNCADA_E_INVALIDA
+    assert diagnosticada.outcome is InvocationOutcomeEnum.SUCCESS
+
+
+def test_diagnostico_nao_altera_chamadas_nem_consumo() -> None:
+    sessao = _sessao_com_chamada_concluida()
+    antes = (sessao.totals.total_llm_calls, sessao.totals.total_tokens, sessao.totals.inference_time_ms)
+
+    sessao.record_output_diagnostic(invocation_id="inv-1", diagnostic=_TRUNCADA_E_INVALIDA)
+
+    assert (sessao.totals.total_llm_calls, sessao.totals.total_tokens, sessao.totals.inference_time_ms) == antes
+
+
+def test_saida_truncada_e_com_sintaxe_invalida_conta_uma_unica_recusa() -> None:
+    sessao = _sessao_com_chamada_concluida()
+    sessao.record_output_diagnostic(invocation_id="inv-1", diagnostic=_TRUNCADA_E_INVALIDA)
+
+    assert sessao.rejected_output_count == 1
+    assert sessao.totals.total_llm_calls == 1
+
+
+def test_contagem_de_recusas_ignora_aceitas_e_invocacoes_sem_diagnostico() -> None:
+    sessao = _sessao_com_chamada_concluida("inv-1")
+    sessao.record_output_diagnostic(invocation_id="inv-1", diagnostic=_TRUNCADA_E_INVALIDA)
+    sessao.start_invocation(invocation=_nova_invocacao(invocation_id="inv-2"))
+    sessao.complete_invocation(
+        invocation_id="inv-2", outcome=InvocationOutcomeEnum.SUCCESS, duration_ms=1, tokens_input=1, tokens_output=1
+    )
+    sessao.record_output_diagnostic(invocation_id="inv-2", diagnostic=_ACEITA)
+    sessao.start_invocation(invocation=_nova_invocacao(invocation_id="inv-3"))
+
+    assert sessao.rejected_output_count == 1
+
+
+def test_record_output_recovery_atualiza_a_invocacao_recusada() -> None:
+    sessao = _sessao_com_chamada_concluida()
+    sessao.record_output_diagnostic(invocation_id="inv-1", diagnostic=_TRUNCADA_E_INVALIDA)
+    recuperacao = OutputRecovery(strategy=RecoveryStrategyEnum.CORRECTION_PROMPT, result=RecoveryResultEnum.PENDING)
+
+    atualizada = sessao.record_output_recovery(invocation_id="inv-1", recovery=recuperacao)
+
+    assert atualizada.recovery == recuperacao
+    assert sessao.invocations[0].recovery == recuperacao
+
+
+@pytest.mark.parametrize("operacao", ["diagnostico", "recuperacao"])
+def test_diagnostico_ou_recuperacao_de_invocacao_desconhecida_e_recusado(operacao: str) -> None:
+    sessao = _sessao_com_chamada_concluida()
+
+    with pytest.raises(ValueError, match="não pertence"):
+        if operacao == "diagnostico":
+            sessao.record_output_diagnostic(invocation_id="inv-x", diagnostic=_ACEITA)
+        else:
+            sessao.record_output_recovery(
+                invocation_id="inv-x",
+                recovery=OutputRecovery(strategy=RecoveryStrategyEnum.NONE, result=RecoveryResultEnum.FAILED),
+            )

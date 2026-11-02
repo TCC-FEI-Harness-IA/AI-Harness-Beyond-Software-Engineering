@@ -11,10 +11,19 @@ from src.domain.entities.llm.genai_model import GenaiModel
 from src.domain.entities.llm.message import Message
 from src.domain.entities.llm.tokens_usage import TokensUsage
 from src.domain.entities.session.session_failure import SessionFailure
+from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
+from src.domain.entities.thinking.output_problem import OutputProblem
+from src.domain.entities.thinking.output_recovery import OutputRecovery
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
+from src.domain.enums.length_interruption_enum import LengthInterruptionEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.output_contract_status_enum import OutputContractStatusEnum
+from src.domain.enums.output_problem_code_enum import OutputProblemCodeEnum
+from src.domain.enums.output_syntax_status_enum import OutputSyntaxStatusEnum
+from src.domain.enums.recovery_result_enum import RecoveryResultEnum
+from src.domain.enums.recovery_strategy_enum import RecoveryStrategyEnum
 from src.domain.enums.session_failure_reason_enum import SessionFailureReasonEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
@@ -602,3 +611,100 @@ async def test_start_invocation_registra_a_temperatura_efetiva_da_chamada() -> N
     )
 
     assert recorder.session.invocations[0].temperature == 1.0
+
+
+# ── Diagnóstico das saídas e recuperação ─────────────────────────────────────
+
+_DIAGNOSTICO_RECUSA = OutputDiagnostic(
+    syntax_status=OutputSyntaxStatusEnum.INVALID,
+    contract_status=OutputContractStatusEnum.NOT_EVALUATED,
+    finish_reason="length",
+    length_interruption=LengthInterruptionEnum.CONFIRMED,
+    problem=OutputProblem(code=OutputProblemCodeEnum.JSON_SYNTAX, reason="string não terminada"),
+)
+
+
+async def _chamada_concluida(recorder: SessionRecorderAdapter, recovers_invocation_id: str | None = None) -> str:
+    invocation_id = await recorder.start_invocation(
+        phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION,
+        task_id=None,
+        context_id="ctx_1",
+        model_name="vendor/modelo",
+        provider=ModelProviderEnum.OPEN_ROUTER,
+        recovers_invocation_id=recovers_invocation_id,
+    )
+    await recorder.complete_invocation(
+        invocation_id=invocation_id, outcome=InvocationOutcomeEnum.SUCCESS, duration_ms=10, tokens_input=3,
+        tokens_output=4, finish_reason="length",
+    )
+    return invocation_id
+
+
+async def test_start_invocation_registra_o_vinculo_a_invocacao_original() -> None:
+    recorder = _build_recorder()
+    await _start(recorder=recorder)
+    original = await _chamada_concluida(recorder=recorder)
+
+    correcao = await _chamada_concluida(recorder=recorder, recovers_invocation_id=original)
+
+    assert recorder.session.invocations[0].recovers_invocation_id is None
+    assert recorder.session.invocations[1].id == correcao
+    assert recorder.session.invocations[1].recovers_invocation_id == "inv_1"
+
+
+async def test_record_output_diagnostic_persiste_na_invocacao_de_origem() -> None:
+    repositorio = InMemorySessionRepository()
+    recorder = _build_recorder(repository=repositorio)
+    await _start(recorder=recorder)
+    invocation_id = await _chamada_concluida(recorder=recorder)
+
+    await recorder.record_output_diagnostic(invocation_id=invocation_id, diagnostic=_DIAGNOSTICO_RECUSA)
+
+    gravada = await repositorio.find_by_id(session_id="sess_1")
+    assert gravada is not None
+    assert gravada.invocations[0].output_diagnostic == _DIAGNOSTICO_RECUSA
+    assert gravada.invocations[0].outcome is InvocationOutcomeEnum.SUCCESS
+    assert gravada.totals.total_llm_calls == 1
+
+
+async def test_record_output_recovery_persiste_o_resultado_da_recuperacao() -> None:
+    repositorio = InMemorySessionRepository()
+    recorder = _build_recorder(repository=repositorio)
+    await _start(recorder=recorder)
+    invocation_id = await _chamada_concluida(recorder=recorder)
+    await recorder.record_output_diagnostic(invocation_id=invocation_id, diagnostic=_DIAGNOSTICO_RECUSA)
+    falha = OutputRecovery(strategy=RecoveryStrategyEnum.NONE, result=RecoveryResultEnum.FAILED)
+
+    await recorder.record_output_recovery(invocation_id=invocation_id, recovery=falha)
+
+    gravada = await repositorio.find_by_id(session_id="sess_1")
+    assert gravada is not None
+    assert gravada.invocations[0].recovery == falha
+
+
+async def test_diagnostico_e_recuperacao_antes_de_start_sao_recusados() -> None:
+    recorder = _build_recorder()
+
+    with pytest.raises(ValueError, match="não foi iniciada"):
+        await recorder.record_output_diagnostic(invocation_id="inv_1", diagnostic=_DIAGNOSTICO_RECUSA)
+    with pytest.raises(ValueError, match="não foi iniciada"):
+        await recorder.record_output_recovery(
+            invocation_id="inv_1",
+            recovery=OutputRecovery(strategy=RecoveryStrategyEnum.NONE, result=RecoveryResultEnum.FAILED),
+        )
+
+
+async def test_etapa_programatica_pode_apontar_a_invocacao_auditada() -> None:
+    recorder = _build_recorder()
+    await _start(recorder=recorder)
+
+    mensagem = await recorder.record_programmatic_step(
+        phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION, content="saída recusada", task_id=None, context_id="ctx_1",
+        prompt_input=_PROMPT, invocation_id="inv_9",
+    )
+    sem_vinculo = await recorder.record_programmatic_step(
+        phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION, content="etapa", task_id=None, context_id=None
+    )
+
+    assert mensagem.invocation_id == "inv_9"
+    assert sem_vinculo.invocation_id is None

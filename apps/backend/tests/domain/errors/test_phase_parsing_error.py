@@ -1,5 +1,11 @@
+from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
+from src.domain.entities.thinking.output_problem import OutputProblem
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.output_defect_enum import OutputDefectEnum
+from src.domain.enums.length_interruption_enum import LengthInterruptionEnum
+from src.domain.enums.output_contract_status_enum import OutputContractStatusEnum
+from src.domain.enums.output_problem_code_enum import OutputProblemCodeEnum
+from src.domain.enums.output_syntax_status_enum import OutputSyntaxStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.errors.phase_parsing_error import PhaseParsingError
 from src.domain.errors.ralph_error import RalphError
@@ -64,3 +70,29 @@ def test_carrega_o_defeito_informado() -> None:
     )
 
     assert erro.defect is OutputDefectEnum.TRUNCATED
+
+
+def test_sem_diagnostico_informado_o_erro_nao_inventa_classificacao() -> None:
+    erro = PhaseParsingError(phase=ThinkingPhaseEnum.A1_GENERAL_CRITERIA, raw_output="x", reason="r")
+
+    assert erro.diagnostic is None
+
+
+def test_carrega_o_diagnostico_estruturado_ao_lado_do_motivo_legivel() -> None:
+    diagnostico = OutputDiagnostic(
+        syntax_status=OutputSyntaxStatusEnum.VALID,
+        contract_status=OutputContractStatusEnum.INVALID,
+        finish_reason="stop",
+        length_interruption=LengthInterruptionEnum.NOT_DETECTED,
+        problem=OutputProblem(
+            code=OutputProblemCodeEnum.DECISION_CONSISTENCY, reason="decisão incoerente", field="decision"
+        ),
+    )
+
+    erro = PhaseParsingError(
+        phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION, raw_output="{}", reason="decisão incoerente",
+        diagnostic=diagnostico,
+    )
+
+    assert erro.diagnostic is diagnostico
+    assert erro.reason == "decisão incoerente"

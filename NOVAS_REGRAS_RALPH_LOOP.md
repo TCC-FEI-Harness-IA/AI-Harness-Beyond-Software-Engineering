@@ -17,8 +17,9 @@ A explicação geral do fluxo está em [`RALPH_LOOP_ADAPTADO.md`](RALPH_LOOP_ADA
 | 5 | **Reinicialização de contexto entre fases e recuperação de saídas inválidas** | Todas as fases, em especial B.1 → B.2 → B.1 e B.1 → B.4 | Toda mudança de fase e toda tarefa abrem uma janela nova; só as correções de saída reaproveitam a janela. A nova tentativa de B.1 e B.4 recebem o feedback e o histórico como entradas explícitas. Cada defeito de saída (sintaxe, contrato, interrupção por comprimento) recebe uma correção própria. |
 | 6 | **Registro dos resultados parciais em B.4** | B. Execução em Loop | Todo resultado parcial novo da tarefa aprovada vira um aprendizado autossuficiente (fato compacto + breve explicação); B.4 roda em janela própria, com o histórico da tarefa como entrada explícita, e a memória descarta repetições. |
 | 7 | **Separação entre escopo, suficiência e apresentação** | A.1, A.2, B.2, C.1, C.2 e C.3 | Reforço dos prompts: restrições reais, limites sobre ações, suficiência de conteúdo antes da apresentação e tratamento de lacunas reais. |
+| 8 | **Diagnóstico estruturado das saídas do modelo** *(tratamento operacional)* | Todas as fases com saída estruturada | Cada saída avaliada pelo parser registra, na invocação que a produziu, sintaxe, contrato, código do problema, término original, corte por comprimento e recuperação. Não muda o raciocínio, as retentativas nem o orçamento. |
 
-As alterações 2 e 3 vieram de uma segunda rodada de testes. A alteração 2 **substitui** a regra de escopo da alteração 1 (e do paper), segundo a qual os aprendizados ficavam restritos a B.1; os pontos afetados da seção 1 estão marcados com *(atualizado pela alteração 2)*. A alteração 4 muda apenas o que os templates A.2 e C.2 pedem de cada tarefa; não muda a ordem das etapas nem as expressões de entrada e saída. A alteração 5 **substitui** a regra do paper segundo a qual as tentativas de uma mesma tarefa compartilham o contexto e B.4 opera sobre o "contexto completo da tarefa": as tentativas passam a rodar em janelas novas, e B.4 recebe o histórico da tarefa como material delimitado. Os pontos afetados das seções 2 e 3 estão marcados com *(atualizado pela alteração 5)*.
+As alterações 2 e 3 vieram de uma segunda rodada de testes. A alteração 2 **substitui** a regra de escopo da alteração 1 (e do paper), segundo a qual os aprendizados ficavam restritos a B.1; os pontos afetados da seção 1 estão marcados com *(atualizado pela alteração 2)*. A alteração 4 muda apenas o que os templates A.2 e C.2 pedem de cada tarefa; não muda a ordem das etapas nem as expressões de entrada e saída. A alteração 5 **substitui** a regra do paper segundo a qual as tentativas de uma mesma tarefa compartilham o contexto e B.4 opera sobre o "contexto completo da tarefa": as tentativas passam a rodar em janelas novas, e B.4 recebe o histórico da tarefa como material delimitado. Os pontos afetados das seções 2 e 3 estão marcados com *(atualizado pela alteração 5)*. A alteração 6 reforça os resultados parciais extraídos em B.4, a alteração 7 separa escopo, suficiência e apresentação, e a alteração 8 acrescenta diagnósticos operacionais associados às invocações.
 
 ---
 
@@ -839,6 +840,8 @@ Nunca: fabricar um campo ausente, completar uma string interrompida, inventar um
 
 ### 5.5 Exemplo: a Tarefa 2 do paper
 
+A seção 6 detalha as áreas atuais de B.4: tarefa e resultado aprovado têm áreas próprias, e o histórico delimitado reúne as tentativas e os vereditos, apontando para o resultado aprovado sem duplicá-lo. As saídas inválidas da resolução e do validador permanecem nesse histórico.
+
 A primeira tentativa da Tarefa 2 antecipa a resposta final e é reprovada; a segunda vem primeiro como texto solto (erro de sintaxe) e depois em JSON válido; o validador aprova. Temperatura do usuário: 0,3.
 
 | # | Chamada | Janela | Mensagens enviadas | Temperatura |
@@ -1449,3 +1452,203 @@ de explicação interna; em B.2 a avaliação integral sem revisão de critério
 para construir a resposta e a preservação de exigências reais de conteúdo; em C.3 a aplicação da
 apresentação sem novo raciocínio. Essas clarificações não demandam novas etapas ou novas expressões
 de controle do fluxo.
+
+
+---
+
+## 8. Diagnóstico estruturado das saídas do modelo *(tratamento operacional)*
+
+> **Natureza da alteração:** esta seção **não** descreve uma nova etapa de raciocínio do paper. Nenhum template, critério, tarefa, decisão ou expressão da Metodologia muda, e a transcrição literal continua intacta em [`RALPH_LOOP_ADAPTADO.md`](RALPH_LOOP_ADAPTADO.md). O que muda é o **registro** de por que cada saída do modelo foi aceita ou recusada pelo parser. O limite de retentativas (`RALPH_JSON_PARSE_MAX_RETRIES`), a política de orçamento e o que o fluxo faz com a saída continuam exatamente como antes.
+
+### 8.1 Problema
+
+O parser já validava o JSON, os tipos, os campos obrigatórios, os identificadores dos critérios e a coerência dos vereditos, e a sessão já guardava a saída recusada, o consumo de cada chamada e o `finish_reason`. Porém `PhaseParsingError` e `InvalidOutput` descreviam a recusa só com uma mensagem de texto. No benchmark, quatro ocorrências diferentes ficavam indistinguíveis sem ler cada saída bruta:
+
+| Questão | O que aconteceu | Classe |
+|---|---|---|
+| Q056 — Química ITA | A saída terminou no meio de uma string porque atingiu o limite de comprimento (`finish_reason: "length"`). | Sintaxe inválida **e** corte confirmado. |
+| Q042 — Matemática ITA | JSON inválido, mas o provedor encerrou com `finish_reason: "stop"`. | Sintaxe inválida **sem** corte. |
+| Q163 | Um campo veio com tipo errado (`"met": "true"` em vez de `true`). | Contrato inválido: tipo. |
+| Q037 | A decisão `approved` contradizia as avaliações (havia critério com `met: false`). | Contrato inválido: coerência da decisão. |
+
+Além disso, uma invocação com desfecho `success` significava só que o provedor respondeu: o conteúdo podia ter sido recusado pelo parser, e isso não aparecia na própria invocação.
+
+### 8.2 Regra nova
+
+Toda saída **avaliada pelo parser**, aceita ou recusada, recebe um **diagnóstico estruturado** gravado na **invocação que a produziu** (`invocations[].output_diagnostic`). O diagnóstico separa três informações independentes:
+
+1. **Extração/sintaxe** (`syntax_status`): `valid`; `invalid` (nenhum objeto JSON, nem com reparo); `valid_after_repair` (o reparo local só acrescentou chaves/colchetes finais, registrados em `repaired_closings`). Fica `null` quando a sintaxe nem chegou a ser avaliada (fase sem saída estruturada ou recusa que o parser não classificou).
+2. **Contrato da fase** (`contract_status`): `valid`, `invalid` ou `not_evaluated` (não havia objeto a conferir).
+3. **Interrupção por comprimento** (`length_interruption`), independente das duas anteriores:
+
+| Valor | Quando | Leitura |
+|---|---|---|
+| `confirmed` | O provedor informou `finish_reason: "length"`. | Corte confirmado pelo provedor. |
+| `suspected` | Sem `finish_reason`, mas a saída termina dentro de uma string ou com `{`/`[` abertos. | **Indício** de corte, nunca confirmação. |
+| `not_detected` | O provedor informou outro motivo (`stop`, `content_filter`...). | Sem corte por comprimento. |
+| `unknown` | Sem `finish_reason` e sem indício estrutural. | Desconhecido. |
+
+O diagnóstico também guarda o `finish_reason` original e, quando a saída é recusada, **um único problema** (`problem`):
+
+| Código | Significado | Exemplo |
+|---|---|---|
+| `json_syntax` | Nenhum objeto JSON extraível, nem com reparo local. | Q056, Q042 |
+| `missing_field` | Campo obrigatório ausente. | `{}` em B.1 (`result`) |
+| `schema_type` | Campo presente com tipo errado. | Q163 (`criteria_evaluation[].met`) |
+| `empty_value` | Texto em branco ou lista vazia onde se exige conteúdo. | `"result": "  "` |
+| `invalid_value` | Tipo certo, valor fora do domínio. | `"decision": "talvez"` |
+| `duplicate_id` | Identificador repetido. | Dois critérios `AC1` |
+| `criteria_ids` | Avaliações não cobrem exatamente os critérios esperados (faltando, desconhecidos ou repetidos). | Falta avaliar `T1-AC2` |
+| `decision_consistency` | Decisão, avaliações e pendências se contradizem. | Q037 |
+| `task_ids` | Identificador de tarefa já usado na sessão. | `T1` reutilizado em C.2 |
+| `task_limit` | Lote de tarefas acima do teto da sessão (o `limit` do erro continua `tasks_per_session`). | 6 tarefas para 5 vagas |
+| `unsupported_phase` | A fase não produz saída estruturada. | B.3 |
+| `unclassified` | Recusa de um parser que não informou classificação. | — |
+
+O problema traz `code`, o **motivo legível** (`reason`, o mesmo texto enviado ao modelo na mensagem de correção), o campo afetado (`field`, como `criteria_evaluation[].met`) e os critérios ou tarefas afetados (`affected_ids`), quando conhecidos.
+
+Regras complementares:
+
+- **Aceitação separada do desfecho do provedor.** O `outcome` da invocação continua descrevendo só o provedor (`success`, `empty_completion`, `provider_error`). A aceitação do conteúdo fica em `content_accepted` (`true`, `false` ou `null` quando desconhecida), derivada do diagnóstico.
+- **Recuperação ligada à invocação original.** Quando uma saída é recusada, a invocação recebe `recovery`:
+  - `strategy`: `correction_prompt` (ainda havia retentativa: a correção é pedida na mesma janela, com temperatura 1) ou `none` (a recusa esgotou as retentativas);
+  - `result`: `pending` enquanto a correção não volta; `recovered` quando uma chamada posterior da mesma execução teve a saída aceita (em `resolved_by_invocation_id`); `failed` quando a execução termina sem saída aceita (retentativas esgotadas, orçamento negado, erro do provedor ou respostas vazias seguidas).
+  - Cada nova chamada da execução aponta a **invocação original** (a primeira recusa) em `recovers_invocation_id`, inclusive uma repetição por resposta vazia no meio da recuperação.
+- **Auditoria preservada.** A mensagem de sistema "Saída inválida descartada..." continua trazendo o motivo legível e a saída bruta completa; agora também traz uma linha de diagnóstico e aponta a invocação em `messages[].invocation_id`.
+- **Truncamento é informação independente.** Uma saída pode estar truncada e ter sintaxe inválida (Q056), ou terminar com `length` e formar JSON válido — nesse caso ela é **aceita**, com `length_interruption: "confirmed"`, sem garantia de completude semântica (o parser registra um aviso no log).
+- **Sem dupla contagem.** Uma saída é uma recusa só, mesmo com dois diagnósticos (truncada e inválida). `Session.rejected_output_count` conta invocações com `content_accepted: false`; os totais de chamadas, tokens e tempo não mudam com o diagnóstico, porque a chamada já foi contada quando enviada.
+- **Validação estrita mantida.** Avaliações ausentes não são preenchidas, tipos não são convertidos por suposição e a decisão nunca é forçada para aceitar a resposta. Uma **reprovação válida** de B.2 ou C.1 é resultado semântico normal: conteúdo aceito, sem problema e sem recuperação.
+
+### 8.3 Exemplos com as ocorrências do benchmark
+
+**Q056 — string cortada pelo limite de comprimento (A.2).** Saída bruta: `{"tasks": [{"id": "T1", "title": "Calcular a entalpia de forma`, com `finish_reason: "length"`. Como o provedor confirmou o corte, o reparo local não é tentado (o que falta pode ser conteúdo):
+
+```json
+{
+  "outcome": "success",
+  "finish_reason": "length",
+  "content_accepted": false,
+  "output_diagnostic": {
+    "syntax_status": "invalid",
+    "contract_status": "not_evaluated",
+    "finish_reason": "length",
+    "length_interruption": "confirmed",
+    "repaired_closings": null,
+    "problem": {"code": "json_syntax", "reason": "Nenhum objeto JSON válido foi encontrado na saída.", "field": null, "affected_ids": []}
+  },
+  "recovery": {"strategy": "correction_prompt", "result": "recovered", "resolved_by_invocation_id": "inv_8"}
+}
+```
+
+**Q042 — JSON inválido com término `stop`.** Mesma classe de sintaxe, mas sem corte: `"length_interruption": "not_detected"`, `"finish_reason": "stop"`. A diferença entre Q056 e Q042 passa a ser uma consulta ao campo, não uma leitura da saída bruta.
+
+**Q163 — tipo errado (B.2).** `"met": "true"` não é convertido:
+
+```json
+"output_diagnostic": {
+  "syntax_status": "valid",
+  "contract_status": "invalid",
+  "finish_reason": "stop",
+  "length_interruption": "not_detected",
+  "repaired_closings": null,
+  "problem": {"code": "schema_type", "reason": "O campo 'met' deve ser booleano.", "field": "criteria_evaluation[].met", "affected_ids": ["T1-AC1"]}
+}
+```
+
+**Q037 — decisão incompatível com as avaliações (B.2).** `decision: "approved"` com `T1-AC2` avaliado `met: false`. A decisão não é trocada para `reproved`; a saída é recusada e a correção é pedida:
+
+```json
+"problem": {
+  "code": "decision_consistency",
+  "reason": "A decisão 'approved' é incoerente com as avaliações: aprovar exige todos os critérios com met=true e 'unmet_criteria_ids' vazia.",
+  "field": "decision",
+  "affected_ids": ["T1-AC2"]
+}
+```
+
+### 8.4 Exemplos de saídas aceitas
+
+**JSON válido terminado por `length`.** O modelo fechou o objeto exatamente no limite. A saída é aceita e não há retentativa; o corte fica registrado:
+
+```json
+{"outcome": "success", "finish_reason": "length", "content_accepted": true,
+ "output_diagnostic": {"syntax_status": "valid", "contract_status": "valid", "finish_reason": "length",
+                       "length_interruption": "confirmed", "repaired_closings": null, "problem": null},
+ "recovery": null}
+```
+
+**Reparo local.** A saída termina com `stop` sem os dois últimos fechamentos (`...portugues"}`). O parser acrescenta `]}` e aceita: `"syntax_status": "valid_after_repair"`, `"repaired_closings": "]}"`, `"length_interruption": "not_detected"`. Se o provedor não informar `finish_reason`, o mesmo caso fica com `"length_interruption": "suspected"` — indício, não corte confirmado.
+
+**Reprovação válida em B.2.** `decision: "reproved"`, `T1-AC1` com `met: false` e `unmet_criteria_ids: ["T1-AC1"]`: `content_accepted: true`, `problem: null`, `recovery: null`. A nova tentativa de B.1 segue a regra do paper (e a alteração 3); nada disso é erro de protocolo.
+
+### 8.5 Exemplo de cadeia de recuperação
+
+Fase A.1 com `RALPH_JSON_PARSE_MAX_RETRIES = 2`:
+
+| Invocação | Saída | `content_accepted` | `recovers_invocation_id` | `recovery` |
+|---|---|---|---|---|
+| `inv_1` | Cortada por `length` (`json_syntax`, `confirmed`) | `false` | `null` | `correction_prompt` → `recovered` por `inv_3` |
+| `inv_2` | JSON sem vírgula, `stop` (`json_syntax`, `not_detected`) | `false` | `inv_1` | `correction_prompt` → `recovered` por `inv_3` |
+| `inv_3` | Válida | `true` | `inv_1` | `null` |
+
+Totais: 3 chamadas e 2 saídas recusadas. Com `RALPH_JSON_PARSE_MAX_RETRIES = 1`, a mesma sequência termina em `inv_2`: `inv_1` fica com `correction_prompt` → `failed`, `inv_2` com `none` → `failed`, a fase levanta `PhaseParsingError` (com o diagnóstico da última recusa) e a sessão termina como antes, com falha técnica.
+
+### 8.6 Compatibilidade com sessões antigas
+
+Documentos gravados antes desta alteração não têm `output_diagnostic`, `recovery`, `recovers_invocation_id`, `content_accepted` nem `messages[].invocation_id`. Eles continuam legíveis: os campos voltam como ausentes (`null`), `content_accepted` fica `null` — **desconhecido, nunca sucesso presumido** — e essas invocações não entram em `rejected_output_count`. Os totais históricos não mudam. `content_accepted` é gravado só para leitura humana; na leitura ele é derivado do diagnóstico.
+
+### 8.7 O que muda no texto do paper
+
+| Trecho da Metodologia | Ajuste |
+|---|---|
+| Etapas A, B e C | **Nenhum.** A alteração não cria etapa nem muda entradas, saídas ou decisões. |
+| Metodologia de avaliação (se o paper relatar falhas técnicas do benchmark) | Pode distinguir, com base nos campos registrados, falhas de sintaxe com e sem corte por comprimento, violações de contrato por código e recuperações bem-sucedidas ou não. |
+
+Parágrafo sugerido, se o paper descrever o tratamento de saídas inválidas (fora da Metodologia de raciocínio):
+
+> Cada saída estruturada do modelo é registrada com um diagnóstico operacional que separa o estado sintático (válido, inválido ou válido após reparo de fechamentos), o estado do contrato da etapa e a interrupção por limite de comprimento, confirmada apenas pelo motivo de término informado pelo provedor. Saídas recusadas recebem um código de problema e são vinculadas às chamadas de correção subsequentes. Esse registro não altera o fluxo de raciocínio: reprovações válidas nas verificações permanecem resultados semânticos, e nenhuma resposta é ajustada para ser aceita.
+
+### 8.8 Decisões de projeto
+
+| Decisão | Justificativa |
+|---|---|
+| Diagnóstico gravado na invocação, e não numa lista separada. | Cada saída vem de exatamente uma chamada: o vínculo é direto e a contagem por invocação impede contar a mesma saída duas vezes. |
+| Um único problema por saída recusada. | O parser continua estrito e para no primeiro problema, como antes; o corte por comprimento é informação à parte, não um segundo problema. |
+| Corte confirmado só com `finish_reason: "length"`. | Sem o provedor, terminar dentro de uma string é compatível com corte e com saída malformada; registrar como confirmado seria presumir. |
+| `content_accepted` derivado, nunca lido do documento. | Uma única fonte de verdade (o diagnóstico) evita estados contraditórios. |
+| `parse_output` novo no contrato do parser; `parse` mantido. | A fase precisa do diagnóstico de aceite (reparo, corte); quem só quer a estrutura continua usando `parse`. |
+| Recusa sem diagnóstico vira `unclassified`, com sintaxe `null`. | Um parser que não classifica a recusa não autoriza presumir nada sobre a sintaxe. |
+| Falha ao registrar a recuperação não encobre o erro original. | O registro é operacional: o erro que encerrou a fase (orçamento, provedor, parsing) precisa continuar chegando ao caso de uso. |
+| Invariantes no domínio (`OutputDiagnostic`, `OutputRecovery`, `LLMInvocation`). | Diagnóstico só em invocação `success`, uma vez; recuperação só em saída recusada; resultado final não é reescrito; contrato `not_evaluated` exatamente quando não há objeto JSON. |
+
+### 8.9 Limitações
+
+- O parser para no primeiro problema: uma saída com dois defeitos de contrato registra só o primeiro encontrado.
+- `suspected` é heurístico: uma saída malformada sem `finish_reason` pode parecer cortada.
+- Um JSON válido terminado por `length` é aceito sem garantia de que o conteúdo esteja completo; o diagnóstico só torna o caso visível.
+- Uma execução cancelada (por exemplo, encerramento do processo) pode deixar uma recuperação em `pending`.
+- Sessões antigas não ganham diagnóstico retroativo: as ocorrências Q056, Q042, Q163 e Q037 já gravadas continuam só com o texto da auditoria.
+
+### 8.10 Validação na implementação
+
+A alteração foi feita com TDD, em worktree e branch próprias (`fix/phase-output-diagnostics`). A suíte do backend passa por completo (1672 testes, cobertura de 100%, exigida pelo projeto) e os arquivos alterados passam no `flake8`. Os testes cobrem:
+
+- **Domínio:** estados e códigos; classificação do corte (`confirmed` só com `length`; `suspected` só sem `finish_reason`); invariantes do diagnóstico, da recuperação e da invocação; contagem de recusas sem duplicidade e totais inalterados.
+- **Parser:** as quatro classes do benchmark (Q056, Q042, Q163, Q037); reparo local (`valid_after_repair`, com e sem `finish_reason`); JSON válido com `length` aceito; reprovação válida de B.2 aceita; código, campo e identificadores de cada violação de contrato (A.1, A.2/C.2, B.1, B.2/C.1, A.3/B.4, C.3, teto e reutilização de tarefas, fase sem saída estruturada).
+- **Fase base:** diagnóstico associado à invocação de origem; recuperação bem-sucedida (uma e duas recusas, resposta vazia no meio); falha terminal (retentativas esgotadas, sem retentativa, orçamento negado, respostas vazias, erro do provedor); auditoria com `invocation_id`, motivo e saída bruta; recusa sem diagnóstico como `unclassified`; falha ao registrar a recuperação sem encobrir o erro original.
+- **Persistência e consulta:** recorder; mapper (ida e volta, documento JSON, valores e chaves inválidos, documentos antigos); repositórios JSON e MongoDB; `GET /v1/sessions/{id}`; exportação ZIP dos erros do benchmark.
+
+Arquivos principais:
+
+| Arquivo | Papel |
+|---|---|
+| `apps/backend/src/domain/enums/output_syntax_status_enum.py`, `output_contract_status_enum.py`, `output_problem_code_enum.py`, `length_interruption_enum.py`, `recovery_strategy_enum.py`, `recovery_result_enum.py` | Estados, códigos e classificação do corte. |
+| `apps/backend/src/domain/entities/thinking/output_problem.py`, `output_diagnostic.py`, `output_recovery.py`, `parsed_output.py` | Contratos do diagnóstico e da recuperação. |
+| `apps/backend/src/domain/entities/session/llm_invocation.py`, `session.py`, `session_message.py` | Diagnóstico, recuperação e vínculos na invocação; `rejected_output_count`; vínculo da auditoria. |
+| `apps/backend/src/domain/interfaces/structured_response_parser_interface.py`, `infra/adapters/structured_response_parser_adapter.py` | `parse_output` e produção dos diagnósticos. |
+| `apps/backend/src/application/phases/base_thinking_phase.py` | Associação à invocação e ciclo da recuperação. |
+| `apps/backend/src/domain/interfaces/session_recorder_interface.py`, `infra/adapters/session_recorder_adapter.py`, `infra/mappers/session_document_mapper.py` | Registro e persistência (JSON e MongoDB), consulta e exportação. |
+
+### 8.11 Integração com a recuperação e o isolamento de contexto
+
+O diagnóstico estruturado e a classificação operacional `OutputDefectEnum` coexistem: sintaxe inválida com corte confirmado pede uma nova saída completa e concisa; sintaxe inválida sem corte confirmado pede o mesmo conteúdo em JSON válido; contrato inválido pede que o modelo confira e corrija a própria saída. O indicador de comprimento continua independente do contrato, inclusive quando um JSON válido termina com `length`. As correções preservam a janela da mesma fase e tarefa, e toda transição abre uma janela nova. B.4 recebe a tarefa, o resultado aprovado, as saídas recusadas de resolução e verificação e os vereditos como entradas explícitas, separados da memória transversal.

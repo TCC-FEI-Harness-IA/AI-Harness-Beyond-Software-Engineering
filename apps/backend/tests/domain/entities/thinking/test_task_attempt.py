@@ -35,6 +35,7 @@ def test_guarda_as_saidas_invalidas_que_o_validador_corrigiu() -> None:
 
     assert tentativa.verification_invalid_outputs == (invalida,)
 
+
 def test_por_padrao_nao_registra_saidas_invalidas() -> None:
     tentativa = TaskAttempt(number=1, output="resultado preliminar", report=None)
 

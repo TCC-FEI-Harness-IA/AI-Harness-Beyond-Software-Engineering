@@ -25,6 +25,8 @@ class SessionMessage:
         model_name: Nome do modelo usado, quando aplicável.
         prompt_input: Conversa enviada ao modelo na chamada que produziu `content`, em ordem;
             vazia quando a mensagem não resulta de uma chamada ao modelo.
+        invocation_id: Invocação a que a mensagem se refere, como a que produziu uma saída recusada e
+            auditada; `None` quando não há vínculo ou em mensagens anteriores a este campo.
     """
 
     id: str
@@ -40,6 +42,7 @@ class SessionMessage:
     inference_time_ms: int
     model_name: str | None
     prompt_input: tuple[Message, ...] = ()
+    invocation_id: str | None = None
 
     @property
     def total_tokens(self) -> int:
