@@ -193,6 +193,7 @@ async def test_invariante_i1_a_janela_da_tarefa_seguinte_nao_carrega_a_conversa_
 # (variável `learnings`), e não mais por uma mensagem avulsa no início da janela da tarefa.
 
 _SEM_APRENDIZADOS = "Nenhum aprendizado pontual registrado até o momento."
+_SEM_TENTATIVAS_ANTERIORES = "Nenhuma: esta é a primeira tentativa desta tarefa."
 
 
 async def test_invariante_i2_sem_aprendizados_a_primeira_tarefa_recebe_a_area_com_o_aviso() -> None:
@@ -227,7 +228,11 @@ async def test_invariante_i2_a_janela_da_tarefa_nao_recebe_mais_um_bloco_avulso_
         assert prompt.source is MessageSourceEnum.USER
 
 
-# ── I3 — Contexto preservado entre tentativas da mesma tarefa ────────────────
+# ── I3 — Nova tentativa em janela nova, com o feedback como entrada explícita ─
+#
+# A volta de B.2 para B.1 é uma mudança de fase: a nova tentativa abre uma janela nova e não
+# restaura a conversa da tentativa anterior. O que a correção precisa — as tentativas reprovadas e os
+# vereditos do validador — chega pela variável `previous_attempts` do Template B.1.
 
 
 def _roteiro_com_reprovacao() -> list[str]:
@@ -246,25 +251,46 @@ def _roteiro_com_reprovacao() -> list[str]:
     ]
 
 
-async def test_invariante_i3_as_tentativas_da_mesma_tarefa_usam_a_mesma_janela() -> None:
+async def test_invariante_i3_cada_tentativa_da_mesma_tarefa_usa_uma_janela_nova() -> None:
     eventos = await RalphScenario(responses=_roteiro_com_reprovacao()).run()
 
     raciocinios_da_t2 = [e for e in eventos if e.subtype is _SUB.REASONING and e.task == "T2"]
     assert len(raciocinios_da_t2) == 2
-    assert raciocinios_da_t2[0].context_id == raciocinios_da_t2[1].context_id
+    assert raciocinios_da_t2[0].context_id != raciocinios_da_t2[1].context_id
 
 
-async def test_invariante_i3_a_segunda_tentativa_enxerga_a_reprovacao_da_primeira() -> None:
+async def test_invariante_i3_a_segunda_tentativa_nao_herda_a_conversa_da_primeira() -> None:
     cenario = RalphScenario(responses=_roteiro_com_reprovacao())
 
     await cenario.run()
 
-    segunda_tentativa = cenario.llm.texts_of(8)
-    assert any("primeira tentativa incompleta" in texto for texto in segunda_tentativa)
-    assert any("T2-AC1" in texto for texto in segunda_tentativa)
+    (prompt,) = cenario.llm.conversations[8]
+    assert prompt.text == "TEMPLATE B1"
+    assert prompt.source is MessageSourceEnum.USER
 
 
-async def test_invariante_i3_nao_ha_reset_entre_tentativas_da_mesma_tarefa() -> None:
+async def test_invariante_i3_a_segunda_tentativa_recebe_a_reprovacao_da_primeira_como_entrada_explicita() -> None:
+    cenario = RalphScenario(responses=_roteiro_com_reprovacao())
+
+    await cenario.run()
+
+    anteriores = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[2]["previous_attempts"]
+    assert anteriores.startswith("<tentativas_anteriores>")
+    assert "primeira tentativa incompleta" in anteriores
+    assert "T2-AC1" in anteriores
+    assert "segunda tentativa completa" not in anteriores
+
+
+async def test_invariante_i3_a_primeira_tentativa_declara_que_nao_ha_tentativas_anteriores() -> None:
+    cenario = RalphScenario(responses=_roteiro_com_reprovacao())
+
+    await cenario.run()
+
+    por_resolucao = [v["previous_attempts"] for v in cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)]
+    assert por_resolucao[0] == por_resolucao[1] == _SEM_TENTATIVAS_ANTERIORES
+
+
+async def test_invariante_i3_o_evento_reset_marca_so_o_inicio_da_tarefa() -> None:
     eventos = await RalphScenario(responses=_roteiro_com_reprovacao()).run()
 
     assinaturas_da_t2 = [
@@ -1172,16 +1198,28 @@ async def test_tarefa_sem_aprendizado_deixa_a_area_da_tarefa_seguinte_com_o_avis
 
 
 # ── I3/I4 — Veredito do validador e histórico completo da tarefa (B.4) ───────
+#
+# B.4 roda numa janela nova, da própria fase. O "contexto completo da tarefa" que o paper lhe dá
+# chega como material delimitado na variável `task_history`, montado a partir do registro da
+# tarefa — e não herdando a conversa de B.1.
 
 
-async def test_invariante_i3_a_segunda_tentativa_enxerga_o_veredito_do_validador() -> None:
+def _anteriores_da_segunda_tentativa(cenario: RalphScenario) -> str:
+    return cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[2]["previous_attempts"]
+
+
+def _historico_de_b4(cenario: RalphScenario, indice: int = 0) -> str:
+    return cenario.template_provider.variables_of(_FASE.B4_LEARNINGS_EXTRACTION)[indice]["task_history"]
+
+
+async def test_invariante_i3_a_segunda_tentativa_recebe_o_veredito_do_validador() -> None:
     cenario = RalphScenario(responses=_roteiro_com_reprovacao())
 
     await cenario.run()
 
-    segunda_tentativa = " ".join(cenario.llm.texts_of(8))
-    assert "nao atende" in segunda_tentativa
-    assert "reproved" in segunda_tentativa
+    anteriores = _anteriores_da_segunda_tentativa(cenario)
+    assert "nao atende" in anteriores
+    assert "`reproved`" in anteriores
 
 
 async def test_a_instrucao_de_refazer_so_aparece_quando_ha_nova_tentativa() -> None:
@@ -1189,22 +1227,41 @@ async def test_a_instrucao_de_refazer_so_aparece_quando_ha_nova_tentativa() -> N
 
     await cenario.run()
 
-    segunda_tentativa = cenario.llm.texts_of(8)
-    assert sum("Refaça a resolução da tarefa" in texto for texto in segunda_tentativa) == 1
-    # B.4 roda em janela própria: a instrução de refazer é parte da conversa de B.1, não do histórico.
-    assert not any("Refaça a resolução da tarefa" in texto for texto in cenario.llm.texts_of(10))
+    por_resolucao = [v["previous_attempts"] for v in cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)]
+    assert ["Refaça a resolução da tarefa" in anteriores for anteriores in por_resolucao] == [False, False, True]
+    assert _anteriores_da_segunda_tentativa(cenario).count("Refaça a resolução da tarefa") == 1
+    assert "Refaça a resolução da tarefa" not in _historico_de_b4(cenario, indice=1)
 
 
-async def test_a_resposta_reprovada_nao_e_duplicada_na_mensagem_de_correcao() -> None:
+async def test_a_resposta_reprovada_nao_e_duplicada_no_feedback() -> None:
     cenario = RalphScenario(responses=_roteiro_com_reprovacao())
 
     await cenario.run()
 
-    segunda_tentativa = cenario.llm.texts_of(8)
-    assert sum("primeira tentativa incompleta" in texto for texto in segunda_tentativa) == 1
+    assert _anteriores_da_segunda_tentativa(cenario).count("primeira tentativa incompleta") == 1
 
 
-async def test_b4_recebe_o_veredito_de_aprovacao_mesmo_quando_aprovado_de_primeira() -> None:
+async def test_o_feedback_acumula_todas_as_tentativas_reprovadas_da_tarefa_em_ordem() -> None:
+    cenario = RalphScenario(
+        responses=[
+            _criterios(), _tarefas("T1"), _anotacoes_do_enunciado(),
+            _resolucao("tentativa 1"), _reprovado("T1"),
+            _resolucao("tentativa 2"), _reprovado("T1"),
+            _resolucao("tentativa 3"), _aprovado("T1"), _aprendizados("fato"),
+            _global_aprovado(), _resposta_final(),
+        ],
+        cost_guard=FakeCostGuard(max_task_attempts=3),
+    )
+
+    await cenario.run()
+
+    terceira = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[2]["previous_attempts"]
+    assert terceira.index("tentativa 1") < terceira.index("tentativa 2")
+    assert "Tentativa 1 — reprovada" in terceira and "Tentativa 2 — reprovada" in terceira
+    assert "tentativa 3" not in terceira
+
+
+async def test_b4_recebe_o_historico_delimitado_com_a_tarefa_e_o_veredito_de_primeira() -> None:
     cenario = _cenario_feliz()
 
     await cenario.run()
@@ -1221,11 +1278,59 @@ async def test_b4_recebe_a_reprovacao_e_tambem_a_aprovacao_de_uma_tarefa_com_ret
 
     await cenario.run()
 
-    historico_de_b4 = cenario.template_provider.variables_of(_FASE.B4_LEARNINGS_EXTRACTION)[1]["task_history"]
-    reprovada, aprovada = historico_de_b4.split("### Tentativa 2 — aprovada")
-    assert "### Tentativa 1 — reprovada" in reprovada and "`reproved`" in reprovada
-    assert "primeira tentativa incompleta" in reprovada
-    assert "`approved`" in aprovada
+    historico = _historico_de_b4(cenario, indice=1)
+    primeira = historico.index("**Veredito do validador:**")
+    segunda = historico.index("**Veredito do validador:**", primeira + 1)
+    assert historico.index("primeira tentativa incompleta") < primeira < historico.index("`reproved`") < segunda
+    assert historico.index("### Tentativa 2 — aprovada") < segunda < historico.index("`approved`")
+    assert cenario.template_provider.variables_of(_FASE.B4_LEARNINGS_EXTRACTION)[1]["approved_result"] == (
+        "segunda tentativa completa"
+    )
+
+
+async def test_b4_recebe_a_correcao_de_saida_estruturada_do_validador_identificada_como_invalida() -> None:
+    saida_invalida_do_validador = json.dumps(
+        {"decision": "approved", "criteria_evaluation": [], "unmet_criteria_ids": []}
+    )
+    cenario = RalphScenario(
+        responses=[
+            _criterios(),
+            _tarefas("T1"),
+            _anotacoes_do_enunciado(),
+            _resolucao("2 e primo"),
+            saida_invalida_do_validador,
+            _aprovado("T1"),
+            _aprendizados("fato"),
+            _global_aprovado(),
+            _resposta_final(),
+        ]
+    )
+
+    await cenario.run()
+
+    historico = _historico_de_b4(cenario)
+    indice_da_invalida = historico.index("O validador devolveu uma saída inválida")
+    assert indice_da_invalida < historico.index("**Veredito do validador:**")
+    assert "Faltam avaliações" in historico
+    assert saida_invalida_do_validador in historico
+
+
+async def test_b4_recebe_a_saida_invalida_da_resolucao_identificada_como_descartada() -> None:
+    cenario = RalphScenario(
+        responses=[
+            _criterios(), _tarefas("T1"), _anotacoes_do_enunciado(),
+            "isto nao e json", _resolucao("2 e primo"), _aprovado("T1"), _aprendizados("fato"),
+            _global_aprovado(), _resposta_final(),
+        ]
+    )
+
+    await cenario.run()
+
+    historico = _historico_de_b4(cenario)
+    assert historico.index("isto nao e json") < historico.index("**Resultado preliminar:**")
+    assert cenario.template_provider.variables_of(_FASE.B4_LEARNINGS_EXTRACTION)[0]["approved_result"] == "2 e primo"
+    assert "Saída descartada da resolução" in historico
+    assert "erro de sintaxe" in historico
 
 
 async def test_a_janela_do_validador_continua_isolada_da_da_tarefa() -> None:
@@ -1770,9 +1875,7 @@ async def test_com_os_templates_reais_todo_prompt_de_b_e_c_enviado_ao_modelo_tra
     for indice, fase in enumerate(fases_por_chamada):
         if fase not in _FASES_COM_APRENDIZADOS:
             continue
-        prompt_da_fase = cenario.llm.texts_of(indice)[-1]
-        if fase is _FASE.B1_TASK_RESOLUTION and "Refaça a resolução" in prompt_da_fase:
-            prompt_da_fase = cenario.llm.texts_of(indice)[-2]
+        (prompt_da_fase,) = cenario.llm.texts_of(indice)
         assert "## Aprendizados Pontuais" in prompt_da_fase, fase
         assert _ANOTACOES_DO_PAPER[0] in prompt_da_fase, fase
 
@@ -1923,3 +2026,269 @@ async def test_b1_nao_duplica_os_criterios_de_aceite_dentro_de_task_description(
     assert "**Critérios de aceite:**" not in variaveis_b1["task_description"]
     assert "T1-AC1" not in variaveis_b1["task_description"]
     assert "T1-AC1" in variaveis_b1["task_acceptance_criteria"]
+
+
+# ── Isolamento de contexto entre fases ──────────────────────────────────────
+#
+# Regra: uma correção de saída na mesma fase e tarefa reaproveita a janela; uma tarefa diferente e
+# toda mudança de fase (inclusive B.1 → B.2, B.2 → B.1, B.1 → B.4, C.1 → C.2/C.3 e C.2 → B.1) abrem
+# uma janela nova. Só os aprendizados atravessam fases como memória; as demais entradas previstas no
+# paper chegam explicitamente pelo template da fase. Os testes abaixo usam os templates reais e
+# inspecionam as mensagens efetivamente enviadas ao modelo, e não só a identidade das janelas.
+
+
+def _roteiro_por_todas_as_transicoes() -> list[str]:
+    """Chamadas: 0 A1, 1 A2, 2 A3, 3-5 T1, 6 B1 T2, 7 B2, 8 B1 T2 (JSON ilegível), 9 correção de B1,
+    10 B2, 11 B4 T2, 12 C1 reprova, 13 C2, 14-16 T3, 17 C1, 18 C3."""
+    return [
+        _criterios(),
+        _tarefas("T1", "T2"),
+        _anotacoes_do_enunciado("Alternativas: A) 2 B) 4 C) 6 D) NDA"),
+        *_tarefa_aprovada("T1", "2 e primo", "Um numero primo so e divisivel por 1 e por ele mesmo."),
+        _resolucao("primeira tentativa incompleta"),
+        _reprovado("T2"),
+        "isto nao e json",
+        _resolucao("segunda tentativa completa"),
+        _aprovado("T2"),
+        _aprendizados("Todo numero par e divisivel por 2."),
+        _global_reprovado("AC2"),
+        _tarefas("T3"),
+        *_tarefa_aprovada("T3", "nenhum numero atende as tres condicoes", "Primo, par e maior que 2: nenhum."),
+        _global_aprovado(),
+        _resposta_final(),
+    ]
+
+
+def _cenario_com_templates_reais(responses: list[str]) -> RalphScenario:
+    provider = FilePromptTemplateProvider(settings=Settings(), logger=logging.getLogger("teste.templates"))
+    return RalphScenario(responses=responses, template_provider=provider)
+
+
+# Os delimitadores do material explícito ocupam uma linha própria; os templates só os citam no texto.
+_ABRE_TENTATIVAS = "\n<tentativas_anteriores>\n"
+_FECHA_TENTATIVAS = "\n</tentativas_anteriores>\n"
+_ABRE_HISTORICO = "\n<historico_da_tarefa>\n"
+_FECHA_HISTORICO = "\n</historico_da_tarefa>\n"
+
+
+def _prompt_unico(cenario: RalphScenario, indice: int) -> str:
+    """Devolve a única mensagem da conversa: a janela nova só tem o prompt da própria fase."""
+    (prompt,) = cenario.llm.conversations[indice]
+    assert prompt.source is MessageSourceEnum.USER
+    return prompt.text
+
+
+_CABECALHO = {
+    _FASE.B1_TASK_RESOLUTION: "# B.1 — Resolução da tarefa",
+    _FASE.B2_TASK_VERIFICATION: "# B.2 — Verificação",
+    _FASE.B4_LEARNINGS_EXTRACTION: "# B.4 — Extração",
+    _FASE.C1_GLOBAL_VERIFICATION: "# C.1",
+    _FASE.C2_ADDITIONAL_PLANNING: "# C.2",
+    _FASE.C3_FINAL_ANSWER: "# C.3",
+}
+
+
+def _cabecalhos_presentes(texto: str) -> list[_FASE]:
+    return [fase for fase, cabecalho in _CABECALHO.items() if cabecalho in texto]
+
+
+async def test_cada_execucao_de_fase_tem_janela_propria_e_so_a_correcao_reaproveita_a_janela() -> None:
+    cenario = _cenario_com_templates_reais(_roteiro_por_todas_as_transicoes())
+
+    await cenario.run()
+
+    invocacoes = cenario.session.invocations
+    janelas = [invocacao.context_id for invocacao in invocacoes]
+    assert len(invocacoes) == cenario.llm.call_count == 19
+    assert janelas[8] == janelas[9]
+    assert len(set(janelas)) == 18
+    assert [invocacao.phase.value for invocacao in invocacoes] == [
+        "A1", "A2", "A3", "B1", "B2", "B4", "B1", "B2", "B1", "B1", "B2", "B4", "C1", "C2", "B1", "B2", "B4",
+        "C1", "C3",
+    ]
+
+
+async def test_toda_janela_nova_leva_ao_modelo_so_o_prompt_da_propria_fase() -> None:
+    cenario = _cenario_com_templates_reais(_roteiro_por_todas_as_transicoes())
+
+    await cenario.run()
+
+    for indice, invocacao in enumerate(cenario.session.invocations):
+        if indice == 9:
+            continue
+        prompt = _prompt_unico(cenario, indice)
+        if invocacao.phase in _CABECALHO:
+            assert _cabecalhos_presentes(prompt) == [invocacao.phase], indice
+
+
+async def test_a_correcao_de_saida_reaproveita_a_janela_sem_repetir_o_template() -> None:
+    cenario = _cenario_com_templates_reais(_roteiro_por_todas_as_transicoes())
+
+    await cenario.run()
+
+    prompt, recusada, correcao = cenario.llm.conversations[9]
+    assert prompt.text == _prompt_unico(cenario, 8)
+    assert recusada.text == "isto nao e json"
+    assert recusada.source is MessageSourceEnum.LLM_AGENT
+    assert correcao.source is MessageSourceEnum.USER
+    assert "devolva o mesmo conteúdo" in correcao.text
+    assert _cabecalhos_presentes(correcao.text) == []
+    assert "## Aprendizados Pontuais" not in correcao.text
+
+
+async def test_transicao_b1_para_b2_leva_so_o_resultado_preliminar_e_os_criterios() -> None:
+    cenario = _cenario_com_templates_reais(_roteiro_por_todas_as_transicoes())
+
+    await cenario.run()
+
+    verificacao = _prompt_unico(cenario, 7)
+    assert "primeira tentativa incompleta" in verificacao
+    assert "`T2-AC1`: criterio de T2" in verificacao
+    assert '"task_id"' not in verificacao
+    assert "descricao de T2" not in verificacao
+
+
+async def test_transicao_b2_para_b1_abre_janela_nova_com_o_feedback_explicito() -> None:
+    cenario = _cenario_com_templates_reais(_roteiro_por_todas_as_transicoes())
+
+    await cenario.run()
+
+    nova_tentativa = _prompt_unico(cenario, 8)
+    assert nova_tentativa.count("# B.1 — Resolução da tarefa") == 1
+    assert nova_tentativa.count("## Aprendizados Pontuais") == 1
+    inicio = nova_tentativa.index(_ABRE_TENTATIVAS)
+    fim = nova_tentativa.index(_FECHA_TENTATIVAS)
+    feedback = nova_tentativa[inicio:fim]
+    assert "primeira tentativa incompleta" in feedback
+    assert "`T2-AC1` — não atendido: nao atende" in feedback
+    assert "Critérios não satisfeitos: `T2-AC1`" in nova_tentativa
+    assert '"result": "primeira tentativa incompleta"' not in nova_tentativa
+    assert cenario.session.invocations[8].context_id not in {
+        cenario.session.invocations[6].context_id,
+        cenario.session.invocations[7].context_id,
+    }
+
+
+async def test_transicao_b1_para_b4_abre_janela_nova_com_o_historico_como_material_delimitado() -> None:
+    cenario = _cenario_com_templates_reais(_roteiro_por_todas_as_transicoes())
+
+    await cenario.run()
+
+    extracao = _prompt_unico(cenario, 11)
+    inicio = extracao.index(_ABRE_HISTORICO)
+    fim = extracao.index(_FECHA_HISTORICO)
+    historico = extracao[inicio:fim]
+    for trecho in (
+        "### Tentativa 1 — reprovada",
+        "primeira tentativa incompleta",
+        "**Veredito do validador:**",
+        "isto nao e json",
+        "### Tentativa 2 — aprovada",
+        "`approved`",
+    ):
+        assert trecho in historico, trecho
+    assert "### T2 — titulo de T2" in extracao[:inicio]
+    assert "descricao de T2" in extracao[:inicio]
+    assert "<resultado_aprovado>\nsegunda tentativa completa\n</resultado_aprovado>" in extracao[:inicio]
+    assert "Um numero primo so e divisivel por 1 e por ele mesmo." in extracao[fim:]
+    assert "Todo numero par e divisivel por 2." not in extracao
+    janelas_de_t2 = {invocacao.context_id for invocacao in cenario.session.invocations[6:11]}
+    assert cenario.session.invocations[11].context_id not in janelas_de_t2
+
+
+async def test_b4_em_janela_nova_recebe_explicitamente_o_material_da_extracao() -> None:
+    cenario = _cenario_com_templates_reais(_roteiro_com_reprovacao())
+
+    eventos = await cenario.run()
+
+    # chamadas: 6 B1 de T2, 7 B2, 8 nova tentativa de B1, 9 B2, 10 B4
+    extracao_da_t2 = next(e for e in eventos if e.subtype is _SUB.LEARN and e.task == "T2")
+    janelas_anteriores_da_t2 = {e.context_id for e in eventos if e.task == "T2" and e.subtype is not _SUB.LEARN}
+    assert extracao_da_t2.context_id not in janelas_anteriores_da_t2
+    assert cenario.session.invocations[10].phase is _FASE.B4_LEARNINGS_EXTRACTION
+    assert cenario.session.invocations[10].context_id == extracao_da_t2.context_id
+    prompt = _prompt_unico(cenario, 10)
+    assert prompt.startswith("# B.4 — Extração dos aprendizados pontuais")
+    assert prompt.count(_ABRE_HISTORICO) == prompt.count(_FECHA_HISTORICO) == 1
+    for trecho in (
+        "primeira tentativa incompleta",
+        "`reproved`",
+        "segunda tentativa completa",
+        "`approved`",
+        "### T2 — titulo de T2",
+        "descricao de T2",
+        "`T2-AC1` — não atendido",
+    ):
+        assert trecho in prompt, trecho
+    assert "# B.1 — Resolução da tarefa" not in prompt
+    assert "Limite estrito de escopo" not in prompt
+
+
+async def test_tarefa_diferente_na_mesma_fase_recebe_janela_nova_sem_a_conversa_da_anterior() -> None:
+    cenario = _cenario_com_templates_reais(_roteiro_por_todas_as_transicoes())
+
+    await cenario.run()
+
+    primeira_de_t2 = _prompt_unico(cenario, 6)
+    primeira_de_t3 = _prompt_unico(cenario, 14)
+    assert "### T2 — titulo de T2" in primeira_de_t2 and "2 e primo" not in primeira_de_t2
+    assert "### T3 — titulo de T3" in primeira_de_t3
+    for trecho in ("primeira tentativa incompleta", "segunda tentativa completa", _ABRE_TENTATIVAS):
+        assert trecho not in primeira_de_t3
+    assert _SEM_TENTATIVAS_ANTERIORES in primeira_de_t2 and _SEM_TENTATIVAS_ANTERIORES in primeira_de_t3
+    invocacoes = cenario.session.invocations
+    assert len({invocacoes[3].context_id, invocacoes[6].context_id, invocacoes[14].context_id}) == 3
+
+
+async def test_transicoes_c1_para_c2_e_c3_e_c2_para_b1_abrem_janelas_novas_com_entradas_explicitas() -> None:
+    cenario = _cenario_com_templates_reais(_roteiro_por_todas_as_transicoes())
+
+    await cenario.run()
+
+    replanejamento = _prompt_unico(cenario, 13)
+    assert "`AC2`: selecionar uma das alternativas" in replanejamento
+    assert "segunda tentativa completa" in replanejamento
+    assert "primeira tentativa incompleta" not in replanejamento
+    assert '"decision"' not in replanejamento
+    sintese = _prompt_unico(cenario, 18)
+    assert "nenhum numero atende as tres condicoes" in sintese
+    assert "`AC1`: responder em portugues" in sintese
+    assert '"decision"' not in sintese
+    resolucao_de_t3 = _prompt_unico(cenario, 14)
+    assert "## Tarefas" not in resolucao_de_t3
+    assert '"tasks"' not in resolucao_de_t3
+
+
+async def test_a_auditoria_persistida_guarda_todas_as_conversas_separadas_das_janelas() -> None:
+    cenario = _cenario_com_templates_reais(_roteiro_por_todas_as_transicoes())
+
+    await cenario.run()
+
+    entradas_registradas = [
+        [entrada.text for entrada in mensagem.prompt_input]
+        for mensagem in cenario.session.messages
+        if mensagem.prompt_input
+    ]
+    assert entradas_registradas == [cenario.llm.texts_of(indice) for indice in range(cenario.llm.call_count)]
+    conteudos = " ".join(mensagem.content for mensagem in cenario.session.messages)
+    assert "primeira tentativa incompleta" in conteudos
+    assert "isto nao e json" in conteudos
+    assert "**Decisão:** `reproved`" in conteudos
+
+
+async def test_a_nova_tentativa_e_sua_correcao_continuam_com_temperatura_1_em_janela_nova() -> None:
+    cenario = _cenario_com_templates_reais(_roteiro_por_todas_as_transicoes())
+
+    await cenario.run()
+
+    temperaturas = [chamada["temperature"] for chamada in cenario.llm.calls]
+    assert [indice for indice, t in enumerate(temperaturas) if t == 1.0] == [8, 9]
+
+
+async def test_o_armazenamento_registra_a_janela_da_tentativa_aprovada() -> None:
+    cenario = RalphScenario(responses=_roteiro_com_reprovacao())
+
+    eventos = await cenario.run()
+
+    armazenamento = next(e for e in eventos if e.subtype is _SUB.STORE and e.task == "T2")
+    assert armazenamento.context_id == cenario.session.invocations[8].context_id

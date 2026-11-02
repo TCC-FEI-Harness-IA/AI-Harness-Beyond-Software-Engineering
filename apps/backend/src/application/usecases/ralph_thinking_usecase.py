@@ -3,12 +3,10 @@ from typing import Any, AsyncGenerator, Sequence
 
 from src.application.dtos.ralph_thinking_input_dto import RalphThinkingInputDTO
 from src.domain.entities.llm.context_window import ContextWindow
-from src.domain.entities.llm.message import Message
 from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.thinking.acceptance_criterion import AcceptanceCriterion
 from src.domain.entities.thinking.criterion_evaluation import CriterionEvaluation
 from src.domain.entities.thinking.global_approval import GlobalApproval
-from src.domain.entities.thinking.invalid_output import InvalidOutput
 from src.domain.entities.thinking.phase_outcome import PhaseOutcome
 from src.domain.entities.thinking.learning import Learning
 from src.domain.entities.thinking.task import Task
@@ -18,7 +16,6 @@ from src.domain.entities.thinking.thinking_event import ThinkingEvent
 from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.entities.thinking.verification_report import VerificationReport
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
-from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.session_failure_reason_enum import SessionFailureReasonEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.task_status_enum import TaskStatusEnum
@@ -62,14 +59,29 @@ _REPORT_CONTENT = "**Decisão:** `{decision}`\n\n{evaluations}"
 _EVALUATION_ITEM = "- `{criterion_id}` — {status}: {justification}"
 _MET_LABEL = "atendido"
 _UNMET_LABEL = "não atendido"
-_VALIDATOR_REPORT_CONTENT = "## Veredito do validador (tentativa {attempt})\n\n{report}"
-_INVALID_VERIFIER_OUTPUT_CONTENT = (
-    "O validador devolveu uma saída inválida e foi instruído a corrigi-la.\n\n"
-    "**Saída inválida:**\n\n{raw_output}\n\n**Motivo da recusa:** {reason}"
+# Entradas explícitas montadas a partir do registro da tarefa (`Task.attempts`). Toda mudança de fase
+# abre uma janela nova: o feedback da nova tentativa de B.1 e o histórico que B.4 recebe chegam como
+# material delimitado nas variáveis do template, e nunca herdando a conversa de outra janela.
+_NO_PREVIOUS_ATTEMPTS_CONTENT = "Nenhuma: esta é a primeira tentativa desta tarefa."
+_PREVIOUS_ATTEMPTS_CONTENT = "<tentativas_anteriores>\n{attempts}\n</tentativas_anteriores>\n\n{instruction}"
+_PREVIOUS_ATTEMPT_CONTENT = (
+    "### Tentativa {attempt} — reprovada\n\n"
+    "**Resultado apresentado:**\n\n{output}\n\n"
+    "**Veredito do validador:**\n\n{report}"
 )
 _RETRY_INSTRUCTION_CONTENT = (
     "A tentativa anterior foi reprovada. Critérios não satisfeitos: {unmet}.\n\n"
     "Refaça a resolução da tarefa corrigindo exatamente esses pontos."
+)
+_DISCARDED_RESOLUTION_CONTENT = (
+    "#### Saída descartada da resolução ({defect})\n\n"
+    "A resolução devolveu uma saída inválida e foi instruída a corrigi-la.\n\n"
+    "**Saída inválida:**\n\n{raw_output}\n\n**Motivo da recusa:** {reason}"
+)
+_INVALID_VERIFIER_OUTPUT_CONTENT = (
+    "#### Saída inválida do validador ({defect})\n\n"
+    "O validador devolveu uma saída inválida e foi instruído a corrigi-la.\n\n"
+    "**Saída inválida:**\n\n{raw_output}\n\n**Motivo da recusa:** {reason}"
 )
 _RESULT_BLOCK = "## {task_id} — {title}\n\n{content}"
 _HISTORY_ATTEMPT_HEADER = "### Tentativa {attempt} — {status}"
@@ -172,6 +184,7 @@ class RalphThinkingUseCase:
         self.__active_task_id: str | None = None
         self.__pending_criteria_ids: tuple[str, ...] = ()
         self.__context: ContextWindow = ContextWindow(context_id="", phase=_RALPH_FLOW)
+        self.__resolution_context: ContextWindow = self.__context
         self.__running_phase: ThinkingPhaseEnum = _RALPH_FLOW
 
     async def execute(self, input_dto: RalphThinkingInputDTO) -> AsyncGenerator[ThinkingEvent, None]:
@@ -307,6 +320,9 @@ class RalphThinkingUseCase:
     async def __run_task(self, task: Task) -> AsyncGenerator[ThinkingEvent, None]:
         """Executa uma tarefa completa: B.1, B.2, B.3 e B.4.
 
+        O evento `reset` marca o início da tarefa (*Fresh Context*) e anuncia a janela da primeira
+        tentativa. Cada execução de fase da tarefa abre, além dela, a sua própria janela.
+
         Args:
             task: Tarefa retirada da fila, já em andamento.
 
@@ -347,7 +363,7 @@ class RalphThinkingUseCase:
 
         async for event in self.__resolve_task(task=task, context=context):
             yield event
-        async for event in self.__store_result(task=task, context=context):
+        async for event in self.__store_result(task=task):
             yield event
         async for event in self.__extract_learnings(task=task):
             yield event
@@ -356,12 +372,11 @@ class RalphThinkingUseCase:
     async def __resolve_task(self, task: Task, context: ContextWindow) -> AsyncGenerator[ThinkingEvent, None]:
         """Executa o ciclo de tentativas de B.1 e B.2 para uma tarefa.
 
-        A janela da tarefa é a mesma em toda retentativa: a tentativa reprovada e o veredito do
-        validador permanecem no contexto e guiam a correção. Cada veredito é anexado a essa
-        janela assim que existe, antes de qualquer decisão. A janela do validador continua
-        isolada: só o seu relatório volta para cá. Cada tentativa fica registrada na tarefa, com
-        as saídas inválidas que o validador corrigiu, e é desse registro — e não desta janela —
-        que B.4 monta o histórico da tarefa.
+        Cada execução de fase tem a sua janela: B.1 → B.2 e B.2 → B.1 são mudanças de fase. A nova
+        tentativa de B.1 não restaura a conversa da anterior: as tentativas reprovadas e os vereditos
+        do validador chegam como entrada explícita do Template B.1 (`previous_attempts`), montada a
+        partir do registro da tarefa. Cada tentativa fica registrada em `task.attempts`, com as saídas
+        inválidas que B.1 e B.2 tiveram de corrigir, porque é dali que B.4 recebe o histórico.
 
         Toda tentativa depois de uma reprovação é uma retentativa: B.1 é chamada com a temperatura de
         retentativa, e a verificação dessa tentativa volta à temperatura do usuário.
@@ -371,7 +386,7 @@ class RalphThinkingUseCase:
 
         Args:
             task: Tarefa em execução.
-            context: Janela de contexto da tarefa.
+            context: Janela nova da primeira tentativa, anunciada pelo evento `reset`.
 
         Yields:
             ThinkingEvent: Eventos `reasoning` e `verify_pass`/`verify_fail`.
@@ -381,6 +396,9 @@ class RalphThinkingUseCase:
         """
         while True:
             attempt = self.cost_guard.register_task_attempt(task_id=task.id)
+            if attempt > _FIRST_ATTEMPT:
+                context = self.__new_context(phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION, task_id=task.id)
+            self.__resolution_context = context
             outcome = await self.__execute_phase(
                 runner=self.task_resolution_phase,
                 context=context,
@@ -388,6 +406,7 @@ class RalphThinkingUseCase:
                 is_retry=attempt > _FIRST_ATTEMPT,
             )
             preliminary = outcome.parsed["result"]
+            resolution_invalid_outputs = outcome.invalid_outputs
             yield await self.__record_and_build(
                 subtype=ThinkingEventSubtypeEnum.REASONING,
                 phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION,
@@ -398,9 +417,7 @@ class RalphThinkingUseCase:
                 task_id=task.id,
             )
 
-            verification_context = self.context_window_factory.create(
-                phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION, task_id=task.id
-            )
+            verification_context = self.__new_context(phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION, task_id=task.id)
             outcome = await self.__execute_phase(
                 runner=self.task_verification_phase,
                 context=verification_context,
@@ -415,11 +432,9 @@ class RalphThinkingUseCase:
                     number=attempt,
                     output=preliminary,
                     report=report,
-                    invalid_verifier_outputs=outcome.invalid_outputs,
+                    resolution_invalid_outputs=resolution_invalid_outputs,
+                    verification_invalid_outputs=outcome.invalid_outputs,
                 )
-            )
-            self.__record_verification_in_task_context(
-                context=context, attempt=attempt, report=report, invalid_outputs=outcome.invalid_outputs
             )
             yield await self.__record_and_build(
                 subtype=(
@@ -446,64 +461,21 @@ class RalphThinkingUseCase:
                     task_id=task.id,
                 )
 
-            context.append(
-                message=Message(
-                    creation_timestamp=self.clock.now(),
-                    text=_RETRY_INSTRUCTION_CONTENT.format(unmet=self.__render_ids(ids=report.unmet_criteria_ids)),
-                    source=MessageSourceEnum.USER,
-                )
-            )
-
-    def __record_verification_in_task_context(
-        self,
-        context: ContextWindow,
-        attempt: int,
-        report: VerificationReport,
-        invalid_outputs: Sequence[InvalidOutput],
-    ) -> None:
-        """Acrescenta ao histórico da tarefa a interação com o validador.
-
-        Primeiro as saídas inválidas que o validador teve de corrigir, claramente identificadas
-        como tais; depois o relatório validado, o único com efeito de controle.
-
-        Args:
-            context: Janela de contexto da tarefa.
-            attempt: Número da tentativa verificada.
-            report: Relatório validado da verificação.
-            invalid_outputs: Saídas recusadas pelo parser e corrigidas pelo validador.
-        """
-        for invalid_output in invalid_outputs:
-            context.append(
-                message=Message(
-                    creation_timestamp=self.clock.now(),
-                    text=_INVALID_VERIFIER_OUTPUT_CONTENT.format(
-                        raw_output=invalid_output.raw_output, reason=invalid_output.reason
-                    ),
-                    source=MessageSourceEnum.USER,
-                )
-            )
-        context.append(
-            message=Message(
-                creation_timestamp=self.clock.now(),
-                text=_VALIDATOR_REPORT_CONTENT.format(attempt=attempt, report=self.__render_report(report=report)),
-                source=MessageSourceEnum.USER,
-            )
-        )
-
-    async def __store_result(self, task: Task, context: ContextWindow) -> AsyncGenerator[ThinkingEvent, None]:
+    async def __store_result(self, task: Task) -> AsyncGenerator[ThinkingEvent, None]:
         """Armazena o resultado aprovado de uma tarefa (B.3), sem chamar o modelo.
 
         Só uma tarefa aprovada, cuja última tentativa tem relatório aprovado, tem resultado a
-        armazenar; a própria tarefa garante isso ao entregá-lo.
+        armazenar; a própria tarefa garante isso ao entregá-lo. A etapa não abre janela: ela é
+        registrada com a janela da tentativa aprovada, que produziu o resultado armazenado.
 
         Args:
             task: Tarefa recém-aprovada.
-            context: Janela de contexto da tarefa.
 
         Yields:
             ThinkingEvent: Evento `store`, sempre com tempo de inferência zero.
         """
         self.__running_phase = ThinkingPhaseEnum.B3_RESULT_STORAGE
+        context = self.__resolution_context
         self.__results[task.id] = task.approved_result()
         content = _STORE_CONTENT.format(task_id=task.id)
         await self.session_recorder.record_programmatic_step(
@@ -809,8 +781,8 @@ class RalphThinkingUseCase:
     ) -> PhaseOutcome:
         """Executa uma fase registrando qual fase e qual janela estão em andamento.
 
-        O diagnóstico de uma falha técnica precisa apontar a fase que realmente falhou; por isso a
-        fase em andamento é registrada aqui, e não deduzida da janela corrente.
+        O diagnóstico de uma falha técnica precisa apontar a fase que realmente falhou e a janela em
+        que ela rodava; cada execução de fase tem a sua janela.
 
         Args:
             runner: Fase a executar.
@@ -975,13 +947,14 @@ class RalphThinkingUseCase:
 
         Returns:
             dict[str, str]: Descrição da tarefa (sem duplicar os critérios), seus critérios de
-            aceite e os aprendizados pontuais.
+            aceite, os aprendizados pontuais e o feedback das tentativas anteriores.
         """
         return {
             "task_description": _TASK_HEADER_CONTENT.format(
                 task_id=task.id, title=task.title, description=task.description
             ),
             "task_acceptance_criteria": self.__render_criteria(criteria=task.acceptance_criteria),
+            "previous_attempts": self.__render_previous_attempts(task=task),
             **self.__learnings_variables(),
         }
 
@@ -1240,14 +1213,22 @@ class RalphThinkingUseCase:
                     attempt=attempt.number,
                     status=_APPROVED_ATTEMPT_LABEL if report.approved else _REPROVED_ATTEMPT_LABEL,
                 ),
+                *(
+                    _DISCARDED_RESOLUTION_CONTENT.format(
+                        defect=invalid.defect.label, raw_output=invalid.raw_output, reason=invalid.reason
+                    )
+                    for invalid in attempt.resolution_invalid_outputs
+                ),
                 (
                     _HISTORY_APPROVED_OUTPUT_CONTENT
                     if report.approved
                     else _HISTORY_OUTPUT_CONTENT.format(output=attempt.output)
                 ),
                 *(
-                    _INVALID_VERIFIER_OUTPUT_CONTENT.format(raw_output=invalid.raw_output, reason=invalid.reason)
-                    for invalid in attempt.invalid_verifier_outputs
+                    _INVALID_VERIFIER_OUTPUT_CONTENT.format(
+                        defect=invalid.defect.label, raw_output=invalid.raw_output, reason=invalid.reason
+                    )
+                    for invalid in attempt.verification_invalid_outputs
                 ),
                 _HISTORY_REPORT_CONTENT.format(report=self.__render_report(report=report)),
             ]
@@ -1297,6 +1278,29 @@ class RalphThinkingUseCase:
             str: Um item por aprendizado.
         """
         return _ITEM_SEPARATOR.join(f"- {learning.content.strip()}" for learning in learnings)
+
+    def __render_previous_attempts(self, task: Task) -> str:
+        """Renderiza o feedback que a nova tentativa de B.1 recebe como entrada explícita.
+
+        Args:
+            task: Tarefa em execução.
+
+        Returns:
+            str: As tentativas reprovadas, com resultado e veredito, delimitadas e seguidas da
+            instrução de refazer; ou o aviso de que esta é a primeira tentativa.
+        """
+        if not task.attempts:
+            return _NO_PREVIOUS_ATTEMPTS_CONTENT
+        attempts = _BLOCK_SEPARATOR.join(
+            _PREVIOUS_ATTEMPT_CONTENT.format(
+                attempt=attempt.number, output=attempt.output, report=self.__render_report(report=attempt.report)
+            )
+            for attempt in task.attempts
+        )
+        instruction = _RETRY_INSTRUCTION_CONTENT.format(
+            unmet=self.__render_ids(ids=task.attempts[-1].report.unmet_criteria_ids)
+        )
+        return _PREVIOUS_ATTEMPTS_CONTENT.format(attempts=attempts, instruction=instruction)
 
     def __render_results(self) -> str:
         """Renderiza os resultados armazenados em B.3.

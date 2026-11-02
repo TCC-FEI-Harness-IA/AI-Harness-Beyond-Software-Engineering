@@ -8,7 +8,9 @@ _PLACEHOLDERS_POR_FASE = {
     ThinkingPhaseEnum.A1_GENERAL_CRITERIA: {"user_question"},
     ThinkingPhaseEnum.A2_TASK_DECOMPOSITION: {"user_question", "max_tasks"},
     ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: {"user_question"},
-    ThinkingPhaseEnum.B1_TASK_RESOLUTION: {"task_description", "task_acceptance_criteria", "learnings"},
+    ThinkingPhaseEnum.B1_TASK_RESOLUTION: {
+        "task_description", "task_acceptance_criteria", "learnings", "previous_attempts"
+    },
     ThinkingPhaseEnum.B2_TASK_VERIFICATION: {"preliminary_result", "task_acceptance_criteria", "learnings"},
     ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: {"task_description", "approved_result", "task_history", "learnings"},
     ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: {"stored_results", "general_acceptance_criteria", "learnings"},
@@ -322,3 +324,22 @@ def test_templates_orientam_avaliacao_relativa_por_eliminacao_sem_hiper_literali
         template = " ".join(provider.get(phase=fase).lower().split())
         assert "eliminação" in template, fase
         assert "100% literal" in template or "hiper-litera" in template, fase
+
+
+def test_template_b1_traz_as_tentativas_anteriores_como_entrada_explicita() -> None:
+    template = _provider().get(phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION)
+
+    assert "## Tentativas anteriores desta tarefa" in template
+    assert "<tentativas_anteriores>" in template
+    assert template.index("{{previous_attempts}}") < template.index("## Formato de saída")
+
+
+def test_template_b4_extrai_do_historico_delimitado_e_nao_do_contexto_acima() -> None:
+    template = _provider().get(phase=ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION)
+    normalizado = " ".join(template.lower().split())
+
+    assert "## Histórico da tarefa" in template
+    assert "<historico_da_tarefa>" in template
+    assert "contexto acima" not in normalizado
+    assert "não continue" in normalizado
+    assert template.index("{{task_history}}") < template.index("## Formato de saída")

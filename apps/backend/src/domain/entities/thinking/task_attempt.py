@@ -8,15 +8,19 @@ from src.domain.entities.thinking.verification_report import VerificationReport
 class TaskAttempt:
     """Representa uma tentativa de resolução de tarefa (B.1) e seu veredito (B.2).
 
+    É o registro de que o orquestrador monta as entradas explícitas das fases seguintes: o
+    feedback da nova tentativa de B.1 e o histórico da tarefa entregue a B.4.
+
     Attributes:
         number: Número sequencial da tentativa, começando em 1.
         output: Saída produzida por B.1 nessa tentativa.
         report: Relatório de verificação de B.2, ou `None` antes de verificar.
-        invalid_verifier_outputs: Saídas do validador recusadas pelo parser e corrigidas antes do
-            relatório válido. Fazem parte do histórico da tarefa que B.4 recebe.
+        resolution_invalid_outputs: Saídas de B.1 recusadas pelo parser e corrigidas nessa tentativa.
+        verification_invalid_outputs: Saídas de B.2 recusadas pelo parser e corrigidas nessa tentativa.
     """
 
     number: int
     output: str
     report: VerificationReport | None
-    invalid_verifier_outputs: tuple[InvalidOutput, ...] = ()
+    resolution_invalid_outputs: tuple[InvalidOutput, ...] = ()
+    verification_invalid_outputs: tuple[InvalidOutput, ...] = ()

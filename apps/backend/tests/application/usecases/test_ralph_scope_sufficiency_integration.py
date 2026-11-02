@@ -192,9 +192,11 @@ async def test_b2_distingue_mencao_contextual_de_calculo_fora_do_escopo(
     if outside_scope:
         assert rejected not in stored
     b1_invocations = [i for i in scenario.session.invocations if i.phase is Phase.B1_TASK_RESOLUTION]
-    assert len({i.context_id for i in b1_invocations}) == 1
+    assert len({i.context_id for i in b1_invocations}) == len(b1_invocations)
     if outside_scope:
         retry = scenario.llm.texts_of(5)
-        assert any(rejected in text for text in retry)
+        assert len(retry) == 1
+        assert retry[0].count("# B.1") == 1
+        assert rejected in _area(retry[0], "Tentativas anteriores desta tarefa")
         assert "T1-AC2" in retry[-1]
     assert scenario.session.final_answer == "6 g"

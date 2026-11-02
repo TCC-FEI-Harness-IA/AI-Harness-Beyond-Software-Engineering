@@ -329,9 +329,11 @@ Invocações gravadas antes deste campo voltam com `temperature: null`.
 
 **Prompt de entrada.** `content` é a saída; `prompt_input` é a conversa exatamente como foi enviada
 ao modelo na chamada que produziu essa saída, em ordem (`source` `user` para prompts e correções,
-`llm_agent` para respostas anteriores da mesma janela). Quando a fase precisou de correção de JSON, é
-a conversa da última chamada, já com a mensagem de correção; a auditoria de uma saída inválida
-(`source` `system`) guarda a conversa da chamada que a produziu. A pergunta do usuário e as etapas
+`llm_agent` para respostas anteriores da mesma janela). Toda execução de fase começa numa janela nova,
+então a primeira chamada de cada fase leva só o prompt dela. Quando a fase precisou de correção de JSON,
+é a conversa da última chamada, já com a saída recusada e a mensagem de correção (o template não é
+repetido); a auditoria de uma saída inválida (`source` `system`) guarda a conversa da chamada que a
+produziu e o tipo de defeito (erro de sintaxe, violação de contrato ou interrupção por comprimento). A pergunta do usuário e as etapas
 programáticas têm `prompt_input` vazio, assim como sessões gravadas antes deste campo existir.
 
 **Totais e invocações.** `total_llm_calls`, `tokens_*` e `inference_time_ms` vêm exclusivamente
@@ -575,10 +577,12 @@ persistida antes do evento `result`.
 |---|---|
 | A.2 conclui o plano inicial | A.3 anota os pontos de atenção do enunciado (valores com unidades, alternativas, fórmulas, condições) numa janela própria; as anotações entram na memória de aprendizados antes de qualquer tarefa. Lista vazia é válida. |
 | Qualquer prompt de B.1, B.2, B.4, C.1, C.2 ou C.3 é montado | O template tem a área **Aprendizados Pontuais**, preenchida com todos os aprendizados acumulados até aquele momento (anotações de A.3 seguidas dos aprendizados de B.4), ou com o aviso de que ainda não há nenhum. Os aprendizados nunca entram nos resultados armazenados. |
-| B.2 aprova | B.3 armazena só essa resposta; B.4 roda numa janela própria e recebe, como entradas explícitas, a tarefa, o resultado aprovado, o histórico de todas as tentativas (com os vereditos do validador) e os aprendizados já registrados. A memória descarta aprendizados em branco ou repetidos (a menos de maiúsculas e espaços). |
-| B.2 reprova e há tentativas | O veredito e a instrução de refazer entram na mesma janela da tarefa; B.1 repete com temperatura `1`. A verificação dessa tentativa e as fases seguintes voltam à temperatura do usuário. |
+| Qualquer fase é executada | A execução abre uma janela nova, da própria fase: tarefa diferente e mudança de fase (inclusive B.1 → B.2, B.2 → B.1, B.1 → B.4 e C.1 → C.2/C.3) nunca herdam a conversa anterior. Só as correções de saída da própria execução reaproveitam a janela. Só os aprendizados atravessam fases como memória; as demais entradas chegam explicitamente pelo template. |
+| B.2 aprova | B.3 armazena só essa resposta; B.4 roda numa janela nova e recebe o histórico completo da tarefa (tarefa, tentativas, saídas descartadas e vereditos) como material delimitado `<historico_da_tarefa>`. |
+| B.2 reprova e há tentativas | B.1 repete numa janela nova, com temperatura `1`; as tentativas reprovadas e os vereditos chegam pela variável `previous_attempts` do Template B.1, delimitados por `<tentativas_anteriores>`. A verificação dessa tentativa e as fases seguintes voltam à temperatura do usuário. |
 | B.2 reprova e as tentativas acabam | Nada é armazenado, B.4 não roda, a execução é interrompida. |
-| B.2/C.1 devolve um relatório vazio, incompleto, duplicado, com ID desconhecido ou contraditório | O verificador é chamado de novo, com temperatura `1`, para corrigir a saída (chamada contada); não consome tentativa de B.1. Sem correção, a fase falha. |
+| B.2/C.1 devolve um relatório vazio, incompleto, duplicado, com ID desconhecido ou contraditório | O verificador é chamado de novo, na mesma janela e com temperatura `1`, para conferir e corrigir o próprio relatório (chamada contada); não consome tentativa de B.1. O veredito nunca é ajustado automaticamente. Sem correção, a fase falha. |
+| Qualquer fase devolve um JSON ilegível ou interrompido pelo limite de comprimento | Erro de sintaxe: o modelo é chamado de novo para devolver o mesmo conteúdo em JSON válido, sem nova resolução. Interrupção por comprimento: pede-se uma nova saída completa e concisa, nunca a continuação da anterior. Os únicos reparos locais são a extração de cercas e o fechamento estrutural inequívoco. |
 | C.1 reprova e há recursos | C.2 cria tarefas para os critérios pendentes, que entram no topo da fila. |
 | C.1 reprova e não há recursos para C.2 | A execução é interrompida; os critérios pendentes ficam em `failure`. Nunca há C.3. |
 | C.1 aprova e C.3 falha ou não pode rodar | A execução termina sem resposta final. |

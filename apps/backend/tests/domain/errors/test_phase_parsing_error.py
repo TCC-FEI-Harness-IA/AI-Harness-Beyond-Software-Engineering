@@ -1,4 +1,5 @@
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
+from src.domain.enums.output_defect_enum import OutputDefectEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.errors.phase_parsing_error import PhaseParsingError
 from src.domain.errors.ralph_error import RalphError
@@ -46,3 +47,20 @@ def test_pode_apontar_o_limite_operacional_que_motivou_a_recusa() -> None:
     )
 
     assert erro.limit is BudgetLimitEnum.TASKS_PER_SESSION
+
+
+def test_sem_classificacao_explicita_o_defeito_e_violacao_de_contrato() -> None:
+    erro = PhaseParsingError(phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION, raw_output="x", reason="r")
+
+    assert erro.defect is OutputDefectEnum.CONTRACT
+
+
+def test_carrega_o_defeito_informado() -> None:
+    erro = PhaseParsingError(
+        phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION,
+        raw_output="{",
+        reason="cortada",
+        defect=OutputDefectEnum.TRUNCATED,
+    )
+
+    assert erro.defect is OutputDefectEnum.TRUNCATED

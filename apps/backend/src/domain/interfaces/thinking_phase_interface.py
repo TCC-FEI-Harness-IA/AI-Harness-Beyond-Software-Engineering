@@ -48,8 +48,11 @@ class IThinkingPhase(ABC):
     ) -> PhaseOutcome:
         """Executa a fase sobre a janela de contexto informada.
 
+        A janela tem de ser nova e criada para esta fase: toda mudança de fase e toda tarefa
+        diferente abrem uma janela nova. Só as correções de saída da própria execução a reaproveitam.
+
         Args:
-            context: Janela de contexto em que a fase é executada.
+            context: Janela de contexto nova, da própria fase, em que a fase é executada.
             variables: Placeholders a substituir no template da fase.
             validation: Dados esperados pela chamada, usados para validar a saída estruturada.
                 É obrigatório nas fases de verificação.
@@ -58,5 +61,8 @@ class IThinkingPhase(ABC):
 
         Returns:
             PhaseOutcome: Resultado da execução da fase.
+
+        Raises:
+            ValueError: Quando a janela já foi usada ou pertence a outra fase.
         """
         raise NotImplementedError
