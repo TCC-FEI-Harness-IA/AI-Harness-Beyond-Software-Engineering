@@ -18,14 +18,28 @@ Cada tarefa deve:
    confira os critérios aos pares e elimine qualquer contradição — por exemplo, "responda somente
    a alternativa" e "a resposta deve conter explicações" se excluem e não podem coexistir.
 3. Trazer, entre os critérios, **restrições de escopo que impeçam a resolução precoce da questão
-   principal** — por exemplo: "a resposta não deve tentar resolver a questão final", "a resposta
-   não deve avaliar nenhuma outra condição além da que esta tarefa trata".
+   principal**, redigidas de forma **afirmativa e delimitadora** — por exemplo: "o escopo da
+   resposta restringe-se exclusivamente a [escopo da tarefa], sem antecipar etapas posteriores nem
+   escolher a alternativa final". Evite formular o critério com negativas ambíguas ("não concluir
+   se...", "não afirmar que não...") que possam ser confundidas pelo verificador quando a própria
+   conclusão técnica da tarefa for uma impossibilidade ou negação.
 4. Exigir que a resposta da tarefa traga o **resultado acompanhado da explicação de por que ele é
    válido**, nunca o resultado isolado. Se a tarefa envolve uma conta, a resposta deve apresentar
    as fórmulas usadas, a substituição dos valores com unidades de medida, as convenções adotadas
    (sinais, referenciais, aproximações) e a justificativa de cada passo até o valor final; se
    envolve uma classificação ou escolha, deve apresentar o raciocínio que a sustenta. Escreva essa
    exigência na descrição da tarefa e inclua um critério de aceite que a verifique.
+5. **Jamais pré-calcular resultados ou antecipar contas no planejamento.** Esta etapa é apenas de
+   planejamento: **não resolva o problema aqui**. É proibido incluir valores numéricos calculados por
+   você, resultados intermediários, substituições algébricas prontas ou gabaritos nos campos
+   `description` ou `acceptance_criteria` (`T*-AC*`). Os critérios de aceite devem descrever **qual**
+   grandeza, relação ou propriedade precisa ser determinada e justificada (por exemplo, "Determina o
+   valor numérico da força resultante com unidade no SI"), e **nunca** cravar de antemão quanto ela
+   deve valer (por exemplo, nunca escreva "Obtém força igual a 15 N" ou "Substitui x = 4"). Da mesma
+   forma, nas tarefas seguintes (`T2`, `T3`...), **nunca tente adivinhar ou preencher o resultado que
+   a tarefa anterior encontrará**: copie apenas os dados brutos pertinentes do enunciado original e
+   oriente a tarefa a utilizar o valor ou conclusão registrado pelas tarefas anteriores nos
+   **Aprendizados Pontuais**.
 
 **O contexto não será compartilhado entre as tarefas.** Cada tarefa será executada isoladamente,
 sem acesso ao enunciado original, às demais tarefas ou aos resultados delas. Portanto a descrição
@@ -53,6 +67,16 @@ Planeje **o menor número possível de tarefas** capaz de gerar os insumos neces
   literais do texto sem analisá-los, nem tarefas finais para "sintetizar tarefas anteriores",
   "escolher a alternativa final" ou "redigir a resposta final" — a consolidação dos resultados e a
   redação da resposta final pertencem a uma fase posterior própria do fluxo.
+- **Feche a lacuna até a grandeza ou determinação final pedida pela questão.** Embora cada tarefa
+  deva ter escopo atômico e limitado, a sequência de tarefas precisa avançar até que a **última
+  tarefa do plano conclua exatamente o cálculo, a relação ou a determinação final exigida pela
+  pergunta do enunciado**, consumindo os aprendizados pontuais gerados pelas tarefas anteriores. Por
+  exemplo: se uma tarefa determina o mês em que o produto I supera o produto II (ex.: agosto) e o
+  enunciado pergunta o que ocorre no *mês seguinte*, deve haver uma tarefa seguinte que receba dos
+  **Aprendizados Pontuais** o mês da ultrapassagem e determine explicitamente qual é o mês seguinte;
+  se uma tarefa calcula a quantidade já existente e o enunciado pede *quanto falta adicionar*, a
+  última tarefa deve calcular essa diferença final. Deixe para a síntese final (`C.3`) apenas a
+  apresentação do resultado já determinado e o seu pareamento com a letra da alternativa.
 - **Mantenha os critérios concisos.** Defina apenas os critérios essenciais para validar a tarefa
   (tipicamente de 2 a 4 critérios por tarefa), sem desdobrar a mesma exigência em vários itens.
 

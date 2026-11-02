@@ -55,11 +55,17 @@ não a resposta final já formatada:
   enunciado quando os resultados apontarem a **alternativa relativamente mais coerente por
   eliminação das demais**, admitindo paráfrases, sínteses ou inferências interpretativas razoáveis
   sem exigir correspondência 100% literal palavra por palavra.
+- Confira se os resultados armazenados concluíram **até o último passo lógico ou cálculo final pedido
+  pela pergunta** (por exemplo: se a pergunta pede o *mês seguinte* ao de uma ultrapassagem, ou a
+  *quantidade adicional* a acrescentar, não basta ter apenas o mês da ultrapassagem ou a quantidade
+  inicial; se faltar essa determinação final nos resultados armazenados, marque o critério
+  correspondente como `met: false` para que o planejamento adicional crie a tarefa final).
 
 ## Formato de saída
 
 Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de
-código, no formato:
+código, preenchendo `criteria_evaluation` primeiro, `unmet_criteria_ids` em seguida e `decision` por
+último, no formato:
 
-{"decision": "approved", "criteria_evaluation": [{"criterion_id": "...", "met": true,
-"justification": "..."}], "unmet_criteria_ids": []}
+{"criteria_evaluation": [{"criterion_id": "...", "met": true,
+"justification": "..."}], "unmet_criteria_ids": [], "decision": "approved"}

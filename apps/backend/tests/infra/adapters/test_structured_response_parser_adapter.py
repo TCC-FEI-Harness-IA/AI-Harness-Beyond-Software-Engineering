@@ -656,3 +656,45 @@ def test_json_completo_nao_gera_aviso_de_reparo(caplog: pytest.LogCaptureFixture
         _parse(json.dumps(_CRITERIOS_VALIDOS))
 
     assert not [registro for registro in caplog.records if registro.levelno == logging.WARNING]
+
+
+def test_objeto_json_duplicado_extrai_o_primeiro_objeto() -> None:
+    duplicado = f"{json.dumps(_CRITERIOS_VALIDOS)}\n\n{json.dumps(_CRITERIOS_VALIDOS)}"
+
+    assert _parse(duplicado) == _CRITERIOS_VALIDOS
+
+
+def test_array_json_duplicado_continua_recusado() -> None:
+    with pytest.raises(PhaseParsingError):
+        _parse("[1, 2]\n[3, 4]")
+
+
+def test_escapes_latex_invalidos_em_strings_json_sao_reparados() -> None:
+    bruto = '{"task_id": "T1", "result": "Equação \\( \\omega = 2\\pi \\)\\nLinha 2"}'
+
+    parsed = _parser().parse(raw_output=bruto, phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION)
+
+    assert parsed["result"] == "Equação \\( \\omega = 2\\pi \\)\nLinha 2"
+
+
+def test_escape_latex_em_json_que_nao_e_objeto_continua_recusado() -> None:
+    with pytest.raises(PhaseParsingError):
+        _parse('["\\( x \\)"]')
+
+
+def test_verificacao_sem_unmet_criteria_ids_preenche_a_lista_a_partir_das_avaliacoes() -> None:
+    bruto = json.dumps(
+        {
+            "criteria_evaluation": [{"criterion_id": "T1-AC1", "met": True, "justification": "ok"}],
+            "decision": "approved",
+        }
+    )
+
+    parsed = _parser().parse(
+        raw_output=bruto,
+        phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION,
+        validation=_esperando("T1-AC1"),
+    )
+
+    assert parsed["unmet_criteria_ids"] == []
+

@@ -1028,3 +1028,19 @@ async def test_json_cortado_pelo_limite_de_tokens_ainda_pede_retentativa(recorde
     assert llm.call_count == 2
     assert resultado.parsed == json.loads(_SAIDA_VALIDA)
     assert [saida.raw_output for saida in resultado.invalid_outputs] == [_SAIDA_VALIDA[:-1]]
+
+
+async def test_saida_invalida_muito_longa_e_truncada_na_janela_mas_preservada_na_auditoria(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    saida_longa = "x" * 2500
+    llm = ScriptedLLMCompletions(responses=[saida_longa, _SAIDA_VALIDA], finish_reason="length")
+    janela = _janela()
+
+    resultado = await _fase(llm_completions=llm, recorder=recorder).execute(context=janela, variables={})
+
+    assert llm.call_count == 2
+    assert llm.texts_of(1)[1] == ("x" * 1000) + "..."
+    assert resultado.invalid_outputs[0].raw_output == saida_longa
+    assert saida_longa in _auditorias(recorder)[0].content
+

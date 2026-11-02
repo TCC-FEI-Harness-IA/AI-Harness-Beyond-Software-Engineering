@@ -253,4 +253,34 @@ def test_templates_orientam_avaliacao_relativa_por_eliminacao_sem_hiper_literali
         assert "100% literal" in template or "hiper-litera" in template, fase
 
 
+def test_templates_de_planejamento_proibem_pre_calculo_e_pedem_escopo_afirmativo() -> None:
+    provider = _provider()
+
+    for fase in _FASES_DE_PLANEJAMENTO:
+        template = " ".join(provider.get(phase=fase).lower().split())
+        assert "pré-calcular" in template, fase
+        assert "afirmativa e delimitadora" in template, fase
+        assert "restringe-se exclusivamente a" in template, fase
+
+
+def test_templates_de_planejamento_exigem_que_a_ultima_tarefa_conclua_a_grandeza_final() -> None:
+    provider = _provider()
+
+    for fase in _FASES_DE_PLANEJAMENTO:
+        template = " ".join(provider.get(phase=fase).lower().split())
+        assert "última tarefa" in template, fase
+        assert "grandeza" in template, fase
+
+
+def test_templates_de_verificacao_pedem_decision_por_ultimo_no_json() -> None:
+    provider = _provider()
+
+    for fase in _FASES_DE_VERIFICACAO:
+        formato = provider.get(phase=fase).split("## Formato de saída", 1)[1]
+        assert formato.index('"criteria_evaluation"') < formato.index('"unmet_criteria_ids"') < formato.index(
+            '"decision"'
+        ), fase
+
+
+
 

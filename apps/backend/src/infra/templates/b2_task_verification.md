@@ -45,12 +45,17 @@ nada além dos critérios listados acima.
 Evite o **hiper-literalismo**: quando um critério exigir que uma análise, conclusão ou opção seja
 sustentada pelo texto ou enunciado, considere o critério **atendido** se o resultado demonstrar a
 **melhor aderência relativa (por eliminação dos distratores mais graves)** ou uma paráfrase e
-inferência interpretativa coerente, sem exigir correspondência 100% literal palavra por palavra.
+inferência interpretativa coerente, sem exigir correspondência 100% literal palavra por palavra. Da
+mesma forma, se um critério de aceite trouxer um número ou expressão pré-calculados indevidamente no
+planejamento que divirjam da dedução matemática/física correta a partir dos dados do enunciado e de
+**Aprendizados Pontuais**, considere o critério **atendido (`met: true`)** quando o resultado
+demonstrar e justificar o cálculo correto daquela grandeza.
 
 ## Formato de saída
 
 Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de
-código, no formato:
+código, preenchendo `criteria_evaluation` primeiro, `unmet_criteria_ids` em seguida e `decision` por
+último, no formato:
 
-{"decision": "approved", "criteria_evaluation": [{"criterion_id": "...", "met": true,
-"justification": "..."}], "unmet_criteria_ids": []}
+{"criteria_evaluation": [{"criterion_id": "...", "met": true,
+"justification": "..."}], "unmet_criteria_ids": [], "decision": "approved"}

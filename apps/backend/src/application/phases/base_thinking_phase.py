@@ -37,6 +37,8 @@ _INVALID_OUTPUT_AUDIT_TEMPLATE = (
 _NO_TOKENS = 0
 _NO_ELAPSED_MS = 0
 _NO_RETRIES_LEFT = 0
+_INVALID_CONTEXT_MAX_LENGTH = 1000
+_TRUNCATION_SUFFIX = "..."
 # Temperatura de toda chamada de retentativa. Repetir um pedido que falhou com a temperatura do usuário
 # — em geral baixa — tende a reproduzir a mesma saída e a mesma falha até esgotar as tentativas.
 _RETRY_TEMPERATURE = 1.0
@@ -217,6 +219,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                     context=context, invalid_output=invalid_output, prompt_input=prompt_input
                 )
                 retries_left = self.__consume_retry(retries_left=retries_left, error=error)
+                self.__compact_invalid_message(context=context)
                 context.append(
                     message=Message(
                         creation_timestamp=self.clock.now(),
@@ -264,6 +267,25 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             task_id=context.task_id,
             context_id=context.context_id,
             prompt_input=prompt_input,
+        )
+
+    def __compact_invalid_message(self, context: ContextWindow) -> None:
+        """Trunca na janela a saída inválida quando ela é longa demais para ser reenviada inteira.
+
+        A saída bruta completa já ficou registrada em `InvalidOutput` e na auditoria da sessão;
+        manter dezenas de milhares de caracteres de uma resposta cortada na janela infla o custo
+        das retentativas e das fases seguintes que compartilham a conversa.
+
+        Args:
+            context: Janela de contexto onde a última mensagem é a saída recusada pelo parser.
+        """
+        last_message = context.messages[-1]
+        if len(last_message.text) <= _INVALID_CONTEXT_MAX_LENGTH:
+            return
+        context.messages[-1] = Message(
+            creation_timestamp=last_message.creation_timestamp,
+            text=f"{last_message.text[:_INVALID_CONTEXT_MAX_LENGTH]}{_TRUNCATION_SUFFIX}",
+            source=last_message.source,
         )
 
     def __consume_retry(self, retries_left: int, error: RalphError) -> int:
