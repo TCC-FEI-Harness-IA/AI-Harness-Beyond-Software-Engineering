@@ -251,6 +251,3 @@ def test_templates_orientam_avaliacao_relativa_por_eliminacao_sem_hiper_literali
         template = " ".join(provider.get(phase=fase).lower().split())
         assert "eliminação" in template, fase
         assert "100% literal" in template or "hiper-litera" in template, fase
-
-
-

@@ -18,8 +18,12 @@ Cada tarefa deve:
    confira os critérios aos pares e elimine qualquer contradição — por exemplo, "responda somente
    a alternativa" e "a resposta deve conter explicações" se excluem e não podem coexistir.
 3. Trazer, entre os critérios, **restrições de escopo que impeçam a resolução precoce da questão
-   principal** — por exemplo: "a resposta não deve tentar resolver a questão final", "a resposta
-   não deve avaliar nenhuma outra condição além da que esta tarefa trata".
+   principal**: restrinja ações analíticas fora do objetivo, como calcular outra grandeza, avaliar
+   outra condição ou antecipar uma conclusão ainda não sustentada pela tarefa. Uma referência
+   contextual a termos do enunciado não é execução de outra tarefa nem antecipação da solução.
+   Não converta limites de resolução em proibições de palavras. Se o próprio objetivo inclui
+   comparação ou análise conjunta, permita essa análise e sua conclusão fundamentada; a redação
+   da resposta final ao usuário pertence a C.3.
 4. Exigir que a resposta da tarefa traga o **resultado acompanhado da explicação de por que ele é
    válido**, nunca o resultado isolado. Se a tarefa envolve uma conta, a resposta deve apresentar
    as fórmulas usadas, a substituição dos valores com unidades de medida, as convenções adotadas
@@ -58,6 +62,17 @@ Planeje **o menor número possível de tarefas** capaz de gerar os insumos neces
 
 Em conjunto, as tarefas precisam gerar insumos suficientes para sustentar a resposta final ao
 enunciado.
+
+## Exemplos de escopo e explicação
+
+- Válido, numa tarefa de massa total: "Calcular a massa total e explicar a conta; não calcular a
+  massa por colher". A frase "o enunciado cita colheres" é referência contextual permitida.
+  Inválido como critério gerado: "não mencionar colheres" — proíbe palavras sem restringir uma ação.
+- Violação real do escopo anterior: dividir a massa total pelo número de colheres e concluir a
+  massa por colher. Mencionar o próximo uso do resultado, sem executar essa conta, não é violação.
+- Válido: resultado acompanhado da explicação verificável, ainda que o usuário queira apenas a
+  letra na resposta final. Inválido: exigir "somente a letra, sem explicações" da tarefa, ou impor
+  duas linhas a partir de "seja objetivo", impedindo a justificativa necessária à verificação.
 
 **Limite do lote:** a sessão comporta no máximo {{max_tasks}} tarefas (teto de segurança, e **não**
 uma meta a atingir). Não ultrapasse esse número e não funda tarefas genuinamente independentes em

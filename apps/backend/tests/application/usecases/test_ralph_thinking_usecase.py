@@ -1949,4 +1949,3 @@ async def test_b1_nao_duplica_os_criterios_de_aceite_dentro_de_task_description(
     assert "**Critérios de aceite:**" not in variaveis_b1["task_description"]
     assert "T1-AC1" not in variaveis_b1["task_description"]
     assert "T1-AC1" in variaveis_b1["task_acceptance_criteria"]
-

@@ -56,6 +56,31 @@ não a resposta final já formatada:
   eliminação das demais**, admitindo paráfrases, sínteses ou inferências interpretativas razoáveis
   sem exigir correspondência 100% literal palavra por palavra.
 
+Para idioma, formato e restrições de apresentação, julgue se C.3 consegue aplicá-los ao conteúdo
+aprovado sem novo raciocínio analítico. Não exija que cada resultado intermediário já seja a resposta
+final. Ao justificar `met: true`, indique o conteúdo que permite a apresentação solicitada.
+
+Para exigências de conteúdo, identifique a evidência nos resultados armazenados. A possibilidade
+de formatar uma resposta não supre análise, cálculo ou fundamentação ausente. Não realize aqui a
+análise que falta para então declará-la coberta; a lacuna deve seguir para C.2. Os aprendizados
+permanecem referência separada e não substituem essa evidência.
+
+## Exemplos de suficiência e lacuna real
+
+- Aprovar o formato: os resultados identificam inequivocamente a alternativa C, com conta e
+  explicação, e o pedido exige terminar com `RESPOSTA_FINAL: LETRA`. A ausência de `RESPOSTA_FINAL: C`
+  nos resultados não é lacuna de conteúdo: C.3 pode escrever essa linha sem nova análise.
+  Reprovar só pela ausência da linha seria incorreto.
+- Aprovar a apresentação enxuta: o pedido é "apenas a letra, sem justificativa" e os resultados
+  explicados já sustentam C. As explicações internas não violam o formato final; C.3 pode omiti-las.
+- Reprovar conteúdo ausente: o critério exige análise conjunta explícita de três condições e só
+  há listas de verificações isoladas. Mesmo que pareça possível escolher ou formatar uma letra,
+  falta a análise conjunta exigida. Marque esse critério como não atendido e encaminhe a lacuna a C.2.
+- Justificativa opcional: a falta de uma explicação destinada ao usuário não é, por si, pendência
+  se o pedido a permite sem exigir e a conclusão já está sustentada. Justificativa obrigatória:
+  se o pedido exige fundamentação e ela não consta dos resultados, reprove o critério correspondente.
+  Não invente essa exigência quando o pedido só solicita objetividade.
+
 ## Formato de saída
 
 Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de
