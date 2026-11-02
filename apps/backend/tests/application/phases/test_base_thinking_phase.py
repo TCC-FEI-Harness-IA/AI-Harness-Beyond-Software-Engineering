@@ -12,6 +12,7 @@ from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.output_defect_enum import OutputDefectEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.errors.budget_exceeded_error import BudgetExceededError
 from src.domain.errors.empty_completion_error import EmptyCompletionError
@@ -1028,3 +1029,231 @@ async def test_json_cortado_pelo_limite_de_tokens_ainda_pede_retentativa(recorde
     assert llm.call_count == 2
     assert resultado.parsed == json.loads(_SAIDA_VALIDA)
     assert [saida.raw_output for saida in resultado.invalid_outputs] == [_SAIDA_VALIDA[:-1]]
+
+
+# ── Isolamento de contexto ───────────────────────────────────────────────────
+#
+# Toda execução de fase começa numa janela nova, da própria fase: uma tarefa diferente ou uma
+# mudança de fase nunca herda a conversa de outra execução. A única reutilização permitida é a
+# das correções de saída, que acontecem dentro da própria execução.
+
+
+async def test_execucao_em_janela_de_outra_fase_e_recusada_antes_de_qualquer_chamada(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA])
+    guardiao = FakeCostGuard()
+    janela_de_b1 = ContextWindow(context_id="ctx-b1", phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION, task_id="T1")
+
+    with pytest.raises(ValueError, match="janela"):
+        await _fase(llm_completions=llm, recorder=recorder, cost_guard=guardiao).execute(
+            context=janela_de_b1, variables={}
+        )
+
+    assert llm.call_count == 0
+    assert guardiao.started_calls == []
+    assert recorder.session.invocations == []
+    assert janela_de_b1.messages == []
+
+
+async def test_execucao_em_janela_ja_usada_e_recusada_e_nao_duplica_o_template(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA, _SAIDA_VALIDA])
+    provider = FakePromptTemplateProvider(templates={_FASE: "prompt da fase"})
+    fase = _fase(llm_completions=llm, recorder=recorder, template_provider=provider)
+    janela = _janela()
+    await fase.execute(context=janela, variables={})
+
+    with pytest.raises(ValueError, match="janela nova"):
+        await fase.execute(context=janela, variables={})
+
+    assert llm.call_count == 1
+    assert [mensagem.text for mensagem in janela.messages] == ["prompt da fase", _SAIDA_VALIDA]
+
+
+# ── Recuperação de saída inválida por tipo de defeito ────────────────────────
+#
+# Na correção, a janela da execução é reaproveitada: as respostas recusadas e os feedbacks
+# permanecem, mas o template — instruções e aprendizados, que não mudam dentro da execução — não é
+# acrescentado de novo. A mensagem de correção depende do defeito.
+
+_TEMPLATE = "prompt da fase"
+_PEDIDO_DE_SINTAXE = "devolva o mesmo conteúdo"
+_PEDIDO_DE_CONTRATO = "Confira a sua própria saída"
+_PEDIDO_DE_INTERRUPCAO = "nova saída completa e mais concisa"
+
+
+def _erro(reason: str, defect: OutputDefectEnum) -> PhaseParsingError:
+    return PhaseParsingError(phase=_FASE, raw_output="x", reason=reason, defect=defect)
+
+
+async def _correcao_pedida(recorder: SessionRecorderAdapter, defect: OutputDefectEnum) -> str:
+    llm = ScriptedLLMCompletions(responses=["saida recusada", _SAIDA_VALIDA])
+    parser = FakeStructuredParser(outcomes=[_erro(reason="motivo da recusa", defect=defect), _CRITERIOS_VALIDOS])
+    provider = FakePromptTemplateProvider(templates={_FASE: _TEMPLATE})
+
+    await _fase(llm_completions=llm, recorder=recorder, parser=parser, template_provider=provider).execute(
+        context=_janela(), variables={}
+    )
+
+    assert llm.texts_of(1)[:2] == [_TEMPLATE, "saida recusada"]
+    return llm.texts_of(1)[-1]
+
+
+async def test_erro_de_sintaxe_pede_o_mesmo_conteudo_em_json_valido_sem_nova_resolucao(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    correcao = await _correcao_pedida(recorder=recorder, defect=OutputDefectEnum.SYNTAX)
+
+    assert "motivo da recusa" in correcao
+    assert _PEDIDO_DE_SINTAXE in correcao
+    assert "Não refaça a resolução" in correcao
+    assert _PEDIDO_DE_CONTRATO not in correcao
+    assert _PEDIDO_DE_INTERRUPCAO not in correcao
+
+
+async def test_violacao_de_contrato_pede_ao_modelo_que_confira_e_corrija_a_propria_saida(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    correcao = await _correcao_pedida(recorder=recorder, defect=OutputDefectEnum.CONTRACT)
+
+    assert "motivo da recusa" in correcao
+    assert _PEDIDO_DE_CONTRATO in correcao
+    assert "relatório" in correcao
+    assert _PEDIDO_DE_SINTAXE not in correcao
+    assert _PEDIDO_DE_INTERRUPCAO not in correcao
+
+
+async def test_interrupcao_por_comprimento_pede_nova_saida_completa_e_concisa_sem_continuacao(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    correcao = await _correcao_pedida(recorder=recorder, defect=OutputDefectEnum.TRUNCATED)
+
+    assert "motivo da recusa" in correcao
+    assert _PEDIDO_DE_INTERRUPCAO in correcao
+    assert "Não continue a saída anterior" in correcao
+    assert _PEDIDO_DE_SINTAXE not in correcao
+    assert _PEDIDO_DE_CONTRATO not in correcao
+
+
+async def test_nenhuma_mensagem_de_correcao_repete_o_template(recorder: SessionRecorderAdapter) -> None:
+    for defect in OutputDefectEnum:
+        correcao = await _correcao_pedida(recorder=recorder, defect=defect)
+
+        assert _TEMPLATE not in correcao
+
+
+async def test_correcoes_seguidas_preservam_respostas_e_feedbacks_com_o_template_uma_unica_vez(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    llm = ScriptedLLMCompletions(responses=["ruim 1", "ruim 2", _SAIDA_VALIDA])
+    parser = FakeStructuredParser(
+        outcomes=[
+            _erro(reason="sintaxe", defect=OutputDefectEnum.SYNTAX),
+            _erro(reason="contrato", defect=OutputDefectEnum.CONTRACT),
+            _CRITERIOS_VALIDOS,
+        ]
+    )
+    provider = FakePromptTemplateProvider(templates={_FASE: _TEMPLATE})
+    janela = _janela()
+
+    await _fase(llm_completions=llm, recorder=recorder, parser=parser, template_provider=provider).execute(
+        context=janela, variables={}
+    )
+
+    terceira = llm.conversations[2]
+    assert [mensagem.text for mensagem in terceira][:2] == [_TEMPLATE, "ruim 1"]
+    assert terceira[3].text == "ruim 2"
+    assert _PEDIDO_DE_SINTAXE in terceira[2].text
+    assert _PEDIDO_DE_CONTRATO in terceira[4].text
+    assert [mensagem.source for mensagem in terceira] == [
+        MessageSourceEnum.USER,
+        MessageSourceEnum.LLM_AGENT,
+        MessageSourceEnum.USER,
+        MessageSourceEnum.LLM_AGENT,
+        MessageSourceEnum.USER,
+    ]
+    for indice in range(llm.call_count):
+        assert llm.texts_of(indice).count(_TEMPLATE) == 1
+    assert provider.variables_of(_FASE) == [{}]
+
+
+async def test_saida_interrompida_e_substituida_pela_nova_saida_sem_concatenacao(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    cortada = _SAIDA_VALIDA[:25]
+    llm = ScriptedLLMCompletions(responses=[cortada, _SAIDA_VALIDA], finish_reason="length")
+
+    resultado = await _fase(llm_completions=llm, recorder=recorder).execute(context=_janela(), variables={})
+
+    assert resultado.raw_output == _SAIDA_VALIDA
+    assert resultado.parsed == json.loads(_SAIDA_VALIDA)
+    (recusada,) = resultado.invalid_outputs
+    assert recusada.raw_output == cortada
+    assert recusada.defect is OutputDefectEnum.TRUNCATED
+    assert _PEDIDO_DE_INTERRUPCAO in llm.texts_of(1)[-1]
+
+
+async def test_com_o_parser_real_json_ilegivel_recebe_o_pedido_de_sintaxe(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=["isto nao e json", _SAIDA_VALIDA])
+
+    resultado = await _fase(llm_completions=llm, recorder=recorder).execute(context=_janela(), variables={})
+
+    assert _PEDIDO_DE_SINTAXE in llm.texts_of(1)[-1]
+    assert resultado.invalid_outputs[0].defect is OutputDefectEnum.SYNTAX
+
+
+async def test_com_o_parser_real_relatorio_incoerente_recebe_o_pedido_de_conferencia(
+    recorder: SessionRecorderAdapter,
+) -> None:
+    incoerente = json.dumps(
+        {
+            "decision": "reproved",
+            "criteria_evaluation": [{"criterion_id": "T1-AC1", "met": True, "justification": "atende"}],
+            "unmet_criteria_ids": [],
+        }
+    )
+    llm = ScriptedLLMCompletions(responses=[incoerente, _verificacao(("T1-AC1", False))])
+    fase = TaskVerificationPhase(
+        llm_completions=llm,
+        template_provider=FakePromptTemplateProvider(),
+        parser=_parser_real(),
+        cost_guard=FakeCostGuard(),
+        session_recorder=recorder,
+        clock=FakeClock(),
+        settings=FakeSettings(),
+        logger=logging.getLogger("teste.fase"),
+    )
+
+    resultado = await fase.execute(
+        context=ContextWindow(context_id="ctx-v", phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION),
+        variables={},
+        validation=ValidationContext(expected_criteria_ids=("T1-AC1",)),
+    )
+
+    assert _PEDIDO_DE_CONTRATO in llm.texts_of(1)[-1]
+    assert resultado.invalid_outputs[0].defect is OutputDefectEnum.CONTRACT
+    assert resultado.parsed["decision"] == "reproved"
+
+
+async def test_a_auditoria_da_saida_invalida_identifica_o_tipo_de_defeito(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=["ruim 1", "ruim 2", "ruim 3", _SAIDA_VALIDA])
+    parser = FakeStructuredParser(
+        outcomes=[
+            _erro(reason="r1", defect=OutputDefectEnum.SYNTAX),
+            _erro(reason="r2", defect=OutputDefectEnum.CONTRACT),
+            _erro(reason="r3", defect=OutputDefectEnum.TRUNCATED),
+            _CRITERIOS_VALIDOS,
+        ]
+    )
+
+    await _fase(
+        llm_completions=llm, recorder=recorder, parser=parser, settings=FakeSettings(ralph_json_parse_max_retries=3)
+    ).execute(context=_janela(), variables={})
+
+    sintaxe, contrato, interrupcao = _auditorias(recorder)
+    assert "erro de sintaxe" in sintaxe.content
+    assert "violação de contrato" in contrato.content
+    assert "interrupção por comprimento" in interrupcao.content
+    assert recorder.session.totals.total_llm_calls == 4

@@ -5,6 +5,7 @@ from typing import Any, Callable
 
 from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
+from src.domain.enums.output_defect_enum import OutputDefectEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.enums.verification_decision_enum import VerificationDecisionEnum
 from src.domain.errors.phase_parsing_error import PhaseParsingError
@@ -26,6 +27,10 @@ _CLOSING_BY_OPENING = {"{": "}", "[": "]"}
 _CLOSINGS = frozenset(_CLOSING_BY_OPENING.values())
 # Motivos de término em que a saída foi cortada: o que falta pode ser conteúdo, não só fechamentos.
 _TRUNCATED_FINISH_REASONS = frozenset({"length"})
+_NO_JSON_REASON = "Nenhum objeto JSON válido foi encontrado na saída."
+_TRUNCATED_REASON = (
+    "A saída foi interrompida pelo limite de comprimento antes de formar um objeto JSON completo."
+)
 
 
 class StructuredResponseParserAdapter(IStructuredResponseParser):
@@ -36,6 +41,11 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
     terminou sem fechar as últimas chaves e colchetes. Já a validação de schema
     é estrita — a fase seguinte do fluxo só recebe uma estrutura que sabidamente
     confere com o contrato daquela etapa.
+
+    Os reparos locais são conservadores: só a extração do JSON e o fechamento estrutural
+    inequívoco, que não alteram conteúdo. Nada aqui inventa campos, completa strings
+    interrompidas, preenche explicações ou muda o veredito de um relatório. Toda recusa é
+    classificada (`OutputDefectEnum`) para que a correção pedida ao modelo seja a adequada.
     """
 
     def __init__(self, logger: logging.Logger) -> None:
@@ -66,9 +76,10 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             dict[str, Any]: Estrutura JSON já validada contra o schema da fase.
 
         Raises:
-            PhaseParsingError: Quando não há JSON válido, quando a fase não produz
-                saída estruturada, quando o schema não confere ou quando a saída
-                contradiz o contexto de validação.
+            PhaseParsingError: Quando não há JSON válido (defeito de sintaxe, ou de interrupção
+                quando a saída foi cortada pelo limite de comprimento), quando a fase não produz
+                saída estruturada, quando o schema não confere ou quando a saída contradiz o
+                contexto de validação (violação de contrato).
             ValueError: Quando uma fase de verificação é chamada sem os critérios esperados.
         """
         validator = self.__validators().get(phase)
@@ -115,19 +126,24 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             dict[str, Any]: Objeto JSON extraído.
 
         Raises:
-            PhaseParsingError: Quando nenhuma estratégia devolve um objeto JSON.
+            PhaseParsingError: Quando nenhuma estratégia devolve um objeto JSON: defeito de
+                interrupção se a saída foi cortada pelo limite de comprimento, de sintaxe no demais.
         """
         for candidate in self.__candidates(raw_output=raw_output):
             parsed = self.__load_object(candidate=candidate)
             if parsed is not None:
                 return parsed
 
-        if finish_reason not in _TRUNCATED_FINISH_REASONS:
-            parsed = self.__repair_missing_closings(raw_output=raw_output, phase=phase)
-            if parsed is not None:
-                return parsed
+        if finish_reason in _TRUNCATED_FINISH_REASONS:
+            self.__fail(
+                phase=phase, raw_output=raw_output, reason=_TRUNCATED_REASON, defect=OutputDefectEnum.TRUNCATED
+            )
 
-        self.__fail(phase=phase, raw_output=raw_output, reason="Nenhum objeto JSON válido foi encontrado na saída.")
+        parsed = self.__repair_missing_closings(raw_output=raw_output, phase=phase)
+        if parsed is not None:
+            return parsed
+
+        self.__fail(phase=phase, raw_output=raw_output, reason=_NO_JSON_REASON, defect=OutputDefectEnum.SYNTAX)
 
     def __candidates(self, raw_output: str) -> list[str]:
         """Lista os trechos candidatos a objeto JSON, na ordem de tentativa.
@@ -627,15 +643,20 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         raw_output: str,
         reason: str,
         limit: BudgetLimitEnum | None = None,
+        defect: OutputDefectEnum = OutputDefectEnum.CONTRACT,
     ) -> None:
         """Registra e levanta a falha de parsing da fase.
 
         Raises:
-            PhaseParsingError: Sempre.
+            PhaseParsingError: Sempre; por padrão, como violação do contrato da fase.
         """
-        self.logger.warning("Saída da fase '%s' recusada pelo parser: %s", phase.value, reason)
+        self.logger.warning("Saída da fase '%s' recusada pelo parser (%s): %s", phase.value, defect.value, reason)
         raise PhaseParsingError(
-            phase=phase, raw_output=self.__truncate(raw_output=raw_output), reason=reason, limit=limit
+            phase=phase,
+            raw_output=self.__truncate(raw_output=raw_output),
+            reason=reason,
+            limit=limit,
+            defect=defect,
         )
 
     def __truncate(self, raw_output: str) -> str:

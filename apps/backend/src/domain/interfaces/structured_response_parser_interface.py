@@ -34,7 +34,8 @@ class IStructuredResponseParser(ABC):
 
         Raises:
             PhaseParsingError: Quando não há JSON válido, o schema não confere ou a saída
-                contradiz o contexto de validação.
+                contradiz o contexto de validação. O erro classifica o defeito (`defect`): sintaxe,
+                violação de contrato ou interrupção pelo limite de comprimento.
             ValueError: Quando uma fase de verificação é chamada sem os critérios esperados.
         """
         raise NotImplementedError

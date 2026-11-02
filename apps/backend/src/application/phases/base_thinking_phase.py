@@ -12,6 +12,7 @@ from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.output_defect_enum import OutputDefectEnum
 from src.domain.errors.budget_exceeded_error import BudgetExceededError
 from src.domain.errors.empty_completion_error import EmptyCompletionError
 from src.domain.errors.phase_parsing_error import PhaseParsingError
@@ -25,13 +26,31 @@ from src.domain.interfaces.settings_interface import ISettings
 from src.domain.interfaces.structured_response_parser_interface import IStructuredResponseParser
 from src.domain.interfaces.thinking_phase_interface import IThinkingPhase
 
-_CORRECTION_TEMPLATE = (
-    "A saída anterior não pôde ser interpretada: {reason}\n"
-    "Reescreva a resposta como um único objeto JSON válido, no formato exigido acima, "
-    "sem texto antes ou depois e sem cerca de código."
-)
+# Correção pedida ao modelo, por defeito da saída recusada. Nenhuma repete o template da fase: ele
+# já está na janela, e instruções e aprendizados não mudam dentro de uma mesma execução.
+_CORRECTION_BY_DEFECT: dict[OutputDefectEnum, str] = {
+    OutputDefectEnum.SYNTAX: (
+        "A saída anterior não é um JSON válido: {reason}\n"
+        "Não refaça a resolução e não altere o conteúdo: devolva o mesmo conteúdo da saída anterior, "
+        "serializado como um único objeto JSON válido no formato já pedido, sem texto antes ou depois "
+        "e sem cerca de código."
+    ),
+    OutputDefectEnum.CONTRACT: (
+        "A saída anterior é um JSON legível, mas não cumpre o contrato desta etapa: {reason}\n"
+        "Confira a sua própria saída — num relatório de verificação, o seu relatório — contra as "
+        "instruções e corrija o que estiver incoerente: cada decisão deve ser sua e coerente com as "
+        "suas avaliações, e nada será ajustado automaticamente. Devolva a saída corrigida completa, "
+        "como um único objeto JSON válido, sem texto antes ou depois e sem cerca de código."
+    ),
+    OutputDefectEnum.TRUNCATED: (
+        "A saída anterior foi interrompida pelo limite de comprimento e ficou incompleta: {reason}\n"
+        "Não continue a saída anterior: ela foi descartada e não será emendada à próxima. Produza "
+        "uma nova saída completa e mais concisa, que caiba no limite, como um único objeto JSON "
+        "válido no formato já pedido, sem texto antes ou depois e sem cerca de código."
+    ),
+}
 _INVALID_OUTPUT_AUDIT_TEMPLATE = (
-    "Saída inválida descartada na fase {phase}: {reason}\n\n"
+    "Saída inválida descartada na fase {phase} ({defect}): {reason}\n\n"
     "Saída bruta do modelo:\n\n{raw_output}"
 )
 _NO_TOKENS = 0
@@ -77,6 +96,9 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
     O esqueleto "montar prompt → chamar LLM → registrar custo → parsear JSON" é
     idêntico para todas as fases; as subclasses variam apenas o template e o
     schema esperado.
+
+    Cada execução roda numa janela nova, da própria fase: é a regra de isolamento de contexto
+    do fluxo. A janela só é reaproveitada pelas correções de saída dessa mesma execução.
     """
 
     def __init__(
@@ -144,14 +166,23 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
     ) -> PhaseOutcome:
         """Executa a fase sobre a janela de contexto informada.
 
-        O prompt entra na janela, o modelo responde, o custo é contabilizado e a
-        saída é parseada. Duas falhas são retentáveis até o limite configurado, porque
-        ambas são não determinísticas: o modelo devolver algo que não é o JSON da fase
-        (ou um JSON que contradiz o contexto de validação), caso em que a janela recebe uma
+        A janela tem de ser nova e da própria fase: uma tarefa diferente ou uma mudança de fase
+        nunca herda a conversa de outra execução. O prompt entra na janela, o modelo responde, o
+        custo é contabilizado e a saída é parseada. Duas falhas são retentáveis até o limite
+        configurado, porque ambas são não determinísticas: o modelo devolver algo que não é o JSON
+        da fase (ou um JSON que contradiz o contexto de validação), caso em que a janela recebe uma
         mensagem de correção, e o provedor devolver uma resposta sem conteúdo nenhum, caso em
         que não há o que corrigir, só o que repetir. Cada retentativa é uma nova invocação,
         autorizada e registrada como as demais: o custo de uma chamada não se perde por ela ter
         sido recusada, e uma recusa do parser não consome tentativas de resolução da tarefa.
+
+        A correção reaproveita a janela da execução: as respostas recusadas e as mensagens de
+        correção permanecem, e o template não é acrescentado de novo, porque instruções e
+        aprendizados não mudam dentro de uma execução. A mensagem de correção depende do defeito
+        (`OutputDefectEnum`): um erro de sintaxe pede o mesmo conteúdo em JSON válido, sem nova
+        resolução; uma violação de contrato pede ao modelo que confira e corrija a própria saída;
+        uma interrupção por comprimento pede uma nova saída completa e concisa, nunca a continuação
+        da anterior — a saída aceita é sempre uma única resposta do modelo, sem emendas.
 
         Cada saída recusada pelo parser fica registrada na sessão no momento da recusa, inclusive a
         última, que encerra a fase com erro: a auditoria independe de a fase terminar bem.
@@ -170,10 +201,12 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             PhaseOutcome: Resultado da execução da fase.
 
         Raises:
+            ValueError: Quando a janela não é nova ou pertence a outra fase, antes de qualquer chamada.
             BudgetExceededError: Quando o guardião de custo nega a chamada.
             PhaseParsingError: Quando o limite de retentativas de parsing se esgota.
             EmptyCompletionError: Quando o provedor insiste em responder sem conteúdo.
         """
+        self.__ensure_fresh_window(context=context)
         context.append(
             message=Message(
                 creation_timestamp=self.clock.now(),
@@ -209,7 +242,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                     finish_reason=llm_message.finish_reason,
                 )
             except PhaseParsingError as error:
-                invalid_output = InvalidOutput(raw_output=raw_output, reason=error.reason)
+                invalid_output = InvalidOutput(raw_output=raw_output, reason=error.reason, defect=error.defect)
                 invalid_outputs.append(invalid_output)
                 # A auditoria não pode depender de a fase terminar bem: é justamente quando as correções
                 # se esgotam que o intercâmbio com o modelo precisa ter ficado na sessão.
@@ -220,7 +253,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                 context.append(
                     message=Message(
                         creation_timestamp=self.clock.now(),
-                        text=_CORRECTION_TEMPLATE.format(reason=error.reason),
+                        text=_CORRECTION_BY_DEFECT[error.defect].format(reason=error.reason),
                         source=MessageSourceEnum.USER,
                     )
                 )
@@ -243,6 +276,28 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                 prompt_input=prompt_input,
             )
 
+    def __ensure_fresh_window(self, context: ContextWindow) -> None:
+        """Exige uma janela nova, criada para esta fase.
+
+        Reaproveitar a janela de outra fase ou de outra execução faria o modelo herdar uma conversa
+        que não é dele; as entradas de que a fase precisa chegam explicitamente pelas variáveis.
+
+        Args:
+            context: Janela de contexto recebida pela execução.
+
+        Raises:
+            ValueError: Quando a janela pertence a outra fase ou já recebeu mensagens.
+        """
+        if context.phase is not self.phase:
+            raise ValueError(
+                f"A fase '{self.phase.value}' não pode rodar na janela da fase '{context.phase.value}': "
+                "toda mudança de fase exige uma janela nova."
+            )
+        if not context.is_empty():
+            raise ValueError(
+                f"A fase '{self.phase.value}' exige uma janela nova; a janela '{context.context_id}' já foi usada."
+            )
+
     async def __audit_invalid_output(
         self, context: ContextWindow, invalid_output: InvalidOutput, prompt_input: tuple[Message, ...]
     ) -> None:
@@ -259,7 +314,10 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         await self.session_recorder.record_programmatic_step(
             phase=self.phase,
             content=_INVALID_OUTPUT_AUDIT_TEMPLATE.format(
-                phase=self.phase.value, reason=invalid_output.reason, raw_output=invalid_output.raw_output
+                phase=self.phase.value,
+                defect=invalid_output.defect.label,
+                reason=invalid_output.reason,
+                raw_output=invalid_output.raw_output,
             ),
             task_id=context.task_id,
             context_id=context.context_id,

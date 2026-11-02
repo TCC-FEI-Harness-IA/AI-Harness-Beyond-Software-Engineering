@@ -19,6 +19,15 @@ tarefa.
 
 {{learnings}}
 
+## Tentativas anteriores desta tarefa
+
+Quando esta tarefa já foi tentada e reprovada, as tentativas anteriores e os vereditos do
+validador aparecem abaixo, delimitados por `<tentativas_anteriores>`. São o feedback desta nova
+tentativa: corrija exatamente os critérios não satisfeitos, sem repetir o que foi reprovado. Esta
+é uma resolução nova e completa da tarefa, e não a continuação de uma conversa anterior.
+
+{{previous_attempts}}
+
 ## Instruções
 
 Limite estrito de escopo:
