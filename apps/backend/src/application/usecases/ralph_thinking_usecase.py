@@ -178,7 +178,7 @@ class RalphThinkingUseCase:
         self.settings: ISettings = settings
         self.logger = logger
         self.__user_question: str = ""
-        self.__max_tokens: int = 0
+        self.__session_token_limit: int = 0
         self.__general_criteria: tuple[AcceptanceCriterion, ...] = ()
         self.__results: dict[str, TaskResult] = {}
         self.__active_task_id: str | None = None
@@ -202,7 +202,7 @@ class RalphThinkingUseCase:
                 sessão como `failed` e é repropagada ao chamador.
         """
         self.__user_question = input_dto.user_input
-        self.__max_tokens = input_dto.max_tokens
+        self.__session_token_limit = input_dto.max_tokens
         await self.session_recorder.start(
             user_question=input_dto.user_input,
             flow=_RALPH_FLOW,
@@ -571,7 +571,9 @@ class RalphThinkingUseCase:
                 )
                 continue
 
-            verdict = self.cost_guard.authorize_additional_planning(reserved_output_tokens=self.__max_tokens)
+            verdict = self.cost_guard.authorize_additional_planning(
+                reserved_output_tokens=self.__next_call_max_tokens(phase=ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING)
+            )
             if not verdict.authorized:
                 raise ExecutionInterruptedError(
                     limit=verdict.limit,
@@ -828,13 +830,28 @@ class RalphThinkingUseCase:
         Raises:
             ExecutionInterruptedError: Quando o guardião nega a próxima chamada de resolução.
         """
+        phase = ThinkingPhaseEnum.B1_TASK_RESOLUTION
         verdict = self.cost_guard.authorize(
-            phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION, reserved_output_tokens=self.__max_tokens
+            phase=phase, reserved_output_tokens=self.__next_call_max_tokens(phase=phase)
         )
         if not verdict.authorized:
             raise ExecutionInterruptedError(
                 limit=verdict.limit, phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION, detail=verdict.reason
             )
+
+    def __next_call_max_tokens(self, phase: ThinkingPhaseEnum) -> int:
+        """Teto de saída que a próxima chamada da fase pediria: o saldo da sessão, até o limite pedido.
+
+        É a mesma conta das fases, para que a consulta antecipada ao guardião avalie a chamada
+        que de fato seria feita.
+
+        Args:
+            phase: Fase que faria a próxima chamada.
+
+        Returns:
+            int: Tokens de saída que a chamada pediria.
+        """
+        return min(self.__session_token_limit, self.cost_guard.available_output_tokens(phase=phase))
 
     def __planning_limits(self) -> dict[str, str]:
         """Informa aos templates de planejamento quantas tarefas a sessão ainda comporta.

@@ -10,7 +10,7 @@ class BenchmarkLLMConfig:
     Attributes:
         model_name: Modelo pedido em todas as chamadas.
         provider: Provedor que atende as chamadas.
-        max_tokens: Limite de tokens de saída de cada chamada.
+        max_tokens: Limite de tokens de cada sessão gerada pela bateria.
         temperature: Temperatura de geração.
     """
 

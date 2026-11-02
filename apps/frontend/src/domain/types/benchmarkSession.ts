@@ -70,7 +70,7 @@ export interface BenchmarkSessionDocument {
 export interface BenchmarkDataset {
   question_ids: string[]
   max_parallel_limit: number
-  /** Maior `max_tokens` por chamada: acima disso o Ralph esgota o orçamento da sessão. */
+  /** Maior `max_tokens` aceito: o limite de tokens por sessão do backend (`LLM_MAX_TOKENS`). */
   max_tokens_limit: number
 }
 

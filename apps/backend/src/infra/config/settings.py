@@ -44,7 +44,7 @@ class Settings(ISettings):
             ),
             "LLM_PROVIDER": os.getenv("LLM_PROVIDER", ModelProviderEnum.OPEN_ROUTER.value),
             "LLM_MODEL": os.getenv("LLM_MODEL", ""),
-            "LLM_MAX_TOKENS": os.getenv("LLM_MAX_TOKENS", "1024"),
+            "LLM_MAX_TOKENS": os.getenv("LLM_MAX_TOKENS", "120000"),
             "LLM_TEMPERATURE": os.getenv("LLM_TEMPERATURE", "0.7"),
             "LLM_TIMEOUT_SECONDS": os.getenv("LLM_TIMEOUT_SECONDS", "30"),
             "LLM_REASONING_EFFORT": os.getenv("LLM_REASONING_EFFORT", ""),
@@ -77,7 +77,6 @@ class Settings(ISettings):
             "RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS": os.getenv("RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS", "2"),
             "RALPH_MAX_TASKS_PER_SESSION": os.getenv("RALPH_MAX_TASKS_PER_SESSION", "12"),
             "RALPH_MAX_LLM_CALLS_PER_SESSION": os.getenv("RALPH_MAX_LLM_CALLS_PER_SESSION", "60"),
-            "RALPH_SESSION_TOKEN_BUDGET": os.getenv("RALPH_SESSION_TOKEN_BUDGET", "120000"),
             "RALPH_FINAL_ANSWER_TOKEN_RESERVE": os.getenv("RALPH_FINAL_ANSWER_TOKEN_RESERVE", "4000"),
             "RALPH_SESSION_TIMEOUT_SECONDS": os.getenv("RALPH_SESSION_TIMEOUT_SECONDS", "600"),
             "RALPH_PROMPT_TEMPLATES_PATH": os.getenv("RALPH_PROMPT_TEMPLATES_PATH", "src/infra/templates"),
@@ -94,7 +93,6 @@ class Settings(ISettings):
             ),
             "RALPH_BENCHMARK_PROMPT_PATH": os.getenv("RALPH_BENCHMARK_PROMPT_PATH", "src/infra/benchmark/prompt.md"),
             "RALPH_BENCHMARK_MAX_PARALLEL": os.getenv("RALPH_BENCHMARK_MAX_PARALLEL", "10"),
-            "RALPH_BENCHMARK_MAX_TOKENS_LIMIT": os.getenv("RALPH_BENCHMARK_MAX_TOKENS_LIMIT", "32000"),
             "RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS": os.getenv(
                 "RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS", "1"
             ),
@@ -223,7 +221,7 @@ class Settings(ISettings):
 
     @property
     def llm_max_tokens(self) -> int:
-        """Teto padrão de tokens de saída."""
+        """Teto de tokens (entrada + saída) por sessão imposto pelo backend; o pedido nunca passa dele."""
         return self.__get_int("LLM_MAX_TOKENS")
 
     @property
@@ -402,11 +400,6 @@ class Settings(ISettings):
         return self.__get_int("RALPH_MAX_LLM_CALLS_PER_SESSION")
 
     @property
-    def ralph_session_token_budget(self) -> int:
-        """Teto de tokens (entrada + saída) da sessão inteira."""
-        return self.__get_int("RALPH_SESSION_TOKEN_BUDGET")
-
-    @property
     def ralph_final_answer_token_reserve(self) -> int:
         """Reserva de tokens que o loop não consome, deixada para C.3 em regime de melhor esforço."""
         return self.__get_int("RALPH_FINAL_ANSWER_TOKEN_RESERVE")
@@ -454,11 +447,6 @@ class Settings(ISettings):
     def ralph_benchmark_max_parallel(self) -> int:
         """Limite superior de questões executadas em paralelo numa bateria."""
         return self.__get_int("RALPH_BENCHMARK_MAX_PARALLEL")
-
-    @property
-    def ralph_benchmark_max_tokens_limit(self) -> int:
-        """Maior `max_tokens` aceito numa bateria, por chamada ao modelo."""
-        return self.__get_int("RALPH_BENCHMARK_MAX_TOKENS_LIMIT")
 
     @property
     def ralph_benchmark_progress_interval_seconds(self) -> float:

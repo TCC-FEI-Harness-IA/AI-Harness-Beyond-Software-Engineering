@@ -42,7 +42,6 @@ _ENV_VARS = (
     "RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS",
     "RALPH_MAX_TASKS_PER_SESSION",
     "RALPH_MAX_LLM_CALLS_PER_SESSION",
-    "RALPH_SESSION_TOKEN_BUDGET",
     "RALPH_FINAL_ANSWER_TOKEN_RESERVE",
     "RALPH_SESSION_TIMEOUT_SECONDS",
     "RALPH_PROMPT_TEMPLATES_PATH",
@@ -53,7 +52,6 @@ _ENV_VARS = (
     "RALPH_BENCHMARK_QUESTIONS_PATH",
     "RALPH_BENCHMARK_PROMPT_PATH",
     "RALPH_BENCHMARK_MAX_PARALLEL",
-    "RALPH_BENCHMARK_MAX_TOKENS_LIMIT",
     "RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS",
 )
 
@@ -84,7 +82,7 @@ def test_aplica_os_defaults_documentados_quando_a_variavel_esta_ausente() -> Non
     assert settings.cors_allowed_origins == ["http://localhost:5173", "http://localhost:3000"]
     assert settings.llm_provider is ModelProviderEnum.OPEN_ROUTER
     assert settings.llm_model == ""
-    assert settings.llm_max_tokens == 1024
+    assert settings.llm_max_tokens == 120000
     assert settings.llm_temperature == 0.7
     assert settings.llm_timeout_seconds == 30.0
     assert settings.llm_reasoning_effort == ""
@@ -112,7 +110,6 @@ def test_aplica_os_defaults_documentados_quando_a_variavel_esta_ausente() -> Non
     assert settings.ralph_max_additional_planning_rounds == 2
     assert settings.ralph_max_tasks_per_session == 12
     assert settings.ralph_max_llm_calls_per_session == 60
-    assert settings.ralph_session_token_budget == 120000
     assert settings.ralph_final_answer_token_reserve == 4000
     assert settings.ralph_session_timeout_seconds == 600
     assert settings.ralph_prompt_templates_path == "src/infra/templates"
@@ -267,16 +264,14 @@ def test_aplica_os_defaults_do_benchmark_quando_ausentes() -> None:
     assert settings.ralph_benchmark_questions_path == "src/infra/benchmark/questions"
     assert settings.ralph_benchmark_prompt_path == "src/infra/benchmark/prompt.md"
     assert settings.ralph_benchmark_max_parallel == 10
-    assert settings.ralph_benchmark_max_tokens_limit == 32000
     assert settings.ralph_benchmark_progress_interval_seconds == 1.0
 
 
-def test_limite_padrao_de_max_tokens_do_benchmark_cabe_no_orcamento_padrao_do_ralph() -> None:
-    """Cada chamada do Ralph reserva `max_tokens` no orçamento: o limite não pode, sozinho, estourá-lo."""
+def test_teto_padrao_de_tokens_por_sessao_comporta_a_reserva_da_resposta_final() -> None:
+    """O teto por sessão monta o orçamento do Ralph: precisa ser maior que a reserva de C.3."""
     settings = Settings()
 
-    teto_de_trabalho = settings.ralph_session_token_budget - settings.ralph_final_answer_token_reserve
-    assert settings.ralph_benchmark_max_tokens_limit < teto_de_trabalho
+    assert settings.llm_max_tokens > settings.ralph_final_answer_token_reserve
 
 
 def test_le_do_ambiente_as_variaveis_de_benchmark(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -284,7 +279,6 @@ def test_le_do_ambiente_as_variaveis_de_benchmark(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setenv("MONGODB_BENCHMARK_SESSIONS_COLLECTION", "  baterias  ")
     monkeypatch.setenv("RALPH_BENCHMARK_QUESTIONS_PATH", "/tmp/questoes")
     monkeypatch.setenv("RALPH_BENCHMARK_PROMPT_PATH", "/tmp/prompt.md")
-    monkeypatch.setenv("RALPH_BENCHMARK_MAX_TOKENS_LIMIT", "8000")
 
     settings = Settings()
 
@@ -292,7 +286,6 @@ def test_le_do_ambiente_as_variaveis_de_benchmark(monkeypatch: pytest.MonkeyPatc
     assert settings.mongodb_benchmark_sessions_collection == "baterias"
     assert settings.ralph_benchmark_questions_path == "/tmp/questoes"
     assert settings.ralph_benchmark_prompt_path == "/tmp/prompt.md"
-    assert settings.ralph_benchmark_max_tokens_limit == 8000
 
 
 def test_log_level_e_normalizado_para_maiusculas(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -311,13 +304,11 @@ def test_log_level_e_normalizado_para_maiusculas(monkeypatch: pytest.MonkeyPatch
         ("RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS", "ralph_max_additional_planning_rounds"),
         ("RALPH_MAX_TASKS_PER_SESSION", "ralph_max_tasks_per_session"),
         ("RALPH_MAX_LLM_CALLS_PER_SESSION", "ralph_max_llm_calls_per_session"),
-        ("RALPH_SESSION_TOKEN_BUDGET", "ralph_session_token_budget"),
         ("RALPH_FINAL_ANSWER_TOKEN_RESERVE", "ralph_final_answer_token_reserve"),
         ("RALPH_SESSION_TIMEOUT_SECONDS", "ralph_session_timeout_seconds"),
         ("RALPH_JSON_PARSE_MAX_RETRIES", "ralph_json_parse_max_retries"),
         ("RALPH_WEBSOCKET_MAX_MESSAGE_BYTES", "ralph_websocket_max_message_bytes"),
         ("RALPH_BENCHMARK_MAX_PARALLEL", "ralph_benchmark_max_parallel"),
-        ("RALPH_BENCHMARK_MAX_TOKENS_LIMIT", "ralph_benchmark_max_tokens_limit"),
     ],
 )
 def test_converte_para_inteiro(monkeypatch: pytest.MonkeyPatch, var_name: str, attribute: str) -> None:

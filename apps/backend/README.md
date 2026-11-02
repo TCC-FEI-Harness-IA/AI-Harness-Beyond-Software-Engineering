@@ -98,6 +98,7 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
   - [`GET /v1/sessions`](#get-v1sessions)
   - [`GET /v1/sessions/{session_id}`](#get-v1sessionssession_id)
   - [`GET /v1/health`](#get-v1health)
+  - [`GET /v1/limits`](#get-v1limits)
 - [Endpoint WebSocket](#endpoint-websocket)
   - [`WS /v1/message/reasoning`](#ws-v1messagereasoning)
 - [Benchmark](#benchmark)
@@ -192,7 +193,7 @@ Executa uma chamada direta ao modelo.
 **Erros**
 | Status | Quando |
 |---|---|
-| `422` | Corpo fora do contrato (`message` ausente, `temperature` fora de `[0, 1]` ou não finita, `max_tokens <= 0`, `provider` desconhecido, etc.). |
+| `422` | Corpo fora do contrato (`message` ausente, `temperature` fora de `[0, 1]` ou não finita, `max_tokens <= 0` ou acima de `LLM_MAX_TOKENS`, `provider` desconhecido, etc.). |
 | `500` | Falha ao chamar o provedor ou qualquer outra exceção não tratada. `detail` traz a mensagem da exceção. |
 
 ```bash
@@ -411,6 +412,13 @@ Verificação simples de disponibilidade.
 
 **Resposta `200`**: `{ "status": "ok" }`
 
+### `GET /v1/limits`
+
+Limites do backend que o cliente precisa respeitar ao montar uma requisição. O front usa
+`max_tokens_limit` para que o limite de tokens por sessão pedido nunca passe do limite do backend.
+
+**Resposta `200`**: `{ "max_tokens_limit": 120000 }` (o valor de `LLM_MAX_TOKENS`)
+
 ---
 
 ## Endpoint WebSocket
@@ -498,7 +506,7 @@ Todos os payloads são JSON. Campos sem valor default são obrigatórios.
 |---|---|---|
 | `provider` | `"open_router" \| "azure_ai_foundry" \| "openai"` | obrigatório; decide qual adapter atende a chamada |
 | `provider_config` | [`ProviderConfigDTO`](#providerconfigdto) | obrigatório |
-| `max_tokens` | `int` | `> 0` |
+| `max_tokens` | `int` | `> 0` e `<= LLM_MAX_TOKENS`. É o limite de tokens (entrada + saída) **da sessão inteira**, e não de cada chamada; cada chamada ao modelo recebe como teto de saída o saldo que resta dele (ver [Limite de tokens por sessão](#limite-de-tokens-por-sessão)) |
 | `temperature` | `float` | `[0, 1]`, finita; **só** ausente ou `null` vira `0.7`; `0` é preservado e o valor nunca é arredondado — chega ao provedor exatamente como pedido e é registrado na sessão |
 
 ### `DefaultInputDTO`
@@ -596,9 +604,25 @@ a consistência estrutural do relatório; não garante que o julgamento do model
 semanticamente correto.
 
 **O que não vem do paper.** O paper repete até aprovar e não define limites de recursos nem estados
-de interrupção. Os limites (`RALPH_*`) e o encerramento sem conclusão são um tratamento operacional
-adicional, que nunca promove material reprovado nem sintetiza sem aprovação global. A reserva de
-tokens é uma margem de melhor esforço, não uma garantia de conclusão.
+de interrupção. Os limites (`RALPH_*` e o limite de tokens por sessão) e o encerramento sem conclusão são
+um tratamento operacional adicional, que nunca promove material reprovado nem sintetiza sem aprovação
+global. A reserva de tokens é uma margem de melhor esforço, não uma garantia de conclusão.
+
+### Limite de tokens por sessão
+
+Todo limite de tokens vale para a **sessão**, nunca para uma rodada ou chamada isolada. Há dois:
+
+1. **Backend — `LLM_MAX_TOKENS`.** Teto absoluto por sessão. Exposto em `GET /v1/limits`.
+2. **Cliente — `llm_model_config.max_tokens`.** Limite pedido para a sessão; nunca pode passar do
+   limite do backend (`422`/`1003` na fronteira, e `ValueError` se chegar ao composition root).
+
+O limite efetivo da sessão é o `max_tokens` pedido. Na inferência simples, que faz uma única chamada,
+ele é o teto de saída dessa chamada. No Ralph, ele é o orçamento do guardião de custo: cada chamada recebe
+como teto de saída o saldo que resta dele, ou seja, o limite menos os tokens (entrada + saída) já consumidos
+e, fora de C.3, menos também a reserva da resposta final. Com o saldo zerado, a chamada é negada
+(`session_token_budget`). A entrada não é estimada, então o consumo real pode ultrapassar o limite em até o
+tamanho da entrada da última chamada. Um saldo grande pode passar da janela de contexto do modelo; nesse
+caso, peça um limite menor.
 
 **Benchmark.** O único executor de dataset é o [benchmark](#benchmark) de questões de múltipla
 escolha, com avaliação determinística pelo gabarito. Datasets como MMLU/GPQA não fazem parte deste backend.
@@ -618,10 +642,10 @@ Ver `.env.example` para o arquivo completo.
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Origens liberadas (CSV). |
 | `LLM_PROVIDER` | `open_router` | Provedor usado quando a requisição não especifica: `open_router`, `azure_ai_foundry` ou `openai`. |
 | `LLM_MODEL` | *(vazio)* | Modelo padrão quando a requisição não especifica. |
-| `LLM_MAX_TOKENS` | `1024` | Teto de tokens de saída padrão. |
+| `LLM_MAX_TOKENS` | `120000` | Limite de tokens (entrada + saída) **por sessão** imposto pelo backend, nos dois fluxos e no benchmark. O `max_tokens` pedido é o limite da sessão e nunca pode passar dele (`422` no HTTP, `1003` nos WebSockets). Também é o orçamento do guardião de custo do Ralph. |
 | `LLM_TEMPERATURE` | `0.7` | Temperatura padrão. |
 | `LLM_TIMEOUT_SECONDS` | `30` | Timeout das chamadas HTTP, em qualquer provedor. |
-| `LLM_REASONING_EFFORT` | *(vazio)* | Esforço de raciocínio (`minimal`/`low`/`medium`/`high`); vazio não envia o parâmetro. Como `max_tokens` cobre raciocínio **e** resposta, limitá-lo evita que o modelo gaste o orçamento inteiro pensando e devolva conteúdo vazio. |
+| `LLM_REASONING_EFFORT` | *(vazio)* | Esforço de raciocínio (`minimal`/`low`/`medium`/`high`); vazio não envia o parâmetro. Como o teto de saída de cada chamada cobre raciocínio **e** resposta, limitá-lo evita que o modelo gaste o saldo da sessão pensando e devolva conteúdo vazio. |
 | `OPENROUTER_API_URL` | `https://openrouter.ai/api/v1/chat/completions` | Endpoint de chat completions. |
 | `OPENROUTER_API_KEY` | *(vazio)* | Chave da API. Obrigatória para usar o provedor. |
 | `OPENROUTER_HTTP_REFERER` | *(vazio)* | Header `HTTP-Referer`, opcional. |
@@ -646,8 +670,7 @@ Ver `.env.example` para o arquivo completo.
 | `RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS` | `2` | Máximo de rodadas de planejamento adicional por sessão. Esgotado com a verificação global ainda reprovada, a execução é interrompida (sem síntese). |
 | `RALPH_MAX_TASKS_PER_SESSION` | `12` | Total máximo de tarefas por sessão. Vale para o plano inicial e para cada planejamento adicional: um lote acima do espaço restante é devolvido ao planejador para correção, nunca truncado. |
 | `RALPH_MAX_LLM_CALLS_PER_SESSION` | `60` | Teto absoluto de chamadas ao modelo. Toda chamada enviada conta, inclusive correções de JSON e completions vazias repetidas. |
-| `RALPH_SESSION_TOKEN_BUDGET` | `120000` | Teto de tokens (input + output) da sessão. A conta de cada chamada inclui o consumo já registrado mais o `max_tokens` pedido; a entrada não é estimada, então o consumo real pode ultrapassar o teto em até o tamanho da entrada. |
-| `RALPH_FINAL_ANSWER_TOKEN_RESERVE` | `4000` | Margem de tokens que só C.3 enxerga, de melhor esforço: **não garante** a síntese (C.1 também precisa de recursos antes dela). |
+| `RALPH_FINAL_ANSWER_TOKEN_RESERVE` | `4000` | Margem de tokens, descontada do limite da sessão, que só C.3 enxerga, de melhor esforço: **não garante** a síntese (C.1 também precisa de recursos antes dela). O limite da sessão precisa ser maior que ela; do contrário o Ralph é recusado antes de qualquer chamada. |
 | `RALPH_SESSION_TIMEOUT_SECONDS` | `600` | Tempo máximo de parede da sessão, verificado antes de cada chamada. O timeout HTTP de uma chamada (`LLM_TIMEOUT_SECONDS`) não é limitado ao tempo restante da sessão. |
 | `RALPH_PROMPT_TEMPLATES_PATH` | `src/infra/templates` | Diretório dos templates `.md`. |
 | `RALPH_JSON_PARSE_MAX_RETRIES` | `2` | Retentativas quando o modelo devolve JSON inválido, relatório de verificação inconsistente, lote de tarefas inválido ou completion vazia. Cada retentativa é uma chamada contada, feita com temperatura `1`; a temperatura do usuário volta na chamada seguinte às retentativas. |
@@ -657,7 +680,6 @@ Ver `.env.example` para o arquivo completo.
 | `RALPH_BENCHMARK_QUESTIONS_PATH` | `src/infra/benchmark/questions` | Dataset de questões: uma pasta por questão, com `enunciado.md` e `alternativa_correta.md`. |
 | `RALPH_BENCHMARK_PROMPT_PATH` | `src/infra/benchmark/prompt.md` | Instrução de resposta anexada ao enunciado de cada questão. |
 | `RALPH_BENCHMARK_MAX_PARALLEL` | `10` | Limite superior de `max_parallel` numa bateria. |
-| `RALPH_BENCHMARK_MAX_TOKENS_LIMIT` | `32000` | Maior `max_tokens` aceito numa bateria. Acima disso o Ralph é bloqueado pelo orçamento da sessão (cada chamada reserva `max_tokens`) e o provedor recusa a chamada simples por exceder a janela de contexto. |
 | `RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS` | `1` | Intervalo máximo entre dois frames `progress` sem mudança de estado, para manter o tempo decorrido atualizado. |
 
 ---
@@ -726,9 +748,8 @@ em `error`. A acurácia de um fluxo é `correct / executed`.
    `question_count` (opcional, `>= 1`) executa as primeiras questões do dataset; ausente, executa todas.
    `max_parallel` (default `5`) vai de `1` a `RALPH_BENCHMARK_MAX_PARALLEL`. `llm_model_config` é o
    [`ModelConfigDTO`](#modelconfigdto) dos endpoints de mensagem e vale para todos os fluxos; seu
-   `max_tokens` vai de `1` a `RALPH_BENCHMARK_MAX_TOKENS_LIMIT`. O `max_tokens` é o teto de saída de **cada
-   chamada**: o Ralph reserva esse valor no `RALPH_SESSION_TOKEN_BUDGET` a cada chamada, então um teto
-   próximo ao orçamento bloqueia a execução logo na fase A.1.
+   `max_tokens` vai de `1` a `LLM_MAX_TOKENS` e é o limite de tokens de **cada sessão** gerada pela bateria
+   (uma por fluxo e questão), e não de cada chamada. Ver [Limite de tokens por sessão](#limite-de-tokens-por-sessão).
 
 2. O servidor envia um frame `{"type": "progress", "benchmark_session": {...}}` a cada mudança (questão ou
    fluxo começando ou terminando, consumo de tokens do Ralph) e, sem mudanças, a cada
@@ -807,8 +828,9 @@ bateria não existe; `400` para identificador inválido; `500` para outras falha
 
 ### `GET /v1/benchmark/questions`
 
-Questões do dataset, na ordem de execução, e os limites de paralelismo e de `max_tokens`:
-`{ "question_ids": ["FISICA_ENEM_2023_AZUL_Q108", ...], "max_parallel_limit": 10, "max_tokens_limit": 32000 }`.
+Questões do dataset, na ordem de execução, e os limites de paralelismo e de `max_tokens` (tokens por
+sessão, igual a `LLM_MAX_TOKENS`):
+`{ "question_ids": ["FISICA_ENEM_2023_AZUL_Q108", ...], "max_parallel_limit": 10, "max_tokens_limit": 120000 }`.
 
 ### Metadados nas sessões
 

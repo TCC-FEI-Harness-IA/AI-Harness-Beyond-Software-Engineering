@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.infra.config.settings import Settings
 from src.infra.routes.v1.message.dtos.provider_config_dto import ProviderConfigDTO
 
 _DEFAULT_TEMPERATURE = 0.7
@@ -15,8 +16,28 @@ class ModelConfigDTO(BaseModel):
     # na fronteira, em vez de falhar na hora de escolher o serviço.
     provider: ModelProviderEnum
     provider_config: ProviderConfigDTO
+    # Limite de tokens (entrada + saída) da sessão inteira, e não de cada chamada ao modelo.
     max_tokens: int = Field(gt=0)
     temperature: float = Field(default=_DEFAULT_TEMPERATURE)
+
+    @field_validator("max_tokens")
+    @classmethod
+    def validate_max_tokens(cls, value: int) -> int:
+        """Recusa um limite de tokens da sessão acima do teto do backend.
+
+        Args:
+            value: Limite de tokens da sessão informado no corpo da requisição.
+
+        Returns:
+            int: O próprio limite, quando cabe no teto.
+
+        Raises:
+            ValueError: Quando o limite passa de `LLM_MAX_TOKENS`.
+        """
+        backend_limit = Settings().llm_max_tokens
+        if value > backend_limit:
+            raise ValueError(f"max_tokens não pode passar do limite de tokens por sessão do backend ({backend_limit})")
+        return value
 
     @field_validator("temperature", mode="before")
     @classmethod

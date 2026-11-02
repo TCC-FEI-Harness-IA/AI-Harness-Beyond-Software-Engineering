@@ -186,7 +186,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
 
         Args:
             model_name: Nome do modelo a ser usado nas chamadas da fase.
-            max_tokens: Limite de tokens de saída das chamadas da fase.
+            max_tokens: Limite de tokens da sessão; nenhuma chamada da fase pede mais que ele.
             temperature: Temperatura de geração das chamadas da fase.
             provider: Provedor que atende as chamadas da fase.
         """
@@ -573,9 +573,8 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             temperature=temperature,
             provider=self.provider,
         )
-        verdict = self.cost_guard.begin_call(
-            phase=self.phase, reserved_output_tokens=self.max_tokens or self.settings.llm_max_tokens
-        )
+        call_max_tokens = self.__call_max_tokens()
+        verdict = self.cost_guard.begin_call(phase=self.phase, reserved_output_tokens=call_max_tokens)
         if not verdict.authorized:
             raise BudgetExceededError(limit=verdict.limit, phase=self.phase, reason=verdict.reason)
 
@@ -594,7 +593,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             llm_message = await self.llm_completions.send_conversation(
                 conversation=context.messages,
                 model_name=self.model_name,
-                max_tokens=self.max_tokens,
+                max_tokens=call_max_tokens,
                 temperature=temperature,
                 provider=self.provider,
             )
@@ -643,3 +642,16 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             provider_response_id=llm_message.provider_response_id,
         )
         return llm_message, invocation_id
+
+    def __call_max_tokens(self) -> int:
+        """Teto de saída da próxima chamada: o saldo de tokens da sessão, nunca acima do limite pedido.
+
+        O limite de tokens vale para a sessão inteira; cada chamada pede só o que ainda resta dele
+        para a fase (C.3 enxerga a reserva da resposta final). Com o saldo zerado o teto é zero, e o
+        guardião de custo nega a chamada.
+
+        Returns:
+            int: Tokens de saída que a chamada pode pedir ao modelo.
+        """
+        session_limit = self.max_tokens or self.settings.llm_max_tokens
+        return min(session_limit, self.cost_guard.available_output_tokens(phase=self.phase))

@@ -108,5 +108,26 @@ def test_health_check_responde_ok(client: TestClient) -> None:
     assert resposta.json() == {"status": "ok"}
 
 
+def test_limites_informam_o_teto_de_tokens_por_sessao_do_backend(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("LLM_MAX_TOKENS", "64000")
+
+    resposta = client.get("/v1/limits")
+
+    assert resposta.status_code == 200
+    assert resposta.json() == {"max_tokens_limit": 64000}
+
+
+def test_max_tokens_acima_do_teto_por_sessao_do_backend_e_recusado(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("LLM_MAX_TOKENS", "500")
+    corpo = _build_body()
+    corpo["llm_model_config"]["max_tokens"] = 501
+
+    assert client.post("/v1/message/default", json=corpo).status_code == 422
+
+
 def test_rota_de_reasoning_foi_removida_nesta_fase(client: TestClient) -> None:
     assert client.post("/v1/message/reasoning", json=_build_body()).status_code == 404

@@ -110,6 +110,8 @@ def storage_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", "vendor/modelo")
     monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router")
+    monkeypatch.setenv("LLM_MAX_TOKENS", "120000")
+    monkeypatch.setenv("RALPH_FINAL_ANSWER_TOKEN_RESERVE", "4000")
     return caminho
 
 
@@ -156,7 +158,7 @@ def _build_reasoning_payload() -> dict[str, object]:
         "llm_model_config": {
             "provider": "open_router",
             "provider_config": {"model_name": "vendor/modelo"},
-            "max_tokens": 1200,
+            "max_tokens": 50000,
             "temperature": 0.3,
         },
     }

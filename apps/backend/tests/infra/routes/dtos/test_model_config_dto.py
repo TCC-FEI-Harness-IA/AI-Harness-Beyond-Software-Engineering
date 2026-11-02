@@ -82,3 +82,16 @@ def test_provider_local_deixou_de_ser_aceito() -> None:
     """Nunca houve serviço por trás de "local": o contrato agora recusa o valor."""
     with pytest.raises(ValidationError):
         ModelConfigDTO.model_validate({**_BASE, "provider": "local"})
+
+
+def test_max_tokens_no_teto_por_sessao_do_backend_e_aceito(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LLM_MAX_TOKENS", "100")
+
+    assert ModelConfigDTO.model_validate(_BASE).max_tokens == 100
+
+
+def test_max_tokens_acima_do_teto_por_sessao_do_backend_e_recusado(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LLM_MAX_TOKENS", "99")
+
+    with pytest.raises(ValidationError, match="limite de tokens por sessão do backend \\(99\\)"):
+        ModelConfigDTO.model_validate(_BASE)

@@ -55,7 +55,7 @@ class ISettings(ABC):
     @property
     @abstractmethod
     def llm_max_tokens(self) -> int:
-        """Teto padrão de tokens de saída."""
+        """Teto de tokens (entrada + saída) por sessão imposto pelo backend; o pedido nunca passa dele."""
         raise NotImplementedError
 
     @property
@@ -234,12 +234,6 @@ class ISettings(ABC):
 
     @property
     @abstractmethod
-    def ralph_session_token_budget(self) -> int:
-        """Teto de tokens (entrada + saída) da sessão inteira."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
     def ralph_final_answer_token_reserve(self) -> int:
         """Reserva de tokens que o loop não consome, deixada para C.3 em regime de melhor esforço."""
         raise NotImplementedError
@@ -294,12 +288,6 @@ class ISettings(ABC):
     @abstractmethod
     def ralph_benchmark_max_parallel(self) -> int:
         """Limite superior de questões executadas em paralelo numa bateria."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def ralph_benchmark_max_tokens_limit(self) -> int:
-        """Maior `max_tokens` aceito numa bateria, por chamada ao modelo."""
         raise NotImplementedError
 
     @property

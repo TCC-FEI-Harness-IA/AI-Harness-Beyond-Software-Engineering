@@ -69,7 +69,7 @@ class BenchmarkQueryStartup:
 
         Returns:
             dict[str, Any]: Identificadores das questões, na ordem de execução, e os limites de paralelismo
-            e de `max_tokens` aceitos numa bateria.
+            e de `max_tokens` (tokens por sessão) aceitos numa bateria.
 
         Raises:
             ValueError: Quando o dataset é inválido.
@@ -77,5 +77,5 @@ class BenchmarkQueryStartup:
         return {
             "question_ids": [question.id for question in self.question_provider.list_questions()],
             "max_parallel_limit": self.settings.ralph_benchmark_max_parallel,
-            "max_tokens_limit": self.settings.ralph_benchmark_max_tokens_limit,
+            "max_tokens_limit": self.settings.llm_max_tokens,
         }

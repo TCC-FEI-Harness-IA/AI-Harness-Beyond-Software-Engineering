@@ -10,7 +10,7 @@ class DefaultMessageInputDTO:
     Attributes:
         user_input: Pergunta enviada pelo usuário.
         model_name: Nome do modelo a ser usado na chamada.
-        max_tokens: Limite de tokens de saída.
+        max_tokens: Limite de tokens da sessão; é o teto de saída da única chamada.
         temperature: Temperatura da geração.
         provider: Provedor que atende a chamada.
     """

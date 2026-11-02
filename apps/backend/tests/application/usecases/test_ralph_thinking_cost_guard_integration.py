@@ -127,20 +127,28 @@ async def test_a_reserva_continua_intacta_mas_nao_forca_a_sintese() -> None:
     assert not [e for e in eventos if e.phase in (_FASE.C1_GLOBAL_VERIFICATION, _FASE.C3_FINAL_ANSWER)]
 
 
-async def test_a_saida_maxima_pedida_impede_iniciar_uma_chamada_que_poderia_estourar_o_teto() -> None:
+async def test_cada_chamada_pede_so_o_saldo_da_sessao_ate_esgota_lo() -> None:
+    """Orçamento 100, reserva 25 e 15 tokens por chamada: cinco chamadas cabem; a sexta é negada."""
     cenario = RalphScenario(
-        responses=[criterios()],
+        responses=_roteiro_minimo(),
         budget=_orcamento(session_token_budget=100, final_answer_token_reserve=25),
-        max_tokens=80,
+        max_tokens=100,
     )
 
     await _executar(cenario, BudgetExceededError)
 
-    assert cenario.llm.call_count == 0
-    assert cenario.session.invocations == []
-    assert cenario.session.totals.total_llm_calls == 0
-    assert cenario.session.failure.phase is _FASE.A1_GENERAL_CRITERIA
+    assert [chamada["max_tokens"] for chamada in cenario.llm.calls] == [75, 60, 45, 30, 15]
+    assert cenario.session.totals.total_llm_calls == 5
+    assert cenario.session.failure.phase is _FASE.B4_LEARNINGS_EXTRACTION
     assert cenario.session.failure.limit is BudgetLimitEnum.SESSION_TOKEN_BUDGET
+
+
+async def test_o_limite_pedido_menor_que_o_saldo_e_o_teto_de_cada_chamada() -> None:
+    cenario = RalphScenario(responses=_roteiro_minimo(), budget=_orcamento(), max_tokens=40)
+
+    await cenario.run()
+
+    assert {chamada["max_tokens"] for chamada in cenario.llm.calls} == {40}
 
 
 # ── Limite de chamadas em cada fase ──────────────────────────────────────────

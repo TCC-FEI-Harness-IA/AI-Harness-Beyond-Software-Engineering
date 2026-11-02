@@ -71,7 +71,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             user_question: Pergunta original enviada pelo usuário.
             flow: Fluxo usado pela sessão.
             model_name: Nome do modelo usado na sessão.
-            max_tokens: Limite de tokens de saída configurado para a sessão.
+            max_tokens: Limite de tokens configurado para a sessão.
             temperature: Temperatura de geração configurada para a sessão.
             provider: Provedor efetivo das chamadas da sessão, quando conhecido.
 

@@ -6,9 +6,11 @@ import { MODEL_PROVIDER, PROVIDER_LABELS } from '@/domain/enums/modelProvider'
 import { RunConfigProvider } from '@/state/RunConfigContext'
 import { RunConfigBar } from './RunConfigBar'
 
-function renderBar(): void {
+function renderBar(
+  loadLimits: () => Promise<{ max_tokens_limit: number }> = () => new Promise(() => {}),
+): void {
   render(
-    <RunConfigProvider>
+    <RunConfigProvider loadLimits={loadLimits}>
       <RunConfigBar />
     </RunConfigProvider>,
   )
@@ -19,6 +21,15 @@ beforeEach(() => {
 })
 
 describe('RunConfigBar', () => {
+  it('o máximo de tokens é por sessão e mostra o limite do backend', async () => {
+    renderBar(() => Promise.resolve({ max_tokens_limit: 64000 }))
+
+    const campo = screen.getByRole('spinbutton', { name: /Máximo de tokens por sessão/ })
+    expect(screen.getByText(/Soma de todas as chamadas ao modelo na sessão/)).toBeInTheDocument()
+    expect(await screen.findByText(/Máximo do backend: 64\.000\./)).toBeInTheDocument()
+    expect(campo).toHaveAttribute('max', '64000')
+  })
+
   it('mostra o módulo de configuração sempre visível, sem precisar abrir nada', () => {
     renderBar()
 

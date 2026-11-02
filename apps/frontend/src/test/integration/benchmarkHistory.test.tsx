@@ -165,7 +165,7 @@ describe('Benchmark como funcionalidade da aplicação', () => {
     renderApp('/benchmark')
 
     const start = await screen.findByRole('button', { name: 'Iniciar bateria' })
-    expect(screen.getByRole('alert')).toHaveTextContent('passa do limite de 32.000 por chamada')
+    expect(screen.getByRole('alert')).toHaveTextContent('passa do limite de 32.000 por sessão')
     expect(start).toBeDisabled()
 
     // Contornar o botão desabilitado (envio direto do formulário) também não abre a conexão.

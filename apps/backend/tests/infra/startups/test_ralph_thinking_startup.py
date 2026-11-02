@@ -47,6 +47,8 @@ def ambiente_de_modelo(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", "vendor/modelo")
     monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router,openai")
+    monkeypatch.setenv("LLM_MAX_TOKENS", "120000")
+    monkeypatch.setenv("RALPH_FINAL_ANSWER_TOKEN_RESERVE", "4000")
 
 
 def test_constroi_todo_o_grafo_sem_deixar_atributo_nulo() -> None:
@@ -91,7 +93,7 @@ _LIMITES_DE_AMBIENTE = {
     "RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS": "4",
     "RALPH_MAX_TASKS_PER_SESSION": "9",
     "RALPH_MAX_LLM_CALLS_PER_SESSION": "33",
-    "RALPH_SESSION_TOKEN_BUDGET": "5000",
+    "LLM_MAX_TOKENS": "5000",
     "RALPH_FINAL_ANSWER_TOKEN_RESERVE": "500",
     "RALPH_SESSION_TIMEOUT_SECONDS": "42",
 }
@@ -189,7 +191,7 @@ _REASONING_PAYLOAD = ReasoningInputDTO.model_validate(
         "llm_model_config": {
             "provider": "openai",
             "provider_config": {"model_name": "vendor/modelo"},
-            "max_tokens": 1200,
+            "max_tokens": 50000,
             "temperature": 0.3,
         },
     }
@@ -236,10 +238,32 @@ async def test_run_traduz_o_payload_de_transporte_para_o_dto_de_aplicacao() -> N
     assert fake_use_case.received_input_dto == RalphThinkingInputDTO(
         user_input="pergunta do usuario",
         model_name="vendor/modelo",
-        max_tokens=1200,
+        max_tokens=50000,
         temperature=0.3,
         provider=ModelProviderEnum.OPENAI,
     )
+
+
+async def test_run_aplica_o_max_tokens_do_payload_como_limite_de_tokens_da_sessao() -> None:
+    startup = RalphThinkingStartup()
+    startup.ralph_thinking_use_case = _FakeUseCase(events=[_EVENT])
+
+    await _collect(startup.run(payload=_REASONING_PAYLOAD))
+
+    assert startup.cost_guard.budget.session_token_budget == 50000
+    assert startup.cost_budget.session_token_budget == 120000
+
+
+async def test_run_recusa_um_limite_de_sessao_acima_do_teto_do_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LLM_MAX_TOKENS", "10000")
+    startup = RalphThinkingStartup()
+    fake_use_case = _FakeUseCase(events=[_EVENT])
+    startup.ralph_thinking_use_case = fake_use_case
+
+    with pytest.raises(ValueError, match="LLM_MAX_TOKENS"):
+        await _collect(startup.run(payload=_REASONING_PAYLOAD))
+
+    assert fake_use_case.received_input_dto is None
 
 
 async def test_run_converte_cada_thinking_event_em_reasoning_event_dto() -> None:

@@ -38,6 +38,7 @@ O front fala com o backend por dois transportes:
 | Inferência simples (baseline) | HTTP `POST` | `/v1/message/default` |
 | Ralph Loop Adaptado (harness) | WebSocket | `/v1/message/reasoning` |
 | Histórico | HTTP `GET` | `/v1/sessions`, `/v1/sessions/{id}` |
+| Limite de tokens por sessão do backend | HTTP `GET` | `/v1/limits` |
 | BenchMark — execução da bateria | WebSocket | `/v1/benchmark/run` |
 | BenchMark — baterias e dataset | HTTP `GET` | `/v1/benchmark/sessions`, `/v1/benchmark/sessions/{id}`, `/v1/benchmark/questions` |
 | BenchMark — exportar erros do Ralph Loop | HTTP `GET` | `/v1/benchmark/sessions/{id}/ralph-loop-errors/export` |
@@ -113,7 +114,7 @@ mensagem que nomeia a variável.
 | `VITE_DEFAULT_PROVIDER` | `open_router` | `provider` pré-selecionado, enviado no `llm_model_config`. Precisa estar em `VITE_AVAILABLE_PROVIDERS`. |
 | `VITE_AVAILABLE_MODELS` | *(CSV)* | Modelos oferecidos no seletor. Precisa ser subconjunto de `GENAI_AVAILABLE_MODELS` no backend. |
 | `VITE_DEFAULT_MODEL` | — | Modelo pré-selecionado. Precisa estar em `VITE_AVAILABLE_MODELS`. |
-| `VITE_DEFAULT_MAX_TOKENS` | `4000` | `max_tokens` padrão. Num modelo de raciocínio o teto cobre o raciocínio interno **e** a resposta — um valor apertado faz o provedor devolver conteúdo vazio. |
+| `VITE_DEFAULT_MAX_TOKENS` | `50000` | `max_tokens` padrão: limite de tokens (entrada + saída) **por sessão** imposto pelo front, somando todas as chamadas ao modelo. Nunca passa do limite por sessão do backend (`LLM_MAX_TOKENS`, lido em `GET /v1/limits`): o valor salvo ou digitado é rebaixado a ele. Para o Ralph, precisa ser maior que `RALPH_FINAL_ANSWER_TOKEN_RESERVE`. |
 | `VITE_DEFAULT_TEMPERATURE` | `0.3` | `temperature` padrão. Backend exige `[0, 1]`. |
 | `VITE_HISTORY_FETCH_CONCURRENCY` | `6` | Requisições simultâneas ao hidratar a lista de histórico. |
 | `VITE_HISTORY_SUMMARY_MAX_CHARS` | `120` | Limite de caracteres do resumo no card de histórico. |

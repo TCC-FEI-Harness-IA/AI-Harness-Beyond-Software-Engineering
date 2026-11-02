@@ -71,7 +71,7 @@ class RalphThinkingStartup:
             max_additional_planning_rounds=self.settings.ralph_max_additional_planning_rounds,
             max_tasks_per_session=self.settings.ralph_max_tasks_per_session,
             max_llm_calls_per_session=self.settings.ralph_max_llm_calls_per_session,
-            session_token_budget=self.settings.ralph_session_token_budget,
+            session_token_budget=self.settings.llm_max_tokens,
             final_answer_token_reserve=self.settings.ralph_final_answer_token_reserve,
             session_timeout_seconds=self.settings.ralph_session_timeout_seconds,
         )
@@ -147,13 +147,20 @@ class RalphThinkingStartup:
     async def run(self, payload: ReasoningInputDTO) -> AsyncGenerator[ReasoningEventDTO, None]:
         """Executa o fluxo harness a partir do frame de abertura do WebSocket.
 
+        O `max_tokens` do payload é o limite de tokens da sessão e aperta o orçamento do guardião de
+        custo, montado com o teto do backend (`LLM_MAX_TOKENS`).
+
         Args:
             payload: Frame de abertura no contrato de transporte.
 
         Yields:
             ReasoningEventDTO: Evento de transporte equivalente a cada `ThinkingEvent`
             emitido pelo caso de uso.
+
+        Raises:
+            ValueError: Quando o limite pedido passa do teto do backend ou não cabe a reserva da resposta final.
         """
+        self.cost_guard.limit_session_tokens(session_token_budget=payload.llm_model_config.max_tokens)
         input_dto = RalphThinkingInputDTO(
             user_input=payload.message.user_input,
             model_name=payload.llm_model_config.provider_config.model_name,

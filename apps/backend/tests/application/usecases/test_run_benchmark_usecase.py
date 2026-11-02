@@ -273,19 +273,19 @@ async def test_consumidor_que_para_de_ler_interrompe_a_bateria_e_cancela_os_flux
     assert len(runner.cancelled) == 2
 
 
-@pytest.mark.parametrize("max_tokens", [0, 32001, 10_000_000, 1_000_000_000])
+@pytest.mark.parametrize("max_tokens", [0, 120_001, 10_000_000, 1_000_000_000])
 async def test_max_tokens_fora_do_limite_e_recusado_antes_de_criar_a_bateria(max_tokens: int) -> None:
     runner = FakeBenchmarkFlowRunner(_imediato)
     caso, repositorio = _caso_de_uso(runner)
 
-    with pytest.raises(InvalidBenchmarkRequestError, match="max_tokens deve estar entre 1 e 32000"):
+    with pytest.raises(InvalidBenchmarkRequestError, match="max_tokens deve estar entre 1 e 120000"):
         await _coletar(caso, _entrada(max_tokens=max_tokens))
 
     assert repositorio.saved == []
     assert runner.requests == []
 
 
-@pytest.mark.parametrize("max_tokens", [1, 4096, 32000])
+@pytest.mark.parametrize("max_tokens", [1, 4096, 120_000])
 async def test_max_tokens_dentro_do_limite_e_aceito_e_chega_aos_fluxos(max_tokens: int) -> None:
     runner = FakeBenchmarkFlowRunner(_imediato)
     caso, _ = _caso_de_uso(runner, quantidade=1)

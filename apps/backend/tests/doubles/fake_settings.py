@@ -12,7 +12,7 @@ _DEFAULTS: dict[str, Any] = {
     "cors_allowed_origins": ["http://localhost:5173"],
     "llm_provider": ModelProviderEnum.OPEN_ROUTER,
     "llm_model": "vendor/modelo-padrao",
-    "llm_max_tokens": 1024,
+    "llm_max_tokens": 120000,
     "llm_temperature": 0.7,
     "llm_timeout_seconds": 30.0,
     "llm_reasoning_effort": "",
@@ -40,7 +40,6 @@ _DEFAULTS: dict[str, Any] = {
     "ralph_max_additional_planning_rounds": 2,
     "ralph_max_tasks_per_session": 12,
     "ralph_max_llm_calls_per_session": 60,
-    "ralph_session_token_budget": 120000,
     "ralph_final_answer_token_reserve": 4000,
     "ralph_session_timeout_seconds": 600,
     "ralph_prompt_templates_path": "src/infra/templates",
@@ -51,7 +50,6 @@ _DEFAULTS: dict[str, Any] = {
     "ralph_benchmark_questions_path": "src/infra/benchmark/questions",
     "ralph_benchmark_prompt_path": "src/infra/benchmark/prompt.md",
     "ralph_benchmark_max_parallel": 10,
-    "ralph_benchmark_max_tokens_limit": 32000,
     "ralph_benchmark_progress_interval_seconds": 0.05,
 }
 
@@ -209,10 +207,6 @@ class FakeSettings(ISettings):
         return self.values["ralph_max_llm_calls_per_session"]
 
     @property
-    def ralph_session_token_budget(self) -> int:
-        return self.values["ralph_session_token_budget"]
-
-    @property
     def ralph_final_answer_token_reserve(self) -> int:
         return self.values["ralph_final_answer_token_reserve"]
 
@@ -251,10 +245,6 @@ class FakeSettings(ISettings):
     @property
     def ralph_benchmark_max_parallel(self) -> int:
         return self.values["ralph_benchmark_max_parallel"]
-
-    @property
-    def ralph_benchmark_max_tokens_limit(self) -> int:
-        return self.values["ralph_benchmark_max_tokens_limit"]
 
     @property
     def ralph_benchmark_progress_interval_seconds(self) -> float:

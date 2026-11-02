@@ -103,6 +103,10 @@ class FakeCostGuard(ICostGuard):
         """Devolve os tokens restantes programados."""
         return self.tokens_left
 
+    def available_output_tokens(self, phase: ThinkingPhaseEnum) -> int:
+        """Devolve os tokens restantes programados, qualquer que seja a fase."""
+        return self.tokens_left
+
     def __verdict(self) -> BudgetVerdict:
         """Monta o veredito de autorização programado."""
         if self.authorized:

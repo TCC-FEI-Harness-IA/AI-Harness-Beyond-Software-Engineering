@@ -11,7 +11,7 @@ class RunBenchmarkInputDTO:
         question_count: Quantas questões executar, das primeiras do dataset; `None` executa todas.
         max_parallel: Máximo de questões executadas em paralelo (workers).
         model_name: Modelo usado em todos os fluxos.
-        max_tokens: Limite de tokens de saída de cada chamada.
+        max_tokens: Limite de tokens de cada sessão gerada pela bateria.
         temperature: Temperatura de geração.
         provider: Provedor que atende as chamadas.
     """

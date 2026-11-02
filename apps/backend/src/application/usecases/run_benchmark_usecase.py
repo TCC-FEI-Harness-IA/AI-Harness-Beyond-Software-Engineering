@@ -132,12 +132,12 @@ class RunBenchmarkUseCase:
             InvalidBenchmarkRequestError: Quando `max_tokens`, o paralelismo ou a quantidade de questões
                 estão fora do permitido.
         """
-        max_tokens_limit = self.settings.ralph_benchmark_max_tokens_limit
+        max_tokens_limit = self.settings.llm_max_tokens
         if not _MIN_TOKENS <= input_dto.max_tokens <= max_tokens_limit:
             raise InvalidBenchmarkRequestError(
                 f"max_tokens deve estar entre {_MIN_TOKENS} e {max_tokens_limit}. Valor: {input_dto.max_tokens}. "
-                "Cada chamada do Ralph reserva max_tokens no orçamento da sessão, e a inferência simples não "
-                "cabe na janela de contexto do modelo acima disso."
+                "É o limite de tokens de cada sessão (inferência simples e Ralph Loop), e não pode passar do "
+                "limite por sessão do backend (LLM_MAX_TOKENS)."
             )
         max_parallel_limit = self.settings.ralph_benchmark_max_parallel
         if not _MIN_PARALLEL <= input_dto.max_parallel <= max_parallel_limit:

@@ -32,7 +32,7 @@ class IThinkingPhase(ABC):
 
         Args:
             model_name: Nome do modelo a ser usado nas chamadas da fase.
-            max_tokens: Limite de tokens de saída das chamadas da fase.
+            max_tokens: Limite de tokens da sessão; nenhuma chamada da fase pede mais que ele.
             temperature: Temperatura de geração das chamadas da fase.
             provider: Provedor que atende as chamadas da fase.
         """

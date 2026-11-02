@@ -87,7 +87,7 @@ def _build_payload(**overrides: Any) -> dict[str, Any]:
         "llm_model_config": {
             "provider": "open_router",
             "provider_config": {"model_name": "vendor/modelo"},
-            "max_tokens": 1200,
+            "max_tokens": 50000,
             "temperature": 0.3,
         },
     }
@@ -126,7 +126,7 @@ def test_fluxo_completo_recebe_a_sequencia_de_eventos_e_termina_em_result(client
     with client.websocket_connect("/v1/message/reasoning") as ws:
         ws.send_text('{"message": {"user_input": "pergunta"}, "llm_model_config": '
                      '{"provider": "open_router", "provider_config": {"model_name": "vendor/modelo"}, '
-                     '"max_tokens": 1200, "temperature": 0.3}}')
+                     '"max_tokens": 50000, "temperature": 0.3}}')
         frames, close_code = _collect_frames(ws)
 
     assert [frame["type"] for frame in frames] == ["thinking", "thinking", "result"]

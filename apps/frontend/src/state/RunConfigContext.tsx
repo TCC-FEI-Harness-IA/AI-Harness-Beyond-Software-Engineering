@@ -1,12 +1,18 @@
-// Modelo, teto de tokens e temperatura — configuração de execução compartilhada pelos dois
-// fluxos de inferência (README, FASE 04, seção 4). Vive em Context para sobreviver à navegação
+// Modelo, limite de tokens por sessão e temperatura — configuração de execução compartilhada pelos
+// dois fluxos de inferência (README, FASE 04, seção 4). Vive em Context para sobreviver à navegação
 // entre a home e as telas de chat, sem precisar passar por props em cascata.
+//
+// O `maxTokens` é o limite de tokens imposto pelo front a cada sessão. Ele nunca passa do limite por
+// sessão do backend (`GET /v1/limits`, `LLM_MAX_TOKENS`): assim que o limite do backend chega, o
+// valor salvo é rebaixado a ele, e nenhum valor digitado o ultrapassa.
 
 import type { ReactNode } from 'react'
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { getBackendLimits } from '@/api/limitsApi'
 import type { RunConfig } from '@/api/messageApi'
 import { env } from '@/config/env'
 import { type ModelProvider, isModelProvider } from '@/domain/enums/modelProvider'
+import type { BackendLimits } from '@/domain/types/backendLimits'
 
 const STORAGE_KEY = 'tcc.runConfig'
 
@@ -19,6 +25,8 @@ interface StoredRunConfig {
 
 interface RunConfigState {
   config: RunConfig
+  /** Limite de tokens por sessão do backend; `null` enquanto não chegou (ou se não pôde ser lido). */
+  maxTokensLimit: number | null
   setModelName: (model: string) => void
   setMaxTokens: (value: number) => void
   setTemperature: (value: number) => void
@@ -42,9 +50,9 @@ function clampTemperature(value: number): number {
   return Math.min(1, Math.max(0, value))
 }
 
-function clampMaxTokens(value: number): number {
-  if (!Number.isFinite(value)) return env.defaultMaxTokens
-  return Math.max(1, Math.trunc(value))
+function clampMaxTokens(value: number, limit: number | null): number {
+  const tokens = Number.isFinite(value) ? Math.max(1, Math.trunc(value)) : env.defaultMaxTokens
+  return limit === null ? tokens : Math.min(limit, tokens)
 }
 
 // Um provedor que o backend não conhece — ou que saiu de VITE_AVAILABLE_PROVIDERS — volta
@@ -81,7 +89,7 @@ function readStoredConfig(): RunConfig {
     return {
       ...base,
       modelName: env.availableModels.includes(parsed.modelName) ? parsed.modelName : base.modelName,
-      maxTokens: clampMaxTokens(parsed.maxTokens),
+      maxTokens: clampMaxTokens(parsed.maxTokens, null),
       temperature: clampTemperature(parsed.temperature),
       provider: normalizeProvider(parsed.provider),
     }
@@ -106,11 +114,37 @@ function persistConfig(config: RunConfig): void {
 
 interface RunConfigProviderProps {
   children: ReactNode
+  /** Fonte do limite de tokens por sessão do backend; os testes a substituem. */
+  loadLimits?: (signal: AbortSignal) => Promise<BackendLimits>
 }
 
 /** Provider da configuração de execução (modelo, max_tokens, temperature) dos dois fluxos. */
-export function RunConfigProvider({ children }: RunConfigProviderProps): JSX.Element {
+export function RunConfigProvider({
+  children,
+  loadLimits = getBackendLimits,
+}: RunConfigProviderProps): JSX.Element {
   const [config, setConfig] = useState<RunConfig>(readStoredConfig)
+  const [maxTokensLimit, setMaxTokensLimit] = useState<number | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    loadLimits(controller.signal)
+      .then((limits) => {
+        const limit = limits.max_tokens_limit
+        setMaxTokensLimit(limit)
+        setConfig((prev) => {
+          if (prev.maxTokens <= limit) return prev
+          const next = { ...prev, maxTokens: limit }
+          persistConfig(next)
+          return next
+        })
+      })
+      .catch(() => {
+        // Sem o limite do backend (fora do ar, resposta inválida, desmontagem), o campo segue sem
+        // teto local; o backend continua recusando um `max_tokens` acima do dele.
+      })
+    return () => controller.abort()
+  }, [loadLimits])
 
   const setModelName = useCallback((model: string) => {
     setConfig((prev) => {
@@ -122,11 +156,11 @@ export function RunConfigProvider({ children }: RunConfigProviderProps): JSX.Ele
 
   const setMaxTokens = useCallback((value: number) => {
     setConfig((prev) => {
-      const next = { ...prev, maxTokens: clampMaxTokens(value) }
+      const next = { ...prev, maxTokens: clampMaxTokens(value, maxTokensLimit) }
       persistConfig(next)
       return next
     })
-  }, [])
+  }, [maxTokensLimit])
 
   const setTemperature = useCallback((value: number) => {
     setConfig((prev) => {
@@ -145,14 +179,15 @@ export function RunConfigProvider({ children }: RunConfigProviderProps): JSX.Ele
   }, [])
 
   const reset = useCallback(() => {
-    const base = defaultConfig()
+    const defaults = defaultConfig()
+    const base = { ...defaults, maxTokens: clampMaxTokens(defaults.maxTokens, maxTokensLimit) }
     setConfig(base)
     persistConfig(base)
-  }, [])
+  }, [maxTokensLimit])
 
   const value = useMemo<RunConfigState>(
-    () => ({ config, setModelName, setMaxTokens, setTemperature, setProvider, reset }),
-    [config, setModelName, setMaxTokens, setTemperature, setProvider, reset],
+    () => ({ config, maxTokensLimit, setModelName, setMaxTokens, setTemperature, setProvider, reset }),
+    [config, maxTokensLimit, setModelName, setMaxTokens, setTemperature, setProvider, reset],
   )
 
   return <RunConfigContext.Provider value={value}>{children}</RunConfigContext.Provider>

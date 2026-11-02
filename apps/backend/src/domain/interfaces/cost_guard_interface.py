@@ -118,3 +118,19 @@ class ICostGuard(ABC):
             int: Tokens ainda disponíveis, já descontada a reserva da resposta final.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def available_output_tokens(self, phase: ThinkingPhaseEnum) -> int:
+        """Saldo de tokens da sessão que a próxima chamada da fase ainda pode usar.
+
+        O limite de tokens vale para a sessão inteira, e uma chamada nunca pede mais do que o
+        saldo que resta dele. Só C.3 enxerga a reserva da resposta final; as demais fases param
+        antes dela.
+
+        Args:
+            phase: Fase de thinking que pretende chamar o modelo.
+
+        Returns:
+            int: Tokens ainda disponíveis para a fase, nunca negativo.
+        """
+        raise NotImplementedError

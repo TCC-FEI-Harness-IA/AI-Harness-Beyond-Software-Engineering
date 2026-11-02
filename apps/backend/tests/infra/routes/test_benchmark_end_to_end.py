@@ -79,6 +79,8 @@ def ambiente(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", _MODELO)
     monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router")
+    monkeypatch.setenv("LLM_MAX_TOKENS", "120000")
+    monkeypatch.setenv("RALPH_FINAL_ANSWER_TOKEN_RESERVE", "4000")
     return tmp_path
 
 
@@ -103,7 +105,7 @@ def _abertura(**sobrescritas: Any) -> dict[str, Any]:
         "llm_model_config": {
             "provider": "open_router",
             "provider_config": {"model_name": _MODELO},
-            "max_tokens": 4096,
+            "max_tokens": 50000,
             "temperature": 0,
         },
     }
@@ -230,7 +232,7 @@ def test_consultas_listam_detalham_e_descrevem_o_dataset(ambiente: Path, monkeyp
     assert len(dataset["question_ids"]) == 90
     assert dataset["question_ids"][0] == "FISICA_ENEM_2022_AZUL_Q093"
     assert dataset["max_parallel_limit"] == 10
-    assert dataset["max_tokens_limit"] == 32000
+    assert dataset["max_tokens_limit"] == 120000
     assert listagem == {"benchmark_sessions": [bateria]}
     assert detalhe.status_code == 200
     assert detalhe.json() == bateria
@@ -274,11 +276,11 @@ def test_bateria_completa_usa_as_noventa_questoes_nos_dois_fluxos(
     assert len(provedor.enviados) == 90 * 9
 
 
-@pytest.mark.parametrize("max_tokens", [10_000_000, 1_000_000_000])
-def test_max_tokens_absurdo_e_recusado_sem_chamar_o_provedor(
+@pytest.mark.parametrize("max_tokens", [120_001, 10_000_000, 1_000_000_000])
+def test_max_tokens_acima_do_limite_por_sessao_do_backend_e_recusado_sem_chamar_o_provedor(
     ambiente: Path, monkeypatch: pytest.MonkeyPatch, max_tokens: int
 ) -> None:
-    """Reproduz as baterias reais que falharam: HTTP 400 no simples e `session_token_budget` no Ralph."""
+    """O limite por sessão pedido nunca passa de `LLM_MAX_TOKENS`: a bateria nem é criada."""
     provedor = _Provedor([])
     abertura = _abertura(question_count=1)
     abertura["llm_model_config"]["max_tokens"] = max_tokens
@@ -286,41 +288,43 @@ def test_max_tokens_absurdo_e_recusado_sem_chamar_o_provedor(
     frames, codigo = _executar(_cliente(monkeypatch, provedor), abertura)
 
     assert codigo == 1003
-    assert "max_tokens deve estar entre 1 e 32000" in frames[0]["content"]
+    assert "limite de tokens por sessão do backend (120000)" in frames[0]["content"]
     assert provedor.enviados == []
     assert not (ambiente / "benchmark-sessions").exists()
     assert not (ambiente / "sessions").exists()
 
 
-def test_max_tokens_no_limite_padrao_roda_os_dois_fluxos_com_o_guardiao_de_custo_real(
+def test_max_tokens_no_limite_do_backend_roda_os_dois_fluxos_com_o_guardiao_de_custo_real(
     ambiente: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O limite padrão não pode, por si só, bloquear o Ralph no orçamento de sessão padrão."""
+    """O limite é da sessão: cada chamada do Ralph pede só o saldo que resta dele."""
     certa = _resposta_certa_da_primeira_questao()
     provedor = _Provedor([certa, *_roteiro_ralph(certa)])
     abertura = _abertura(question_count=1)
-    abertura["llm_model_config"]["max_tokens"] = 32000
+    abertura["llm_model_config"]["max_tokens"] = 120000
 
     frames, codigo = _executar(_cliente(monkeypatch, provedor), abertura)
 
     assert codigo == 1000
     bateria = frames[-1]["benchmark_session"]
-    assert bateria["max_tokens"] == 32000
+    assert bateria["max_tokens"] == 120000
     assert bateria["summary"]["simple"]["correct"] == 1
     assert bateria["summary"]["ralph"]["correct"] == 1
     assert bateria["summary"]["ralph"]["failures"] == 0
     assert len(provedor.enviados) == 9
-    assert {corpo["max_tokens"] for corpo in provedor.enviados} == {32000}
+    simples, *ralph = [corpo["max_tokens"] for corpo in provedor.enviados]
+    assert simples == 120000
+    # A.1 enxerga o orçamento de trabalho inteiro; cada chamada seguinte, só o que sobrou dele.
+    assert ralph[0] == 120000 - 4000
+    assert ralph[1] == ralph[0] - 15
 
 
-def test_sem_o_limite_um_max_tokens_perto_do_orcamento_bloqueia_o_ralph_na_primeira_fase(
+def test_limite_da_sessao_que_nao_comporta_a_reserva_falha_o_ralph_sem_chamar_o_modelo(
     ambiente: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Caracteriza a falha real que o limite evita: cada chamada do Ralph reserva `max_tokens` no orçamento."""
-    monkeypatch.setenv("RALPH_BENCHMARK_MAX_TOKENS_LIMIT", "1000000")
     provedor = _Provedor([_resposta_certa_da_primeira_questao()])
     abertura = _abertura(question_count=1)
-    abertura["llm_model_config"]["max_tokens"] = 200000
+    abertura["llm_model_config"]["max_tokens"] = 4000
 
     frames, codigo = _executar(_cliente(monkeypatch, provedor), abertura)
 
@@ -328,6 +332,5 @@ def test_sem_o_limite_um_max_tokens_perto_do_orcamento_bloqueia_o_ralph_na_prime
     bateria = frames[-1]["benchmark_session"]
     assert bateria["summary"]["simple"]["correct"] == 1
     assert bateria["summary"]["ralph"]["failures"] == 1
-    assert "session_token_budget" in bateria["questions"][0]["ralph"]["error"]
-    assert "'A1'" in bateria["questions"][0]["ralph"]["error"]
+    assert "RALPH_FINAL_ANSWER_TOKEN_RESERVE" in bateria["questions"][0]["ralph"]["error"]
     assert len(provedor.enviados) == 1

@@ -1,4 +1,5 @@
 import logging
+from dataclasses import replace
 
 from src.domain.entities.resilience.budget_verdict import BudgetVerdict
 from src.domain.entities.resilience.cost_budget import CostBudget
@@ -202,6 +203,42 @@ class CostGuardAdapter(ICostGuard):
         """
         available = self.budget.session_token_budget - self.budget.final_answer_token_reserve
         return max(_MINIMUM_REMAINING, available - self.__consumed_tokens)
+
+    def available_output_tokens(self, phase: ThinkingPhaseEnum) -> int:
+        """Saldo de tokens da sessão que a próxima chamada da fase ainda pode usar.
+
+        Args:
+            phase: Fase de thinking que pretende chamar o modelo.
+
+        Returns:
+            int: Teto da fase menos o consumo já contabilizado, nunca negativo.
+        """
+        return max(_MINIMUM_REMAINING, self.__token_ceiling(phase=phase) - self.__consumed_tokens)
+
+    def limit_session_tokens(self, session_token_budget: int) -> None:
+        """Aplica à sessão o limite de tokens pedido pelo usuário, que só pode apertar o configurado.
+
+        O orçamento montado a partir das configurações traz o teto do backend (`LLM_MAX_TOKENS`).
+        Deve ser chamado antes da primeira chamada ao modelo.
+
+        Args:
+            session_token_budget: Limite de tokens (entrada + saída) pedido para a sessão.
+
+        Raises:
+            ValueError: Quando o limite passa do teto configurado ou não é maior que a reserva da
+                resposta final.
+        """
+        if session_token_budget > self.budget.session_token_budget:
+            raise ValueError(
+                f"O limite de tokens da sessão ({session_token_budget}) passa do teto do backend "
+                f"(LLM_MAX_TOKENS = {self.budget.session_token_budget})."
+            )
+        if session_token_budget <= self.budget.final_answer_token_reserve:
+            raise ValueError(
+                f"O limite de tokens da sessão ({session_token_budget}) precisa ser maior que a reserva da "
+                f"resposta final (RALPH_FINAL_ANSWER_TOKEN_RESERVE = {self.budget.final_answer_token_reserve})."
+            )
+        self.budget = replace(self.budget, session_token_budget=session_token_budget)
 
     def __token_ceiling(self, phase: ThinkingPhaseEnum) -> int:
         """Devolve o teto de tokens aplicável à fase informada.

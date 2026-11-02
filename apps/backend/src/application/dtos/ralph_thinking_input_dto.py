@@ -10,7 +10,7 @@ class RalphThinkingInputDTO:
     Attributes:
         user_input: Pergunta enviada pelo usuário.
         model_name: Nome do modelo a ser usado na sessão.
-        max_tokens: Limite de tokens de saída.
+        max_tokens: Limite de tokens (entrada + saída) da sessão inteira.
         temperature: Temperatura da geração.
         provider: Provedor que atende todas as chamadas da sessão.
     """

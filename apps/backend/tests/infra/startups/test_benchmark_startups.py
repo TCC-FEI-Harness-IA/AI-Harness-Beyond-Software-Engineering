@@ -27,6 +27,7 @@ def armazenamento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("RALPH_SESSIONS_STORAGE_PATH", str(tmp_path / "sessions"))
     monkeypatch.setenv("RALPH_BENCHMARK_SESSIONS_STORAGE_PATH", str(tmp_path / "benchmark-sessions"))
     monkeypatch.setenv("RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS", "0.01")
+    monkeypatch.setenv("LLM_MAX_TOKENS", "120000")
     return tmp_path
 
 
@@ -94,7 +95,7 @@ async def test_startup_de_consulta_lista_detalha_e_descreve(armazenamento: Path)
     assert await consulta.get_benchmark_session_document(benchmark_session_id=bateria["id"]) == bateria
     assert await consulta.list_benchmark_session_documents() == [bateria]
     assert consulta.describe_dataset()["max_parallel_limit"] == 10
-    assert consulta.describe_dataset()["max_tokens_limit"] == 32000
+    assert consulta.describe_dataset()["max_tokens_limit"] == 120000
     assert len(consulta.describe_dataset()["question_ids"]) == 90
 
 

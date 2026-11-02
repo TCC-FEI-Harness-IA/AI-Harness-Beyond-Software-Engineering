@@ -487,3 +487,62 @@ def test_autorizacao_concedida_nao_emite_aviso(
         guard.authorize(phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION)
 
     assert not [registro for registro in caplog.records if registro.levelno == logging.WARNING]
+
+
+# ── Limite de tokens por sessão ──────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("consumo", "fase", "saldo"),
+    [
+        (0, ThinkingPhaseEnum.B1_TASK_RESOLUTION, 800),
+        (300, ThinkingPhaseEnum.B1_TASK_RESOLUTION, 500),
+        (300, ThinkingPhaseEnum.C3_FINAL_ANSWER, 700),
+        (900, ThinkingPhaseEnum.B1_TASK_RESOLUTION, 0),
+        (1200, ThinkingPhaseEnum.C3_FINAL_ANSWER, 0),
+    ],
+)
+def test_saldo_de_saida_e_o_teto_da_fase_menos_o_consumo(
+    budget_factory: Callable[..., CostBudget], consumo: int, fase: ThinkingPhaseEnum, saldo: int
+) -> None:
+    guard = _guard(budget_factory())
+    _gastar(guard, consumo)
+
+    assert guard.available_output_tokens(phase=fase) == saldo
+
+
+def test_pedir_o_saldo_inteiro_e_autorizado_e_o_saldo_zerado_nega(budget_factory: Callable[..., CostBudget]) -> None:
+    guard = _guard(budget_factory())
+    _gastar(guard, 750)
+
+    assert guard.authorize(phase=_B1, reserved_output_tokens=guard.available_output_tokens(phase=_B1)).authorized
+    _gastar(guard, 50)
+    veredito = guard.authorize(phase=_B1, reserved_output_tokens=guard.available_output_tokens(phase=_B1))
+    assert veredito.authorized is False
+    assert veredito.limit is BudgetLimitEnum.SESSION_TOKEN_BUDGET
+
+
+def test_limite_da_sessao_aperta_o_orcamento_configurado(budget_factory: Callable[..., CostBudget]) -> None:
+    guard = _guard(budget_factory())
+
+    guard.limit_session_tokens(session_token_budget=500)
+
+    assert guard.budget.session_token_budget == 500
+    assert guard.available_output_tokens(phase=_B1) == 300
+    assert guard.available_output_tokens(phase=ThinkingPhaseEnum.C3_FINAL_ANSWER) == 500
+
+
+def test_limite_da_sessao_acima_do_teto_do_backend_e_recusado(budget_factory: Callable[..., CostBudget]) -> None:
+    guard = _guard(budget_factory())
+
+    with pytest.raises(ValueError, match="LLM_MAX_TOKENS = 1000"):
+        guard.limit_session_tokens(session_token_budget=1001)
+
+    assert guard.budget.session_token_budget == 1000
+
+
+def test_limite_da_sessao_que_nao_comporta_a_reserva_e_recusado(budget_factory: Callable[..., CostBudget]) -> None:
+    guard = _guard(budget_factory())
+
+    with pytest.raises(ValueError, match="RALPH_FINAL_ANSWER_TOKEN_RESERVE = 200"):
+        guard.limit_session_tokens(session_token_budget=200)

@@ -1,12 +1,14 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { env } from '@/config/env'
 import { MODEL_PROVIDER } from '@/domain/enums/modelProvider'
+import type { BackendLimits } from '@/domain/types/backendLimits'
 import { RunConfigProvider, useRunConfig } from './RunConfigContext'
 
 function ConfigProbe(): JSX.Element {
-  const { config, setModelName, setMaxTokens, setTemperature, setProvider, reset } = useRunConfig()
+  const { config, maxTokensLimit, setModelName, setMaxTokens, setTemperature, setProvider, reset } =
+    useRunConfig()
   return (
     <div>
       <span data-testid="model">{config.modelName}</span>
@@ -25,6 +27,10 @@ function ConfigProbe(): JSX.Element {
       <button type="button" onClick={() => setMaxTokens(0)}>
         Zerar tokens
       </button>
+      <button type="button" onClick={() => setMaxTokens(1_000_000)}>
+        Tokens altos
+      </button>
+      <span data-testid="max-tokens-limit">{String(maxTokensLimit)}</span>
       <button type="button" onClick={() => setTemperature(1.4)}>
         Temperatura alta
       </button>
@@ -35,13 +41,17 @@ function ConfigProbe(): JSX.Element {
   )
 }
 
-function renderProbe(): void {
+function renderProbe(
+  loadLimits: (signal: AbortSignal) => Promise<BackendLimits> = () => new Promise(() => {}),
+): void {
   render(
-    <RunConfigProvider>
+    <RunConfigProvider loadLimits={loadLimits}>
       <ConfigProbe />
     </RunConfigProvider>,
   )
 }
+
+const BACKEND_LIMIT = { max_tokens_limit: 64000 }
 
 beforeEach(() => {
   window.localStorage.clear()
@@ -135,6 +145,61 @@ describe('RunConfigContext', () => {
     await user.click(screen.getByRole('button', { name: 'Zerar tokens' }))
 
     expect(Number(screen.getByTestId('max-tokens').textContent)).toBeGreaterThan(0)
+  })
+
+  it('o limite do backend rebaixa o max_tokens salvo acima dele', async () => {
+    window.localStorage.setItem(
+      'tcc.runConfig',
+      JSON.stringify({ modelName: env.defaultModel, maxTokens: 900000, temperature: 0.5 }),
+    )
+
+    renderProbe(() => Promise.resolve(BACKEND_LIMIT))
+
+    await waitFor(() => expect(screen.getByTestId('max-tokens')).toHaveTextContent('64000'))
+    expect(screen.getByTestId('max-tokens-limit')).toHaveTextContent('64000')
+    expect(JSON.parse(window.localStorage.getItem('tcc.runConfig') ?? '{}').maxTokens).toBe(64000)
+  })
+
+  it('o valor digitado nunca passa do limite por sessão do backend', async () => {
+    const user = userEvent.setup()
+    renderProbe(() => Promise.resolve(BACKEND_LIMIT))
+    await waitFor(() => expect(screen.getByTestId('max-tokens-limit')).toHaveTextContent('64000'))
+
+    await user.click(screen.getByRole('button', { name: 'Tokens altos' }))
+
+    expect(screen.getByTestId('max-tokens')).toHaveTextContent('64000')
+  })
+
+  it('restaurar os padrões também respeita o limite do backend', async () => {
+    const user = userEvent.setup()
+    renderProbe(() => Promise.resolve({ max_tokens_limit: 10 }))
+    await waitFor(() => expect(screen.getByTestId('max-tokens-limit')).toHaveTextContent('10'))
+
+    await user.click(screen.getByRole('button', { name: 'Restaurar' }))
+
+    expect(screen.getByTestId('max-tokens')).toHaveTextContent('10')
+  })
+
+  it('um max_tokens dentro do limite do backend é preservado', async () => {
+    window.localStorage.setItem(
+      'tcc.runConfig',
+      JSON.stringify({ modelName: env.defaultModel, maxTokens: 900, temperature: 0.5 }),
+    )
+
+    renderProbe(() => Promise.resolve(BACKEND_LIMIT))
+
+    await waitFor(() => expect(screen.getByTestId('max-tokens-limit')).toHaveTextContent('64000'))
+    expect(screen.getByTestId('max-tokens')).toHaveTextContent('900')
+  })
+
+  it('sem o limite do backend o valor fica sem teto local', async () => {
+    const user = userEvent.setup()
+    renderProbe(() => Promise.reject(new Error('backend fora do ar')))
+
+    await user.click(screen.getByRole('button', { name: 'Tokens altos' }))
+
+    expect(screen.getByTestId('max-tokens')).toHaveTextContent('1000000')
+    expect(screen.getByTestId('max-tokens-limit')).toHaveTextContent('null')
   })
 
   it('um localStorage que lança não quebra o provider', () => {

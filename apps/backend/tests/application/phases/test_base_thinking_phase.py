@@ -126,13 +126,26 @@ async def test_sem_configure_a_reserva_de_saida_e_o_teto_padrao_das_configuracoe
     recorder: SessionRecorderAdapter,
 ) -> None:
     llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA])
-    guardiao = FakeCostGuard()
+    guardiao = FakeCostGuard(tokens_left=500_000)
 
-    await _fase(llm_completions=llm, recorder=recorder, cost_guard=guardiao).execute(
-        context=_janela(), variables={}
-    )
+    await _fase(
+        llm_completions=llm, recorder=recorder, cost_guard=guardiao, settings=FakeSettings(llm_max_tokens=1024)
+    ).execute(context=_janela(), variables={})
 
     assert guardiao.started_calls == [(_FASE, 1024)]
+
+
+async def test_a_chamada_pede_so_o_saldo_de_tokens_da_sessao(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA])
+    guardiao = FakeCostGuard(tokens_left=300)
+    fase = _fase(llm_completions=llm, recorder=recorder, cost_guard=guardiao)
+    fase.configure(model_name="vendor/modelo", max_tokens=5000, temperature=0.3, provider=ModelProviderEnum.OPENAI)
+
+    await fase.execute(context=_janela(), variables={})
+
+    assert guardiao.started_calls == [(_FASE, 300)]
+    assert llm.calls[0]["max_tokens"] == 300
+    assert llm.validations[0]["max_tokens"] == 5000
 
 
 async def test_autorizacao_negada_impede_a_chamada_e_o_registro_da_invocacao(

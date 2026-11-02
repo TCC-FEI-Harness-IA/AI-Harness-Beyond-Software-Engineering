@@ -174,10 +174,11 @@ function loadEnv(): AppEnv {
     )
   }
 
-  // Num modelo de raciocínio, `max_tokens` cobre o raciocínio interno e a resposta. Neste
-  // projeto o raciocínio sozinho já passou de 1000 tokens numa pergunta curta, então um teto
-  // apertado sobra zero para a resposta e o provedor devolve conteúdo vazio.
-  const defaultMaxTokens = readNumber('VITE_DEFAULT_MAX_TOKENS', 4000)
+  // `max_tokens` é o limite de tokens (entrada + saída) da sessão inteira, e não de uma chamada:
+  // o Ralph soma muitas chamadas, e o backend ainda separa dele a reserva da resposta final
+  // (RALPH_FINAL_ANSWER_TOKEN_RESERVE, 4000 por padrão). O valor nunca passa do limite por sessão
+  // do backend: o RunConfigContext o rebaixa assim que `GET /v1/limits` responde.
+  const defaultMaxTokens = readNumber('VITE_DEFAULT_MAX_TOKENS', 50000)
   if (!Number.isInteger(defaultMaxTokens) || defaultMaxTokens <= 0) {
     throw new ConfigError('VITE_DEFAULT_MAX_TOKENS', 'precisa ser um número inteiro positivo')
   }
