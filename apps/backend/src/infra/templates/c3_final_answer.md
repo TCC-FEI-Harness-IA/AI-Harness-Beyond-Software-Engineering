@@ -32,8 +32,10 @@ Esta etapa é de **apresentação, não de raciocínio**. É terminantemente pro
 - especular, supor ou inferir o que os resultados não sustentam;
 - realizar novo raciocínio analítico sobre o problema.
 
-Use exclusivamente o material dos resultados armazenados. A resposta final vai no campo
-`final_answer`, em markdown.
+Use exclusivamente o material dos resultados armazenados. Em questões de múltipla escolha, confira
+com atenção a tabela de alternativas em **Aprendizados Pontuais** para garantir que a letra escolhida
+corresponda exatamente ao valor ou conclusão sustentados pelos resultados armazenados. A resposta
+final vai no campo `final_answer`, em markdown.
 
 Aplique idioma, formato e restrições finais sem novo raciocínio analítico. Os resultados internos
 podem conter explicações mesmo quando o pedido final só admite a letra. Omita ou apresente a

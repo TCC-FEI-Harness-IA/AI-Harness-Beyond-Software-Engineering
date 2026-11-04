@@ -31,6 +31,7 @@ _ITEM_SUFFIX = "[]"
 _FIELD_SEPARATOR = "."
 # Strings JSON completas, com escapes: o que está dentro delas não conta como estrutura.
 _STRING_LITERAL_PATTERN = re.compile(r'"(?:[^"\\]|\\.)*"', re.DOTALL)
+_UNESCAPED_BACKSLASH_PATTERN = re.compile(r'\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4})|(\\)')
 _STRING_DELIMITER = '"'
 _CLOSING_BY_OPENING = {"{": "}", "[": "]"}
 _CLOSINGS = frozenset(_CLOSING_BY_OPENING.values())
@@ -371,6 +372,30 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             dict[str, Any] | None: Objeto interpretado, ou `None` quando o trecho
             não é JSON válido ou não é um objeto.
         """
+        parsed = self.__loads_dict(candidate=candidate)
+        if parsed is not None:
+            return parsed
+
+        if "\\" in candidate:
+            repaired = _UNESCAPED_BACKSLASH_PATTERN.sub(
+                lambda match: "\\\\" if match.group(1) else match.group(0),
+                candidate,
+            )
+            parsed = self.__loads_dict(candidate=repaired)
+            if parsed is not None:
+                return parsed
+
+        return self.__decode_first_of_duplicated_objects(candidate=candidate)
+
+    def __loads_dict(self, candidate: str) -> dict[str, Any] | None:
+        """Converte uma string JSON em dicionário, ou devolve `None` se falhar.
+
+        Args:
+            candidate: String candidata a JSON.
+
+        Returns:
+            dict[str, Any] | None: Dicionário decodificado, ou `None`.
+        """
         try:
             parsed = json.loads(candidate)
         except ValueError:
@@ -381,7 +406,27 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
 
         return parsed
 
-    # ── Contrato de cada fase ────────────────────────────────────────────────
+    def __decode_first_of_duplicated_objects(self, candidate: str) -> dict[str, Any] | None:
+        """Extrai o primeiro objeto quando o modelo emitiu dois objetos JSON seguidos.
+
+        Args:
+            candidate: Trecho candidato que falhou em `json.loads`.
+
+        Returns:
+            dict[str, Any] | None: Primeiro objeto, quando o restante também é um objeto JSON;
+            `None` quando o restante é lixo ou fechamento excedente.
+        """
+        stripped = candidate.strip()
+        try:
+            first, index = json.JSONDecoder().raw_decode(stripped)
+            second = json.loads(stripped[index:].strip())
+        except ValueError:
+            return None
+
+        if isinstance(first, dict) and isinstance(second, dict):
+            return first
+
+        return None
 
     def __validate_general_criteria(
         self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None
@@ -510,6 +555,11 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         )
         for evaluation in evaluations:
             self.__validate_evaluation(evaluation=evaluation)
+
+        if "unmet_criteria_ids" not in parsed:
+            parsed["unmet_criteria_ids"] = [
+                evaluation["criterion_id"] for evaluation in evaluations if not evaluation["met"]
+            ]
 
         unmet = self.__require_list(
             source=parsed, key="unmet_criteria_ids", label="unmet_criteria_ids", allow_empty=True

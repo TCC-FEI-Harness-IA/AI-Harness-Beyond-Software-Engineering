@@ -66,6 +66,8 @@ _UNKNOWN_VALUE = "desconhecido"
 _NO_TOKENS = 0
 _NO_ELAPSED_MS = 0
 _NO_RETRIES_LEFT = 0
+_INVALID_CONTEXT_MAX_LENGTH = 1000
+_TRUNCATION_SUFFIX = "..."
 # Temperatura de toda chamada de retentativa. Repetir um pedido que falhou com a temperatura do usuário
 # — em geral baixa — tende a reproduzir a mesma saída e a mesma falha até esgotar as tentativas.
 _RETRY_TEMPERATURE = 1.0
@@ -378,6 +380,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                     chain=chain, invocation_id=invocation_id, has_retry=retries_left > _NO_RETRIES_LEFT
                 )
                 retries_left = self.__consume_retry(retries_left=retries_left, error=error)
+                self.__compact_invalid_message(context=context)
                 context.append(
                     message=Message(
                         creation_timestamp=self.clock.now(),
@@ -520,6 +523,25 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             finish_reason=diagnostic.finish_reason or _UNKNOWN_VALUE,
             length=diagnostic.length_interruption.value,
             raw_output=invalid_output.raw_output,
+        )
+
+    def __compact_invalid_message(self, context: ContextWindow) -> None:
+        """Trunca na janela a saída inválida quando ela é longa demais para ser reenviada inteira.
+
+        A saída bruta completa já ficou registrada em `InvalidOutput` e na auditoria da sessão;
+        manter dezenas de milhares de caracteres de uma resposta cortada na janela infla o custo
+        das retentativas e das fases seguintes que compartilham a conversa.
+
+        Args:
+            context: Janela de contexto onde a última mensagem é a saída recusada pelo parser.
+        """
+        last_message = context.messages[-1]
+        if len(last_message.text) <= _INVALID_CONTEXT_MAX_LENGTH:
+            return
+        context.messages[-1] = Message(
+            creation_timestamp=last_message.creation_timestamp,
+            text=f"{last_message.text[:_INVALID_CONTEXT_MAX_LENGTH]}{_TRUNCATION_SUFFIX}",
+            source=last_message.source,
         )
 
     def __consume_retry(self, retries_left: int, error: RalphError) -> int:

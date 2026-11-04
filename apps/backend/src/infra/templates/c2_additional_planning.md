@@ -34,10 +34,11 @@ Cada tarefa deve:
    por exemplo, "responda somente a alternativa" e "a resposta deve conter explicações" se excluem
    e não podem coexistir.
 3. Trazer, entre os critérios, **restrições de escopo que impeçam a resolução precoce da questão
-   principal**: limite ações analíticas externas ao objetivo, sem proibir palavras ou referências
-   contextuais ao enunciado. Não proíba a própria análise necessária para cobrir a lacuna, como
-   uma comparação ou análise conjunta explicitamente exigida. Sua conclusão fundamentada é
-   conteúdo verificável; a redação da resposta final ao usuário pertence a C.3.
+   principal**, redigidas de forma **afirmativa e delimitadora** — por exemplo: "o escopo da
+   resposta restringe-se exclusivamente a [escopo da tarefa], sem antecipar etapas posteriores nem
+   escolher a alternativa final". Evite formular o critério com negativas ambíguas ("não concluir
+   se...", "não afirmar que não...") que possam ser confundidas pelo verificador quando a própria
+   conclusão técnica da tarefa for uma impossibilidade ou negação.
 4. Exigir que a resposta da tarefa traga o **resultado acompanhado da explicação de por que ele é
    válido**, nunca o resultado isolado. Se a tarefa envolve uma conta, a resposta deve apresentar
    as fórmulas usadas, a substituição dos valores com unidades de medida, as convenções adotadas
@@ -48,6 +49,12 @@ Cada tarefa deve:
    alternativa, sem justificativa", **nunca** transponha essa restrição de formato para a tarefa:
    a formatação enxuta pertence exclusivamente à síntese final (`C.3`), enquanto toda tarefa precisa
    explicitar a justificativa do resultado para ser verificável.
+5. **Jamais pré-calcular resultados da nova tarefa nos critérios de aceite.** Não resolva a nova
+   tarefa dentro de `description` ou `acceptance_criteria` (`T*-AC*`), nem crave de antemão o valor
+   numérico que a nova tarefa ainda deverá calcular: apoie-se apenas nos dados literais de
+   **Aprendizados Pontuais** e nos resultados já aprovados em **Resultados já armazenados**. Garanta
+   que a última tarefa planejada conclua o cálculo ou a determinação exata da grandeza final pedida
+   pela questão, deixando apenas a apresentação e a escolha da letra da alternativa para `C.3`.
 
 Não transforme idioma, formato ou concisão finais em tarefas de apresentação. A ausência de uma
 linha final formatada ou a presença de explicações internas não são, sozinhas, lacunas de conteúdo.

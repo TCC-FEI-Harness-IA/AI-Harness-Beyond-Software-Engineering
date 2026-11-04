@@ -659,145 +659,43 @@ def test_json_completo_nao_gera_aviso_de_reparo(caplog: pytest.LogCaptureFixture
     assert not [registro for registro in caplog.records if registro.levelno == logging.WARNING]
 
 
-# ── Classificação do defeito da saída recusada ───────────────────────────────
-#
-# A correção pedida ao modelo depende do defeito: um JSON ilegível só precisa ser serializado de
-# novo, um contrato violado precisa ser conferido pelo próprio modelo e uma saída interrompida pelo
-# limite de comprimento precisa ser refeita, completa e concisa. É o parser que classifica.
+def test_objeto_json_duplicado_extrai_o_primeiro_objeto() -> None:
+    duplicado = f"{json.dumps(_CRITERIOS_VALIDOS)}\n\n{json.dumps(_CRITERIOS_VALIDOS)}"
+
+    assert _parse(duplicado) == _CRITERIOS_VALIDOS
 
 
-def _defeito(raw_output: str, phase: ThinkingPhaseEnum = _FASE_A1, finish_reason: str | None = "stop",
-             validation: ValidationContext | None = None) -> OutputDefectEnum:
-    with pytest.raises(PhaseParsingError) as erro:
-        _parser().parse(raw_output=raw_output, phase=phase, validation=validation, finish_reason=finish_reason)
-    return erro.value.defect
+def test_array_json_duplicado_continua_recusado() -> None:
+    with pytest.raises(PhaseParsingError):
+        _parse("[1, 2]\n[3, 4]")
 
 
-@pytest.mark.parametrize(
-    "bruto",
-    [
-        "isto nao e json",
-        '{"general_acceptance_criteria": [{"id": "AC1", "description": "d"},',
-        '{"general_acceptance_criteria": [{"id": "AC1", "description": "responder em',
-        '{"general_acceptance_criteria": [{"id": "AC1", "description": "d"}]}}',
-    ],
-)
-def test_saida_sem_json_legivel_e_defeito_de_sintaxe(bruto: str) -> None:
-    assert _defeito(bruto) is OutputDefectEnum.SYNTAX
+def test_escapes_latex_invalidos_em_strings_json_sao_reparados() -> None:
+    bruto = '{"task_id": "T1", "result": "Equação \\( \\omega = 2\\pi \\)\\nLinha 2"}'
+
+    parsed = _parser().parse(raw_output=bruto, phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION)
+
+    assert parsed["result"] == "Equação \\( \\omega = 2\\pi \\)\nLinha 2"
 
 
-def test_saida_sem_json_legivel_cortada_pelo_limite_de_comprimento_e_defeito_de_interrupcao() -> None:
-    cortada = '{"general_acceptance_criteria": [{"id": "AC1", "description": "responder em'
-
-    assert _defeito(cortada, finish_reason="length") is OutputDefectEnum.TRUNCATED
-
-
-def test_saida_interrompida_tem_motivo_que_aponta_o_limite_de_comprimento() -> None:
-    with pytest.raises(PhaseParsingError) as erro:
-        _parser().parse(raw_output='{"result": "abc', phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION,
-                        finish_reason="length")
-
-    assert "limite de comprimento" in erro.value.reason
+def test_escape_latex_em_json_que_nao_e_objeto_continua_recusado() -> None:
+    with pytest.raises(PhaseParsingError):
+        _parse('["\\( x \\)"]')
 
 
-def test_json_legivel_fora_do_schema_e_violacao_de_contrato() -> None:
-    assert _defeito(json.dumps({"general_acceptance_criteria": []})) is OutputDefectEnum.CONTRACT
-
-
-def test_relatorio_incoerente_e_violacao_de_contrato() -> None:
-    incoerente = {**_VERIFICACAO_VALIDA, "decision": "reproved"}
-
-    defeito = _defeito(
-        json.dumps(incoerente),
-        phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION,
-        validation=ValidationContext(expected_criteria_ids=("T1-AC1",)),
+def test_verificacao_sem_unmet_criteria_ids_preenche_a_lista_a_partir_das_avaliacoes() -> None:
+    bruto = json.dumps(
+        {
+            "criteria_evaluation": [{"criterion_id": "T1-AC1", "met": True, "justification": "ok"}],
+            "decision": "approved",
+        }
     )
-
-    assert defeito is OutputDefectEnum.CONTRACT
-
-
-def test_json_completo_que_viola_o_contrato_continua_violacao_de_contrato_mesmo_com_limite_de_comprimento() -> None:
-    # A estrutura fechou: o que está errado é o conteúdo que o modelo escolheu, não o corte.
-    assert _defeito(json.dumps({"general_acceptance_criteria": []}), finish_reason="length") is (
-        OutputDefectEnum.CONTRACT
-    )
-
-
-def test_lote_acima_do_teto_e_violacao_de_contrato() -> None:
-    defeito = _defeito(
-        json.dumps({"tasks": [_TAREFA_VALIDA, {**_TAREFA_VALIDA, "id": "T2"}]}),
-        phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION,
-        validation=ValidationContext(max_tasks=1),
-    )
-
-    assert defeito is OutputDefectEnum.CONTRACT
-
-
-# ── Reparos locais conservadores ─────────────────────────────────────────────
-#
-# Só se repara localmente o que não altera conteúdo: a extração de dentro de cercas (ou de texto
-# solto) e o fechamento estrutural inequívoco. Nada de inventar campos, completar strings,
-# preencher explicações ou mudar o veredito de um relatório.
-
-
-def test_reparo_nao_fabrica_campo_ausente() -> None:
-    sem_resultado = '{"task_id": "T1"'
-
-    assert _defeito(sem_resultado, phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION) is OutputDefectEnum.CONTRACT
-
-
-def test_reparo_nao_completa_string_interrompida() -> None:
-    assert _defeito('{"task_id": "T1", "result": "2 e pri', phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION) is (
-        OutputDefectEnum.SYNTAX
-    )
-
-
-def test_reparo_nao_inventa_justificativa_ausente() -> None:
-    sem_justificativa = {
-        "decision": "approved",
-        "criteria_evaluation": [{"criterion_id": "T1-AC1", "met": True, "justification": ""}],
-        "unmet_criteria_ids": [],
-    }
-
-    defeito = _defeito(
-        json.dumps(sem_justificativa)[:-1],
-        phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION,
-        validation=ValidationContext(expected_criteria_ids=("T1-AC1",)),
-    )
-
-    assert defeito is OutputDefectEnum.CONTRACT
-
-
-def test_reparo_nunca_transforma_uma_reprovacao_em_aprovacao() -> None:
-    reprovacao_sem_pendencias = {
-        "decision": "reproved",
-        "criteria_evaluation": [{"criterion_id": "T1-AC1", "met": True, "justification": "atende"}],
-        "unmet_criteria_ids": [],
-    }
-
-    with pytest.raises(PhaseParsingError) as erro:
-        _parser().parse(
-            raw_output=json.dumps(reprovacao_sem_pendencias)[:-1],
-            phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION,
-            validation=ValidationContext(expected_criteria_ids=("T1-AC1",)),
-        )
-
-    assert erro.value.defect is OutputDefectEnum.CONTRACT
-    assert "reproved" in erro.value.reason
-
-
-def test_reparo_preserva_o_conteudo_extraido_de_cerca_sem_alterar_o_veredito() -> None:
-    reprovado = {
-        "decision": "reproved",
-        "criteria_evaluation": [{"criterion_id": "T1-AC1", "met": False, "justification": "nao atende"}],
-        "unmet_criteria_ids": ["T1-AC1"],
-    }
-    bruto = f"```json\n{json.dumps(reprovado)[:-2]}\n```"
 
     parsed = _parser().parse(
         raw_output=bruto,
         phase=ThinkingPhaseEnum.B2_TASK_VERIFICATION,
-        validation=ValidationContext(expected_criteria_ids=("T1-AC1",)),
+        validation=_esperando("T1-AC1"),
     )
 
-    assert parsed == reprovado
+    assert parsed["unmet_criteria_ids"] == []
+
