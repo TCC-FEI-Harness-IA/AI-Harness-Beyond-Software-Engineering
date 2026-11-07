@@ -133,3 +133,42 @@ def test_bateria_encerrada_nao_aceita_alteracoes(operacao) -> None:
 
     with pytest.raises(ValueError, match="já foi encerrada"):
         operacao(sessao)
+
+
+def _bateria_encerrada():
+    sessao = bateria("Q1", "Q2")
+    _executar_questao(sessao, "Q1", simples_correto=True, ralph_correto=False)
+    _executar_questao(sessao, "Q2", simples_correto=True, ralph_correto=True)
+    sessao.finish(status=BenchmarkSessionStatusEnum.COMPLETED, at=_DEPOIS, wall_time_ms=5)
+    return sessao
+
+
+def test_reexecucao_substitui_o_desfecho_numa_bateria_encerrada_sem_reabri_la() -> None:
+    sessao = _bateria_encerrada()
+    depois = _DEPOIS + timedelta(seconds=30)
+
+    sessao.start_rerun(question_id="Q1", mode=_RALPH, at=depois)
+    assert sessao.question("Q1").current_mode is _RALPH
+    sessao.record_rerun_outcome(
+        question_id="Q1", outcome=desfecho(mode=_RALPH, correto=True, session_id="Q1_r2"), at=depois
+    )
+
+    assert sessao.status is BenchmarkSessionStatusEnum.COMPLETED
+    assert sessao.summary(_RALPH).correct == 2
+    assert sessao.question("Q1").session_ids == ["Q1_s", "Q1_r2"]
+    assert sessao.updated_at == depois
+    assert sessao.finished_at == _DEPOIS
+
+
+@pytest.mark.parametrize(
+    "operacao",
+    [
+        lambda sessao: sessao.start_rerun(question_id="Q1", mode=_RALPH, at=_DEPOIS),
+        lambda sessao: sessao.record_rerun_outcome(question_id="Q1", outcome=desfecho(), at=_DEPOIS),
+    ],
+)
+def test_bateria_em_execucao_nao_aceita_reexecucao(operacao) -> None:
+    sessao = bateria("Q1")
+
+    with pytest.raises(ValueError, match="ainda está em execução"):
+        operacao(sessao)

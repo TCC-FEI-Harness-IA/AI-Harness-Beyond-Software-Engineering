@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Response, WebSocket, WebSocketDisc
 from pydantic import ValidationError
 from starlette.websockets import WebSocketState
 
+from src.domain.errors.benchmark_question_not_rerunnable_error import BenchmarkQuestionNotRerunnableError
 from src.domain.errors.benchmark_session_not_finished_error import BenchmarkSessionNotFinishedError
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
 from src.domain.errors.invalid_benchmark_request_error import InvalidBenchmarkRequestError
@@ -14,6 +15,7 @@ from src.infra.routes.v1.benchmark.dtos.benchmark_frame_dto import BenchmarkFram
 from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
 from src.infra.startups.benchmark_export_startup import BenchmarkExportStartup
 from src.infra.startups.benchmark_query_startup import BenchmarkQueryStartup
+from src.infra.startups.benchmark_rerun_startup import BenchmarkRerunStartup
 from src.infra.startups.benchmark_run_startup import BenchmarkRunStartup
 
 _ERROR_FRAME_TYPE = "error"
@@ -149,6 +151,45 @@ async def run_benchmark(websocket: WebSocket) -> None:
             await websocket.send_json({"type": _ERROR_FRAME_TYPE, "content": str(error)})
             await websocket.close(code=_CLOSE_INTERNAL_ERROR)
         logger.exception("Erro ao executar a bateria de benchmark")
+    finally:
+        if generator is not None:
+            await generator.aclose()
+
+
+@router.websocket("/sessions/{benchmark_session_id}/questions/{question_id}/rerun")
+async def rerun_benchmark_question(websocket: WebSocket, benchmark_session_id: str, question_id: str) -> None:
+    """Reexecuta os fluxos errados de uma questão de uma bateria encerrada, sem frame de abertura.
+
+    Emite o documento da bateria a cada mudança (`progress`) e termina com um `result`, fechando
+    com `1000`. Pedidos recusados (bateria inexistente ou em execução, questão sem erro) geram um
+    frame `error` e fecham com `1003`. Se o cliente desconecta, o fluxo em andamento é cancelado e
+    o desfecho anterior da questão permanece.
+    """
+    logger = Settings().logger(module_file=__file__)
+
+    await websocket.accept()
+
+    generator: AsyncGenerator[BenchmarkFrameDTO, None] | None = None
+    try:
+        generator = BenchmarkRerunStartup().run(benchmark_session_id=benchmark_session_id, question_id=question_id)
+        async for frame in generator:
+            await websocket.send_json(frame.model_dump())
+        await websocket.close(code=_CLOSE_NORMAL)
+    except (
+        BenchmarkSessionNotFoundError,
+        BenchmarkSessionNotFinishedError,
+        BenchmarkQuestionNotRerunnableError,
+        InvalidBenchmarkRequestError,
+    ) as error:
+        await websocket.send_json({"type": _ERROR_FRAME_TYPE, "content": str(error)})
+        await websocket.close(code=_CLOSE_UNSUPPORTED_DATA)
+    except WebSocketDisconnect:
+        logger.info("Cliente desconectou durante a reexecução da questão '%s'", question_id)
+    except Exception as error:
+        if websocket.client_state == WebSocketState.CONNECTED:
+            await websocket.send_json({"type": _ERROR_FRAME_TYPE, "content": str(error)})
+            await websocket.close(code=_CLOSE_INTERNAL_ERROR)
+        logger.exception("Erro ao reexecutar a questão '%s'", question_id)
     finally:
         if generator is not None:
             await generator.aclose()

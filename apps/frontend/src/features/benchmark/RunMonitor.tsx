@@ -20,14 +20,17 @@ import styles from './RunMonitor.module.css'
  * `BenchmarkRunContext`. Continua visível depois do fim, até ser dispensado, com o desfecho.
  */
 export function RunMonitor(): JSX.Element | null {
-  const { phase, session, rejection, isActive, cancel, dismiss } = useBenchmarkRun()
+  const { phase, session, rejection, rerunQuestionId, isActive, rerun, cancel, dismiss } =
+    useBenchmarkRun()
   if (phase === 'idle') return null
 
   return (
     <Card as="article" padding="lg" className={styles.card} aria-label="Bateria atual">
       <header className={styles.header}>
         <div className={styles.titleRow}>
-          <h2 className={styles.title}>Bateria atual</h2>
+          <h2 className={styles.title}>
+            {rerunQuestionId ? `Reexecução de ${rerunQuestionId}` : 'Bateria atual'}
+          </h2>
           {session ? (
             <Badge
               tone={
@@ -82,7 +85,11 @@ export function RunMonitor(): JSX.Element | null {
           <p>{benchmarkLabel(session.benchmark)}</p>
           <BenchmarkProgressStats session={session} />
           <BenchmarkSummary session={session} />
-          <BenchmarkQuestionsTable session={session} />
+          <BenchmarkQuestionsTable
+            session={session}
+            onRerun={(questionId) => rerun(session.id, questionId)}
+            rerunDisabled={isActive}
+          />
         </>
       ) : null}
     </Card>

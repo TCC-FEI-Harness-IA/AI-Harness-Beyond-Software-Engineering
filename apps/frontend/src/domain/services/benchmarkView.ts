@@ -26,6 +26,18 @@ export function benchmarkFlowCell(
   mode: BenchmarkInferenceMode,
 ): BenchmarkFlowCell {
   const outcome = question[mode]
+  // Reexecução: a questão segue encerrada e o desfecho anterior fica até o novo chegar.
+  const isRerunning =
+    question.current_mode === mode && question.status === BENCHMARK_QUESTION_STATUS.FINISHED
+  if (isRerunning) {
+    return {
+      kind: 'running',
+      label: 'Executando',
+      tone: TONE.ACCENT,
+      sessionId: null,
+      detail: null,
+    }
+  }
   if (outcome !== null) {
     const alternative = outcome.selected_alternative ?? NO_ALTERNATIVE
     if (outcome.error !== null) {
@@ -77,4 +89,16 @@ export function benchmarkCompletion(progress: {
 }): number {
   if (progress.total === 0) return 0
   return (progress.finished + progress.interrupted) / progress.total
+}
+
+/**
+ * Uma questão encerrada com ao menos um fluxo errado ou com falha pode ser reexecutada, desde que
+ * nenhum fluxo dela esteja rodando. Quem usa também confere se a bateria já terminou.
+ */
+export function isQuestionRerunnable(question: BenchmarkQuestionRun): boolean {
+  return (
+    question.status === BENCHMARK_QUESTION_STATUS.FINISHED &&
+    question.current_mode === null &&
+    [question.simple, question.ralph].some((outcome) => outcome !== null && !outcome.is_correct)
+  )
 }

@@ -7,7 +7,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppError } from '@/api/errors/AppError'
 import { ContractError } from '@/api/errors/ContractError'
 import { type BenchmarkRunParams, buildBenchmarkRunPayload } from '@/api/benchmarkApi'
-import { type BenchmarkStreamHandle, openBenchmarkStream } from '@/api/benchmarkStreamClient'
+import {
+  type BenchmarkStreamHandle,
+  type BenchmarkStreamHandlers,
+  openBenchmarkRerunStream,
+  openBenchmarkStream,
+} from '@/api/benchmarkStreamClient'
 import type { BenchmarkSessionDocument } from '@/domain/types/benchmarkSession'
 
 export type BenchmarkRunPhase =
@@ -20,6 +25,8 @@ export interface BenchmarkRunState {
   error: AppError | null
   /** Recusa do servidor (frame `error`) ou falha da conexão, já em texto para o usuário. */
   rejection: string | null
+  /** Questão cuja reexecução está em andamento (ou terminou há pouco); `null` numa bateria nova. */
+  rerunQuestionId: string | null
   /** Incrementa a cada bateria que termina — sinaliza às listas que precisam recarregar. */
   finishedCount: number
 }
@@ -27,6 +34,8 @@ export interface BenchmarkRunState {
 interface BenchmarkRunContextValue extends BenchmarkRunState {
   isActive: boolean
   start: (params: BenchmarkRunParams) => void
+  /** Reexecuta os fluxos errados de uma questão de uma bateria já encerrada. */
+  rerun: (benchmarkSessionId: string, questionId: string) => void
   cancel: () => void
   dismiss: () => void
 }
@@ -36,6 +45,7 @@ const INITIAL_STATE: BenchmarkRunState = {
   session: null,
   error: null,
   rejection: null,
+  rerunQuestionId: null,
   finishedCount: 0,
 }
 
@@ -51,63 +61,89 @@ export function BenchmarkRunProvider({ children }: { children: ReactNode }): JSX
 
   useEffect(() => () => handleRef.current?.close(), [])
 
-  const start = useCallback((params: BenchmarkRunParams) => {
-    if (handleRef.current) return
-
-    let payload
-    try {
-      payload = buildBenchmarkRunPayload(params)
-    } catch (error) {
-      const appError = toAppError(error)
+  const connect = useCallback(
+    (
+      open: (handlers: BenchmarkStreamHandlers) => BenchmarkStreamHandle,
+      rerunQuestionId: string | null,
+    ) => {
       setState((prev) => ({
         ...prev,
-        phase: 'error',
+        phase: 'connecting',
         session: null,
-        error: appError,
-        rejection: appError.userMessage,
+        error: null,
+        rejection: null,
+        rerunQuestionId,
       }))
-      return
-    }
+      handleRef.current = open({
+        onSession: (session, isFinal) => {
+          setState((prev) => ({
+            ...prev,
+            session,
+            phase: isFinal ? 'finished' : 'running',
+            finishedCount: isFinal ? prev.finishedCount + 1 : prev.finishedCount,
+          }))
+        },
+        onErrorFrame: (content) => setState((prev) => ({ ...prev, rejection: content })),
+        onClose: () => {
+          handleRef.current = null
+        },
+        onFailure: (error) => {
+          handleRef.current = null
+          // Uma bateria que não conclui fecha com 1011 depois do frame `result`: o desfecho já
+          // está no documento, então o fechamento não vira um erro de conexão por cima dele.
+          setState((prev) =>
+            prev.phase === 'finished'
+              ? prev
+              : {
+                  ...prev,
+                  phase: 'error',
+                  error,
+                  rejection: prev.rejection ?? error.userMessage,
+                  finishedCount: prev.finishedCount + 1,
+                },
+          )
+        },
+        onFrameWarning: (message) => console.warn(`[BenchmarkRunContext] ${message}`),
+      })
+    },
+    [],
+  )
 
-    setState((prev) => ({
-      ...prev,
-      phase: 'connecting',
-      session: null,
-      error: null,
-      rejection: null,
-    }))
-    handleRef.current = openBenchmarkStream(payload, {
-      onSession: (session, isFinal) => {
+  const start = useCallback(
+    (params: BenchmarkRunParams) => {
+      if (handleRef.current) return
+
+      let payload
+      try {
+        payload = buildBenchmarkRunPayload(params)
+      } catch (error) {
+        const appError = toAppError(error)
         setState((prev) => ({
           ...prev,
-          session,
-          phase: isFinal ? 'finished' : 'running',
-          finishedCount: isFinal ? prev.finishedCount + 1 : prev.finishedCount,
+          phase: 'error',
+          session: null,
+          error: appError,
+          rejection: appError.userMessage,
+          rerunQuestionId: null,
         }))
-      },
-      onErrorFrame: (content) => setState((prev) => ({ ...prev, rejection: content })),
-      onClose: () => {
-        handleRef.current = null
-      },
-      onFailure: (error) => {
-        handleRef.current = null
-        // Uma bateria que não conclui fecha com 1011 depois do frame `result`: o desfecho já
-        // está no documento, então o fechamento não vira um erro de conexão por cima dele.
-        setState((prev) =>
-          prev.phase === 'finished'
-            ? prev
-            : {
-                ...prev,
-                phase: 'error',
-                error,
-                rejection: prev.rejection ?? error.userMessage,
-                finishedCount: prev.finishedCount + 1,
-              },
-        )
-      },
-      onFrameWarning: (message) => console.warn(`[BenchmarkRunContext] ${message}`),
-    })
-  }, [])
+        return
+      }
+
+      connect((handlers) => openBenchmarkStream(payload, handlers), null)
+    },
+    [connect],
+  )
+
+  const rerun = useCallback(
+    (benchmarkSessionId: string, questionId: string) => {
+      if (handleRef.current) return
+      connect(
+        (handlers) => openBenchmarkRerunStream(benchmarkSessionId, questionId, handlers),
+        questionId,
+      )
+    },
+    [connect],
+  )
 
   const cancel = useCallback(() => {
     if (!handleRef.current) return
@@ -126,10 +162,11 @@ export function BenchmarkRunProvider({ children }: { children: ReactNode }): JSX
       ...state,
       isActive: state.phase === 'connecting' || state.phase === 'running',
       start,
+      rerun,
       cancel,
       dismiss,
     }),
-    [state, start, cancel, dismiss],
+    [state, start, rerun, cancel, dismiss],
   )
 
   return <BenchmarkRunContext.Provider value={value}>{children}</BenchmarkRunContext.Provider>

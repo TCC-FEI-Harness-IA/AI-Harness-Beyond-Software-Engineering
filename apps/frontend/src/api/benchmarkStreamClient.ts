@@ -1,6 +1,9 @@
 // WebSocket de `WS /v1/benchmark/run` (README, FASE 02, seção 8): um frame de abertura com os
 // parâmetros da bateria, N frames `progress` com o documento inteiro da bateria e um `result`
 // final. Fechar a conexão pelo cliente interrompe a bateria no servidor.
+//
+// `WS /v1/benchmark/sessions/{id}/questions/{question_id}/rerun` fala o mesmo protocolo de frames,
+// mas sem frame de abertura: a configuração do modelo vem da própria bateria persistida.
 
 import { env } from '../config/env'
 import type { BenchmarkRunInput, BenchmarkSessionDocument } from '../domain/types/benchmarkSession'
@@ -10,6 +13,7 @@ import { WS_OPEN_TIMEOUT_MESSAGE } from './errors/messages'
 import { parseBenchmarkFrame } from './parsers/benchmarkSession'
 
 const BENCHMARK_RUN_PATH = '/benchmark/run'
+const BENCHMARK_SESSIONS_PATH = '/benchmark/sessions'
 const NORMAL_CLOSE = 1000
 
 export interface BenchmarkStreamHandlers {
@@ -27,11 +31,30 @@ export interface BenchmarkStreamHandle {
   close: () => void
 }
 
+/** Abre a bateria: envia `payload` como frame de abertura e entrega o estado a cada mudança. */
 export function openBenchmarkStream(
   payload: BenchmarkRunInput,
   handlers: BenchmarkStreamHandlers,
 ): BenchmarkStreamHandle {
-  const socket = new WebSocket(`${env.wsBaseUrl}${BENCHMARK_RUN_PATH}`)
+  return openStream(BENCHMARK_RUN_PATH, payload, handlers)
+}
+
+/** Reexecuta os fluxos errados de uma questão de uma bateria encerrada. */
+export function openBenchmarkRerunStream(
+  benchmarkSessionId: string,
+  questionId: string,
+  handlers: BenchmarkStreamHandlers,
+): BenchmarkStreamHandle {
+  const path = `${BENCHMARK_SESSIONS_PATH}/${encodeURIComponent(benchmarkSessionId)}/questions/${encodeURIComponent(questionId)}/rerun`
+  return openStream(path, null, handlers)
+}
+
+function openStream(
+  path: string,
+  payload: BenchmarkRunInput | null,
+  handlers: BenchmarkStreamHandlers,
+): BenchmarkStreamHandle {
+  const socket = new WebSocket(`${env.wsBaseUrl}${path}`)
   let opened = false
   let closed = false
 
@@ -47,7 +70,7 @@ export function openBenchmarkStream(
     if (opened || closed) return
     opened = true
     clearTimeout(openTimer)
-    socket.send(JSON.stringify(payload))
+    if (payload !== null) socket.send(JSON.stringify(payload))
   }
 
   function onMessage(event: MessageEvent): void {

@@ -7,13 +7,14 @@ from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketTestSession
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
+from src.domain.errors.benchmark_question_not_rerunnable_error import BenchmarkQuestionNotRerunnableError
 from src.domain.errors.benchmark_session_not_finished_error import BenchmarkSessionNotFinishedError
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
 from src.domain.errors.invalid_benchmark_request_error import InvalidBenchmarkRequestError
 from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
 from src.infra.routes.v1.benchmark import router as benchmark_router_module
 from src.infra.routes.v1.benchmark.dtos.benchmark_frame_dto import BenchmarkFrameDTO
-from src.infra.routes.v1.benchmark.router import run_benchmark
+from src.infra.routes.v1.benchmark.router import rerun_benchmark_question, run_benchmark
 from src.infra.services.benchmark_ralph_errors_archive_builder import BenchmarkArchive
 from src.main import create_app
 
@@ -346,5 +347,124 @@ def test_falha_inesperada_nao_envia_frame_quando_o_socket_ja_esta_desconectado(
     websocket = _SocketDesconectado(raw_text=json.dumps(_abertura()))
 
     asyncio.run(run_benchmark(websocket))
+
+    assert websocket.sent == []
+
+
+# ── WebSocket de reexecução ──────────────────────────────────────────────────
+
+_RERUN_PATH = "/v1/benchmark/sessions/bench_1/questions/Q1/rerun"
+
+
+class _FakeRerunStartup:
+    """Dublê do startup de reexecução, para isolar a rota do caso de uso."""
+
+    frames: list[BenchmarkFrameDTO] = []
+    error: BaseException | None = None
+    construction_error: Exception | None = None
+    requested: list[tuple[str, str]] = []
+    closed = 0
+
+    def __init__(self) -> None:
+        if _FakeRerunStartup.construction_error is not None:
+            raise _FakeRerunStartup.construction_error
+
+    async def run(self, benchmark_session_id: str, question_id: str) -> AsyncGenerator[BenchmarkFrameDTO, None]:
+        _FakeRerunStartup.requested.append((benchmark_session_id, question_id))
+        try:
+            for frame in _FakeRerunStartup.frames:
+                yield frame
+            if _FakeRerunStartup.error is not None:
+                raise _FakeRerunStartup.error
+        finally:
+            _FakeRerunStartup.closed += 1
+
+
+@pytest.fixture
+def reexecucao(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    _FakeRerunStartup.frames = []
+    _FakeRerunStartup.error = None
+    _FakeRerunStartup.construction_error = None
+    _FakeRerunStartup.requested = []
+    _FakeRerunStartup.closed = 0
+    monkeypatch.setattr(benchmark_router_module, "BenchmarkRerunStartup", _FakeRerunStartup)
+    return client
+
+
+def test_reexecucao_envia_os_frames_sem_abertura_e_fecha_com_1000(reexecucao: TestClient) -> None:
+    _FakeRerunStartup.frames = [_frame("progress", "completed"), _frame("result", "completed")]
+
+    with reexecucao.websocket_connect(_RERUN_PATH) as ws:
+        frames, codigo = _coletar(ws)
+
+    assert [frame["type"] for frame in frames] == ["progress", "result"]
+    assert codigo == 1000
+    assert _FakeRerunStartup.requested == [("bench_1", "Q1")]
+    assert _FakeRerunStartup.closed == 1
+
+
+@pytest.mark.parametrize(
+    "erro",
+    [
+        BenchmarkSessionNotFoundError("bench_1"),
+        BenchmarkSessionNotFinishedError("bench_1"),
+        BenchmarkQuestionNotRerunnableError("bench_1", "Q1"),
+        InvalidBenchmarkRequestError("A questão 'Q1' não existe mais no dataset da bateria."),
+    ],
+)
+def test_reexecucao_recusada_gera_frame_de_erro_e_fecha_com_1003(reexecucao: TestClient, erro: Exception) -> None:
+    _FakeRerunStartup.error = erro
+
+    with reexecucao.websocket_connect(_RERUN_PATH) as ws:
+        frames, codigo = _coletar(ws)
+
+    assert frames == [{"type": "error", "content": str(erro)}]
+    assert codigo == 1003
+
+
+def test_falha_inesperada_na_reexecucao_gera_frame_de_erro_fecha_com_1011_e_encerra_o_gerador(
+    reexecucao: TestClient,
+) -> None:
+    _FakeRerunStartup.frames = [_frame()]
+    _FakeRerunStartup.error = RuntimeError("quebrou")
+
+    with reexecucao.websocket_connect(_RERUN_PATH) as ws:
+        frames, codigo = _coletar(ws)
+
+    assert frames[-1] == {"type": "error", "content": "quebrou"}
+    assert codigo == 1011
+    assert _FakeRerunStartup.closed == 1
+
+
+def test_falha_ao_montar_o_startup_de_reexecucao_gera_frame_de_erro(reexecucao: TestClient) -> None:
+    _FakeRerunStartup.construction_error = ValueError("configuração inválida")
+
+    with reexecucao.websocket_connect(_RERUN_PATH) as ws:
+        frames, codigo = _coletar(ws)
+
+    assert frames == [{"type": "error", "content": "configuração inválida"}]
+    assert codigo == 1011
+
+
+def test_cliente_desconectado_durante_a_reexecucao_encerra_o_gerador(reexecucao: TestClient) -> None:
+    _FakeRerunStartup.frames = [_frame()]
+    _FakeRerunStartup.error = WebSocketDisconnect(code=1001)
+
+    with reexecucao.websocket_connect(_RERUN_PATH) as ws:
+        ws.receive_json()
+
+    assert _FakeRerunStartup.closed == 1
+
+
+def test_falha_na_reexecucao_nao_envia_frame_quando_o_socket_ja_esta_desconectado(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _FakeRerunStartup.frames = []
+    _FakeRerunStartup.error = RuntimeError("quebrou")
+    _FakeRerunStartup.construction_error = None
+    monkeypatch.setattr(benchmark_router_module, "BenchmarkRerunStartup", _FakeRerunStartup)
+    websocket = _SocketDesconectado(raw_text="")
+
+    asyncio.run(rerun_benchmark_question(websocket, "bench_1", "Q1"))
 
     assert websocket.sent == []

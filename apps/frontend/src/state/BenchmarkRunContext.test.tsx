@@ -120,6 +120,65 @@ describe('BenchmarkRunProvider', () => {
     expect(FakeWebSocket.latest().closeCalls).toEqual([1000])
   })
 
+  it('reexecuta uma questão pela rota da questão e termina com o documento atualizado', () => {
+    renderProvider()
+
+    act(() => current.rerun('bench_1', 'Q2'))
+    const socket = FakeWebSocket.latest()
+
+    expect(socket.url).toBe('ws://localhost:8000/v1/benchmark/sessions/bench_1/questions/Q2/rerun')
+    expect(current.phase).toBe('connecting')
+    expect(current.rerunQuestionId).toBe('Q2')
+    expect(current.isActive).toBe(true)
+    act(() => socket.emitOpen())
+    expect(socket.sentFrames).toEqual([])
+    act(() =>
+      socket.emitMessage({
+        type: 'progress',
+        benchmark_session: benchmarkSession({ status: 'completed' }),
+      }),
+    )
+    expect(current.phase).toBe('running')
+    act(() =>
+      socket.emitMessage({
+        type: 'result',
+        benchmark_session: benchmarkSession({ status: 'completed' }),
+      }),
+    )
+    act(() => socket.emitClose(1000))
+
+    expect(current.phase).toBe('finished')
+    expect(current.finishedCount).toBe(1)
+    expect(current.rerunQuestionId).toBe('Q2')
+    act(() => current.dismiss())
+    expect(current.rerunQuestionId).toBeNull()
+  })
+
+  it('não reexecuta enquanto há bateria ou reexecução ativa', () => {
+    renderProvider()
+    start()
+
+    act(() => current.rerun('bench_1', 'Q1'))
+
+    expect(FakeWebSocket.instances).toHaveLength(1)
+    expect(current.rerunQuestionId).toBeNull()
+  })
+
+  it('reexecução recusada pelo servidor vira erro com a mensagem do servidor', () => {
+    renderProvider()
+    act(() => current.rerun('bench_1', 'Q1'))
+    const socket = FakeWebSocket.latest()
+
+    act(() => socket.emitMessage({ type: 'error', content: 'Q1 não tem fluxo errado' }))
+    act(() => socket.emitClose(1003))
+
+    expect(current.phase).toBe('error')
+    expect(current.rejection).toBe('Q1 não tem fluxo errado')
+    expect(current.finishedCount).toBe(1)
+    act(() => current.rerun('bench_1', 'Q1'))
+    expect(FakeWebSocket.instances).toHaveLength(2)
+  })
+
   it('usar fora do provider é um erro de programação', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
 

@@ -41,6 +41,7 @@ O front fala com o backend por dois transportes:
 | Limite de tokens por sessão do backend | HTTP `GET` | `/v1/limits` |
 | BenchMark — execução da bateria | WebSocket | `/v1/benchmark/run` |
 | BenchMark — baterias e dataset | HTTP `GET` | `/v1/benchmark/sessions`, `/v1/benchmark/sessions/{id}`, `/v1/benchmark/questions` |
+| BenchMark — reexecutar uma questão errada | WebSocket | `/v1/benchmark/sessions/{id}/questions/{question_id}/rerun` |
 | BenchMark — exportar erros do Ralph Loop | HTTP `GET` | `/v1/benchmark/sessions/{id}/ralph-loop-errors/export` |
 
 A página **BenchMark** (`/benchmark`) inicia uma bateria (quantidade de questões, questões em paralelo e a

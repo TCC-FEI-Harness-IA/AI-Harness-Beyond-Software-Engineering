@@ -36,7 +36,8 @@ class InMemoryBenchmarkSessionRepository(IBenchmarkSessionRepository):
 
     async def find_by_id(self, benchmark_session_id: str) -> BenchmarkSession | None:
         """Devolve a bateria guardada, ou `None`."""
-        return self.sessions.get(benchmark_session_id)
+        stored = self.sessions.get(benchmark_session_id)
+        return copy.deepcopy(stored) if stored is not None else None
 
     async def list_all(self) -> list[BenchmarkSession]:
         """Devolve as baterias, da mais recente para a mais antiga."""

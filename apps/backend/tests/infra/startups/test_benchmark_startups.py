@@ -12,11 +12,16 @@ from src.application.usecases.list_benchmark_sessions_usecase import ListBenchma
 from src.application.usecases.run_benchmark_usecase import RunBenchmarkUseCase
 from src.domain.entities.benchmark.benchmark_flow_outcome import BenchmarkFlowOutcome
 from src.domain.entities.benchmark.benchmark_flow_request import BenchmarkFlowRequest
+from src.application.usecases.rerun_benchmark_question_usecase import RerunBenchmarkQuestionUseCase
+from src.domain.enums.benchmark_inference_mode_enum import BenchmarkInferenceModeEnum
+from src.domain.enums.benchmark_session_status_enum import BenchmarkSessionStatusEnum
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
 from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
+from tests.doubles.benchmark_factories import bateria, desfecho
 from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
 from src.infra.startups.benchmark_export_startup import BenchmarkExportStartup
 from src.infra.startups.benchmark_query_startup import BenchmarkQueryStartup
+from src.infra.startups.benchmark_rerun_startup import BenchmarkRerunStartup
 from src.infra.startups.benchmark_run_startup import BenchmarkRunStartup
 
 
@@ -150,3 +155,37 @@ async def test_startup_de_exportacao_recusa_bateria_inexistente_e_sem_erros(arma
 
     with pytest.raises(NoBenchmarkErrorsToExportError):
         await BenchmarkExportStartup().export_ralph_errors(benchmark_session_id=frames[-1].benchmark_session["id"])
+
+
+async def test_startup_de_reexecucao_monta_o_grafo_e_emite_progress_ate_o_result(armazenamento: Path) -> None:
+    startup = BenchmarkRerunStartup()
+    assert all(valor is not None for valor in vars(startup).values())
+    assert isinstance(startup.rerun_use_case, RerunBenchmarkQuestionUseCase)
+    assert startup.rerun_use_case.repository is startup.repository
+    questao = "FISICA_ENEM_2022_AZUL_Q093"
+    sessao = bateria(questao)
+    sessao.start_flow(question_id=questao, mode=BenchmarkInferenceModeEnum.SIMPLE, at=sessao.created_at)
+    sessao.record_outcome(
+        question_id=questao, outcome=desfecho(mode=BenchmarkInferenceModeEnum.SIMPLE), at=sessao.created_at
+    )
+    sessao.start_flow(question_id=questao, mode=BenchmarkInferenceModeEnum.RALPH, at=sessao.created_at)
+    sessao.record_outcome(
+        question_id=questao,
+        outcome=desfecho(mode=BenchmarkInferenceModeEnum.RALPH, correto=False),
+        at=sessao.created_at,
+    )
+    sessao.finish_question(question_id=questao, at=sessao.created_at)
+    sessao.finish(status=BenchmarkSessionStatusEnum.COMPLETED, at=sessao.created_at, wall_time_ms=1)
+    await startup.repository.save(benchmark_session=sessao)
+    startup.rerun_use_case.flow_runner = _RunnerImediato()
+
+    frames = [frame async for frame in startup.run(benchmark_session_id="bench_1", question_id=questao)]
+
+    assert {frame.type for frame in frames[:-1]} <= {"progress"}
+    assert frames[-1].type == "result"
+    documento = frames[-1].benchmark_session
+    assert documento["status"] == "completed"
+    assert documento["questions"][0]["ralph"]["is_correct"] is True
+    assert documento["questions"][0]["ralph"]["session_id"] == f"{questao}_ralph"
+    gravada = json.loads((armazenamento / "benchmark-sessions" / "bench_1.json").read_text("utf-8"))
+    assert gravada == documento

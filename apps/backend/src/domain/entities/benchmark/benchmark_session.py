@@ -155,6 +155,36 @@ class BenchmarkSession:
         self.question(question_id).finish()
         self.updated_at = at
 
+    def start_rerun(self, question_id: str, mode: BenchmarkInferenceModeEnum, at: datetime) -> None:
+        """Marca o início da reexecução de um fluxo errado de uma questão encerrada.
+
+        Args:
+            question_id: Questão reexecutada.
+            mode: Fluxo reexecutado.
+            at: Instante do início.
+
+        Raises:
+            ValueError: Quando a bateria ainda está em execução ou o fluxo não pode ser reexecutado.
+        """
+        self.__ensure_not_running()
+        self.question(question_id).start_rerun(mode=mode)
+        self.updated_at = at
+
+    def record_rerun_outcome(self, question_id: str, outcome: BenchmarkFlowOutcome, at: datetime) -> None:
+        """Substitui o desfecho de um fluxo pelo da sua reexecução.
+
+        Args:
+            question_id: Questão reexecutada.
+            outcome: Desfecho da reexecução.
+            at: Instante do registro.
+
+        Raises:
+            ValueError: Quando a bateria ainda está em execução ou o desfecho não é do fluxo reexecutado.
+        """
+        self.__ensure_not_running()
+        self.question(question_id).record_rerun_outcome(outcome=outcome)
+        self.updated_at = at
+
     def update_wall_time(self, wall_time_ms: int) -> None:
         """Atualiza o tempo de execução enquanto a bateria está em andamento.
 
@@ -207,6 +237,15 @@ class BenchmarkSession:
         """
         if self.status is not BenchmarkSessionStatusEnum.RUNNING:
             raise ValueError(f"A bateria '{self.id}' já foi encerrada com status '{self.status.value}'.")
+
+    def __ensure_not_running(self) -> None:
+        """Recusa reexecuções numa bateria ainda em execução.
+
+        Raises:
+            ValueError: Quando a bateria está em execução.
+        """
+        if self.status is BenchmarkSessionStatusEnum.RUNNING:
+            raise ValueError(f"A bateria '{self.id}' ainda está em execução.")
 
     def __count(self, status: BenchmarkQuestionStatusEnum) -> int:
         """Conta as questões em um estado."""

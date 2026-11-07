@@ -106,6 +106,7 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
   - [`GET /v1/benchmark/sessions`](#get-v1benchmarksessions)
   - [`GET /v1/benchmark/sessions/{benchmark_session_id}`](#get-v1benchmarksessionsbenchmark_session_id)
   - [`GET /v1/benchmark/sessions/{benchmark_session_id}/ralph-loop-errors/export`](#get-v1benchmarksessionsbenchmark_session_idralph-loop-errorsexport)
+  - [`WS /v1/benchmark/sessions/{benchmark_session_id}/questions/{question_id}/rerun`](#ws-v1benchmarksessionsbenchmark_session_idquestionsquestion_idrerun)
   - [`GET /v1/benchmark/questions`](#get-v1benchmarkquestions)
 - [Garantias do harness e encerramento sem conclusão](#garantias-do-harness-e-encerramento-sem-conclusão)
 - [Contratos (DTOs)](#contratos-dtos)
@@ -834,6 +835,24 @@ gravado — não executa o benchmark de novo. Cada pasta tem:
 sessão não existe mais (por exemplo, o fluxo falhou antes de criá-la). `409` quando a bateria ainda
 está em execução ou nenhuma questão errou no Ralph Loop (nunca devolve um ZIP vazio); `404` quando a
 bateria não existe; `400` para identificador inválido; `500` para outras falhas.
+
+### `WS /v1/benchmark/sessions/{benchmark_session_id}/questions/{question_id}/rerun`
+
+Reexecuta uma questão de uma bateria já encerrada, para conferir se uma correção no código resolveu
+um erro. Não há frame de abertura: o modelo, o provedor, `max_tokens` e a temperatura vêm da própria
+bateria, e o prompt segue o dataset e o protocolo (few-shot) dela. Só os fluxos (`simple`/`ralph`)
+com desfecho errado ou com falha são refeitos, cada um numa sessão nova; o novo desfecho substitui o
+anterior na bateria, que é gravada a cada fluxo refeito (as sessões antigas continuam em
+`GET /v1/sessions/{id}`, mas deixam de constar em `session_ids` da bateria). Os fluxos que já
+acertaram não rodam de novo.
+
+Os frames são os mesmos de `WS /v1/benchmark/run`: `progress` a cada mudança e um `result` final,
+com o documento inteiro da bateria; enquanto o fluxo roda, `questions[].current_mode` indica qual
+é, com a questão ainda `finished`. O `status` da bateria não muda. Fecha com `1000` ao terminar.
+Pedidos recusados (bateria inexistente, ainda em execução ou já em reexecução, questão que não
+pertence à bateria, não existe mais no dataset ou não tem fluxo errado) geram um frame
+`{ "type": "error", "content": "..." }` e fecham com `1003`. Se o cliente desconecta, o fluxo em
+andamento é cancelado e o desfecho anterior permanece. Só uma reexecução por bateria roda por vez.
 
 ### `GET /v1/benchmark/questions`
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { outcome, questionRun } from '@/test/fixtures/benchmarkSession'
-import { benchmarkCompletion, benchmarkFlowCell } from './benchmarkView'
+import { benchmarkCompletion, benchmarkFlowCell, isQuestionRerunnable } from './benchmarkView'
 
 describe('benchmarkFlowCell', () => {
   it('fluxo sem desfecho e fora de execução aguarda', () => {
@@ -88,5 +88,62 @@ describe('benchmarkCompletion', () => {
 
   it('bateria sem questões tem progresso zero', () => {
     expect(benchmarkCompletion({ total: 0, finished: 0, interrupted: 0 })).toBe(0)
+  })
+})
+
+describe('reexecução de uma questão', () => {
+  const wrong = outcome({ mode: 'ralph', is_correct: false, selected_alternative: 'C' })
+
+  it('fluxo reexecutado numa questão encerrada mostra executando, mesmo com o desfecho anterior', () => {
+    const question = questionRun({
+      status: 'finished',
+      current_mode: 'ralph',
+      simple: outcome(),
+      ralph: wrong,
+    })
+
+    expect(benchmarkFlowCell(question, 'ralph')).toMatchObject({ kind: 'running', sessionId: null })
+    expect(benchmarkFlowCell(question, 'simple').kind).toBe('correct')
+  })
+
+  it.each([
+    [
+      'simples errado',
+      { simple: outcome({ is_correct: false }), ralph: outcome({ mode: 'ralph' }) },
+    ],
+    ['ralph errado', { simple: outcome(), ralph: wrong }],
+    [
+      'falha técnica',
+      { simple: outcome(), ralph: outcome({ mode: 'ralph', is_correct: false, error: 'timeout' }) },
+    ],
+  ] as const)('questão encerrada com %s pode ser reexecutada', (_name, outcomes) => {
+    expect(isQuestionRerunnable(questionRun({ status: 'finished', ...outcomes }))).toBe(true)
+  })
+
+  it('questão que acertou os dois fluxos não pode ser reexecutada', () => {
+    const question = questionRun({
+      status: 'finished',
+      simple: outcome(),
+      ralph: outcome({ mode: 'ralph' }),
+    })
+
+    expect(isQuestionRerunnable(question)).toBe(false)
+  })
+
+  it.each(['pending', 'running', 'interrupted'] as const)(
+    'questão %s não pode ser reexecutada',
+    (status) => {
+      expect(
+        isQuestionRerunnable(questionRun({ status, simple: outcome({ is_correct: false }) })),
+      ).toBe(false)
+    },
+  )
+
+  it('questão já em reexecução não pode ser reexecutada de novo', () => {
+    expect(
+      isQuestionRerunnable(
+        questionRun({ status: 'finished', current_mode: 'ralph', simple: wrong, ralph: wrong }),
+      ),
+    ).toBe(false)
   })
 })

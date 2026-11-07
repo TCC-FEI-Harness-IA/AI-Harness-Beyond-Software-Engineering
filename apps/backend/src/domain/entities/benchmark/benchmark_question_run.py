@@ -128,6 +128,62 @@ class BenchmarkQuestionRun:
             raise ValueError(f"A questão '{self.question_id}' só termina depois dos dois fluxos.")
         self.status = BenchmarkQuestionStatusEnum.FINISHED
 
+    @property
+    def rerunnable_modes(self) -> list[BenchmarkInferenceModeEnum]:
+        """Fluxos com desfecho errado ou com falha, na ordem de execução.
+
+        Returns:
+            list[BenchmarkInferenceModeEnum]: Fluxos que podem ser reexecutados; vazio quando a questão
+            não terminou os dois fluxos ou acertou ambos.
+        """
+        if self.status is not BenchmarkQuestionStatusEnum.FINISHED:
+            return []
+        return [outcome.mode for outcome in self.outcomes if not outcome.is_correct]
+
+    def start_rerun(self, mode: BenchmarkInferenceModeEnum) -> None:
+        """Marca o início da reexecução de um fluxo errado, preservando o desfecho anterior até o novo.
+
+        A questão continua `finished`: só `current_mode` indica o fluxo em andamento.
+
+        Args:
+            mode: Fluxo reexecutado.
+
+        Raises:
+            ValueError: Quando o fluxo não pode ser reexecutado ou a questão já executa outro fluxo.
+        """
+        if self.current_mode is not None:
+            raise ValueError(f"A questão '{self.question_id}' já executa o fluxo '{self.current_mode.value}'.")
+        if mode not in self.rerunnable_modes:
+            raise ValueError(f"O fluxo '{mode.value}' da questão '{self.question_id}' não está errado.")
+
+        self.current_mode = mode
+        self.current_tokens = 0
+
+    def record_rerun_outcome(self, outcome: BenchmarkFlowOutcome) -> None:
+        """Substitui o desfecho do fluxo reexecutado pelo novo.
+
+        Args:
+            outcome: Desfecho da reexecução.
+
+        Raises:
+            ValueError: Quando o desfecho não é do fluxo em reexecução.
+        """
+        if outcome.mode is not self.current_mode:
+            raise ValueError(f"O fluxo '{outcome.mode.value}' não está em execução na questão '{self.question_id}'.")
+
+        if outcome.mode is BenchmarkInferenceModeEnum.SIMPLE:
+            self.simple = outcome
+        else:
+            self.ralph = outcome
+        self.current_mode = None
+        self.current_tokens = 0
+
+    def abort_rerun(self) -> None:
+        """Descarta a reexecução em andamento, mantendo o desfecho anterior do fluxo."""
+        if self.status is BenchmarkQuestionStatusEnum.FINISHED:
+            self.current_mode = None
+            self.current_tokens = 0
+
     def interrupt(self) -> None:
         """Marca como interrompida a questão que estava em execução.
 

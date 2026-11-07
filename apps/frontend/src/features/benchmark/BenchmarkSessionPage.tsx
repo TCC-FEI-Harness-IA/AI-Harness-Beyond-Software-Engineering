@@ -45,6 +45,7 @@ function BenchmarkSessionView({
   session: BenchmarkSessionDocument
   isLive: boolean
 }): JSX.Element {
+  const { isActive, rerun } = useBenchmarkRun()
   return (
     <>
       <div className={styles.header}>
@@ -96,7 +97,11 @@ function BenchmarkSessionView({
       </Card>
       <BenchmarkRalphErrorsExport session={session} />
       <h2 className={styles.sectionTitle}>Questões e sessões</h2>
-      <BenchmarkQuestionsTable session={session} />
+      <BenchmarkQuestionsTable
+        session={session}
+        onRerun={(questionId) => rerun(session.id, questionId)}
+        rerunDisabled={isActive}
+      />
     </>
   )
 }

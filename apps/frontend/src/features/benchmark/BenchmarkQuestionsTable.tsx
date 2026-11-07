@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { BENCHMARK_MODE_LABEL } from '@/domain/enums/benchmarkStatus'
-import { benchmarkFlowCell } from '@/domain/services/benchmarkView'
+import { BENCHMARK_SESSION_STATUS } from '@/domain/enums/benchmarkStatus'
+import { benchmarkFlowCell, isQuestionRerunnable } from '@/domain/services/benchmarkView'
 import { formatTokens } from '@/domain/services/formatters'
 import type { BenchmarkInferenceMode } from '@/domain/types/benchmarkDetails'
 import type {
@@ -47,13 +48,22 @@ function FlowCell({
 /**
  * Uma linha por questão da bateria, com o desfecho de cada fluxo. Um fluxo encerrado leva ao
  * chat da sua sessão — o mesmo detalhe do histórico, nos modos Chat e Gráfico.
+ *
+ * Com `onRerun`, as questões encerradas com fluxo errado ou com falha ganham o botão
+ * "Executar novamente", que refaz só esses fluxos. Fica desabilitado enquanto `rerunDisabled`
+ * (outra bateria ou reexecução em andamento) e ausente enquanto a própria bateria executa.
  */
 export function BenchmarkQuestionsTable({
   session,
+  onRerun,
+  rerunDisabled = false,
 }: {
   session: BenchmarkSessionDocument
+  onRerun?: (questionId: string) => void
+  rerunDisabled?: boolean
 }): JSX.Element {
   const [page, setPage] = useState(0)
+  const canRerun = onRerun !== undefined && session.status !== BENCHMARK_SESSION_STATUS.RUNNING
   const pageCount = Math.max(1, Math.ceil(session.questions.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount - 1)
   const questions = session.questions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
@@ -95,6 +105,11 @@ export function BenchmarkQuestionsTable({
             <th scope="col" className={styles.numeric}>
               Tokens
             </th>
+            {onRerun ? (
+              <th scope="col">
+                <span className={styles.srOnly}>Ações</span>
+              </th>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -113,6 +128,21 @@ export function BenchmarkQuestionsTable({
                 />
               ))}
               <td className={styles.numeric}>{formatTokens(question.total_tokens)}</td>
+              {onRerun ? (
+                <td>
+                  {canRerun && isQuestionRerunnable(question) ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={rerunDisabled}
+                      aria-label={`Executar novamente ${question.question_id}`}
+                      onClick={() => onRerun(question.question_id)}
+                    >
+                      Executar novamente
+                    </Button>
+                  ) : null}
+                </td>
+              ) : null}
             </tr>
           ))}
         </tbody>
