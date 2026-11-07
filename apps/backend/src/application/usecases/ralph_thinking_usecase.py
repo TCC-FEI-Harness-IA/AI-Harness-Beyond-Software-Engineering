@@ -42,55 +42,55 @@ _NO_INFERENCE_TIME_MS = 0
 _FIRST_TASK_NUMBER = 1
 _FIRST_ATTEMPT = 1
 
-_CRITERIA_HEADING = "## Critérios de aceite gerais"
-_TASKS_HEADING = "## Tarefas planejadas"
-_LEARNINGS_HEADING = "## Aprendizados extraídos"
-_DISCARDED_LEARNINGS_HEADING = "## Aprendizados repetidos descartados"
-_NO_LEARNINGS_CONTENT = "Nenhum aprendizado foi extraído desta tarefa."
-_NO_PLANNING_LEARNINGS_CONTENT = "Nenhum aprendizado foi extraído do enunciado."
-_RESET_CONTENT = "Contexto reinicializado para a tarefa `{task_id}`. Nova janela: `{context_id}`."
+_CRITERIA_HEADING = "## General acceptance criteria"
+_TASKS_HEADING = "## Planned tasks"
+_LEARNINGS_HEADING = "## Extracted learnings"
+_DISCARDED_LEARNINGS_HEADING = "## Discarded repeated learnings"
+_NO_LEARNINGS_CONTENT = "No learnings were extracted from this task."
+_NO_PLANNING_LEARNINGS_CONTENT = "No learnings were extracted from the question."
+_RESET_CONTENT = "Context reset for task `{task_id}`. New window: `{context_id}`."
 _TASK_HEADER_CONTENT = "### {task_id} — {title}\n\n{description}"
 _TASK_CONTENT = (
     f"{_TASK_HEADER_CONTENT}\n\n"
-    "**Critérios de aceite:**\n{criteria}"
+    "**Acceptance criteria:**\n{criteria}"
 )
-_STORE_CONTENT = "Resultado da tarefa `{task_id}` armazenado."
-_REPORT_CONTENT = "**Decisão:** `{decision}`\n\n{evaluations}"
+_STORE_CONTENT = "Result of task `{task_id}` stored."
+_REPORT_CONTENT = "**Decision:** `{decision}`\n\n{evaluations}"
 _EVALUATION_ITEM = "- `{criterion_id}` — {status}: {justification}"
-_MET_LABEL = "atendido"
-_UNMET_LABEL = "não atendido"
+_MET_LABEL = "met"
+_UNMET_LABEL = "not met"
 # Entradas explícitas montadas a partir do registro da tarefa (`Task.attempts`). Toda mudança de fase
 # abre uma janela nova: o feedback da nova tentativa de B.1 e o histórico que B.4 recebe chegam como
 # material delimitado nas variáveis do template, e nunca herdando a conversa de outra janela.
-_NO_PREVIOUS_ATTEMPTS_CONTENT = "Nenhuma: esta é a primeira tentativa desta tarefa."
-_PREVIOUS_ATTEMPTS_CONTENT = "<tentativas_anteriores>\n{attempts}\n</tentativas_anteriores>\n\n{instruction}"
+_NO_PREVIOUS_ATTEMPTS_CONTENT = "None: this is the first attempt at this task."
+_PREVIOUS_ATTEMPTS_CONTENT = "<previous_attempts>\n{attempts}\n</previous_attempts>\n\n{instruction}"
 _PREVIOUS_ATTEMPT_CONTENT = (
-    "### Tentativa {attempt} — reprovada\n\n"
-    "**Resultado apresentado:**\n\n{output}\n\n"
-    "**Veredito do validador:**\n\n{report}"
+    "### Attempt {attempt} — rejected\n\n"
+    "**Result presented:**\n\n{output}\n\n"
+    "**Validator verdict:**\n\n{report}"
 )
 _RETRY_INSTRUCTION_CONTENT = (
-    "A tentativa anterior foi reprovada. Critérios não satisfeitos: {unmet}.\n\n"
-    "Refaça a resolução da tarefa corrigindo exatamente esses pontos."
+    "The previous attempt was rejected. Criteria not met: {unmet}.\n\n"
+    "Redo the resolution of the task fixing exactly these points."
 )
 _DISCARDED_RESOLUTION_CONTENT = (
-    "#### Saída descartada da resolução ({defect})\n\n"
-    "A resolução devolveu uma saída inválida e foi instruída a corrigi-la.\n\n"
-    "**Saída inválida:**\n\n{raw_output}\n\n**Motivo da recusa:** {reason}"
+    "#### Discarded resolution output ({defect})\n\n"
+    "The resolution returned an invalid output and was instructed to correct it.\n\n"
+    "**Invalid output:**\n\n{raw_output}\n\n**Rejection reason:** {reason}"
 )
 _INVALID_VERIFIER_OUTPUT_CONTENT = (
-    "#### Saída inválida do validador ({defect})\n\n"
-    "O validador devolveu uma saída inválida e foi instruído a corrigi-la.\n\n"
-    "**Saída inválida:**\n\n{raw_output}\n\n**Motivo da recusa:** {reason}"
+    "#### Invalid validator output ({defect})\n\n"
+    "The validator returned an invalid output and was instructed to correct it.\n\n"
+    "**Invalid output:**\n\n{raw_output}\n\n**Rejection reason:** {reason}"
 )
 _RESULT_BLOCK = "## {task_id} — {title}\n\n{content}"
-_RESULT_SUMMARY_BLOCK = "## {task_id} — {title}\n\n**Enunciado:**\n\n{description}\n\n**Conclusão:** {conclusion}"
-_HISTORY_ATTEMPT_HEADER = "### Tentativa {attempt} — {status}"
-_HISTORY_OUTPUT_CONTENT = "**Resultado preliminar:**\n\n{output}"
-_HISTORY_APPROVED_OUTPUT_CONTENT = "**Resultado preliminar:** é o resultado aprovado, apresentado na área própria."
-_HISTORY_REPORT_CONTENT = "**Veredito do validador:**\n\n{report}"
-_APPROVED_ATTEMPT_LABEL = "aprovada"
-_REPROVED_ATTEMPT_LABEL = "reprovada"
+_RESULT_SUMMARY_BLOCK = "## {task_id} — {title}\n\n**Statement:**\n\n{description}\n\n**Conclusion:** {conclusion}"
+_HISTORY_ATTEMPT_HEADER = "### Attempt {attempt} — {status}"
+_HISTORY_OUTPUT_CONTENT = "**Preliminary result:**\n\n{output}"
+_HISTORY_APPROVED_OUTPUT_CONTENT = "**Preliminary result:** it is the approved result, shown in its own area."
+_HISTORY_REPORT_CONTENT = "**Validator verdict:**\n\n{report}"
+_APPROVED_ATTEMPT_LABEL = "approved"
+_REPROVED_ATTEMPT_LABEL = "rejected"
 _ERROR_CONTENT = "**Erro:** {reason}"
 _CONSUMPTION_DETAIL = "Consumo conhecido: {tokens} tokens em {calls} chamadas ao modelo."
 _DISCARDED_DETAIL = "Tarefas descartadas: {tasks}."

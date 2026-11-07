@@ -5,7 +5,7 @@ from src.domain.interfaces.learnings_memory_interface import ILearningsMemory
 
 _ITEM_PREFIX = "- "
 _ITEM_SEPARATOR = "\n"
-_NO_LEARNINGS_CONTENT = "Nenhum aprendizado pontual registrado até o momento."
+_NO_LEARNINGS_CONTENT = "No key learnings recorded so far."
 
 
 class LearningsMemory(ILearningsMemory):

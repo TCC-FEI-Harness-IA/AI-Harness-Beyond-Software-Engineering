@@ -78,10 +78,11 @@ def test_permutacao_reproduzivel_preserva_gabarito_e_prompt_sem_metadados(datase
         prompt = provider.build_prompt(question, provider.answer_instruction())
         assert question.statement in prompt
         assert "\u2028 preservado" in prompt
-        assert f"RESPOSTA_FINAL: {question.expected_alternative}" not in prompt
+        assert f"FINAL_ANSWER: {question.expected_alternative}" not in prompt
         assert "EXPLICACAO_PRIVADA" not in prompt
         assert "REVISAO_ANTIGA" not in prompt
-        assert "RESPOSTA_FINAL: LETTER" in prompt
+        assert "FINAL_ANSWER: LETTER" in prompt
+        assert "RESPOSTA_FINAL" not in prompt
     assert questions == GPQABenchmarkQuestionProvider(data_path=dataset, subset=subset).list_questions()
     provider.list_questions().clear()
     assert provider.list_questions() == questions
@@ -138,3 +139,21 @@ def test_preserva_distratores_duplicados_presentes_no_original(dataset: Path) ->
 def test_rejeita_subconjunto_desconhecido() -> None:
     with pytest.raises(ValueError):
         GPQABenchmarkQuestionProvider(subset="unknown")
+
+
+def test_instrucao_propria_do_gpqa_e_em_ingles_e_lida_uma_vez(tmp_path: Path) -> None:
+    instrucao = tmp_path / "gpqa.md"
+    instrucao.write_text("\n  Answer.  \n", encoding="utf-8")
+    provider = GPQABenchmarkQuestionProvider(prompt_path=instrucao)
+
+    assert provider.answer_instruction() == "Answer."
+    instrucao.write_text("Other", encoding="utf-8")
+    assert provider.answer_instruction() == "Answer."
+    oficial = GPQABenchmarkQuestionProvider().answer_instruction()
+    assert "Reason carefully before answering." in oficial
+    assert oficial.endswith("FINAL_ANSWER: LETTER")
+
+
+def test_instrucao_do_gpqa_ausente_e_recusada(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="não encontrada"):
+        GPQABenchmarkQuestionProvider(prompt_path=tmp_path / "nada.md").answer_instruction()

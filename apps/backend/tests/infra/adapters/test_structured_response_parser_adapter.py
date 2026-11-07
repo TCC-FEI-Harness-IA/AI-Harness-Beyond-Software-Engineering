@@ -234,7 +234,7 @@ def test_decomposicao_dentro_do_teto_e_aceita() -> None:
 def test_decomposicao_acima_do_teto_e_recusada_apontando_o_limite_de_tarefas() -> None:
     contexto = ValidationContext(max_tasks=1)
 
-    with pytest.raises(PhaseParsingError, match="no máximo 1") as erro:
+    with pytest.raises(PhaseParsingError, match="at most 1") as erro:
         _planejar([_tarefa_com_id("T1"), _tarefa_com_id("T2")], validation=contexto)
 
     assert erro.value.limit is BudgetLimitEnum.TASKS_PER_SESSION
@@ -379,7 +379,7 @@ def test_avaliacao_faltante_e_recusada() -> None:
 def test_avaliacao_repetida_e_recusada() -> None:
     payload = _relatorio(_avaliacao("AC1"), _avaliacao("AC1"))
 
-    with pytest.raises(PhaseParsingError, match="mais de uma vez"):
+    with pytest.raises(PhaseParsingError, match="more than once"):
         _verificar(payload, esperados=("AC1",))
 
 
@@ -393,49 +393,49 @@ def test_avaliacao_de_criterio_desconhecido_e_recusada() -> None:
 def test_aprovado_com_avaliacao_negativa_e_recusado() -> None:
     payload = _relatorio(_avaliacao("T1-AC1", met=False), decision="approved", unmet=[])
 
-    with pytest.raises(PhaseParsingError, match="incoerente"):
+    with pytest.raises(PhaseParsingError, match="inconsistent"):
         _verificar(payload)
 
 
 def test_aprovado_com_pendencias_e_incoerente() -> None:
     payload = {**_VERIFICACAO_VALIDA, "unmet_criteria_ids": ["T1-AC1"]}
 
-    with pytest.raises(PhaseParsingError, match="incoerente"):
+    with pytest.raises(PhaseParsingError, match="inconsistent"):
         _verificar(payload)
 
 
 def test_reprovado_sem_pendencias_e_incoerente() -> None:
     payload = {**_VERIFICACAO_VALIDA, "decision": "reproved"}
 
-    with pytest.raises(PhaseParsingError, match="incoerente"):
+    with pytest.raises(PhaseParsingError, match="inconsistent"):
         _verificar(payload, fase=ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION)
 
 
 def test_reprovado_com_todas_as_avaliacoes_positivas_e_recusado() -> None:
     payload = _relatorio(_avaliacao("T1-AC1"), decision="reproved", unmet=["T1-AC1"])
 
-    with pytest.raises(PhaseParsingError, match="pendências"):
+    with pytest.raises(PhaseParsingError, match="pending criteria"):
         _verificar(payload)
 
 
 def test_pendencia_desconhecida_e_recusada() -> None:
     payload = _relatorio(_avaliacao("AC1", met=False), decision="reproved", unmet=["AC1", "DESCONHECIDO"])
 
-    with pytest.raises(PhaseParsingError, match="pendências"):
+    with pytest.raises(PhaseParsingError, match="pending criteria"):
         _verificar(payload, esperados=("AC1",))
 
 
 def test_pendencia_repetida_e_recusada() -> None:
     payload = _relatorio(_avaliacao("AC1", met=False), decision="reproved", unmet=["AC1", "AC1"])
 
-    with pytest.raises(PhaseParsingError, match="repet"):
+    with pytest.raises(PhaseParsingError, match="repeated"):
         _verificar(payload, esperados=("AC1",))
 
 
 def test_pendencias_que_nao_correspondem_as_avaliacoes_negativas_sao_recusadas() -> None:
     payload = _relatorio(_avaliacao("AC1"), _avaliacao("AC2", met=False), decision="reproved", unmet=["AC1"])
 
-    with pytest.raises(PhaseParsingError, match="pendências"):
+    with pytest.raises(PhaseParsingError, match="pending criteria"):
         _verificar(payload, esperados=("AC1", "AC2"))
 
 

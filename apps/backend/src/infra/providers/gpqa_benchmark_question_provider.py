@@ -12,16 +12,13 @@ from src.domain.entities.benchmark.benchmark_question import BenchmarkQuestion
 from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
 from src.domain.enums.gpqa_subset_enum import GPQASubsetEnum
 from src.domain.interfaces.benchmark_question_provider_interface import IBenchmarkQuestionProvider
+from src.infra.providers.benchmark_instruction_reader import BENCHMARK_PROMPTS_PATH, read_benchmark_instruction
 
 GPQA_REVISION = "56686c06f5e19865c153de0fdb11be3890014df7"
 GPQA_CHOICE_SEED = 0
 _DATA_PATH = Path(__file__).resolve().parents[1] / "benchmark/gpqa"
 _PASSWORD = b"deserted-untie-orchid"  # Senha pública fornecida pelos autores.
-_INSTRUCTION = (
-    "Solve the multiple-choice question above. Select exactly one of A, B, C, or D, preserving the original order. "
-    "Reason carefully before answering. You may explain your reasoning, but end your response with a single "
-    "line in this exact format: RESPOSTA_FINAL: LETTER (replace LETTER with your selected letter)."
-)
+_PROMPT_PATH = BENCHMARK_PROMPTS_PATH / "gpqa.md"
 
 
 class GPQABenchmarkQuestionProvider(IBenchmarkQuestionProvider):
@@ -29,12 +26,14 @@ class GPQABenchmarkQuestionProvider(IBenchmarkQuestionProvider):
 
     def __init__(
         self, few_shot: int = 0, data_path: Path = _DATA_PATH,
-        subset: GPQASubsetEnum = GPQASubsetEnum.DIAMOND,
+        subset: GPQASubsetEnum = GPQASubsetEnum.DIAMOND, prompt_path: Path = _PROMPT_PATH,
     ) -> None:
         if few_shot != 0:
             raise ValueError("GPQA aceita somente few_shot 0.")
         self.subset = GPQASubsetEnum(subset)
         self.data_path = data_path
+        self.prompt_path = prompt_path
+        self._instruction: str | None = None
         self._questions: list[BenchmarkQuestion] | None = None
 
     def definition(self) -> BenchmarkDefinition:
@@ -44,7 +43,9 @@ class GPQABenchmarkQuestionProvider(IBenchmarkQuestionProvider):
         )
 
     def answer_instruction(self) -> str:
-        return _INSTRUCTION
+        if self._instruction is None:
+            self._instruction = read_benchmark_instruction(path=self.prompt_path)
+        return self._instruction
 
     def list_questions(self) -> list[BenchmarkQuestion]:
         if self._questions is None:

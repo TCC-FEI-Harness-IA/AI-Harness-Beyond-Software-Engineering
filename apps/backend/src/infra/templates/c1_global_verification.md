@@ -1,105 +1,109 @@
-# C.1 — Compilação e verificação dos critérios gerais
+# C.1 — Compilation and verification of the general criteria
 
-Avalie se a **união** dos resultados armazenados é suficiente para satisfazer cada critério geral
-da resposta final.
+Evaluate whether the **union** of the stored results is sufficient to satisfy each general
+criterion of the final answer.
 
-## Resultados armazenados
+## Stored results
 
 {{stored_results}}
 
-## Critérios de aceite gerais
+## General acceptance criteria
 
 {{general_acceptance_criteria}}
 
-## Aprendizados Pontuais
+## Key Learnings
 
-Anotações compactas acumuladas ao longo do fluxo: os pontos de atenção do enunciado e os fatos
-registrados pelas tarefas já concluídas, na ordem em que surgiram. Use-as apenas como
-referência para conferir os dados do enunciado.
-Os aprendizados **não são critérios** e **não contam como cobertura**: um critério geral só está
-atendido quando os resultados armazenados o cobrem.
+Compact notes accumulated throughout the flow: the points of attention from the question and the
+facts recorded by the tasks already completed, in the order in which they appeared. Use them only
+as a reference to check the question data.
+The learnings **are not criteria** and **do not count as coverage**: a general criterion is met only
+when the stored results cover it.
 
 {{learnings}}
 
-## Instruções
+## Instructions
 
-A avaliação é **global**, não por tarefa: considere os resultados em conjunto e decida, critério
-por critério, se o que já foi produzido basta para satisfazê-lo. Justifique cada veredito.
+The evaluation is **global**, not per task: consider the results together and decide, criterion by
+criterion, whether what has already been produced is enough to satisfy it. Justify each verdict.
 
-Emita `approved` somente quando **todos** os critérios gerais estiverem cobertos, e `reproved` caso
-contrário.
+Issue `approved` only when **all** general criteria are covered, and `reproved` otherwise.
 
-Regras de consistência do relatório, verificadas automaticamente — um relatório que as violar é
-recusado e devolvido a você para correção:
+Report consistency rules, checked automatically — a report that violates them is rejected and
+returned to you for correction:
 
-- Faça **exatamente uma avaliação para cada critério geral** listado acima, usando o identificador
-  exato do critério em `criterion_id`. Não omita nenhum critério. Não repita um critério. Não
-  invente identificadores que não estejam na lista.
-- Marque `met` igual a `false` em todo critério ainda descoberto e `true` nos cobertos.
-- `unmet_criteria_ids` deve conter exatamente os identificadores dos critérios com `met` igual a
-  `false`, sem repetições. A lista fica vazia somente quando a decisão é `approved`.
-- A decisão `approved` somente quando todos os critérios têm `met` igual a `true`; basta um
-  critério com `met` igual a `false` para a decisão ser `reproved`.
+- Make **exactly one evaluation for each general criterion** listed above, using the exact
+  identifier of the criterion in `criterion_id`. Do not omit any criterion. Do not repeat a
+  criterion. Do not invent identifiers that are not in the list.
+- Set `met` equal to `false` on every criterion still uncovered and `true` on those covered.
+- `unmet_criteria_ids` must contain exactly the identifiers of the criteria with `met` equal to
+  `false`, without repetitions. The list is empty only when the decision is `approved`.
+- The decision is `approved` only when all criteria have `met` equal to `true`; a single criterion
+  with `met` equal to `false` is enough for the decision to be `reproved`.
 
-**Não construa a resposta final aqui.** Esta etapa apenas julga a suficiência do material
-disponível.
+**Do not build the final answer here.** This stage only judges the sufficiency of the available
+material.
 
-Lembre-se de que os resultados armazenados são o **insumo analítico** para a síntese final (`C.3`), e
-não a resposta final já formatada:
+Remember that the stored results are the **analytical input** for the final synthesis (`C.3`), not
+the already formatted final answer:
 
-- Critérios gerais de formatação da resposta final (por exemplo, "responder apenas com a letra da
-  alternativa, sem justificativas") devem ser marcados como **atendidos (`met: true`)** desde que os
-  resultados armazenados permitam identificar qual é a resposta a ser formatada em `C.3` (o fato de
-  os resultados das tarefas conterem explicações não viola esse critério).
-- Em questões de múltipla escolha, considere atendidos os critérios de aderência e sustentação pelo
-  enunciado quando os resultados apontarem a **alternativa relativamente mais coerente por
-  eliminação das demais**, admitindo paráfrases, sínteses ou inferências interpretativas razoáveis
-  sem exigir correspondência 100% literal palavra por palavra. Da mesma forma, quando os resultados
-  selecionarem explicitamente a alternativa de valor mais próximo do calculado, considere atendidos
-  os critérios de seleção: aproximações são permitidas desde que uma alternativa seja escolhida.
-- Confira se os resultados armazenados concluíram **até o último passo lógico ou cálculo final pedido
-  pela pergunta** (por exemplo: se a pergunta pede o *mês seguinte* ao de uma ultrapassagem, ou a
-  *quantidade adicional* a acrescentar, não basta ter apenas o mês da ultrapassagem ou a quantidade
-  inicial; se faltar essa determinação final nos resultados armazenados, marque o critério
-  correspondente como `met: false` para que o planejamento adicional crie a tarefa final).
+- General formatting criteria of the final answer (for example, "answer only with the letter of the
+  option, without justifications") must be marked as **met (`met: true`)** as long as the stored
+  results make it possible to identify which answer is to be formatted in `C.3` (the fact that the
+  task results contain explanations does not violate that criterion).
+- In multiple-choice questions, consider the criteria of fit and support by the question met when
+  the results point to the **relatively most coherent option by elimination of the others**, admitting
+  paraphrases, syntheses or reasonable interpretive inferences without requiring a 100% literal
+  word-for-word match. Likewise, when the results explicitly select the option whose value is
+  closest to the calculated one, consider the selection criteria met: approximations are allowed as
+  long as an option is chosen.
+- Check whether the stored results concluded **up to the last logical step or final calculation
+  asked by the question** (for example: if the question asks for the *month following* an
+  overtaking, or the *additional quantity* to be added, it is not enough to have only the overtaking
+  month or the initial quantity; if that final determination is missing from the stored results,
+  mark the corresponding criterion as `met: false` so that the additional planning creates the final
+  task).
 
-Para idioma, formato e restrições de apresentação, julgue se C.3 consegue aplicá-los ao conteúdo
-aprovado sem novo raciocínio analítico. Não exija que cada resultado intermediário já seja a resposta
-final. Ao justificar `met: true`, indique o conteúdo que permite a apresentação solicitada.
+For language, format and presentation constraints, judge whether C.3 can apply them to the approved
+content without new analytical reasoning. Do not require each intermediate result to already be the
+final answer. Stored results written in a language other than the one required for the final answer
+do not make a language criterion unmet: C.3 writes the answer in the required language. When
+justifying `met: true`, indicate the content that allows the requested presentation.
 
-Para exigências de conteúdo, identifique a evidência nos resultados armazenados. A possibilidade
-de formatar uma resposta não supre análise, cálculo ou fundamentação ausente. Não realize aqui a
-análise que falta para então declará-la coberta; a lacuna deve seguir para C.2. Os aprendizados
-permanecem referência separada e não substituem essa evidência.
+For content requirements, identify the evidence in the stored results. The possibility of
+formatting an answer does not make up for missing analysis, calculation or grounding. Do not perform
+here the missing analysis and then declare it covered; the gap must go on to C.2. The learnings
+remain a separate reference and do not replace that evidence.
 
-## Exemplos de suficiência e lacuna real
+## Examples of sufficiency and real gaps
 
-- Aprovar o formato: os resultados identificam inequivocamente a alternativa C, com conta e
-  explicação, e o pedido exige terminar com `RESPOSTA_FINAL: LETRA`. A ausência de `RESPOSTA_FINAL: C`
-  nos resultados não é lacuna de conteúdo: C.3 pode escrever essa linha sem nova análise.
-  Reprovar só pela ausência da linha seria incorreto.
-- Aprovar a apresentação enxuta: o pedido é "apenas a letra, sem justificativa" e os resultados
-  explicados já sustentam C. As explicações internas não violam o formato final; C.3 pode omiti-las.
-- Aprovar seleção aproximada: os resultados obtêm 23, as alternativas são 1, 4, 20, 1 e 2, e dentro
-  das tarefas é selecionado 20 como a mais próxima. O critério de seleção está atendido; a diferença de
-  aproximação não é lacuna de conteúdo.
-- Reprovar ausência de seleção: os resultados obtêm 12, as alternativas são 2, 4, 6, 8 e 10, e os
-  resultados concluem que nenhuma alternativa serve, sem selecionar nenhuma. Marque o critério de
-  seleção como `met: false` e encaminhe a lacuna a C.2. Não escolha você a letra para suprir a
-  lacuna, nem considere "RESPOSTA_FINAL: NENHUMA" uma formatação possível da resposta exigida.
-- Reprovar conteúdo ausente: o critério exige análise conjunta explícita de três condições e só
-  há listas de verificações isoladas. Mesmo que pareça possível escolher ou formatar uma letra,
-  falta a análise conjunta exigida. Marque esse critério como não atendido e encaminhe a lacuna a C.2.
-- Justificativa opcional: a falta de uma explicação destinada ao usuário não é, por si, pendência
-  se o pedido a permite sem exigir e a conclusão já está sustentada. Justificativa obrigatória:
-  se o pedido exige fundamentação e ela não consta dos resultados, reprove o critério correspondente.
-  Não invente essa exigência quando o pedido só solicita objetividade.
+- Approve the format: the results unequivocally identify option C, with a calculation and an
+  explanation, and the request requires ending with a marker line such as `FINAL_ANSWER: LETTER`.
+  The absence of `FINAL_ANSWER: C` in the results is not a content gap: C.3 can write that line
+  without new analysis. Rejecting only because the line is absent would be incorrect.
+- Approve the concise presentation: the request is "only the letter, without justification" and the
+  explained results already support C. The internal explanations do not violate the final format;
+  C.3 can omit them.
+- Approve an approximate selection: the results obtain 23, the options are 1, 4, 20, 1 and 2, and
+  within the tasks 20 is selected as the closest. The selection criterion is met; the approximation
+  difference is not a content gap.
+- Reject the absence of a selection: the results obtain 12, the options are 2, 4, 6, 8 and 10, and
+  the results conclude that no option fits, without selecting any. Mark the selection criterion as
+  `met: false` and forward the gap to C.2. Do not choose the letter yourself to fill the gap, and do
+  not consider "FINAL_ANSWER: NONE" a possible formatting of the required answer.
+- Reject missing content: the criterion requires an explicit joint analysis of three conditions
+  and there are only lists of isolated checks. Even if it seems possible to choose or format a
+  letter, the required joint analysis is missing. Mark that criterion as not met and forward the gap
+  to C.2.
+- Optional justification: the lack of an explanation aimed at the user is not, by itself, a pending
+  item if the request allows it without requiring it and the conclusion is already supported.
+  Mandatory justification: if the request requires grounding and it is not in the results, reject
+  the corresponding criterion. Do not invent that requirement when the request only asks for
+  objectivity.
 
-## Formato de saída
+## Output format
 
-Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de
-código, preenchendo `criteria_evaluation` primeiro, `unmet_criteria_ids` em seguida e `decision` por
-último, no formato:
+Respond **exclusively** with a JSON object, with no text before or after it and no code fence,
+filling `criteria_evaluation` first, `unmet_criteria_ids` next and `decision` last, in the format:
 
 {"criteria_evaluation": [{"criterion_id": "...", "met": true,
 "justification": "..."}], "unmet_criteria_ids": [], "decision": "approved"}

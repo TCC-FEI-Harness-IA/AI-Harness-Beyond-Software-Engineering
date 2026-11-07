@@ -60,6 +60,8 @@ def test_prompt_preserva_enunciado_e_gabarito_do_teste_fica_fora(dataset: Path, 
     assert prompt.count("dev physics") == few_shot
     assert "dev history" not in prompt
     assert "E," not in provider.answer_instruction()
+    assert "FINAL_ANSWER: LETTER" in prompt
+    assert "RESPOSTA_FINAL" not in prompt
     assert provider.definition().protocol == f"generative_{few_shot}shot"
     assert provider.definition().revision == MMLU_REVISION
     assert provider.list_questions() == provider.list_questions()
@@ -135,3 +137,24 @@ def test_json_invalido_e_diagnosticado(dataset: Path) -> None:
     (dataset / "manifest.json").write_text("{", encoding="utf-8")
     with pytest.raises(ValueError, match="ausente ou inválido"):
         MMLUBenchmarkQuestionProvider(data_path=dataset).list_questions()
+
+
+def test_instrucao_propria_do_mmlu_e_em_ingles_e_lida_uma_vez(tmp_path: Path) -> None:
+    instrucao = tmp_path / "mmlu.md"
+    instrucao.write_text("\n  Answer.  \n", encoding="utf-8")
+    provider = MMLUBenchmarkQuestionProvider(prompt_path=instrucao)
+
+    assert provider.answer_instruction() == "Answer."
+    instrucao.write_text("Other", encoding="utf-8")
+    assert provider.answer_instruction() == "Answer."
+    oficial = MMLUBenchmarkQuestionProvider().answer_instruction()
+    assert "A, B, C, or D" in oficial
+    assert oficial.endswith("FINAL_ANSWER: LETTER")
+
+
+def test_instrucao_do_mmlu_vazia_e_recusada(tmp_path: Path) -> None:
+    instrucao = tmp_path / "mmlu.md"
+    instrucao.write_text("   ", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="vazia"):
+        MMLUBenchmarkQuestionProvider(prompt_path=instrucao).answer_instruction()

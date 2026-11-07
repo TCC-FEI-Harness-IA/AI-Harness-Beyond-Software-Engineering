@@ -37,23 +37,23 @@ from src.domain.interfaces.thinking_phase_interface import IThinkingPhase
 # já está na janela, e instruções e aprendizados não mudam dentro de uma mesma execução.
 _CORRECTION_BY_DEFECT: dict[OutputDefectEnum, str] = {
     OutputDefectEnum.SYNTAX: (
-        "A saída anterior não é um JSON válido: {reason}\n"
-        "Não refaça a resolução e não altere o conteúdo: devolva o mesmo conteúdo da saída anterior, "
-        "serializado como um único objeto JSON válido no formato já pedido, sem texto antes ou depois "
-        "e sem cerca de código."
+        "The previous output is not valid JSON: {reason}\n"
+        "Do not redo the resolution and do not change the content: return the same content as the previous "
+        "output, serialized as a single valid JSON object in the format already requested, with no text "
+        "before or after it and no code fence."
     ),
     OutputDefectEnum.CONTRACT: (
-        "A saída anterior é um JSON legível, mas não cumpre o contrato desta etapa: {reason}\n"
-        "Confira a sua própria saída — num relatório de verificação, o seu relatório — contra as "
-        "instruções e corrija o que estiver incoerente: cada decisão deve ser sua e coerente com as "
-        "suas avaliações, e nada será ajustado automaticamente. Devolva a saída corrigida completa, "
-        "como um único objeto JSON válido, sem texto antes ou depois e sem cerca de código."
+        "The previous output is readable JSON, but it does not fulfill the contract of this stage: {reason}\n"
+        "Check your own output — in a verification report, your report — against the instructions "
+        "and fix whatever is inconsistent: every decision must be yours and consistent with your "
+        "evaluations, and nothing will be adjusted automatically. Return the complete corrected output, "
+        "as a single valid JSON object, with no text before or after it and no code fence."
     ),
     OutputDefectEnum.TRUNCATED: (
-        "A saída anterior foi interrompida pelo limite de comprimento e ficou incompleta: {reason}\n"
-        "Não continue a saída anterior: ela foi descartada e não será emendada à próxima. Produza "
-        "uma nova saída completa e mais concisa, que caiba no limite, como um único objeto JSON "
-        "válido no formato já pedido, sem texto antes ou depois e sem cerca de código."
+        "The previous output was cut off by the length limit and is incomplete: {reason}\n"
+        "Do not continue the previous output: it was discarded and will not be joined to the next one. "
+        "Produce a new, complete and more concise output that fits within the limit, as a single valid "
+        "JSON object in the format already requested, with no text before or after it and no code fence."
     ),
 }
 _INVALID_OUTPUT_AUDIT_TEMPLATE = (

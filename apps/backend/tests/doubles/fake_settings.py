@@ -49,7 +49,7 @@ _DEFAULTS: dict[str, Any] = {
     "ralph_benchmark_sessions_storage_path": "./data/benchmark-sessions",
     "mongodb_benchmark_sessions_collection": "benchmark_sessions",
     "ralph_benchmark_questions_path": "src/infra/benchmark/questions",
-    "ralph_benchmark_prompt_path": "src/infra/benchmark/prompt.md",
+    "ralph_benchmark_prompt_path": "src/infra/benchmark/prompts/vestibular.md",
     "ralph_benchmark_max_parallel": 10,
     "ralph_benchmark_progress_interval_seconds": 0.05,
 }

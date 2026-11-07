@@ -262,7 +262,7 @@ def test_aplica_os_defaults_do_benchmark_quando_ausentes() -> None:
     assert settings.ralph_benchmark_sessions_storage_path == "./data/benchmark-sessions"
     assert settings.mongodb_benchmark_sessions_collection == "benchmark_sessions"
     assert settings.ralph_benchmark_questions_path == "src/infra/benchmark/questions"
-    assert settings.ralph_benchmark_prompt_path == "src/infra/benchmark/prompt.md"
+    assert settings.ralph_benchmark_prompt_path == "src/infra/benchmark/prompts/vestibular.md"
     assert settings.ralph_benchmark_max_parallel == 10
     assert settings.ralph_benchmark_progress_interval_seconds == 1.0
 

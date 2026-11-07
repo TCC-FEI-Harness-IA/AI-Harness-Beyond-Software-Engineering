@@ -211,7 +211,7 @@ async def test_auditoria_da_recusa_aponta_a_invocacao_e_mantem_motivo_e_saida_br
     (auditoria,) = _auditorias(recorder)
     assert auditoria.invocation_id == "inv_1"
     assert _SEM_VIRGULA in auditoria.content
-    assert "Nenhum objeto JSON válido" in auditoria.content
+    assert "No valid JSON object" in auditoria.content
     assert "json_syntax" in auditoria.content
     assert "not_detected" in auditoria.content
 

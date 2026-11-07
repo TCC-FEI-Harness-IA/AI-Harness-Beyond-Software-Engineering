@@ -7,25 +7,24 @@ from src.domain.entities.benchmark.benchmark_definition import BenchmarkDefiniti
 from src.domain.entities.benchmark.benchmark_question import BenchmarkQuestion
 from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
 from src.domain.interfaces.benchmark_question_provider_interface import IBenchmarkQuestionProvider
+from src.infra.providers.benchmark_instruction_reader import BENCHMARK_PROMPTS_PATH, read_benchmark_instruction
 
 MMLU_REVISION = "c30699e8356da336a370243923dbaf21066bb9fe"
 _DATA_PATH = Path(__file__).resolve().parents[1] / "benchmark/mmlu"
 _LETTERS = "ABCD"
-_INSTRUCTION = (
-    "Solve the multiple-choice question above. Select exactly one of A, B, C, or D, preserving the original order. "
-    "You may explain your reasoning, but end your response with a single line in this exact format: "
-    "RESPOSTA_FINAL: LETTER (replace LETTER with your selected letter)."
-)
+_PROMPT_PATH = BENCHMARK_PROMPTS_PATH / "mmlu.md"
 
 
 class MMLUBenchmarkQuestionProvider(IBenchmarkQuestionProvider):
     """MMLU local, versionado e generativo; exemplos vêm exclusivamente do split dev."""
 
-    def __init__(self, few_shot: int = 0, data_path: Path = _DATA_PATH) -> None:
+    def __init__(self, few_shot: int = 0, data_path: Path = _DATA_PATH, prompt_path: Path = _PROMPT_PATH) -> None:
         if few_shot not in (0, 5):
             raise ValueError("MMLU aceita few_shot 0 ou 5.")
         self.few_shot = few_shot
         self.data_path = data_path
+        self.prompt_path = prompt_path
+        self._instruction: str | None = None
         self._questions: list[BenchmarkQuestion] | None = None
         self._examples: dict[str, list[BenchmarkQuestion]] = defaultdict(list)
 
@@ -36,7 +35,9 @@ class MMLUBenchmarkQuestionProvider(IBenchmarkQuestionProvider):
         )
 
     def answer_instruction(self) -> str:
-        return _INSTRUCTION
+        if self._instruction is None:
+            self._instruction = read_benchmark_instruction(path=self.prompt_path)
+        return self._instruction
 
     def list_questions(self) -> list[BenchmarkQuestion]:
         if self._questions is None:

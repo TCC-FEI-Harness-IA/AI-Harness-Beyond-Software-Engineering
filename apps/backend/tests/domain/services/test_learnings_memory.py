@@ -4,7 +4,7 @@ from src.domain.entities.thinking.learning import Learning
 from src.domain.services.learnings_memory import LearningsMemory
 
 
-_AVISO_SEM_APRENDIZADOS = "Nenhum aprendizado pontual registrado até o momento."
+_AVISO_SEM_APRENDIZADOS = "No key learnings recorded so far."
 
 
 def test_memoria_nova_esta_vazia_e_renderiza_o_aviso_de_que_nao_ha_aprendizados() -> None:
@@ -55,7 +55,7 @@ def test_render_produz_a_lista_markdown_com_um_item_por_aprendizado_sem_titulo()
         ]
     )
 
-    # O título da área ("## Aprendizados Pontuais") pertence a cada template; a memória entrega só os itens.
+    # O título da área ("## Key Learnings") pertence a cada template; a memória entrega só os itens.
     assert memoria.render() == "- fato um\n- fato dois"
 
 

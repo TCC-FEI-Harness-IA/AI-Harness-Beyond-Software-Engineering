@@ -1,90 +1,88 @@
-# B.2 — Verificação dos critérios de aceite da tarefa
+# B.2 — Verification of the task's acceptance criteria
 
-Avalie se o resultado preliminar abaixo atende aos critérios de aceite da tarefa.
+Evaluate whether the preliminary result below meets the task's acceptance criteria.
 
-## Resultado preliminar
+## Preliminary result
 
 {{preliminary_result}}
 
-## Critérios de aceite desta tarefa
+## Acceptance criteria for this task
 
 {{task_acceptance_criteria}}
 
-## Aprendizados Pontuais
+## Key Learnings
 
-Anotações compactas acumuladas ao longo do fluxo: os pontos de atenção do enunciado e os fatos
-registrados pelas tarefas já concluídas, na ordem em que surgiram. Use-as apenas como
-referência para conferir os dados envolvidos (alternativas, valores, unidades de medida).
-Os aprendizados **não são critérios** de aceite: a avaliação continua restrita aos critérios desta
-tarefa.
+Compact notes accumulated throughout the flow: the points of attention from the question and the
+facts recorded by the tasks already completed, in the order in which they appeared. Use them only
+as a reference to check the data involved (options, values, units of measurement).
+The learnings **are not criteria**: the evaluation remains restricted to the criteria of this task.
 
 {{learnings}}
 
-## Instruções
+## Instructions
 
-Percorra os critérios **um por um**. Para cada critério, decida se ele foi atendido e escreva a
-justificativa do veredito. Em seguida emita a decisão final: `approved` somente quando **todos** os
-critérios foram atendidos, `reproved` caso contrário.
+Go through the criteria **one by one**. For each criterion, decide whether it was met and write the
+justification of the verdict. Then issue the final decision: `approved` only when **all** criteria
+were met, `reproved` otherwise.
 
-Regras de consistência do relatório, verificadas automaticamente — um relatório que as violar é
-recusado e devolvido a você para correção:
+Report consistency rules, checked automatically — a report that violates them is rejected and
+returned to you for correction:
 
-- Faça **exatamente uma avaliação para cada critério** listado acima, usando o identificador
-  exato do critério em `criterion_id`. Não omita nenhum critério. Não repita um critério. Não
-  invente identificadores que não estejam na lista.
-- Marque `met` igual a `false` em todo critério não atendido e `true` nos atendidos.
-- `unmet_criteria_ids` deve conter exatamente os identificadores dos critérios com `met` igual a
-  `false`, sem repetições. A lista fica vazia somente quando a decisão é `approved`.
-- A decisão `approved` somente quando todos os critérios têm `met` igual a `true`; basta um
-  critério com `met` igual a `false` para a decisão ser `reproved`.
+- Make **exactly one evaluation for each criterion** listed above, using the exact identifier of
+  the criterion in `criterion_id`. Do not omit any criterion. Do not repeat a criterion. Do not
+  invent identifiers that are not in the list.
+- Set `met` equal to `false` on every criterion not met and `true` on those met.
+- `unmet_criteria_ids` must contain exactly the identifiers of the criteria with `met` equal to
+  `false`, without repetitions. The list is empty only when the decision is `approved`.
+- The decision is `approved` only when all criteria have `met` equal to `true`; a single criterion
+  with `met` equal to `false` is enough for the decision to be `reproved`.
 
-A avaliação é **local**: julgue apenas os critérios desta tarefa. Não julgue se o resultado
-responde à questão final do usuário, não julgue a qualidade da resposta final e não considere
-nada além dos critérios listados acima.
+The evaluation is **local**: judge only the criteria of this task. Do not judge whether the result
+answers the user's final question, do not judge the quality of the final answer and do not consider
+anything beyond the criteria listed above.
 
-**Não ignore, reescreva ou dispense nenhum critério recebido**, mesmo que pareça mal formulado.
-A interpretação de escopo deve seguir a ação que o critério restringe: citar um termo como
-referência contextual não equivale a calcular outra grandeza, avaliar outra condição ou antecipar
-uma solução. Se houver uma proibição explícita de palavras, ela também deve ser verificada como
-foi recebida; esta etapa não tem autorização para corrigir os critérios do planejador.
+**Do not ignore, rewrite or waive any criterion received**, even if it seems poorly worded. The
+interpretation of scope must follow the action the criterion restricts: citing a term as a
+contextual reference is not the same as calculating another quantity, evaluating another condition
+or anticipating a solution. If there is an explicit prohibition of words, it must also be checked as
+it was received; this stage is not authorized to correct the planner's criteria.
 
-Exemplos para um critério "não calcular a massa por colher":
+Examples for a criterion "do not calculate the mass per spoon":
 
-- Atendido: "O enunciado cita colheres; a massa total é 2 g + 4 g = 6 g". A menção é contextual,
-  e o resultado vem explicado dentro do escopo.
-- Não atendido: "A massa total é 6 g; dividindo por duas colheres, são 3 g por colher".
-  A conta adicional executa uma ação proibida, mesmo que esteja correta.
-- Se o critério recebido fosse "não mencionar colheres", a primeira frase o violaria.
-  Não substitua esse critério por "não calcular a massa por colher" durante a avaliação.
+- Met: "The question mentions spoons; the total mass is 2 g + 4 g = 6 g". The mention is
+  contextual, and the result is explained within the scope.
+- Not met: "The total mass is 6 g; dividing by two spoons, that is 3 g per spoon". The additional
+  calculation performs a forbidden action, even if it is correct.
+- If the criterion received were "do not mention spoons", the first sentence would violate it.
+  Do not replace that criterion with "do not calculate the mass per spoon" during the evaluation.
 
-Uma conclusão fundamentada sobre o objetivo da própria tarefa não é antecipação indevida.
-Resolver condições externas ao objetivo ou anunciar a solução global quando o critério o proíbe
-é violação. Explicações internas não devem ser julgadas pelo formato da resposta final, salvo
-quando tal restrição constar nos critérios locais recebidos; todos continuam obrigatórios.
+A well-founded conclusion about the task's own goal is not an undue anticipation. Solving
+conditions outside the goal or announcing the global solution when the criterion forbids it is a
+violation. Internal explanations must not be judged by the format of the final answer, unless such
+a restriction appears in the local criteria received; all of them remain mandatory.
 
-Evite o **hiper-literalismo**: quando um critério exigir que uma análise, conclusão ou opção seja
-sustentada pelo texto ou enunciado, considere o critério **atendido** se o resultado demonstrar a
-**melhor aderência relativa (por eliminação dos distratores mais graves)** ou uma paráfrase e
-inferência interpretativa coerente, sem exigir correspondência 100% literal palavra por palavra. Da
-mesma forma, se um critério de aceite trouxer um número ou expressão pré-calculados indevidamente no
-planejamento que divirjam da dedução matemática/física correta a partir dos dados do enunciado e de
-**Aprendizados Pontuais**, considere o critério **atendido (`met: true`)** quando o resultado
-demonstrar e justificar o cálculo correto daquela grandeza.
+Avoid **hyper-literalism**: when a criterion requires an analysis, conclusion or option to be
+supported by the text or question, consider the criterion **met** if the result demonstrates the
+**best relative fit (by elimination of the most serious distractors)** or a coherent paraphrase and
+interpretive inference, without requiring a 100% literal word-for-word match. Likewise, if an
+acceptance criterion carries a number or expression improperly pre-calculated during planning that
+diverges from the correct mathematical/physical deduction from the question data and the **Key
+Learnings**, consider the criterion **met (`met: true`)** when the result demonstrates and justifies
+the correct calculation of that quantity.
 
-**Aproximações na seleção de alternativas são permitidas.** Quando um critério exigir selecionar a
-alternativa que corresponde ao valor ou à conclusão obtidos — mesmo que redigido como
-"corresponde exatamente" ou "a única que coincide" —, considere-o **atendido (`met: true`)** se o
-resultado **selecionar explicitamente uma única alternativa** como a de valor mais próximo ou de
-melhor aderência, ainda que registre a diferença entre o valor obtido e o da alternativa. A falta de
-correspondência exata não é motivo de reprovação. O critério só **não é atendido** quando nenhuma
-alternativa é selecionada, quando o resultado conclui "nenhuma" ou cria uma opção inexistente, ou
-quando outra alternativa disponível é evidentemente mais próxima do valor obtido.
+**Approximations in the selection of options are allowed.** When a criterion requires selecting the
+option that corresponds to the value or conclusion obtained — even if worded as "matches exactly"
+or "the only one that coincides" —, consider it **met (`met: true`)** if the result **explicitly
+selects a single option** as the one with the closest value or the best fit, even if it records the
+difference between the value obtained and the option's value. The lack of an exact match is not a
+reason for rejection. The criterion is **not met** only when no option is selected, when the result
+concludes "none" or creates a non-existent option, or when another available option is evidently
+closer to the value obtained.
 
-## Formato de saída
+## Output format
 
-Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de
-código, preenchendo `criteria_evaluation` primeiro, `unmet_criteria_ids` em seguida e `decision` por
-último, no formato:
+Respond **exclusively** with a JSON object, with no text before or after it and no code fence,
+filling `criteria_evaluation` first, `unmet_criteria_ids` next and `decision` last, in the format:
 
 {"criteria_evaluation": [{"criterion_id": "...", "met": true,
 "justification": "..."}], "unmet_criteria_ids": [], "decision": "approved"}

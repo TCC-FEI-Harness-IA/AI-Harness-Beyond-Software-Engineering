@@ -17,6 +17,12 @@ from src.domain.entities.benchmark.benchmark_question import BenchmarkQuestion
         ("RESPOSTA_FINAL: A\nRESPOSTA_FINAL: B", None),
         ("RESPOSTA_FINAL: F", None),
         ("RESPOSTA_FINAL: A\nAfinal, B.", None),
+        ("I rule out B and C.\nFINAL_ANSWER: A", "A"),
+        ("**FINAL_ANSWER: D**", "D"),
+        ("FINAL_ANSWER: A\nFINAL_ANSWER: B", None),
+        ("RESPOSTA_FINAL: A\nFINAL_ANSWER: B", None),
+        ("FINAL_ANSWER: F", None),
+        ("FINAL_ANSWER: A\nActually, B.", None),
         ("", None),
     ],
 )

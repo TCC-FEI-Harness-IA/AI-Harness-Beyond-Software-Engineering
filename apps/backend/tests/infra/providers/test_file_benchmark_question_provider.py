@@ -36,6 +36,7 @@ def test_dataset_real_tem_270_questoes_validas_em_ordem() -> None:
     assert all(len(item.options) in (4, 5) for item in questoes)
     assert sum(len(item.options) == 4 for item in questoes) == 16
     assert "RESPOSTA_FINAL: LETRA" in provider.answer_instruction()
+    assert "Resolva a questão de múltipla escolha acima." in provider.answer_instruction()
 
 
 def test_carrega_as_pastas_ordenadas_e_ignora_arquivos(tmp_path: Path) -> None:

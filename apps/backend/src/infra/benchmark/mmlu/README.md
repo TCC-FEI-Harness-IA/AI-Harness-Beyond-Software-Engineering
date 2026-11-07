@@ -17,7 +17,8 @@ durante a execução da aplicação, inclusive em Docker.
   É o protocolo inicialmente selecionado na interface MMLU.
 - Os dois fluxos recebem o mesmo prompt externo. Apenas os exemplos `dev` levam suas respostas no prompt;
   o gabarito do item `test` só é usado pelo avaliador depois da execução.
-- O modelo pode explicar sua resposta e deve terminar com `RESPOSTA_FINAL: A` (ou B, C, D).
+- O modelo pode explicar sua resposta e deve terminar com `FINAL_ANSWER: A` (ou B, C, D). A instrução, em
+  inglês, fica em [`../prompts/mmlu.md`](../prompts/mmlu.md).
   Também são aceitas uma letra isolada ou a alternativa completa isolada, como no benchmark existente.
   Respostas ambíguas, alternativas inexistentes e falhas técnicas contam como erro, com diagnóstico separado.
 - A acurácia global é `acertos / questões executadas`. Uma bateria interrompida contém resultados parciais.

@@ -1,64 +1,67 @@
-# C.3 — Construção da resposta final
+# C.3 — Construction of the final answer
 
-Organize e apresente os resultados já produzidos como a resposta final ao usuário.
+Organize and present the results already produced as the final answer to the user.
 
-## Resultados armazenados
+## Stored results
 
 {{stored_results}}
 
-## Critérios de aceite gerais
+## General acceptance criteria
 
 {{general_acceptance_criteria}}
 
-## Aprendizados Pontuais
+## Key Learnings
 
-Anotações compactas acumuladas ao longo do fluxo: os pontos de atenção do enunciado e os fatos
-registrados pelas tarefas já concluídas, na ordem em que surgiram. Use-as apenas para
-conferir os dados do enunciado ao apresentar a resposta — por exemplo, a letra da alternativa que
-corresponde ao valor obtido nos resultados.
-Os aprendizados **não substituem os resultados armazenados**: o conteúdo da resposta continua vindo
-exclusivamente deles.
+Compact notes accumulated throughout the flow: the points of attention from the question and the
+facts recorded by the tasks already completed, in the order in which they appeared. Use them only to
+check the question data when presenting the answer — for example, the letter of the option that
+corresponds to the value obtained in the results.
+The learnings **do not replace the stored results**: the content of the answer still comes
+exclusively from them.
 
 {{learnings}}
 
-## Instruções
+## Instructions
 
-Escreva a resposta no **idioma** e na **estrutura** definidos pelos critérios gerais, respeitando
-os termos e restrições que eles impõem.
+Write the answer in the **language** and in the **structure** defined by the general criteria,
+respecting the terms and constraints they impose. If the stored results are written in another
+language, translate the content faithfully into the required language: translating is presentation,
+not new reasoning.
 
-Esta etapa é de **apresentação, não de raciocínio**. É terminantemente proibido:
+This stage is about **presentation, not reasoning**. It is strictly forbidden to:
 
-- introduzir fatos novos que não estejam nos resultados armazenados;
-- especular, supor ou inferir o que os resultados não sustentam;
-- realizar novo raciocínio analítico sobre o problema.
+- introduce new facts that are not in the stored results;
+- speculate, assume or infer what the results do not support;
+- perform new analytical reasoning about the problem.
 
-Use exclusivamente o material dos resultados armazenados. Em questões de múltipla escolha, confira
-com atenção a tabela de alternativas em **Aprendizados Pontuais** para garantir que a letra escolhida
-corresponda à alternativa selecionada nos resultados armazenados — inclusive quando eles a
-escolheram como a de valor mais próximo do calculado, o que é uma seleção válida. A resposta
-final vai no campo `final_answer`, em markdown.
+Use exclusively the material from the stored results. In multiple-choice questions, carefully check
+the table of options in **Key Learnings** to ensure that the chosen letter corresponds to the option
+selected in the stored results — including when they chose it as the one whose value is closest to
+the calculated one, which is a valid selection. The final answer goes in the `final_answer` field,
+in markdown.
 
-Aplique idioma, formato e restrições finais sem novo raciocínio analítico. Os resultados internos
-podem conter explicações mesmo quando o pedido final só admite a letra. Omita ou apresente a
-justificativa conforme os critérios gerais: opcional não significa obrigatória, e uma justificativa
-explicitamente exigida deve vir da fundamentação já aprovada. Não invente limites de linhas ou
-palavras a partir de uma orientação genérica de objetividade.
+Apply the final language, format and constraints without new analytical reasoning. The internal
+results may contain explanations even when the final request only admits the letter. Omit or
+present the justification according to the general criteria: optional does not mean mandatory, and
+an explicitly required justification must come from the already approved grounding. Do not invent
+line or word limits from a generic guideline of objectivity.
 
-## Exemplos de apresentação válida e inválida
+## Examples of valid and invalid presentation
 
-- Resultados já identificam C e explicam o cálculo; pedido "apenas a letra". Válido: `C`.
-  Inválido: copiar a explicação interna para a resposta apesar dessa restrição.
-- Mesmos resultados; pedido "termine com RESPOSTA_FINAL: LETRA". Válido: aplicar a linha
-  `RESPOSTA_FINAL: C`, ainda que ela não apareça literalmente nos resultados internos.
-- Pedido "justifique": apresentar a fundamentação aprovada. Pedido "pode justificar": ela é
-  opcional, respeitadas as demais restrições. Inválido: inventar uma prova ou um cálculo para
-  preencher justificativa ausente.
-- Inválido: realizar a interseção de condições só verificadas isoladamente ou selecionar uma
-  alternativa ainda não sustentada. Isso seria novo conteúdo analítico, não formatação.
+- The results already identify C and explain the calculation; request "only the letter". Valid:
+  `C`. Invalid: copying the internal explanation into the answer despite that restriction.
+- Same results; request "end with FINAL_ANSWER: LETTER". Valid: apply the line `FINAL_ANSWER: C`,
+  even though it does not appear literally in the internal results. The same holds for any marker
+  line the request defines, which must be reproduced exactly as requested.
+- Request "justify": present the approved grounding. Request "you may justify": it is optional,
+  respecting the other constraints. Invalid: inventing a proof or a calculation to fill a missing
+  justification.
+- Invalid: performing the intersection of conditions only checked in isolation or selecting an
+  option not yet supported. That would be new analytical content, not formatting.
 
-## Formato de saída
+## Output format
 
-Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de
-código, no formato:
+Respond **exclusively** with a JSON object, with no text before or after it and no code fence, in
+the format:
 
-{"final_answer": "markdown da resposta ao usuario"}
+{"final_answer": "markdown of the answer to the user"}

@@ -169,7 +169,7 @@ def test_q163_campo_com_tipo_errado_nao_e_convertido_por_suposicao() -> None:
     assert erro.diagnostic.contract_status is OutputContractStatusEnum.INVALID
     assert erro.diagnostic.problem == OutputProblem(
         code=OutputProblemCodeEnum.SCHEMA_TYPE,
-        reason="O campo 'met' deve ser booleano.",
+        reason="The 'met' field must be a boolean.",
         field="criteria_evaluation[].met",
         affected_ids=("T1-AC1",),
     )
@@ -184,7 +184,7 @@ def test_q037_decisao_incompativel_com_as_avaliacoes_nao_e_forcada() -> None:
     assert erro.diagnostic.problem.code is OutputProblemCodeEnum.DECISION_CONSISTENCY
     assert erro.diagnostic.problem.field == "decision"
     assert erro.diagnostic.problem.affected_ids == ("T1-AC2",)
-    assert "incoerente" in erro.diagnostic.problem.reason
+    assert "inconsistent" in erro.diagnostic.problem.reason
 
 
 def test_sintaxe_invalida_e_truncada_tem_um_unico_problema_e_o_corte_a_parte() -> None:

@@ -1,42 +1,43 @@
-# A.3 — Aprendizados pontuais do enunciado
+# A.3 — Key learnings from the question
 
-Registre as anotações internas do enunciado abaixo: os pontos que **não podem se perder** quando
-cada tarefa for resolvida isoladamente, sem acesso a este enunciado.
+Record the internal notes about the question below: the points that **must not be lost** when each
+task is solved in isolation, without access to this question.
 
-## Enunciado
+## Question
 
 {{user_question}}
 
-## Instruções
+## Instructions
 
-Anote **todo dado do enunciado que deveria chamar a atenção** de quem for trabalhar numa tarefa
-sem ter lido a pergunta original, em especial:
+Note down **every piece of data in the question that should catch the attention** of whoever works
+on a task without having read the original question, in particular:
 
-- **Valores fornecidos**, sempre com suas **unidades de medida** (por exemplo, "Velocidade: 20 m/s").
-- **Alternativas** oferecidas, copiadas **literalmente**, com a letra ou o número que as identifica
-  e sem omitir nenhuma (por exemplo, "Alternativas: A) 2; B) 4; C) 6; D) Nenhuma das anteriores").
-- **Fórmulas**, equações e relações informadas.
-- **Condições, restrições e definições** impostas pelo enunciado, inclusive as que valem
-  simultaneamente.
-- Nomes, datas, códigos e quaisquer outros dados que mudariam o resultado se fossem trocados.
+- **Given values**, always with their **units of measurement** (for example, "Speed: 20 m/s").
+- **Options** offered, copied **literally**, with the letter or number that identifies them and
+  without omitting any (for example, "Options: A) 2; B) 4; C) 6; D) None of the above").
+- **Formulas**, equations and relations provided.
+- **Conditions, constraints and definitions** imposed by the question, including those that hold
+  simultaneously.
+- Names, dates, codes and any other data that would change the result if they were swapped.
 
-Cada aprendizado é uma afirmação isolada, sucinta e seca, útil sem o enunciado por perto. Copie os
-dados **como aparecem** no enunciado: não reescreva, não converta unidades e não arredonde valores.
+Each learning is an isolated, succinct and dry statement, useful without the question at hand. Copy
+the data **as they appear** in the question: do not rewrite, do not convert units and do not round
+values.
 
-**Não resolva a pergunta nesta etapa.** Nenhuma conclusão, cálculo ou resposta pode aparecer nos
-aprendizados: registre somente o que o enunciado já afirma.
+**Do not solve the question at this stage.** No conclusion, calculation or answer may appear in the
+learnings: record only what the question already states.
 
-É proibido registrar:
+It is forbidden to record:
 
-- a resolução, o resultado ou qualquer palpite sobre a resposta;
-- a repetição do enunciado inteiro;
-- relato de processo ou justificativas.
+- the solution, the result or any guess about the answer;
+- a repetition of the whole question;
+- a report of the process or justifications.
 
-Quando o enunciado não trouxer nenhum dado que valha a pena registrar, devolva uma lista vazia.
+When the question brings no data worth recording, return an empty list.
 
-## Formato de saída
+## Output format
 
-Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de
-código, no formato:
+Respond **exclusively** with a JSON object, with no text before or after it and no code fence, in
+the format:
 
-{"learnings": ["dado do enunciado 1", "dado do enunciado 2"]}
+{"learnings": ["question data 1", "question data 2"]}

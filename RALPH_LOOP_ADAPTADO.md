@@ -2,7 +2,7 @@
 
 ## Resumo
 
-Este documento contextualiza uma adaptação do **Ralph Wiggum Loop**, originalmente empregado em engenharia de software, para responder perguntas gerais em linguagem natural, incluindo questões de múltipla escolha. A arquitetura utiliza planejamento, decomposição em tarefas atômicas, execução e validação iterativas, reinicialização de contexto entre tarefas (*Fresh Context*) e síntese final sujeita a critérios de aceite globais. A seção **Metodologia original** abaixo é uma transcrição literal do trecho fornecido no paper, sem correções ou reformulações. Depois da transcrição do paper, o fluxo implementado recebeu sete extensões e um tratamento operacional de diagnóstico: a etapa **A.3 — Aprendizados pontuais do enunciado**, a área de **Aprendizados Pontuais em todo prompt das fases B e C**, a **temperatura 1 nas retentativas**, as **regras de redação das tarefas em A.2 e C.2** (sem entradas e saída declaradas, critérios complementares entre si e resultado sempre acompanhado da explicação) e a **reinicialização de contexto entre fases com recuperação de saídas inválidas** (toda mudança de fase abre um contexto novo; a nova tentativa de B.1 e B.4 recebem o feedback e o histórico da tarefa como entradas explícitas; cada defeito de saída recebe uma correção própria). Também recebeu o **registro dos resultados parciais em B.4**, com fato compacto e breve explicação, e o **reforço da separação entre escopo, suficiência e apresentação**. O tratamento operacional registra diagnósticos de saída e recuperação por invocação, sem acrescentar uma fase analítica. Elas estão descritas na seção **Extensões ao método do paper** e detalhadas, com exemplos, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+Este documento contextualiza uma adaptação do **Ralph Wiggum Loop**, originalmente empregado em engenharia de software, para responder perguntas gerais em linguagem natural, incluindo questões de múltipla escolha. A arquitetura utiliza planejamento, decomposição em tarefas atômicas, execução e validação iterativas, reinicialização de contexto entre tarefas (*Fresh Context*) e síntese final sujeita a critérios de aceite globais. A seção **Metodologia original** abaixo é uma transcrição literal do trecho fornecido no paper, sem correções ou reformulações. Depois da transcrição do paper, o fluxo implementado recebeu sete extensões e um tratamento operacional de diagnóstico: a etapa **A.3 — Aprendizados pontuais do enunciado**, a área de **Aprendizados Pontuais em todo prompt das fases B e C**, a **temperatura 1 nas retentativas**, as **regras de redação das tarefas em A.2 e C.2** (sem entradas e saída declaradas, critérios complementares entre si e resultado sempre acompanhado da explicação) e a **reinicialização de contexto entre fases com recuperação de saídas inválidas** (toda mudança de fase abre um contexto novo; a nova tentativa de B.1 e B.4 recebem o feedback e o histórico da tarefa como entradas explícitas; cada defeito de saída recebe uma correção própria). Também recebeu o **registro dos resultados parciais em B.4**, com fato compacto e breve explicação, e o **reforço da separação entre escopo, suficiência e apresentação**. O tratamento operacional registra diagnósticos de saída e recuperação por invocação, sem acrescentar uma fase analítica. Os prompts internos do fluxo também passaram a ser escritos em inglês, mantendo a resposta final no idioma da pergunta. Elas estão descritas na seção **Extensões ao método do paper** e detalhadas, com exemplos, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
 
 ## O que é o Ralph Wiggum Loop?
 
@@ -216,6 +216,26 @@ recebe para extração numa janela própria. Aprendizados permanecem em memória
 - **Sem dupla contagem:** uma saída com dois diagnósticos (por exemplo, truncada **e** com sintaxe inválida) é uma recusa só; os totais de chamadas, tokens e tempo não mudam com o diagnóstico.
 - **Validação estrita mantida:** avaliações ausentes não são preenchidas, tipos não são convertidos (`"true"` não vira `true`) e a decisão nunca é forçada. Uma reprovação **válida** de B.2 ou C.1 é resultado semântico normal: conteúdo aceito, sem problema nem recuperação.
 - **Sessões antigas:** documentos sem os campos novos são lidos com diagnóstico, recuperação e vínculo ausentes (`content_accepted: null`), nunca como sucesso presumido. Os campos aparecem na consulta `GET /v1/sessions/{id}` e na exportação ZIP dos erros do benchmark.
+
+### Idioma dos prompts internos (tratamento operacional)
+
+> **Natureza da regra:** isto **não** muda nenhuma etapa, critério ou decisão do fluxo. Só o idioma em que as instruções chegam ao modelo.
+
+Todo o fluxo de pensamento roda em **inglês**: os nove templates (`apps/backend/src/infra/templates/`), as mensagens de correção de saída inválida, os motivos de recusa do parser e o material que o orquestrador monta para os templates (tentativas anteriores, histórico da tarefa, resultados armazenados e o aviso de memória vazia). O **idioma da resposta final continua sendo o da pergunta**: A.1 registra como critério o idioma em que a pergunta foi escrita (salvo pedido explícito de outro), e as instruções em inglês não definem esse idioma. Os resultados internos podem estar em outro idioma; C.1 não trata isso como lacuna e C.3 traduz o conteúdo aprovado ao apresentar a resposta, sem novo raciocínio.
+
+Os nomes usados neste documento correspondem, nos templates, a:
+
+| Neste documento | Nos templates |
+|---|---|
+| Aprendizados Pontuais | Key Learnings |
+| Prompt Original | Original Prompt |
+| Resultados armazenados / Resultados já armazenados | Stored results / Results already stored |
+| `<tentativas_anteriores>` | `<previous_attempts>` |
+| `<resultado_aprovado>` | `<approved_result>` |
+| `<historico_da_tarefa>` | `<task_history>` |
+| "Nenhum aprendizado pontual registrado até o momento." | "No key learnings recorded so far." |
+
+No benchmark, cada dataset tem a própria instrução de resposta, no idioma das suas questões (`apps/backend/src/infra/benchmark/prompts/`): vestibulares em português, terminando com `RESPOSTA_FINAL: LETRA`; MMLU e GPQA em inglês, terminando com `FINAL_ANSWER: LETTER`. O avaliador aceita os dois marcadores.
 
 ## Metodologia original — transcrição literal
 

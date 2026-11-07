@@ -3,8 +3,9 @@ import re
 from src.domain.entities.benchmark.benchmark_answer_evaluation import BenchmarkAnswerEvaluation
 from src.domain.entities.benchmark.benchmark_question import BenchmarkQuestion
 
-_FINAL_MARKER = "RESPOSTA_FINAL:"
-_FINAL_PATTERN = re.compile(r"^RESPOSTA_FINAL:\s*([A-E])\s*$", re.MULTILINE)
+# Marcador da última linha no idioma de cada benchmark: vestibulares em português, MMLU e GPQA em inglês.
+_FINAL_MARKERS = ("RESPOSTA_FINAL", "FINAL_ANSWER")
+_FINAL_PATTERN = re.compile(rf"^({'|'.join(_FINAL_MARKERS)}):\s*([A-E])\s*$", re.MULTILINE)
 _BOLD_MARKUP = "**"
 _INVALID_ANSWER = "Resposta sem alternativa final válida e inequívoca."
 
@@ -12,8 +13,8 @@ _INVALID_ANSWER = "Resposta sem alternativa final válida e inequívoca."
 class BenchmarkAnswerEvaluator:
     """Avaliação determinística das respostas do benchmark.
 
-    Lê a última linha `RESPOSTA_FINAL: LETRA`, uma letra isolada ou uma alternativa completa
-    isolada. Respostas ambíguas, sem alternativa e falhas técnicas contam como erro, com
+    Lê a última linha `RESPOSTA_FINAL: LETRA` (ou `FINAL_ANSWER: LETTER`), uma letra isolada ou uma
+    alternativa completa isolada. Respostas ambíguas, sem alternativa e falhas técnicas contam como erro, com
     diagnóstico separado.
     """
 
@@ -30,11 +31,11 @@ class BenchmarkAnswerEvaluator:
             str | None: Letra escolhida, ou `None` quando não há escolha inequívoca.
         """
         clean = response.replace(_BOLD_MARKUP, "").strip()
-        if _FINAL_MARKER in clean:
+        if any(f"{marker}:" in clean for marker in _FINAL_MARKERS):
             matches = _FINAL_PATTERN.findall(clean)
             last_line = clean.splitlines()[-1].strip()
-            if len(matches) == 1 and last_line == f"{_FINAL_MARKER} {matches[0]}":
-                return matches[0]
+            if len(matches) == 1 and last_line == f"{matches[0][0]}: {matches[0][1]}":
+                return matches[0][1]
             return None
         if clean in options:
             return clean

@@ -47,7 +47,9 @@ Exemplos: [`DefaultMessageUseCase`](src/application/usecases/default_message_use
   configuráveis devem ser expostos como propriedades tipadas de `ISettings`; a leitura e a
   conversão das variáveis de ambiente ficam em `infra/config/settings.py`.
 - **Mantenha prompts em arquivos Markdown.** Carregue-os pela porta `IPromptTemplateProvider`,
-  implementada por `FilePromptTemplateProvider`, em vez de embuti-los nos casos de uso.
+  implementada por `FilePromptTemplateProvider`, em vez de embuti-los nos casos de uso. Os prompts
+  do Ralph Loop e todo texto que chega ao modelo dentro do fluxo (correções, motivos de recusa,
+  histórico das tentativas) são escritos em inglês; a resposta final segue o idioma da pergunta.
 - **Isole integrações em adapters e repositories.** `SessionDocumentMapper` converte entidades
   em documentos; os repositórios JSON e MongoDB cuidam do armazenamento. O caso de uso depende
   de `ISessionRepository`, sem conhecer o formato persistido.
@@ -660,10 +662,10 @@ persistida antes do evento `result`.
 | Situação | Comportamento |
 |---|---|
 | A.2 conclui o plano inicial | A.3 anota os pontos de atenção do enunciado (valores com unidades, alternativas, fórmulas, condições) numa janela própria; as anotações entram na memória de aprendizados antes de qualquer tarefa. Lista vazia é válida. |
-| Qualquer prompt de B.1, B.2, B.4, C.1, C.2 ou C.3 é montado | O template tem a área **Aprendizados Pontuais**, preenchida com todos os aprendizados acumulados até aquele momento (anotações de A.3 seguidas dos aprendizados de B.4), ou com o aviso de que ainda não há nenhum. Os aprendizados nunca entram nos resultados armazenados. |
+| Qualquer prompt de B.1, B.2, B.4, C.1, C.2 ou C.3 é montado | O template tem a área **Aprendizados Pontuais** (`## Key Learnings`), preenchida com todos os aprendizados acumulados até aquele momento (anotações de A.3 seguidas dos aprendizados de B.4), ou com o aviso de que ainda não há nenhum. Os aprendizados nunca entram nos resultados armazenados. |
 | Qualquer fase é executada | A execução abre uma janela nova, da própria fase: tarefa diferente e mudança de fase (inclusive B.1 → B.2, B.2 → B.1, B.1 → B.4 e C.1 → C.2/C.3) nunca herdam a conversa anterior. Só as correções de saída da própria execução reaproveitam a janela. Só os aprendizados atravessam fases como memória; as demais entradas chegam explicitamente pelo template. |
-| B.2 aprova | B.3 armazena só essa resposta; B.4 roda numa janela nova e recebe o histórico completo da tarefa (tarefa, tentativas, saídas descartadas e vereditos) como material delimitado `<historico_da_tarefa>`. |
-| B.2 reprova e há tentativas | B.1 repete numa janela nova, com temperatura `1`; as tentativas reprovadas e os vereditos chegam pela variável `previous_attempts` do Template B.1, delimitados por `<tentativas_anteriores>`. A verificação dessa tentativa e as fases seguintes voltam à temperatura do usuário. |
+| B.2 aprova | B.3 armazena só essa resposta; B.4 roda numa janela nova e recebe o histórico completo da tarefa (tarefa, tentativas, saídas descartadas e vereditos) como material delimitado `<task_history>`. |
+| B.2 reprova e há tentativas | B.1 repete numa janela nova, com temperatura `1`; as tentativas reprovadas e os vereditos chegam pela variável `previous_attempts` do Template B.1, delimitados por `<previous_attempts>`. A verificação dessa tentativa e as fases seguintes voltam à temperatura do usuário. |
 | B.2 reprova e as tentativas acabam | Nada é armazenado, B.4 não roda, a execução é interrompida. |
 | B.2/C.1 devolve um relatório vazio, incompleto, duplicado, com ID desconhecido ou contraditório | O verificador é chamado de novo, na mesma janela e com temperatura `1`, para conferir e corrigir o próprio relatório (chamada contada); não consome tentativa de B.1. O veredito nunca é ajustado automaticamente. Sem correção, a fase falha. |
 | Qualquer fase devolve um JSON ilegível ou interrompido pelo limite de comprimento | Erro de sintaxe: o modelo é chamado de novo para devolver o mesmo conteúdo em JSON válido, sem nova resolução. Interrupção por comprimento: pede-se uma nova saída completa e concisa, nunca a continuação da anterior. Os únicos reparos locais são a extração de cercas e o fechamento estrutural inequívoco. |
@@ -755,7 +757,7 @@ Ver `.env.example` para o arquivo completo.
 | `RALPH_BENCHMARK_SESSIONS_STORAGE_PATH` | `./data/benchmark-sessions` | Diretório dos JSON das baterias de benchmark, quando o backend é `json_file`. |
 | `MONGODB_BENCHMARK_SESSIONS_COLLECTION` | `benchmark_sessions` | Coleção das baterias de benchmark no MongoDB. |
 | `RALPH_BENCHMARK_QUESTIONS_PATH` | `src/infra/benchmark/questions` | Dataset de questões: uma pasta por questão, com `enunciado.md` e `alternativa_correta.md`. |
-| `RALPH_BENCHMARK_PROMPT_PATH` | `src/infra/benchmark/prompt.md` | Instrução de resposta anexada ao enunciado de cada questão. |
+| `RALPH_BENCHMARK_PROMPT_PATH` | `src/infra/benchmark/prompts/vestibular.md` | Instrução de resposta, em português, anexada ao enunciado de cada questão dos vestibulares. MMLU e GPQA usam as próprias instruções em inglês, em `src/infra/benchmark/prompts/`. |
 | `RALPH_BENCHMARK_MAX_PARALLEL` | `10` | Limite superior de `max_parallel` numa bateria. |
 | `RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS` | `1` | Intervalo máximo entre dois frames `progress` sem mudança de estado, para manter o tempo decorrido atualizado. |
 
@@ -796,8 +798,10 @@ Sociologia (categoria conjunta), 30 de Biologia e 50 de cada uma de Matemática,
 As questões ficam em [`src/infra/benchmark/questions`](src/infra/benchmark/questions/README.md),
 no mesmo formato de antes: uma pasta por questão, com `enunciado.md` (enunciado e quatro ou cinco alternativas, de `A)` a
 `D)` ou `E)`) e `alternativa_correta.md` (letra e texto do gabarito). O dataset inteiro é validado antes de qualquer
-chamada ao modelo. A instrução de resposta, comum aos dois fluxos, fica em
-[`src/infra/benchmark/prompt.md`](src/infra/benchmark/prompt.md). O gabarito nunca entra no prompt.
+chamada ao modelo. Cada benchmark tem a própria instrução de resposta, comum aos dois fluxos e no idioma das
+suas questões, em [`src/infra/benchmark/prompts/`](src/infra/benchmark/prompts): `vestibular.md` em português
+(última linha `RESPOSTA_FINAL: LETRA`), `mmlu.md` e `gpqa.md` em inglês (última linha `FINAL_ANSWER: LETTER`).
+O gabarito nunca entra no prompt.
 
 **Bateria (`BenchmarkSession`).** Cada execução cria uma `BenchmarkSession`, persistida no mesmo backend
 das sessões (JSON em `RALPH_BENCHMARK_SESSIONS_STORAGE_PATH` ou a coleção
@@ -813,8 +817,8 @@ Ralph Loop, pelos mesmos composition roots dos endpoints de mensagem. Falhas de 
 do Ralph, resposta sem alternativa) viram erro avaliado e não impedem o outro fluxo nem as próximas
 questões. A bateria é gravada no início, a cada desfecho de fluxo e no encerramento.
 
-**Avaliação.** Determinística: a última linha `RESPOSTA_FINAL: A`, uma letra isolada ou uma alternativa
-completa isolada. Respostas ambíguas, sem alternativa e falhas técnicas contam como erro, com diagnóstico
+**Avaliação.** Determinística: a última linha `RESPOSTA_FINAL: A` (ou `FINAL_ANSWER: A`, nos benchmarks em
+inglês), uma letra isolada ou uma alternativa completa isolada. Respostas ambíguas, sem alternativa e falhas técnicas contam como erro, com diagnóstico
 em `error`. A acurácia de um fluxo é `correct / executed`.
 
 ### `WS /v1/benchmark/run`

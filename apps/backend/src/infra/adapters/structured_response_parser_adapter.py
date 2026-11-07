@@ -37,11 +37,11 @@ _CLOSING_BY_OPENING = {"{": "}", "[": "]"}
 _CLOSINGS = frozenset(_CLOSING_BY_OPENING.values())
 # Motivos de término em que a saída foi cortada: o que falta pode ser conteúdo, não só fechamentos.
 _TRUNCATED_FINISH_REASONS = frozenset({"length"})
-_NO_JSON_REASON = "Nenhum objeto JSON válido foi encontrado na saída."
+_NO_JSON_REASON = "No valid JSON object was found in the output."
 _TRUNCATED_REASON = (
-    "A saída foi interrompida pelo limite de comprimento antes de formar um objeto JSON completo."
+    "The output was cut off by the length limit before forming a complete JSON object."
 )
-_UNSUPPORTED_PHASE_REASON = "A fase não produz saída estruturada."
+_UNSUPPORTED_PHASE_REASON = "The phase does not produce structured output."
 
 
 @dataclass(frozen=True)
@@ -442,7 +442,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             self.__validate_criterion(criterion=criterion, container=field)
         self.__require_unique_ids(
             ids=[criterion["id"] for criterion in criteria],
-            what="critérios gerais",
+            what="general criteria",
             field=self.__item_field(field, "id"),
         )
 
@@ -461,7 +461,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             if not isinstance(task, dict):
                 raise _ContractViolation(
                     code=OutputProblemCodeEnum.SCHEMA_TYPE,
-                    reason="Cada item de 'tasks' deve ser um objeto.",
+                    reason="Each item of 'tasks' must be an object.",
                     field=f"tasks{_ITEM_SUFFIX}",
                 )
             for key in _TASK_TEXT_FIELDS:
@@ -477,12 +477,12 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
                 self.__validate_criterion(criterion=criterion, container=criteria_container)
             self.__require_unique_ids(
                 ids=[criterion["id"] for criterion in criteria],
-                what=f"critérios da tarefa '{task['id']}'",
+                what=f"criteria of task '{task['id']}'",
                 field=self.__item_field(criteria_container, "id"),
             )
 
         self.__require_unique_ids(
-            ids=[task["id"] for task in tasks], what="tarefas do lote", field=self.__item_field("tasks", "id")
+            ids=[task["id"] for task in tasks], what="batch tasks", field=self.__item_field("tasks", "id")
         )
         self.__validate_batch_against_session(tasks=tasks, validation=validation)
 
@@ -502,7 +502,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         if reused:
             raise _ContractViolation(
                 code=OutputProblemCodeEnum.TASK_IDS,
-                reason=f"Os identificadores de tarefa {_ID_LIST_SEPARATOR.join(reused)} já foram usados na sessão.",
+                reason=f"The task identifiers {_ID_LIST_SEPARATOR.join(reused)} were already used in the session.",
                 field=self.__item_field("tasks", "id"),
                 affected_ids=tuple(reused),
             )
@@ -511,8 +511,8 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             raise _ContractViolation(
                 code=OutputProblemCodeEnum.TASK_LIMIT,
                 reason=(
-                    f"O lote tem {len(tasks)} tarefas, mas a sessão comporta no máximo {validation.max_tasks}. "
-                    "Reduza o lote preservando tarefas autônomas e de objetivo único."
+                    f"The batch has {len(tasks)} tasks, but the session holds at most {validation.max_tasks}. "
+                    "Reduce the batch while keeping the tasks autonomous and single-goal."
                 ),
                 field="tasks",
                 limit=BudgetLimitEnum.TASKS_PER_SESSION,
@@ -569,7 +569,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             if not isinstance(criterion_id, str):
                 raise _ContractViolation(
                     code=OutputProblemCodeEnum.SCHEMA_TYPE,
-                    reason="Cada item de 'unmet_criteria_ids' deve ser uma string.",
+                    reason="Each item of 'unmet_criteria_ids' must be a string.",
                     field=f"unmet_criteria_ids{_ITEM_SUFFIX}",
                 )
 
@@ -579,14 +579,14 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         )
         failed_ids = [evaluation["criterion_id"] for evaluation in evaluations if not evaluation["met"]]
         self.__require_coherent_decision(decision=decision, failed_ids=failed_ids, unmet=unmet)
-        self.__require_unique_ids(ids=unmet, what="pendências", field="unmet_criteria_ids")
+        self.__require_unique_ids(ids=unmet, what="pending criteria", field="unmet_criteria_ids")
         if set(unmet) != set(failed_ids):
             raise _ContractViolation(
                 code=OutputProblemCodeEnum.DECISION_CONSISTENCY,
                 reason=(
-                    "As pendências em 'unmet_criteria_ids' devem ser exatamente os critérios avaliados com "
-                    f"met=false. Avaliados com met=false: [{_ID_LIST_SEPARATOR.join(failed_ids)}]; "
-                    f"pendências informadas: [{_ID_LIST_SEPARATOR.join(unmet)}]."
+                    "The pending criteria in 'unmet_criteria_ids' must be exactly the criteria evaluated with "
+                    f"met=false. Evaluated with met=false: [{_ID_LIST_SEPARATOR.join(failed_ids)}]; "
+                    f"pending criteria reported: [{_ID_LIST_SEPARATOR.join(unmet)}]."
                 ),
                 field="unmet_criteria_ids",
                 affected_ids=tuple(sorted(set(unmet) ^ set(failed_ids))),
@@ -613,7 +613,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             code = OutputProblemCodeEnum.INVALID_VALUE
         raise _ContractViolation(
             code=code,
-            reason=f"O campo 'decision' deve ser um veredito conhecido. Valor: '{decision}'.",
+            reason=f"The 'decision' field must be a known verdict. Value: '{decision}'.",
             field="decision",
         )
 
@@ -626,16 +626,16 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         """
         field = self.__item_field("criteria_evaluation", "criterion_id")
         self.__require_unique_ids(
-            ids=evaluated_ids, what="avaliações (cada critério deve ser avaliado uma vez)", field=field,
-            repeated_message="foi avaliado mais de uma vez", code=OutputProblemCodeEnum.CRITERIA_IDS,
+            ids=evaluated_ids, what="evaluations (each criterion must be evaluated once)", field=field,
+            repeated_message="was evaluated more than once", code=OutputProblemCodeEnum.CRITERIA_IDS,
         )
         unknown = [criterion_id for criterion_id in evaluated_ids if criterion_id not in expected_ids]
         if unknown:
             raise _ContractViolation(
                 code=OutputProblemCodeEnum.CRITERIA_IDS,
                 reason=(
-                    f"Há avaliações de critérios desconhecidos: {_ID_LIST_SEPARATOR.join(unknown)}. "
-                    f"Avalie somente: {_ID_LIST_SEPARATOR.join(expected_ids)}."
+                    f"There are evaluations of unknown criteria: {_ID_LIST_SEPARATOR.join(unknown)}. "
+                    f"Evaluate only: {_ID_LIST_SEPARATOR.join(expected_ids)}."
                 ),
                 field=field,
                 affected_ids=tuple(unknown),
@@ -644,7 +644,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         if missing:
             raise _ContractViolation(
                 code=OutputProblemCodeEnum.CRITERIA_IDS,
-                reason=f"Faltam avaliações para os critérios: {_ID_LIST_SEPARATOR.join(missing)}.",
+                reason=f"Evaluations are missing for the criteria: {_ID_LIST_SEPARATOR.join(missing)}.",
                 field=field,
                 affected_ids=tuple(missing),
             )
@@ -663,8 +663,8 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             raise _ContractViolation(
                 code=OutputProblemCodeEnum.DECISION_CONSISTENCY,
                 reason=(
-                    f"A decisão '{decision}' é incoerente com as avaliações: aprovar exige todos os critérios "
-                    "com met=true e 'unmet_criteria_ids' vazia."
+                    f"The decision '{decision}' is inconsistent with the evaluations: approving requires every "
+                    "criterion with met=true and an empty 'unmet_criteria_ids'."
                 ),
                 field="decision",
                 affected_ids=tuple(sorted({*failed_ids, *unmet})),
@@ -673,8 +673,8 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             raise _ContractViolation(
                 code=OutputProblemCodeEnum.DECISION_CONSISTENCY,
                 reason=(
-                    f"A decisão '{decision}' é incoerente com 'unmet_criteria_ids': "
-                    "reprovar exige ao menos um critério pendente."
+                    f"The decision '{decision}' is inconsistent with 'unmet_criteria_ids': "
+                    "rejecting requires at least one pending criterion."
                 ),
                 field="decision",
             )
@@ -684,7 +684,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         ids: list[str],
         what: str,
         field: str,
-        repeated_message: str = "se repete",
+        repeated_message: str = "is repeated",
         code: OutputProblemCodeEnum = OutputProblemCodeEnum.DUPLICATE_ID,
     ) -> None:
         """Exige que uma lista de identificadores não tenha repetições.
@@ -696,7 +696,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         if repeated:
             raise _ContractViolation(
                 code=code,
-                reason=f"Em {what}, o identificador {_ID_LIST_SEPARATOR.join(repeated)} {repeated_message}.",
+                reason=f"In {what}, the identifier {_ID_LIST_SEPARATOR.join(repeated)} {repeated_message}.",
                 field=field,
                 affected_ids=tuple(repeated),
             )
@@ -714,7 +714,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             if not isinstance(learning, str):
                 raise _ContractViolation(
                     code=OutputProblemCodeEnum.SCHEMA_TYPE,
-                    reason="Cada item de 'learnings' deve ser uma string.",
+                    reason="Each item of 'learnings' must be a string.",
                     field=f"learnings{_ITEM_SUFFIX}",
                 )
 
@@ -741,12 +741,12 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         if not isinstance(criterion, dict):
             raise _ContractViolation(
                 code=OutputProblemCodeEnum.SCHEMA_TYPE,
-                reason="Cada critério de aceite deve ser um objeto.",
+                reason="Each acceptance criterion must be an object.",
                 field=f"{container}{_ITEM_SUFFIX}",
             )
         for key in _CRITERION_TEXT_FIELDS:
             self.__require_text(
-                source=criterion, key=key, label=f"criterio.{key}", field=self.__item_field(container, key),
+                source=criterion, key=key, label=f"criterion.{key}", field=self.__item_field(container, key),
                 owner_id=criterion.get("id"),
             )
 
@@ -761,7 +761,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         if not isinstance(evaluation, dict):
             raise _ContractViolation(
                 code=OutputProblemCodeEnum.SCHEMA_TYPE,
-                reason="Cada item de 'criteria_evaluation' deve ser um objeto.",
+                reason="Each item of 'criteria_evaluation' must be an object.",
                 field=f"{container}{_ITEM_SUFFIX}",
             )
         self.__require_text(
@@ -776,7 +776,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         if not isinstance(evaluation.get("met"), bool):
             raise _ContractViolation(
                 code=self.__absence_or_type(source=evaluation, key="met"),
-                reason="O campo 'met' deve ser booleano.",
+                reason="The 'met' field must be a boolean.",
                 field=self.__item_field(container, "met"),
                 affected_ids=(criterion_id,),
             )
@@ -810,14 +810,14 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         if not isinstance(value, list):
             raise _ContractViolation(
                 code=self.__absence_or_type(source=source, key=key),
-                reason=f"O campo '{label}' deve ser uma lista.",
+                reason=f"The '{label}' field must be a list.",
                 field=field or key,
                 affected_ids=self.__owner(owner_id=owner_id),
             )
         if not allow_empty and not value:
             raise _ContractViolation(
                 code=OutputProblemCodeEnum.EMPTY_VALUE,
-                reason=f"O campo '{label}' não pode ser uma lista vazia.",
+                reason=f"The '{label}' field cannot be an empty list.",
                 field=field or key,
                 affected_ids=self.__owner(owner_id=owner_id),
             )
@@ -849,7 +849,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         )
         raise _ContractViolation(
             code=code,
-            reason=f"O campo '{label}' deve ser uma string não vazia.",
+            reason=f"The '{label}' field must be a non-empty string.",
             field=field,
             affected_ids=self.__owner(owner_id=owner_id),
         )

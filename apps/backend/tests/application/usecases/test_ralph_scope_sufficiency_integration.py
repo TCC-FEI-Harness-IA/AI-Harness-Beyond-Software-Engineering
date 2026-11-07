@@ -92,18 +92,18 @@ async def test_conteudo_explicado_sem_linha_final_segue_de_c1_a_c3(format_criter
     _isolated_inputs(scenario)
     c1 = _prompts(scenario, Phase.C1_GLOBAL_VERIFICATION)[0]
     c3 = _prompts(scenario, Phase.C3_FINAL_ANSWER)[0]
-    assert _area(c1, "Resultados armazenados") == _area(c3, "Resultados armazenados")
-    assert content in _area(c1, "Resultados armazenados")
-    assert "RESPOSTA_FINAL:" not in _area(c1, "Resultados armazenados")
+    assert _area(c1, "Stored results") == _area(c3, "Stored results")
+    assert content in _area(c1, "Stored results")
+    assert "RESPOSTA_FINAL:" not in _area(c1, "Stored results")
     for prompt in (c1, c3):
-        assert memory in _area(prompt, "Aprendizados Pontuais")
-        assert memory not in _area(prompt, "Resultados armazenados")
-        assert format_criterion in _area(prompt, "Critérios de aceite gerais")
-    assert "RESPOSTA_FINAL: C" in c1
-    assert "análise conjunta" in c1
-    assert "justificativa opcional" in _prompts(scenario, Phase.A1_GENERAL_CRITERIA)[0]
-    assert "limites arbitrários" in _prompts(scenario, Phase.A1_GENERAL_CRITERIA)[0]
-    assert "sem novo raciocínio analítico" in c3
+        assert memory in _area(prompt, "Key Learnings")
+        assert memory not in _area(prompt, "Stored results")
+        assert format_criterion in _area(prompt, "General acceptance criteria")
+    assert "FINAL_ANSWER: C" in c1
+    assert "joint analysis" in c1
+    assert "optional justification" in _prompts(scenario, Phase.A1_GENERAL_CRITERIA)[0]
+    assert "arbitrary line or word limits" in _prompts(scenario, Phase.A1_GENERAL_CRITERIA)[0]
+    assert "without new analytical reasoning" in c3
 
 
 async def test_analise_conjunta_ausente_exige_c2_e_resultado_explicado_antes_de_c3() -> None:
@@ -132,21 +132,21 @@ async def test_analise_conjunta_ausente_exige_c2_e_resultado_explicado_antes_de_
     ]
     _isolated_inputs(scenario)
     c2 = _prompts(scenario, Phase.C2_ADDITIONAL_PLANNING)[0]
-    assert gap in _area(c2, "Critérios gerais ainda não atendidos")
-    assert "Responder apenas com a letra." not in _area(c2, "Critérios gerais ainda não atendidos")
-    assert content in _area(c2, "Resultados já armazenados")
-    assert "lacunas de conteúdo" in c2 and "RESPOSTA_FINAL: C" in c2
+    assert gap in _area(c2, "General criteria not yet met")
+    assert "Responder apenas com a letra." not in _area(c2, "General criteria not yet met")
+    assert content in _area(c2, "Results already stored")
+    assert "content gaps" in c2 and "FINAL_ANSWER: C" in c2
     b1 = _prompts(scenario, Phase.B1_TASK_RESOLUTION)
     assert "Interseção correta e explicada." in b1[1]
     assert "Listas com explicação." not in b1[1]
     b1_ids = [i.context_id for i in scenario.session.invocations if i.phase is Phase.B1_TASK_RESOLUTION]
     assert len(set(b1_ids)) == 2
     first, second = _prompts(scenario, Phase.C1_GLOBAL_VERIFICATION)
-    assert joint not in _area(first, "Resultados armazenados")
-    assert joint in _area(second, "Resultados armazenados")
-    assert memory not in _area(second, "Resultados armazenados")
-    assert _area(second, "Resultados armazenados") == _area(
-        _prompts(scenario, Phase.C3_FINAL_ANSWER)[0], "Resultados armazenados",
+    assert joint not in _area(first, "Stored results")
+    assert joint in _area(second, "Stored results")
+    assert memory not in _area(second, "Stored results")
+    assert _area(second, "Stored results") == _area(
+        _prompts(scenario, Phase.C3_FINAL_ANSWER)[0], "Stored results",
     )
     assert scenario.session.final_answer == "D"
 
@@ -201,15 +201,15 @@ async def test_resultado_sem_alternativa_sustentada_encaminha_ac2_a_investigacao
     ]
     _isolated_inputs(scenario)
     c2 = _prompts(scenario, Phase.C2_ADDITIONAL_PLANNING)[0]
-    assert _area(c2, "Critérios gerais ainda não atendidos") == f"- `AC2`: {selection}"
-    assert _area(c2, "Prompt Original").endswith(f"\n\n{question}")
-    assert inconsistent in _area(c2, "Resultados já armazenados")
-    assert question in _area(c2, "Aprendizados Pontuais")
-    assert investigation in _area(_prompts(scenario, Phase.B1_TASK_RESOLUTION)[1], "Tarefa")
+    assert _area(c2, "General criteria not yet met") == f"- `AC2`: {selection}"
+    assert _area(c2, "Original Prompt").endswith(f"\n\n{question}")
+    assert inconsistent in _area(c2, "Results already stored")
+    assert question in _area(c2, "Key Learnings")
+    assert investigation in _area(_prompts(scenario, Phase.B1_TASK_RESOLUTION)[1], "Task")
     first, second = _prompts(scenario, Phase.C1_GLOBAL_VERIFICATION)
-    assert corrected not in _area(first, "Resultados armazenados")
-    assert corrected in _area(second, "Resultados armazenados")
-    assert corrected in _area(_prompts(scenario, Phase.C3_FINAL_ANSWER)[0], "Resultados armazenados")
+    assert corrected not in _area(first, "Stored results")
+    assert corrected in _area(second, "Stored results")
+    assert corrected in _area(_prompts(scenario, Phase.C3_FINAL_ANSWER)[0], "Stored results")
     assert scenario.session.final_answer == final == events[-1].content
 
 
@@ -244,12 +244,12 @@ async def test_b2_distingue_mencao_contextual_de_calculo_fora_do_escopo(
     b2 = _prompts(scenario, Phase.B2_TASK_VERIFICATION)
     assert len(b2) == (2 if outside_scope else 1)
     for prompt in b2:
-        assert scope_criterion in _area(prompt, "Critérios de aceite desta tarefa")
-        assert "Massa total correta e explicada." in _area(prompt, "Critérios de aceite desta tarefa")
-        assert "referência contextual" in prompt
-        assert "Não ignore, reescreva ou dispense" in prompt
-    assert "não mencionar colheres" in _prompts(scenario, Phase.A2_TASK_DECOMPOSITION)[0]
-    stored = _area(_prompts(scenario, Phase.C1_GLOBAL_VERIFICATION)[0], "Resultados armazenados")
+        assert scope_criterion in _area(prompt, "Acceptance criteria for this task")
+        assert "Massa total correta e explicada." in _area(prompt, "Acceptance criteria for this task")
+        assert "contextual reference" in prompt
+        assert "Do not ignore, rewrite or waive" in prompt
+    assert "do not mention spoons" in _prompts(scenario, Phase.A2_TASK_DECOMPOSITION)[0]
+    stored = _area(_prompts(scenario, Phase.C1_GLOBAL_VERIFICATION)[0], "Stored results")
     assert approved in stored and overreach not in stored
     if outside_scope:
         assert rejected not in stored
@@ -259,6 +259,6 @@ async def test_b2_distingue_mencao_contextual_de_calculo_fora_do_escopo(
         retry = scenario.llm.texts_of(5)
         assert len(retry) == 1
         assert retry[0].count("# B.1") == 1
-        assert rejected in _area(retry[0], "Tentativas anteriores desta tarefa")
+        assert rejected in _area(retry[0], "Previous attempts at this task")
         assert "T1-AC2" in retry[-1]
     assert scenario.session.final_answer == "6 g"

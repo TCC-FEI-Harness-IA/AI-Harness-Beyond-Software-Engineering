@@ -124,7 +124,7 @@ async def test_b4_roda_em_janela_nova_com_um_unico_prompt_e_sem_a_conversa_de_b1
     assert len(conversa_de_b4) == 1
     assert conversa_de_b4[0].startswith("# B.4")
     assert "# B.1" not in conversa_de_b4[0]
-    assert "Refaça a resolução da tarefa" not in conversa_de_b4[0]
+    assert "Redo the resolution of the task" not in conversa_de_b4[0]
 
     invocacoes = cenario.session.invocations
     janela_de_b4 = invocacoes[_chamadas(cenario, _FASE.B4_LEARNINGS_EXTRACTION, "T1")[0]].context_id
@@ -140,16 +140,16 @@ async def test_o_prompt_de_b4_traz_tarefa_resultado_aprovado_historico_e_memoria
 
     prompt = _conversa(cenario, _FASE.B4_LEARNINGS_EXTRACTION, "T1")[0]
     assert "### T1 — Avaliar a afirmação I" in prompt
-    assert f"<resultado_aprovado>\n{_RESULTADO_APROVADO_T1}\n</resultado_aprovado>" in prompt
+    assert f"<approved_result>\n{_RESULTADO_APROVADO_T1}\n</approved_result>" in prompt
     # O resultado aprovado aparece uma única vez: o histórico só aponta para a área própria.
     assert prompt.count(_RESULTADO_APROVADO_T1) == 1
 
-    historico = prompt[prompt.index("<historico_da_tarefa>"):prompt.index("</historico_da_tarefa>")]
-    assert historico.index("### Tentativa 1 — reprovada") < historico.index("### Tentativa 2 — aprovada")
+    historico = prompt[prompt.index("<task_history>"):prompt.index("</task_history>")]
+    assert historico.index("### Attempt 1 — rejected") < historico.index("### Attempt 2 — approved")
     assert _TENTATIVA_REFUTADA_T1 in historico
     assert "`reproved`" in historico and "`approved`" in historico
 
-    memoria = prompt[prompt.index("## Aprendizados Pontuais"):prompt.index("## Instruções")]
+    memoria = prompt[prompt.index("## Key Learnings"):prompt.index("## Instructions")]
     assert all(f"- {anotacao}" in memoria for anotacao in _ANOTACOES_Q037)
     assert _TENTATIVA_REFUTADA_T1 not in memoria
 
@@ -175,9 +175,9 @@ async def test_o_historico_de_b4_traz_a_saida_invalida_do_validador_antes_do_ver
     await cenario.run()
 
     historico = cenario.template_provider.variables_of(_FASE.B4_LEARNINGS_EXTRACTION)[0]["task_history"]
-    assert historico.index("saída inválida") < historico.index("**Veredito do validador:**")
-    assert "Faltam avaliações" in historico
-    assert "### Tentativa 1 — aprovada" in historico
+    assert historico.index("invalid output") < historico.index("**Validator verdict:**")
+    assert "Evaluations are missing" in historico
+    assert "### Attempt 1 — approved" in historico
 
 
 # ── Classificações: o caso da afirmação I (ITA 2024 Q037) ───────────────────
@@ -202,7 +202,7 @@ async def test_a_classificacao_aprovada_e_persistida_e_chega_a_proxima_tarefa_se
         _TENTATIVA_REFUTADA_T1,
         _RESULTADO_APROVADO_T1,
         "Veredito do validador",
-        "<historico_da_tarefa>",
+        "<task_history>",
         "# B.4",
     ):
         assert vazamento not in conversa_da_t2[0], vazamento
@@ -214,11 +214,11 @@ async def test_a_extracao_da_tarefa_seguinte_ve_a_classificacao_ja_registrada_e_
     await cenario.run()
 
     prompt_da_t2 = _conversa(cenario, _FASE.B4_LEARNINGS_EXTRACTION, "T2")[0]
-    memoria = prompt_da_t2[prompt_da_t2.index("## Aprendizados Pontuais"):prompt_da_t2.index("## Instruções")]
+    memoria = prompt_da_t2[prompt_da_t2.index("## Key Learnings"):prompt_da_t2.index("## Instructions")]
     assert f"- {_APRENDIZADO_T1}" in memoria
     assert _TENTATIVA_REFUTADA_T1 not in prompt_da_t2
     assert _RESULTADO_APROVADO_T1 not in prompt_da_t2
-    assert f"<resultado_aprovado>\n{_RESULTADO_APROVADO_T2}\n</resultado_aprovado>" in prompt_da_t2
+    assert f"<approved_result>\n{_RESULTADO_APROVADO_T2}\n</approved_result>" in prompt_da_t2
 
 
 async def test_os_aprendizados_nao_entram_nos_resultados_armazenados() -> None:
@@ -227,7 +227,7 @@ async def test_os_aprendizados_nao_entram_nos_resultados_armazenados() -> None:
     await cenario.run()
 
     prompt_de_c3 = cenario.llm.texts_of(_chamadas(cenario, _FASE.C3_FINAL_ANSWER)[0])[0]
-    resultados = prompt_de_c3[:prompt_de_c3.index("## Aprendizados Pontuais")]
+    resultados = prompt_de_c3[:prompt_de_c3.index("## Key Learnings")]
     assert _RESULTADO_APROVADO_T1 in resultados
     assert _APRENDIZADO_T1 not in resultados
 
@@ -287,7 +287,7 @@ async def test_aprendizados_ja_registrados_sao_descartados_e_so_o_fato_novo_entr
         _APRENDIZADO_T2,
     ]
     conteudo = _evento_learn(eventos, "T2").content
-    extraidos, descartados = conteudo.split("## Aprendizados repetidos descartados")
+    extraidos, descartados = conteudo.split("## Discarded repeated learnings")
     assert f"- {_APRENDIZADO_T2}" in extraidos
     assert _ANOTACOES_Q037[0] not in extraidos
     assert repetido_com_outra_forma.strip() in descartados
@@ -300,8 +300,8 @@ async def test_quando_todos_os_aprendizados_ja_constam_a_tarefa_registra_que_nad
     eventos = await cenario.run()
 
     conteudo = _evento_learn(eventos, "T2").content
-    assert conteudo.startswith("Nenhum aprendizado foi extraído desta tarefa.")
-    assert f"## Aprendizados repetidos descartados\n\n- {_APRENDIZADO_T1}" in conteudo
+    assert conteudo.startswith("No learnings were extracted from this task.")
+    assert f"## Discarded repeated learnings\n\n- {_APRENDIZADO_T1}" in conteudo
     assert [a.content for a in cenario.learnings_memory.all()].count(_APRENDIZADO_T1) == 1
     prompt_de_c3 = cenario.llm.texts_of(_chamadas(cenario, _FASE.C3_FINAL_ANSWER)[0])[0]
     assert prompt_de_c3.count(f"- {_APRENDIZADO_T1}") == 1
@@ -315,7 +315,7 @@ async def test_lista_vazia_de_b4_mantem_a_memoria_e_o_fluxo_segue_ate_a_resposta
 
     eventos = await cenario.run()
 
-    assert _evento_learn(eventos, "T2").content == "Nenhum aprendizado foi extraído desta tarefa."
+    assert _evento_learn(eventos, "T2").content == "No learnings were extracted from this task."
     assert [a.content for a in cenario.learnings_memory.all()] == [*_ANOTACOES_Q037, _APRENDIZADO_T1]
     assert cenario.session.status is SessionStatusEnum.COMPLETED
     prompt_de_c1 = cenario.llm.texts_of(_chamadas(cenario, _FASE.C1_GLOBAL_VERIFICATION)[0])[0]
@@ -327,5 +327,5 @@ async def test_aprendizado_em_branco_nao_entra_na_memoria_nem_e_listado_como_rep
 
     eventos = await cenario.run()
 
-    assert _evento_learn(eventos, "T2").content == f"## Aprendizados extraídos\n\n- {_APRENDIZADO_T2}"
+    assert _evento_learn(eventos, "T2").content == f"## Extracted learnings\n\n- {_APRENDIZADO_T2}"
     assert cenario.learnings_memory.all()[-1].content == _APRENDIZADO_T2

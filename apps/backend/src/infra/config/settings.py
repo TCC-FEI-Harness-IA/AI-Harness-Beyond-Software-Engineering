@@ -92,7 +92,9 @@ class Settings(ISettings):
             "RALPH_BENCHMARK_QUESTIONS_PATH": os.getenv(
                 "RALPH_BENCHMARK_QUESTIONS_PATH", "src/infra/benchmark/questions"
             ),
-            "RALPH_BENCHMARK_PROMPT_PATH": os.getenv("RALPH_BENCHMARK_PROMPT_PATH", "src/infra/benchmark/prompt.md"),
+            "RALPH_BENCHMARK_PROMPT_PATH": os.getenv(
+                "RALPH_BENCHMARK_PROMPT_PATH", "src/infra/benchmark/prompts/vestibular.md"
+            ),
             "RALPH_BENCHMARK_MAX_PARALLEL": os.getenv("RALPH_BENCHMARK_MAX_PARALLEL", "10"),
             "RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS": os.getenv(
                 "RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS", "1"

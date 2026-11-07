@@ -5,6 +5,7 @@ from pathlib import Path
 from src.domain.entities.benchmark.benchmark_question import BenchmarkQuestion
 from src.domain.interfaces.benchmark_question_provider_interface import IBenchmarkQuestionProvider
 from src.domain.interfaces.settings_interface import ISettings
+from src.infra.providers.benchmark_instruction_reader import read_benchmark_instruction
 
 _STATEMENT_FILE = "enunciado.md"
 _ANSWER_FILE = "alternativa_correta.md"
@@ -60,14 +61,7 @@ class FileBenchmarkQuestionProvider(IBenchmarkQuestionProvider):
             ValueError: Quando o arquivo não existe ou está vazio.
         """
         if self.__instruction is None:
-            path = Path(self.settings.ralph_benchmark_prompt_path)
-            try:
-                instruction = path.read_text(encoding=_FILE_ENCODING).strip()
-            except OSError as error:
-                raise ValueError(f"Instrução do benchmark não encontrada: {path}") from error
-            if not instruction:
-                raise ValueError(f"Instrução do benchmark vazia: {path}")
-            self.__instruction = instruction
+            self.__instruction = read_benchmark_instruction(path=Path(self.settings.ralph_benchmark_prompt_path))
         return self.__instruction
 
     def __load_questions(self, directory: Path) -> list[BenchmarkQuestion]:

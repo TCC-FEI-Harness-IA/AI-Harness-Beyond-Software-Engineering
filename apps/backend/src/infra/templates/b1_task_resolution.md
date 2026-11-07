@@ -1,66 +1,66 @@
-# B.1 — Resolução da tarefa
+# B.1 — Task resolution
 
-Resolva **unicamente** a tarefa descrita abaixo.
+Solve **only** the task described below.
 
-## Tarefa
+## Task
 
 {{task_description}}
 
-## Critérios de aceite desta tarefa
+## Acceptance criteria for this task
 
 {{task_acceptance_criteria}}
 
-## Aprendizados Pontuais
+## Key Learnings
 
-Anotações compactas acumuladas ao longo do fluxo: os pontos de atenção do enunciado e os fatos
-registrados pelas tarefas já concluídas, na ordem em que surgiram. Use-as como contexto de apoio —
-por exemplo, para conferir alternativas, valores e unidades de medida —, sem ampliar o escopo desta
-tarefa.
+Compact notes accumulated throughout the flow: the points of attention from the question and the
+facts recorded by the tasks already completed, in the order in which they appeared. Use them as
+supporting context — for example, to check options, values and units of measurement —, without
+widening the scope of this task.
 
 {{learnings}}
 
-## Tentativas anteriores desta tarefa
+## Previous attempts at this task
 
-Quando esta tarefa já foi tentada e reprovada, as tentativas anteriores e os vereditos do
-validador aparecem abaixo, delimitados por `<tentativas_anteriores>`. São o feedback desta nova
-tentativa: corrija exatamente os critérios não satisfeitos, sem repetir o que foi reprovado. Esta
-é uma resolução nova e completa da tarefa, e não a continuação de uma conversa anterior.
+When this task has already been attempted and rejected, the previous attempts and the validator's
+verdicts appear below, delimited by `<previous_attempts>`. They are the feedback for this new
+attempt: fix exactly the criteria that were not met, without repeating what was rejected. This is a
+new and complete resolution of the task, not the continuation of a previous conversation.
 
 {{previous_attempts}}
 
-## Instruções
+## Instructions
 
-Limite estrito de escopo:
+Strict scope limit:
 
-- **Não** resolva a questão final da qual esta tarefa faz parte.
-- **Não** avalie condições que pertençam a outras tarefas.
-- **Não** antecipe conclusões que dependam de resultados que você não tem.
+- **Do not** solve the final question of which this task is a part.
+- **Do not** evaluate conditions that belong to other tasks.
+- **Do not** anticipate conclusions that depend on results you do not have.
 
-Produza apenas o que esta tarefa pede, satisfazendo cada um dos critérios de aceite listados.
-Quando esta tarefa depender de valores, grandezas ou conclusões obtidos em etapas anteriores, utilize
-os fatos registrados em **Aprendizados Pontuais**. Se a descrição da tarefa ou algum critério de
-aceite citar um valor estimado no planejamento que divirja dos dados literais do enunciado ou do valor
-efetivamente calculado em **Aprendizados Pontuais**, execute o cálculo com os valores reais e registre
-explicitamente a divergência na justificativa, sem forçar uma conta matematicamente incorreta.
-Quando a tarefa envolver avaliar ou comparar afirmações ou opções frente a um texto, avalie por
-**melhor aderência relativa (eliminação)**: diferencie contradições ou extrapolações graves de
-paráfrases, sínteses e inferências razoáveis, sem descartar todas as opções por exigir
-correspondência 100% literal palavra por palavra.
-Quando a tarefa pedir a seleção de uma alternativa e nenhuma coincidir exatamente com o valor ou a
-conclusão obtidos, **selecione explicitamente** a alternativa de valor mais próximo ou de melhor
-aderência e registre a diferença observada. Uma aproximação é uma resposta válida; concluir que
-"nenhuma alternativa é correta" ou deixar a seleção em aberto não é.
-A resolução vai no campo `result`, em markdown.
+Produce only what this task asks for, satisfying each of the listed acceptance criteria. When this
+task depends on values, quantities or conclusions obtained in previous steps, use the facts recorded
+in **Key Learnings**. If the task description or some acceptance criterion cites a value estimated
+during planning that diverges from the literal data of the question or from the value actually
+calculated in **Key Learnings**, perform the calculation with the real values and explicitly record
+the divergence in the justification, without forcing a mathematically incorrect calculation.
+When the task involves evaluating or comparing statements or options against a text, evaluate by
+**best relative fit (elimination)**: distinguish serious contradictions or extrapolations from
+paraphrases, syntheses and reasonable inferences, without discarding every option by requiring a
+100% literal word-for-word match.
+When the task asks for the selection of an option and none coincides exactly with the value or
+conclusion obtained, **explicitly select** the option with the closest value or the best fit and
+record the observed difference. An approximation is a valid answer; concluding that "no option is
+correct" or leaving the selection open is not.
+The resolution goes in the `result` field, in markdown.
 
-No campo `conclusion`, escreva **apenas a conclusão final** da resolução, em uma ou poucas frases
-autossuficientes: o resultado obtido (com valor e unidade de medida, quando houver) ou a afirmação
-a que a tarefa chegou, sem fórmulas intermediárias, passos ou justificativas. A conclusão deve ser
-idêntica, em conteúdo, à conclusão apresentada em `result` — por exemplo: "A velocidade média do
-trajeto é 20 m/s."
+In the `conclusion` field, write **only the final conclusion** of the resolution, in one or a few
+self-sufficient sentences: the result obtained (with value and unit of measurement, when there is
+one) or the statement the task arrived at, without intermediate formulas, steps or justifications.
+The conclusion must be identical, in content, to the conclusion presented in `result` — for
+example: "The average speed over the route is 20 m/s."
 
-## Formato de saída
+## Output format
 
-Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de
-código, no formato:
+Respond **exclusively** with a JSON object, with no text before or after it and no code fence, in
+the format:
 
-{"task_id": "...", "result": "markdown com a resolucao", "conclusion": "conclusao final, sem o raciocinio"}
+{"task_id": "...", "result": "markdown with the resolution", "conclusion": "final conclusion, without the reasoning"}

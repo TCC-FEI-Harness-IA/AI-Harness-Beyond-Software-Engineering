@@ -54,7 +54,8 @@ python -m pytest tests/infra/providers/test_gpqa_benchmark_question_provider.py 
   entre disciplinas embaralhadas, sem reposição. Um filtro vazio inclui todas. A execução integral
   usa todos os itens da variante; amostras equilibradas não têm a mesma distribuição do corpus integral.
 - O gabarito é usado somente após a execução. Ambos os fluxos recebem o mesmo enunciado,
-  alternativas e instrução em inglês, solicitando uma escolha final `RESPOSTA_FINAL: A` (ou B–D).
+  alternativas e instrução em inglês ([`../prompts/gpqa.md`](../prompts/gpqa.md)), solicitando uma
+  escolha final `FINAL_ANSWER: A` (ou B–D).
   O avaliador comum também aceita letra isolada ou alternativa completa isolada. Respostas
   ambíguas, alternativas inválidas e falhas técnicas contam como erro, com diagnóstico separado.
 - A acurácia de cada fluxo é `acertos / questões executadas`. Tentativas internas do Ralph não

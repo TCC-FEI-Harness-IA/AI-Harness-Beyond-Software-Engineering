@@ -364,7 +364,7 @@ async def test_relatorio_que_nao_cobre_os_criterios_pede_correcao_ao_verificador
     assert any("T1-AC2" in texto for texto in llm.texts_of(1))
     assert len(resultado.parsed["criteria_evaluation"]) == 2
     assert [saida.reason for saida in resultado.invalid_outputs] == [
-        "Faltam avaliações para os critérios: T1-AC2."
+        "Evaluations are missing for the criteria: T1-AC2."
     ]
     assert len(guardiao.started_calls) == 2
 
