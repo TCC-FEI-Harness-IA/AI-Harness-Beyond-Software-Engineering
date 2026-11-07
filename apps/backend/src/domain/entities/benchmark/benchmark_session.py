@@ -30,6 +30,7 @@ class BenchmarkSession:
         finished_at: Data e hora de encerramento em UTC, quando encerrada.
         wall_time_ms: Tempo de execução da bateria, em milissegundos.
         error: Diagnóstico de uma falha técnica da bateria, quando houve.
+        alias: Título opcional escolhido pelo usuário depois do encerramento.
     """
 
     id: str
@@ -43,6 +44,16 @@ class BenchmarkSession:
     wall_time_ms: int = 0
     error: str | None = None
     benchmark: BenchmarkDefinition = field(default_factory=BenchmarkDefinition)
+    alias: str | None = None
+
+    def set_alias(self, alias: str | None, at: datetime) -> None:
+        """Define ou remove o título escolhido pelo usuário para uma bateria encerrada."""
+        self.__ensure_not_running()
+        normalized = alias.strip() if alias is not None else ""
+        if len(normalized) > 120:
+            raise ValueError("O alias deve ter no máximo 120 caracteres.")
+        self.alias = normalized or None
+        self.updated_at = at
 
     @property
     def question_count(self) -> int:

@@ -25,6 +25,7 @@ import { BenchmarkRalphErrorsExport } from './BenchmarkRalphErrorsExport'
 import { BenchmarkProgressStats } from './BenchmarkProgressStats'
 import { BenchmarkQuestionsTable } from './BenchmarkQuestionsTable'
 import { BenchmarkSummary } from './BenchmarkSummary'
+import { BenchmarkAliasEditor } from './BenchmarkAliasEditor'
 import styles from './BenchmarkSessionPage.module.css'
 
 const NOT_FOUND_ICON = (
@@ -45,9 +46,11 @@ const NOT_FOUND_ICON = (
 function BenchmarkSessionView({
   session,
   isLive,
+  onAliasSaved,
 }: {
   session: BenchmarkSessionDocument
   isLive: boolean
+  onAliasSaved?: () => void
 }): JSX.Element {
   const { isActive, rerun } = useBenchmarkRun()
   const subjectCounts = new Map<string, number>()
@@ -63,13 +66,16 @@ function BenchmarkSessionView({
           ← BenchMark · {benchmarkDatasetLabel(session.benchmark.dataset)}
         </Link>
         <div className={styles.titleRow}>
-          <h1 className={styles.title}>Bateria de {formatDateTime(session.created_at)}</h1>
+          <h1 className={styles.title}>
+            {session.alias ?? `Bateria de ${formatDateTime(session.created_at)}`}
+          </h1>
           <Badge tone={BENCHMARK_SESSION_STATUS_TONE[session.status]}>
             {BENCHMARK_SESSION_STATUS_LABEL[session.status]}
           </Badge>
           {isLive ? <Badge tone="accent">Ao vivo</Badge> : null}
         </div>
         <p className={styles.meta}>
+          {session.alias ? <span>{formatDateTime(session.created_at)}</span> : null}
           <span>{benchmarkLabel(session.benchmark)}</span>
           <span>{session.model_name}</span>
           <span>{providerLabel(session.provider)}</span>
@@ -78,6 +84,9 @@ function BenchmarkSessionView({
           <span>{session.max_parallel} em paralelo</span>
           <span className={styles.id}>{session.id}</span>
         </p>
+        {session.status !== 'running' && !isLive && onAliasSaved ? (
+          <BenchmarkAliasEditor key={`${session.id}:${session.alias ?? ''}`} session={session} onSaved={onAliasSaved} />
+        ) : null}
         {session.benchmark.dataset !== 'vestibular' ? (
           <p>
             {session.benchmark.subjects.length === 0
@@ -173,7 +182,7 @@ export function BenchmarkSessionPage(): JSX.Element {
 
   return (
     <PageContainer width="wide">
-      <BenchmarkSessionView session={stored.data} isLive={false} />
+      <BenchmarkSessionView session={stored.data} isLive={false} onAliasSaved={stored.reload} />
     </PageContainer>
   )
 }

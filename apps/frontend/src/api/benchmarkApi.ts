@@ -20,6 +20,20 @@ import {
 const QUESTIONS_PATH = '/benchmark/questions'
 const SESSIONS_PATH = '/benchmark/sessions'
 
+/** Define ou remove o alias de uma bateria encerrada. */
+export function updateBenchmarkAlias(
+  benchmarkSessionId: string,
+  alias: string | null,
+  signal?: AbortSignal,
+): Promise<BenchmarkSessionDocument> {
+  return httpClient.put(
+    `${SESSIONS_PATH}/${encodeURIComponent(benchmarkSessionId)}/alias`,
+    { alias },
+    (raw) => parseBenchmarkSession(raw),
+    signal,
+  )
+}
+
 export interface BenchmarkRunParams {
   questionCount: number
   maxParallel: number

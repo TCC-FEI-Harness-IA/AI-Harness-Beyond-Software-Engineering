@@ -937,6 +937,17 @@ Lista as baterias, da mais recente para a mais antiga: `{ "benchmark_sessions": 
 Documento de uma bateria. `404` quando não existe; `400` para identificador ou documento persistido
 inválido; `500` para outras falhas. As sessões de cada fluxo são consultadas por `GET /v1/sessions/{id}`.
 
+### `PUT /v1/benchmark/sessions/{benchmark_session_id}/alias`
+
+Define ou edita o título de uma bateria encerrada (`completed`, `failed` ou `interrupted`). Envie
+`{ "alias": "Comparação de temperatura" }`; o texto tem até 120 caracteres, com espaços das pontas
+removidos. `null` ou texto vazio remove o alias. A resposta é o documento atualizado da bateria.
+O campo `alias` também aparece no detalhe e na listagem; documentos antigos recebem `null`.
+O título fica no documento da bateria no MongoDB (ou no arquivo JSON, conforme o backend configurado).
+No frontend, use **Adicionar alias** ou **Editar alias** no detalhe da bateria; o título aparece também
+no cartão da listagem. `404` para bateria inexistente, `409` para bateria em execução, `422` para corpo
+inválido, `400` para identificador inválido e `500` para outras falhas.
+
 ### `GET /v1/benchmark/sessions/{benchmark_session_id}/ralph-loop-errors/export`
 
 Baixa um ZIP (`application/zip`, `benchmark-session-<id>-ralph-loop-errors.zip`) com uma pasta

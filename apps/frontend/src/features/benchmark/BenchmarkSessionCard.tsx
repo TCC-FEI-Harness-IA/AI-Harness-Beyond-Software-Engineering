@@ -33,7 +33,9 @@ export function BenchmarkSessionCard({
     <Card as="li" className={styles.card}>
       <Link to={buildBenchmarkSessionPath(session.id)} className={styles.link}>
         <div className={styles.header}>
-          <span className={styles.date}>{formatDateTime(session.created_at)}</span>
+          <span className={session.alias ? styles.alias : styles.date}>
+            {session.alias ?? formatDateTime(session.created_at)}
+          </span>
           <Badge tone={BENCHMARK_SESSION_STATUS_TONE[session.status]}>
             {BENCHMARK_SESSION_STATUS_LABEL[session.status]}
           </Badge>
@@ -43,6 +45,7 @@ export function BenchmarkSessionCard({
           <span>{scoreLabel('Ralph', session.summary.ralph)}</span>
         </p>
         <p className={styles.meta}>
+          {session.alias ? <span>{formatDateTime(session.created_at)}</span> : null}
           <span>{benchmarkLabel(session.benchmark)}</span>
           <span>{session.model_name}</span>
           <span>

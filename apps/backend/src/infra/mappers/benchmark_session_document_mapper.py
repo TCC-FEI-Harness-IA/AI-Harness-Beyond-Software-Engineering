@@ -46,6 +46,7 @@ class BenchmarkSessionDocumentMapper(IBenchmarkSessionDocumentMapper):
         return {
             _DOCUMENT_ID_KEY: benchmark_session.id,
             "id": benchmark_session.id,
+            "alias": benchmark_session.alias,
             "benchmark": {
                 **asdict(benchmark_session.benchmark),
                 "dataset": benchmark_session.benchmark.dataset.value,
@@ -121,6 +122,7 @@ class BenchmarkSessionDocumentMapper(IBenchmarkSessionDocumentMapper):
                 for item in self.__required(document=document, key="questions", container=container)
             ],
             benchmark=self.__benchmark_from_document(document.get("benchmark")),
+            alias=document.get("alias"),
         )
 
     @staticmethod

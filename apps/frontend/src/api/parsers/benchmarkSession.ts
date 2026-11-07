@@ -132,6 +132,7 @@ export function parseBenchmarkSession(
 
   return {
     id: requireString(obj, 'id', `${path}.id`),
+    alias: optionalString(obj, 'alias', `${path}.alias`),
     benchmark: parseBenchmarkDefinition(obj.benchmark, `${path}.benchmark`),
     status,
     model_name: requireString(obj, 'model_name', `${path}.model_name`),

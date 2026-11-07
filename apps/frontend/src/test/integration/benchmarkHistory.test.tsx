@@ -43,8 +43,15 @@ function respond(body: unknown, status = 200): Promise<Response> {
 /** Backend simulado: `batteries` é mutável, para simular a bateria gravada ao terminar. */
 function mockBackend(batteries: BenchmarkSessionDocument[] = []) {
   const documents = [...childSessions, normal]
-  const fetchMock = vi.fn((url: string) => {
+  const fetchMock = vi.fn((url: string, init?: RequestInit) => {
     const path = new URL(url).pathname
+    if (path.endsWith('/alias') && init?.method === 'PUT') {
+      const id = decodeURIComponent(path.split('/').at(-2) ?? '')
+      const battery = batteries.find((item) => item.id === id)
+      if (!battery) return respond({ detail: 'não encontrada' }, 404)
+      battery.alias = (JSON.parse(String(init.body)) as { alias: string | null }).alias
+      return respond(battery)
+    }
     if (path === '/v1/benchmark/questions') return respond({ question_ids: ['Q1', 'Q2', 'Q3'], max_parallel_limit: 4, max_tokens_limit: 32000 })
     if (path === '/v1/benchmark/sessions') return respond({ benchmark_sessions: batteries })
     if (path.startsWith('/v1/benchmark/sessions/')) {
@@ -452,6 +459,78 @@ describe('Benchmark como funcionalidade da aplicação', () => {
 
     await user.click(screen.getByRole('link', { name: '← Voltar à bateria' }))
     expect(await screen.findByRole('heading', { name: /Bateria de/ })).toBeInTheDocument()
+  })
+
+  it('adiciona, edita e remove o alias, preservando-o ao navegar pela listagem', async () => {
+    const user = userEvent.setup()
+    const { fetchMock } = mockBackend([completedBenchmarkSession()])
+    renderApp('/benchmark/bench_1')
+
+    await user.click(await screen.findByRole('button', { name: 'Adicionar alias' }))
+    const input = screen.getByRole('textbox', { name: 'Alias da bateria' })
+    expect(input).toHaveFocus()
+    expect(input).toHaveAttribute('maxlength', '120')
+    await user.type(input, '  Comparação GPT  ')
+    await user.click(screen.getByRole('button', { name: 'Salvar alias' }))
+    expect(await screen.findByRole('heading', { name: 'Comparação GPT' })).toBeInTheDocument()
+    const putCall = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')
+    expect(putCall?.[0]).toBe('http://localhost:8000/v1/benchmark/sessions/bench_1/alias')
+    expect(JSON.parse(String(putCall?.[1]?.body))).toEqual({ alias: 'Comparação GPT' })
+
+    await user.click(screen.getByRole('link', { name: '← BenchMark · Vestibulares' }))
+    const list = await screen.findByRole('list', { name: 'Baterias de Vestibulares' })
+    await user.click(within(list).getByRole('link', { name: /Comparação GPT/ }))
+    expect(await screen.findByRole('heading', { name: 'Comparação GPT' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Editar alias' }))
+    await user.clear(screen.getByRole('textbox', { name: 'Alias da bateria' }))
+    await user.type(screen.getByRole('textbox', { name: 'Alias da bateria' }), 'Teste de temperatura')
+    await user.click(screen.getByRole('button', { name: 'Salvar alias' }))
+    expect(await screen.findByRole('heading', { name: 'Teste de temperatura' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Editar alias' }))
+    await user.clear(screen.getByRole('textbox', { name: 'Alias da bateria' }))
+    await user.click(screen.getByRole('button', { name: 'Salvar alias' }))
+    expect(await screen.findByRole('heading', { name: /Bateria de/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Adicionar alias' })).toBeInTheDocument()
+  })
+
+  it('cancelar a edição do alias mantém o título salvo', async () => {
+    const user = userEvent.setup()
+    const battery = { ...completedBenchmarkSession(), alias: 'Título salvo' }
+    const { fetchMock } = mockBackend([battery])
+    renderApp('/benchmark/bench_1')
+    await user.click(await screen.findByRole('button', { name: 'Editar alias' }))
+    await user.type(screen.getByRole('textbox', { name: 'Alias da bateria' }), ' alterado')
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(screen.getByRole('heading', { name: 'Título salvo' })).toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
+  })
+
+  it('uma falha ao salvar mantém o texto para tentar novamente', async () => {
+    const user = userEvent.setup()
+    const { fetchMock } = mockBackend([completedBenchmarkSession()])
+    const original = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation((url, init) =>
+      init?.method === 'PUT' ? respond({ detail: 'Mongo indisponível' }, 500) : original(url, init),
+    )
+    renderApp('/benchmark/bench_1')
+    await user.click(await screen.findByRole('button', { name: 'Adicionar alias' }))
+    await user.type(screen.getByRole('textbox', { name: 'Alias da bateria' }), 'Meu teste')
+    await user.click(screen.getByRole('button', { name: 'Salvar alias' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar o alias')
+    expect(screen.getByRole('textbox', { name: 'Alias da bateria' })).toHaveValue('Meu teste')
+    expect(screen.getByRole('heading', { name: /Bateria de/ })).toBeInTheDocument()
+    fetchMock.mockImplementation(original)
+    await user.click(screen.getByRole('button', { name: 'Salvar alias' }))
+    expect(await screen.findByRole('heading', { name: 'Meu teste' })).toBeInTheDocument()
+  })
+
+  it('bateria em execução não oferece edição de alias', async () => {
+    mockBackend([benchmarkSession()])
+    renderApp('/benchmark/bench_1')
+    expect(await screen.findByRole('heading', { name: /Bateria de/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Adicionar alias' })).not.toBeInTheDocument()
   })
 
   it('o detalhe de uma bateria encerrada exporta os erros do Ralph Loop em ZIP', async () => {

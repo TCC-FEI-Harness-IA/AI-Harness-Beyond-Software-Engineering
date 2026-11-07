@@ -61,6 +61,7 @@ export interface BenchmarkProgress {
 
 export interface BenchmarkSessionDocument {
   id: string
+  alias: string | null
   benchmark: BenchmarkDefinition
   status: BenchmarkSessionStatus
   model_name: string

@@ -17,6 +17,13 @@ function withQuestion(overrides: Record<string, unknown>): unknown {
 }
 
 describe('parseBenchmarkSession', () => {
+  it('aceita documentos anteriores ao alias e preserva títulos quando presentes', () => {
+    const legacy: Record<string, unknown> = { ...benchmarkSession() }
+    delete legacy.alias
+    expect(parseBenchmarkSession(legacy).alias).toBeNull()
+    expect(parseBenchmarkSession({ ...legacy, alias: 'Meu benchmark' }).alias).toBe('Meu benchmark')
+    expect(() => parseBenchmarkSession({ ...legacy, alias: 42 })).toThrow(ContractError)
+  })
   it('lê baterias antigas como vestibulares', () => {
     const legacy: Record<string, unknown> = { ...benchmarkSession() }
     delete legacy.benchmark

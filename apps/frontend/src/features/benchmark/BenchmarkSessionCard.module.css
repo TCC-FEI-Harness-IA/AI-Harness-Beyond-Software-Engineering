@@ -29,6 +29,13 @@
   color: var(--color-text-secondary);
 }
 
+.alias {
+  font-size: var(--text-base);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
 .scores {
   display: flex;
   gap: var(--space-4);

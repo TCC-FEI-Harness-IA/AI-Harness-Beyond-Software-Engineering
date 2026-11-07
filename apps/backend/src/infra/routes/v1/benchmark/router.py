@@ -13,9 +13,11 @@ from src.domain.enums.gpqa_subset_enum import GPQASubsetEnum
 from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
 from src.infra.config.settings import Settings
 from src.infra.routes.v1.benchmark.dtos.benchmark_frame_dto import BenchmarkFrameDTO
+from src.infra.routes.v1.benchmark.dtos.benchmark_alias_input_dto import BenchmarkAliasInputDTO
 from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
 from src.infra.startups.benchmark_export_startup import BenchmarkExportStartup
 from src.infra.startups.benchmark_query_startup import BenchmarkQueryStartup
+from src.infra.startups.benchmark_alias_startup import BenchmarkAliasStartup
 from src.infra.startups.benchmark_rerun_startup import BenchmarkRerunStartup
 from src.infra.startups.benchmark_run_startup import BenchmarkRunStartup
 
@@ -80,6 +82,31 @@ async def get_benchmark_session(benchmark_session_id: str) -> dict[str, Any]:
         return await BenchmarkQueryStartup().get_benchmark_session_document(benchmark_session_id=benchmark_session_id)
     except BenchmarkSessionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.put(
+    "/sessions/{benchmark_session_id}/alias",
+    responses={
+        400: {"description": "Alias inválido"},
+        404: {"description": "Bateria não encontrada"},
+        409: {"description": "Bateria ainda em execução"},
+        500: {"description": "Internal Server Error"},
+    },
+)
+async def update_benchmark_alias(benchmark_session_id: str, payload: BenchmarkAliasInputDTO) -> dict[str, Any]:
+    """Define ou remove o alias de uma bateria de benchmark encerrada."""
+    try:
+        return await BenchmarkAliasStartup().update_alias(
+            benchmark_session_id=benchmark_session_id, alias=payload.alias
+        )
+    except BenchmarkSessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except BenchmarkSessionNotFinishedError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

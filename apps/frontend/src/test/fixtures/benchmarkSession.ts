@@ -50,6 +50,7 @@ export function benchmarkSession(
 ): BenchmarkSessionDocument {
   return {
     id: 'bench_1',
+    alias: null,
     benchmark: { ...LEGACY_BENCHMARK, subjects: [] },
     status: 'running',
     model_name: 'openai/gpt-4o-mini',

@@ -54,6 +54,17 @@ def test_ida_e_volta_preservam_a_bateria() -> None:
     assert reconstruida == original
 
 
+def test_alias_e_opcional_em_documentos_antigos_e_preservado_quando_definido() -> None:
+    mapper = BenchmarkSessionDocumentMapper()
+    document = mapper.to_document(bateria())
+    del document["alias"]
+    assert mapper.from_document(document).alias is None
+    document["alias"] = "Comparação de modelos"
+    session = mapper.from_document(document)
+    assert session.alias == "Comparação de modelos"
+    assert mapper.to_document(session)["alias"] == document["alias"]
+
+
 def test_leitura_de_bateria_legada_preserva_vestibulares() -> None:
     mapper = BenchmarkSessionDocumentMapper()
     original = bateria("Q1")
