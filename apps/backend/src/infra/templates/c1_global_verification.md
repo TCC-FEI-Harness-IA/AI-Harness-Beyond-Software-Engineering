@@ -54,9 +54,9 @@ não a resposta final já formatada:
 - Em questões de múltipla escolha, considere atendidos os critérios de aderência e sustentação pelo
   enunciado quando os resultados apontarem a **alternativa relativamente mais coerente por
   eliminação das demais**, admitindo paráfrases, sínteses ou inferências interpretativas razoáveis
-  sem exigir correspondência 100% literal palavra por palavra. Essa flexibilidade interpretativa
-  não autoriza aceitar valores matematicamente incompatíveis nem escolher a alternativa de valor
-  mais próximo quando o enunciado não admitir essa aproximação.
+  sem exigir correspondência 100% literal palavra por palavra. Da mesma forma, quando os resultados
+  selecionarem explicitamente a alternativa de valor mais próximo do calculado, considere atendidos
+  os critérios de seleção: aproximações são permitidas desde que uma alternativa seja escolhida.
 - Confira se os resultados armazenados concluíram **até o último passo lógico ou cálculo final pedido
   pela pergunta** (por exemplo: se a pergunta pede o *mês seguinte* ao de uma ultrapassagem, ou a
   *quantidade adicional* a acrescentar, não basta ter apenas o mês da ultrapassagem ou a quantidade
@@ -80,11 +80,13 @@ permanecem referência separada e não substituem essa evidência.
   Reprovar só pela ausência da linha seria incorreto.
 - Aprovar a apresentação enxuta: o pedido é "apenas a letra, sem justificativa" e os resultados
   explicados já sustentam C. As explicações internas não violam o formato final; C.3 pode omiti-las.
-- Reprovar seleção sem suporte: os resultados obtêm 12, mas as alternativas são 2, 4, 6, 8 e
-  10, e o pedido exige selecionar exatamente uma delas. Marque o critério de seleção como
-  `met: false` e encaminhe a inconsistência a C.2. Não declare 10 correto por ser próximo ou por
-  satisfazer apenas parte das condições, nem considere "RESPOSTA_FINAL: NENHUMA" uma formatação
-  possível da resposta exigida.
+- Aprovar seleção aproximada: os resultados obtêm 23, as alternativas são 1, 4, 20, 1 e 2, e dentro
+  das tarefas é selecionado 20 como a mais próxima. O critério de seleção está atendido; a diferença de
+  aproximação não é lacuna de conteúdo.
+- Reprovar ausência de seleção: os resultados obtêm 12, as alternativas são 2, 4, 6, 8 e 10, e os
+  resultados concluem que nenhuma alternativa serve, sem selecionar nenhuma. Marque o critério de
+  seleção como `met: false` e encaminhe a lacuna a C.2. Não escolha você a letra para suprir a
+  lacuna, nem considere "RESPOSTA_FINAL: NENHUMA" uma formatação possível da resposta exigida.
 - Reprovar conteúdo ausente: o critério exige análise conjunta explícita de três condições e só
   há listas de verificações isoladas. Mesmo que pareça possível escolher ou formatar uma letra,
   falta a análise conjunta exigida. Marque esse critério como não atendido e encaminhe a lacuna a C.2.

@@ -34,7 +34,8 @@ Esta etapa é de **apresentação, não de raciocínio**. É terminantemente pro
 
 Use exclusivamente o material dos resultados armazenados. Em questões de múltipla escolha, confira
 com atenção a tabela de alternativas em **Aprendizados Pontuais** para garantir que a letra escolhida
-corresponda exatamente ao valor ou conclusão sustentados pelos resultados armazenados. A resposta
+corresponda à alternativa selecionada nos resultados armazenados — inclusive quando eles a
+escolheram como a de valor mais próximo do calculado, o que é uma seleção válida. A resposta
 final vai no campo `final_answer`, em markdown.
 
 Aplique idioma, formato e restrições finais sem novo raciocínio analítico. Os resultados internos

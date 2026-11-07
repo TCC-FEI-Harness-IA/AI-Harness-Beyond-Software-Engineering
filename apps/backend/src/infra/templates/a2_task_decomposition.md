@@ -62,7 +62,11 @@ Planeje **o menor número possível de tarefas** capaz de gerar os insumos neces
   ou faz uma inferência razoável a partir do texto. Não escreva descrições nem critérios de aceite
   que exijam presença 100% literal palavra por palavra ou que pré-julguem conceitos das opções como
   ausentes; oriente a comparar as afirmações e identificar a mais coerente por eliminação dos
-  distratores mais graves.
+  distratores mais graves. Quando a comparação envolver um valor calculado, não exija que a
+  alternativa "corresponda exatamente" ao valor: o critério deve exigir a seleção explícita de uma
+  única alternativa, a de valor mais próximo ou de melhor aderência, registrando a diferença quando
+  houver. Aproximações de arredondamento, algarismos significativos ou ordem de grandeza são
+  aceitáveis; apenas a ausência de seleção é inaceitável.
 - **Evite tarefas burocráticas ou redundantes.** Não crie tarefas apenas para transcrever dados
   literais do texto sem analisá-los, nem tarefas finais para "sintetizar tarefas anteriores",
   "escolher a alternativa final" ou "redigir a resposta final" — a consolidação dos resultados e a

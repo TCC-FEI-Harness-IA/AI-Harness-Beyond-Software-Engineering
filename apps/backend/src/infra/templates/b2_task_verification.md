@@ -71,6 +71,15 @@ planejamento que divirjam da dedução matemática/física correta a partir dos 
 **Aprendizados Pontuais**, considere o critério **atendido (`met: true`)** quando o resultado
 demonstrar e justificar o cálculo correto daquela grandeza.
 
+**Aproximações na seleção de alternativas são permitidas.** Quando um critério exigir selecionar a
+alternativa que corresponde ao valor ou à conclusão obtidos — mesmo que redigido como
+"corresponde exatamente" ou "a única que coincide" —, considere-o **atendido (`met: true`)** se o
+resultado **selecionar explicitamente uma única alternativa** como a de valor mais próximo ou de
+melhor aderência, ainda que registre a diferença entre o valor obtido e o da alternativa. A falta de
+correspondência exata não é motivo de reprovação. O critério só **não é atendido** quando nenhuma
+alternativa é selecionada, quando o resultado conclui "nenhuma" ou cria uma opção inexistente, ou
+quando outra alternativa disponível é evidentemente mais próxima do valor obtido.
+
 ## Formato de saída
 
 Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de

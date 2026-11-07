@@ -46,6 +46,10 @@ Quando a tarefa envolver avaliar ou comparar afirmações ou opções frente a u
 **melhor aderência relativa (eliminação)**: diferencie contradições ou extrapolações graves de
 paráfrases, sínteses e inferências razoáveis, sem descartar todas as opções por exigir
 correspondência 100% literal palavra por palavra.
+Quando a tarefa pedir a seleção de uma alternativa e nenhuma coincidir exatamente com o valor ou a
+conclusão obtidos, **selecione explicitamente** a alternativa de valor mais próximo ou de melhor
+aderência e registre a diferença observada. Uma aproximação é uma resposta válida; concluir que
+"nenhuma alternativa é correta" ou deixar a seleção em aberto não é.
 A resolução vai no campo `result`, em markdown.
 
 No campo `conclusion`, escreva **apenas a conclusão final** da resolução, em uma ou poucas frases

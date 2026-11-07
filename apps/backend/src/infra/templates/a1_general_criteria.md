@@ -37,7 +37,9 @@ Em **questões de múltipla escolha**, defina que a alternativa correta deve ser
 **relativamente mais coerente e melhor sustentada** pelo enunciado em comparação às demais
 (melhor ajuste por eliminação). Não exija correspondência 100% literal palavra por palavra nem
 proíba paráfrases, sínteses ou inferências interpretativas razoáveis que tornem todas as opções
-inválidas.
+inválidas. Quando a escolha depender de um valor calculado, não exija correspondência numérica
+exata nem proíba a escolha da alternativa de valor mais próximo: uma aproximação é aceitável desde
+que uma das alternativas seja selecionada.
 
 Cada critério recebe um identificador próprio, na forma `AC1`, `AC2`, e assim por diante.
 
