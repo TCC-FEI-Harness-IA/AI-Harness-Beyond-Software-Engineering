@@ -1,3 +1,4 @@
+from collections import Counter
 import asyncio
 import logging
 from dataclasses import replace
@@ -379,11 +380,26 @@ async def test_cotas_invalidas_nao_chamam_fluxos_nem_persistem_bateria() -> None
     assert not repositorio.saved
 
 
-async def test_cotas_nao_sao_aceitas_pelos_outros_datasets() -> None:
+async def test_cotas_por_disciplina_amostram_o_mmlu_com_a_semente() -> None:
     runner = FakeBenchmarkFlowRunner(_imediato)
-    caso, _ = _caso_de_uso(runner)
+    caso, repositorio = _caso_de_uso(runner)
+    caso.question_provider = FakeBenchmarkQuestionProvider(
+        [replace(questao(f"P{i}"), subject="physics") for i in range(4)]
+        + [replace(questao(f"H{i}"), subject="history") for i in range(3)]
+    )
     caso.question_provider.definition = lambda: replace(
         FakeBenchmarkQuestionProvider([]).definition(), dataset=BenchmarkDatasetEnum.MMLU,
     )
-    with pytest.raises(InvalidBenchmarkRequestError, match="exclusiva de Vestibulares"):
-        await _coletar(caso, replace(_entrada(), benchmark=BenchmarkDatasetEnum.MMLU, subject_counts={"math": 1}))
+    entrada = replace(
+        _entrada(max_parallel=1), benchmark=BenchmarkDatasetEnum.MMLU, sample_seed=7,
+        subject_counts={"physics": 2, "history": 1, "math": 0},
+    )
+    with pytest.raises(InvalidBenchmarkRequestError, match="desconhecidas"):
+        await _coletar(caso, entrada)
+    entrada = replace(entrada, subject_counts={"physics": 2, "history": 1})
+    await _coletar(caso, entrada)
+    session = repositorio.sessions["bench_1"]
+    assert Counter(q.subject for q in session.questions) == {"physics": 2, "history": 1}
+    assert session.benchmark.subjects == ("history", "physics")
+    assert session.benchmark.sample_seed == 7
+    assert len(runner.requests) == 6

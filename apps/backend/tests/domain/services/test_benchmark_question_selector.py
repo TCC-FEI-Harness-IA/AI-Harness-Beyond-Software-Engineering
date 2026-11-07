@@ -76,3 +76,30 @@ def test_cotas_invalidas_sao_recusadas(counts: dict, total: int | None, message:
 
     with pytest.raises(InvalidBenchmarkRequestError, match=message):
         select_vestibular_questions(_questions(), counts, total)
+
+
+def test_cotas_por_disciplina_amostram_com_a_semente_e_so_acrescentam_ao_crescer() -> None:
+    questions = _questions()
+    selected = select_mmlu_questions(questions, (), None, 42, subject_counts={"physics": 3, "history": 1, "math": 0})
+    assert Counter(q.subject for q in selected) == {"physics": 3, "history": 1}
+    assert selected == select_mmlu_questions(
+        list(reversed(questions)), (), 4, 42, subject_counts={"physics": 3, "history": 1},
+    )
+    assert selected != select_mmlu_questions(questions, (), None, 43, subject_counts={"physics": 3, "history": 1})
+    larger = select_mmlu_questions(questions, (), None, 42, subject_counts={"physics": 7, "history": 1})
+    assert {q.id for q in selected} <= {q.id for q in larger}
+    assert len(select_mmlu_questions(questions, (), None, 42, subject_counts={"physics": 7, "math": 5, "history": 3})) == 15
+    assert questions == _questions()
+
+
+@pytest.mark.parametrize("counts, subjects, total, message", [
+    ({"history": 0}, (), None, "pelo menos uma"),
+    ({"unknown": 1}, (), None, "desconhecidas"),
+    ({"history": 4}, (), None, "entre 0 e 3"),
+    ({"math": True}, (), None, "inteiro"),
+    ({"history": 2}, (), 3, "coincidir"),
+    ({"history": 2}, ("history",), None, "juntos"),
+])
+def test_cotas_por_disciplina_invalidas_sao_recusadas(counts: dict, subjects: tuple, total: int | None, message: str) -> None:
+    with pytest.raises(InvalidBenchmarkRequestError, match=message):
+        select_mmlu_questions(_questions(), subjects, total, 42, subject_counts=counts)

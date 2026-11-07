@@ -68,7 +68,7 @@ export function NewRunForm({
   const [sampleSeed, setSampleSeed] = useState('42')
   const [selectionMode, setSelectionMode] = useState('total')
   const [subjectQuantities, setSubjectQuantities] = useState<Record<string, string>>({})
-  const perSubject = !hasSubjects && selectionMode === 'subject'
+  const perSubject = selectionMode === 'subject'
   const subjectCounts = Object.fromEntries(
     (dataset.subjects ?? []).map((item) => [
       item.id,
@@ -97,8 +97,9 @@ export function NewRunForm({
         benchmark,
         ...(benchmark === 'gpqa' ? { gpqaSubset } : {}),
         fewShot: isMmlu ? fewShot : 0,
-        subjects: subject ? [subject] : [],
+        subjects: subject && !perSubject ? [subject] : [],
         sampleSeed: seed,
+        ...(perSubject ? { subjectCounts } : {}),
       })
     } else if (perSubject) {
       onStart(count, parallel, { subjectCounts })
@@ -131,27 +132,29 @@ export function NewRunForm({
                 </Select>
               </Field>
             ) : null}
-            <Field label="Disciplina">
-              <Select
-                value={subject}
-                disabled={disabled}
-                onChange={(event) => {
-                  const nextSubject = event.target.value
-                  const limit =
-                    dataset.subjects?.find((item) => item.id === nextSubject)?.question_count ??
-                    dataset.question_ids.length
-                  setSubject(nextSubject)
-                  setQuestionCount(String(clamp(questionCount, limit)))
-                }}
-              >
-                <option value="">Todas as disciplinas</option>
-                {dataset.subjects?.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.id.replaceAll('_', ' ')} ({item.question_count})
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            {perSubject ? null : (
+              <Field label="Disciplina">
+                <Select
+                  value={subject}
+                  disabled={disabled}
+                  onChange={(event) => {
+                    const nextSubject = event.target.value
+                    const limit =
+                      dataset.subjects?.find((item) => item.id === nextSubject)?.question_count ??
+                      dataset.question_ids.length
+                    setSubject(nextSubject)
+                    setQuestionCount(String(clamp(questionCount, limit)))
+                  }}
+                >
+                  <option value="">Todas as disciplinas</option>
+                  {dataset.subjects?.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.id.replaceAll('_', ' ')} ({item.question_count})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
             <Field
               label="Semente da amostra"
               hint="Use a mesma semente e configuração para repetir a seleção de questões."
@@ -169,7 +172,7 @@ export function NewRunForm({
           </div>
         </>
       ) : null}
-      {!hasSubjects && (dataset.subjects?.length ?? 0) > 0 ? (
+      {(dataset.subjects?.length ?? 0) > 0 ? (
         <Field label="Seleção de questões">
           <Select
             value={selectionMode}
@@ -177,15 +180,17 @@ export function NewRunForm({
             onChange={(event) => setSelectionMode(event.target.value)}
           >
             <option value="total">Quantidade total</option>
-            <option value="subject">Por matéria</option>
+            <option value="subject">{hasSubjects ? 'Por disciplina' : 'Por matéria'}</option>
           </Select>
         </Field>
       ) : null}
       {perSubject ? (
         <fieldset className={styles.subjects} disabled={disabled}>
-          <legend>Questões por matéria</legend>
+          <legend>{hasSubjects ? 'Questões por disciplina' : 'Questões por matéria'}</legend>
           <p>
-            Use zero para excluir uma matéria. Serão usadas as primeiras questões de cada matéria.
+            {hasSubjects
+              ? 'Use zero para excluir uma disciplina. Cada cota é uma amostra da disciplina, definida pela semente.'
+              : 'Use zero para excluir uma matéria. Serão usadas as primeiras questões de cada matéria.'}
           </p>
           <div className={styles.fields}>
             {dataset.subjects?.map((item) => (

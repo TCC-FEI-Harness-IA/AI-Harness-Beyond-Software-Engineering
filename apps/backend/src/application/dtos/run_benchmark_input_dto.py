@@ -22,7 +22,8 @@ class RunBenchmarkInputDTO:
         subjects: Disciplinas MMLU/GPQA desejadas; vazio seleciona todas.
         sample_seed: Semente da amostragem MMLU/GPQA reproduzível.
         gpqa_subset: Subconjunto GPQA; Diamond por padrão para preservar clientes anteriores.
-        subject_counts: Quantidades por matéria nos vestibulares; matérias omitidas não são executadas.
+        subject_counts: Quantidades por matéria ou disciplina; as omitidas não são executadas. No MMLU/GPQA
+            cada cota é amostrada com `sample_seed`.
     """
 
     question_count: int | None

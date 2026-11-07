@@ -98,8 +98,8 @@ export function buildBenchmarkRunPayload({
   requirePositiveInteger(maxParallel, 'max_parallel')
   requirePositiveInteger(config.maxTokens, 'max_tokens')
   if (subjectCounts !== undefined) {
-    if (benchmark !== 'vestibular') {
-      throw new ContractError('subject_counts é exclusivo de Vestibulares.')
+    if (subjects.length > 0) {
+      throw new ContractError('subject_counts não pode ser usado junto de subjects.')
     }
     const counts = Object.values(subjectCounts)
     if (

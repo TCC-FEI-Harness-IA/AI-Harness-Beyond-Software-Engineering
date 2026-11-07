@@ -98,7 +98,9 @@ sem enunciados nem gabaritos. O frame inicial de `WS /v1/benchmark/run` aceita:
 
 `gpqa_subset` aceita `diamond` (padrão), `main` ou `extended`. Valores desconhecidos e a seleção
 de Main/Extended em pedidos de outros benchmarks são recusados.
-Omitir `question_count` executa todos os itens das disciplinas escolhidas. `few_shot` só aceita 0;
+Omitir `question_count` executa todos os itens das disciplinas escolhidas. Para escolher uma quantidade
+por disciplina, envie `subject_counts` (ex.: `{"physics": 20, "chemistry": 0}`), de zero até o total de cada
+uma, sem `subjects`; cada cota é uma amostra definida por `sample_seed`. `few_shot` só aceita 0;
 `subjects` aceita `biology`, `chemistry` e `physics`; `sample_seed` aceita inteiros de 0 a 4294967295.
 Os limites são verificados antes de persistir a bateria ou chamar modelos. Comece com uma amostra
 pequena para estimar tempo e custo: uma bateria integral cria 396 sessões em Diamond, 896 em Main

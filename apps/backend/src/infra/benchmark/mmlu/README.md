@@ -45,7 +45,9 @@ A interface começa com até **285 questões de teste**, uma amostra exploratór
 quando todas estão selecionadas. Essas questões não são os 285 exemplos `dev`. Amostras equilibradas
 entre disciplinas têm composição diferente do teste integral: sua acurácia descreve a amostra, não deve
 ser reportada como a pontuação do MMLU completo. Para executar o teste integral, informe 14.042 questões
-com todas as disciplinas selecionadas (ou omita `question_count` na API).
+com todas as disciplinas selecionadas (ou omita `question_count` na API). Também é possível escolher
+a quantidade de cada disciplina (de zero ao total dela) com `subject_counts`, em vez de uma amostra
+equilibrada; cada cota é amostrada com a mesma semente.
 
 A bateria preserva dataset, revisão, protocolo, split, disciplinas filtradas, semente e os IDs efetivamente
 executados. Cada questão preserva sua disciplina. O histórico anterior sem esses campos é interpretado

@@ -480,9 +480,20 @@ def test_contrato_de_cotas_recusa_valores_nao_inteiros_nao_negativos(counts: dic
 
 
 @pytest.mark.parametrize("dataset", ["mmlu", "gpqa"])
-def test_contrato_de_cotas_recusa_outros_datasets(dataset: str) -> None:
+def test_contrato_aceita_cotas_por_disciplina_nos_datasets_cientificos(dataset: str) -> None:
+    from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
+
+    payload = BenchmarkRunInputDTO.model_validate(_abertura(benchmark=dataset, subject_counts={"physics": 1}))
+    assert payload.subject_counts == {"physics": 1}
+
+
+@pytest.mark.parametrize("dataset", ["mmlu", "gpqa"])
+def test_contrato_recusa_cotas_junto_de_subjects(dataset: str) -> None:
     from pydantic import ValidationError
     from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
 
-    with pytest.raises(ValidationError, match="exclusiva de Vestibulares"):
-        BenchmarkRunInputDTO.model_validate(_abertura(benchmark=dataset, subject_counts={"FISICA": 1}))
+    with pytest.raises(ValidationError, match="não podem ser usados juntos"):
+        BenchmarkRunInputDTO.model_validate(
+            _abertura(benchmark=dataset, subject_counts={"physics": 1}, subjects=["physics"]),
+        )
+

@@ -858,7 +858,7 @@ em `error`. A acurácia de um fluxo é `correct / executed`.
    bateria; a soma deve ser positiva. Filosofia e Sociologia constituem uma única categoria.
    São usadas as primeiras questões de cada matéria, mantendo a ordem do dataset.
    `question_count` pode ser omitido nesse modo; quando enviado, deve coincidir com a soma das cotas.
-   Matérias desconhecidas, cotas acima do disponível, totais divergentes e cotas em MMLU/GPQA são
+   Matérias desconhecidas, cotas acima do disponível e totais divergentes são
    recusados antes de criar a bateria ou chamar o modelo. Sem `subject_counts`, a seleção por total
    mantém o comportamento anterior. A distribuição escolhida fica registrada em `questions[].subject`
    e as matérias com cota positiva em `benchmark.subjects`.
@@ -866,6 +866,10 @@ em `error`. A acurácia de um fluxo é `correct / executed`.
    Para MMLU, envie `benchmark: "mmlu"`, `few_shot: 0` ou `5`, `subjects: []` (todas) ou uma lista de
    disciplinas e `sample_seed` (padrão 42). A quantidade passa a representar uma amostra distribuída entre
    as disciplinas selecionadas. A bateria persiste esse protocolo no campo `benchmark`.
+   Em MMLU e GPQA também vale `subject_counts` (ex.: `{"physics": 10, "biology": 5}`) com cotas de zero até
+   o total de cada disciplina; cada cota é uma amostra da disciplina definida por `sample_seed`, e aumentar
+   a cota só acrescenta questões à amostra anterior. Não pode ser combinado com `subjects`, e
+   `question_count`, se enviado, deve coincidir com a soma.
    `max_parallel` (default `5`) vai de `1` a `RALPH_BENCHMARK_MAX_PARALLEL`. `llm_model_config` é o
    [`ModelConfigDTO`](#modelconfigdto) dos endpoints de mensagem e vale para todos os fluxos; seu
    `max_tokens` vai de `1` a `LLM_MAX_TOKENS` e é o limite de tokens de **cada sessão** gerada pela bateria

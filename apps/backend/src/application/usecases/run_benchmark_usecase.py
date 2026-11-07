@@ -156,10 +156,9 @@ class RunBenchmarkUseCase:
         if input_dto.benchmark is BenchmarkDatasetEnum.GPQA and input_dto.gpqa_subset != definition.split:
             raise InvalidBenchmarkRequestError("Subconjunto GPQA difere do provider selecionado.")
         if input_dto.benchmark is not BenchmarkDatasetEnum.VESTIBULAR:
-            if input_dto.subject_counts is not None:
-                raise InvalidBenchmarkRequestError("subject_counts é uma opção exclusiva de Vestibulares.")
             return select_subject_questions(
                 questions, input_dto.subjects, input_dto.question_count, input_dto.sample_seed,
+                subject_counts=input_dto.subject_counts,
             )
         if input_dto.subjects:
             raise InvalidBenchmarkRequestError("subjects é uma opção de MMLU e GPQA.")

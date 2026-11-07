@@ -59,7 +59,8 @@ bateria atual quando ela é daquele benchmark e o histórico só com as baterias
 por vez: as outras abas mostram um aviso com o atalho **Acompanhar**. Na aba GPQA, escolha a variante
 (Diamond, Main ou Extended). No MMLU, escolha o
 protocolo generativo 0-shot ou 5-shot, uma disciplina ou todas, e a semente da amostra. O formulário inicia
-com até 285 questões de teste, e pode executar o conjunto inteiro. O histórico e o detalhe identificam o
+com até 285 questões de teste, e pode executar de 1 questão até o conjunto inteiro. Em MMLU e GPQA, a seleção
+**Por disciplina** define a quantidade de cada disciplina, de zero ao máximo dela. O histórico e o detalhe identificam o
 dataset e o protocolo; o detalhe MMLU também mostra disciplinas, semente e revisão. A tabela pagina
 100 questões por vez. Veja o [guia do MMLU](../backend/src/infra/benchmark/mmlu/README.md) para metodologia,
 reprodução e limites de comparação com rankings externos.

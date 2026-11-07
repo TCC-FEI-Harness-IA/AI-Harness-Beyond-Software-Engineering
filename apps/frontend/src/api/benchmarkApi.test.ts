@@ -205,15 +205,27 @@ describe('quantidades por matéria de Vestibulares', () => {
     ).toThrow('subject_counts')
   })
 
-  it.each(['mmlu', 'gpqa'] as const)('recusa cotas em %s', (benchmark) => {
+  it.each(['mmlu', 'gpqa'] as const)('aceita cotas por disciplina em %s', (benchmark) => {
+    const payload = buildBenchmarkRunPayload({
+      benchmark,
+      questionCount: 3,
+      maxParallel: 1,
+      config: CONFIG,
+      subjectCounts: { physics: 3 },
+    })
+    expect(payload).toMatchObject({ benchmark, question_count: 3, subject_counts: { physics: 3 } })
+  })
+
+  it('recusa cotas junto de subjects', () => {
     expect(() =>
       buildBenchmarkRunPayload({
-        benchmark,
+        benchmark: 'mmlu',
         questionCount: 3,
         maxParallel: 1,
         config: CONFIG,
+        subjects: ['physics'],
         subjectCounts: { physics: 3 },
       }),
-    ).toThrow('exclusivo de Vestibulares')
+    ).toThrow('subject_counts')
   })
 })

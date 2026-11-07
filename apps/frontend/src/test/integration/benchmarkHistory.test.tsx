@@ -131,6 +131,41 @@ describe('Benchmark como funcionalidade da aplicação', () => {
     expect(screen.getByText(/Semente 123/)).toBeInTheDocument()
   })
 
+  it('permite escolher a quantidade de cada disciplina do MMLU, de zero ao máximo', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    const original = backend.fetchMock.getMockImplementation()!
+    backend.fetchMock.mockImplementation((url: string) => {
+      if (new URL(url).searchParams.get('benchmark') === 'mmlu') return respond({
+        question_ids: ['M1', 'M2', 'M3', 'M4', 'M5'], max_parallel_limit: 4, max_tokens_limit: 32000,
+        benchmark: { ...benchmarkSession().benchmark, dataset: 'mmlu', revision: 'fixed-revision' },
+        subjects: [{ id: 'college_physics', question_count: 2 }, { id: 'history', question_count: 3 }],
+      })
+      return original(url)
+    })
+    renderApp('/benchmark?benchmark=mmlu')
+    const mode = await screen.findByRole('combobox', { name: 'Seleção de questões' })
+    await user.selectOptions(mode, 'subject')
+    expect(screen.queryByRole('combobox', { name: 'Disciplina' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('spinbutton', { name: /Quantidade de questões/ })).not.toBeInTheDocument()
+    const submit = screen.getByRole('button', { name: 'Iniciar bateria' })
+    expect(submit).toBeDisabled()
+    const history = screen.getByRole('spinbutton', { name: /history/ })
+    expect(history).toHaveAttribute('max', '3')
+    fireEvent.change(history, { target: { value: '9' } })
+    fireEvent.blur(history)
+    expect(history).toHaveValue(3)
+    await user.type(screen.getByRole('spinbutton', { name: /college physics/ }), '{Control>}a{/Control}1')
+    expect(screen.getByRole('status')).toHaveTextContent('Total da bateria: 4 questões.')
+    await user.click(submit)
+    const socket = FakeWebSocket.latest()
+    act(() => socket.emitOpen())
+    expect(JSON.parse(socket.sentFrames[0] ?? '{}')).toMatchObject({
+      benchmark: 'mmlu', subjects: [], question_count: 4,
+      subject_counts: { college_physics: 1, history: 3 },
+    })
+  })
+
   it.each([
     ['diamond', 'Diamond', 198],
     ['main', 'Main', 448],
