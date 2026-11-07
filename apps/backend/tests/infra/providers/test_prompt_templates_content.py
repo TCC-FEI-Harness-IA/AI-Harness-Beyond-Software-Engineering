@@ -15,7 +15,8 @@ _PLACEHOLDERS_POR_FASE = {
     ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: {"task_description", "approved_result", "task_history", "learnings"},
     ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: {"stored_results", "general_acceptance_criteria", "learnings"},
     ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING: {
-        "user_question", "unmet_criteria", "stored_results", "next_task_number", "max_tasks", "learnings"
+        "user_question", "unmet_criteria", "global_verification_feedback", "stored_results",
+        "next_task_number", "max_tasks", "learnings"
     },
     ThinkingPhaseEnum.C3_FINAL_ANSWER: {"stored_results", "general_acceptance_criteria", "learnings"},
 }
@@ -96,6 +97,7 @@ def test_templates_de_planejamento_informam_o_teto_de_tarefas_do_lote() -> None:
             variables={
                 "user_question": "q",
                 "unmet_criteria": "u",
+                "global_verification_feedback": "f",
                 "stored_results": "s",
                 "next_task_number": "2",
                 "max_tasks": "7",

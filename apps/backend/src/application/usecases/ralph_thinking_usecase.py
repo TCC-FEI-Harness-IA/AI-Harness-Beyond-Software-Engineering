@@ -1048,9 +1048,9 @@ class RalphThinkingUseCase:
             report: Relatório de C.1 com os critérios gerais não atendidos.
 
         Returns:
-            dict[str, str]: Prompt original do usuário, critérios pendentes, resultados armazenados
-            resumidos (enunciado e conclusão de cada tarefa) e o número a partir do qual as novas
-            tarefas devem ser numeradas.
+            dict[str, str]: Prompt original, critérios pendentes, relatório de C.1 com os motivos
+            das lacunas, resultados resumidos (enunciado e conclusão de cada tarefa) e o número
+            inicial das novas tarefas. O relatório é feedback diagnóstico, separado dos resultados.
         """
         unmet = tuple(
             criterion for criterion in self.__general_criteria if criterion.id in report.unmet_criteria_ids
@@ -1058,6 +1058,7 @@ class RalphThinkingUseCase:
         return {
             "user_question": self.__user_question,
             "unmet_criteria": self.__render_criteria(criteria=unmet),
+            "global_verification_feedback": self.__render_report(report=report),
             "stored_results": self.__render_result_summaries(),
             "next_task_number": str(self.task_queue.total_created() + _FIRST_TASK_NUMBER),
         }

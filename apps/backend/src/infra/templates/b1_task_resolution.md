@@ -30,11 +30,11 @@ new and complete resolution of the task, not the continuation of a previous conv
 
 ## Instructions
 
-Strict scope limit:
-
-- **Do not** solve the final question of which this task is a part.
-- **Do not** evaluate conditions that belong to other tasks.
-- **Do not** anticipate conclusions that depend on results you do not have.
+Resolve the stated analytical objective, using prior findings from Key Learnings when needed.
+Logical dependence does not widen scope. When this task owns the final determination, perform the
+last calculation, integration or comparison it requires, including a supported comparative choice.
+Limit other analysis to this task's goal; do not anticipate conclusions of other tasks or invent
+findings that are missing from memory. C.3 will present the supported result in the user's format.
 
 Produce only what this task asks for, satisfying each of the listed acceptance criteria. When this
 task depends on values, quantities or conclusions obtained in previous steps, use the facts recorded
@@ -42,15 +42,23 @@ in **Key Learnings**. If the task description or some acceptance criterion cites
 during planning that diverges from the literal data of the question or from the value actually
 calculated in **Key Learnings**, perform the calculation with the real values and explicitly record
 the divergence in the justification, without forcing a mathematically incorrect calculation.
+The same evidence rule applies to a qualitative premise or an unverified hypothesis introduced
+during planning: establish the conditions and explain any conflict with the available facts rather
+than forcing the prescribed conclusion. For an explicitly corrective task, investigate the named
+conflict without presuming which earlier account is wrong.
 When the task involves evaluating or comparing statements or options against a text, evaluate by
 **best relative fit (elimination)**: distinguish serious contradictions or extrapolations from
 paraphrases, syntheses and reasonable inferences, without discarding every option by requiring a
 100% literal word-for-word match.
-When the task asks for the selection of an option and none coincides exactly with the value or
-conclusion obtained, **explicitly select** the option with the closest value or the best fit and
-record the observed difference. An approximation is a valid answer; concluding that "no option is
-correct" or leaving the selection open is not.
-The resolution goes in the `result` field, in markdown.
+When the task asks for a selection, make the choice justified by the comparison. A supported
+approximation or closest-value choice is valid when consistent with the data, applicable model and
+precision; explain the approximation and any relevant difference. Do not invent a numerical
+tolerance: selecting an option alone does not establish correctness. If a discrepancy remains
+unsupported, explain the concrete limitation rather than assert an arbitrary choice.
+The resolution goes in the `result` field, in markdown, with the result and its explanation even
+when the final answer must be short or contain only a letter. For calculations, show formulas,
+substitution with units, applicability, conventions and justified approximations; for interpretations
+or choices, show the supporting evidence and reasoning.
 
 In the `conclusion` field, write **only the final conclusion** of the resolution, in one or a few
 self-sufficient sentences: the result obtained (with value and unit of measurement, when there is

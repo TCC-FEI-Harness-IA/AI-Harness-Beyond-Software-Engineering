@@ -116,6 +116,7 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
   - [`WS /v1/benchmark/sessions/{benchmark_session_id}/questions/{question_id}/rerun`](#ws-v1benchmarksessionsbenchmark_session_idquestionsquestion_idrerun)
   - [`GET /v1/benchmark/questions`](#get-v1benchmarkquestions)
 - [Garantias do harness e encerramento sem conclusão](#garantias-do-harness-e-encerramento-sem-conclusão)
+  - [Planejamento e cobertura do pedido — etapa 03](#planejamento-e-cobertura-do-pedido--etapa-03)
 - [Contratos (DTOs)](#contratos-dtos)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Arquitetura em uma imagem](#arquitetura-em-uma-imagem)
@@ -669,7 +670,7 @@ persistida antes do evento `result`.
 | B.2 reprova e as tentativas acabam | Nada é armazenado, B.4 não roda, a execução é interrompida. |
 | B.2/C.1 devolve um relatório vazio, incompleto, duplicado, com ID desconhecido ou contraditório | O verificador é chamado de novo, na mesma janela e com temperatura `1`, para conferir e corrigir o próprio relatório (chamada contada); não consome tentativa de B.1. O veredito nunca é ajustado automaticamente. Sem correção, a fase falha. |
 | Qualquer fase devolve um JSON ilegível ou interrompido pelo limite de comprimento | Erro de sintaxe: o modelo é chamado de novo para devolver o mesmo conteúdo em JSON válido, sem nova resolução. Interrupção por comprimento: pede-se uma nova saída completa e concisa, nunca a continuação da anterior. Os únicos reparos locais são a extração de cercas e o fechamento estrutural inequívoco. |
-| C.1 reprova e há recursos | C.2 cria tarefas para os critérios pendentes, que entram no topo da fila. O template recebe o **Prompt Original** do usuário e, em **Resultados já armazenados**, só o enunciado e a conclusão (campo `conclusion` de B.1) de cada tarefa aprovada, sem a resolução completa; C.1 e C.3 continuam recebendo as resoluções completas. |
+| C.1 reprova e há recursos | C.2 cria tarefas para os critérios pendentes, que entram no topo da fila. O template recebe o **Prompt Original**, o relatório de C.1 com os motivos das lacunas em **Global verification feedback** e, em **Resultados já armazenados**, só o enunciado e a conclusão (campo `conclusion` de B.1) de cada tarefa aprovada, sem a resolução completa; C.1 e C.3 continuam recebendo as resoluções completas. |
 | C.1 reprova e não há recursos para C.2 | A execução é interrompida; os critérios pendentes ficam em `failure`. Nunca há C.3. |
 | C.1 aprova e C.3 falha ou não pode rodar | A execução termina sem resposta final. |
 | Qualquer limite é atingido em qualquer fase ou retentativa | A execução é interrompida (`failure.reason = resource_limit`), sem nenhuma chamada depois do bloqueio. |
@@ -685,6 +686,49 @@ semanticamente correto.
 de interrupção. Os limites (`RALPH_*` e o limite de tokens por sessão) e o encerramento sem conclusão são
 um tratamento operacional adicional, que nunca promove material reprovado nem sintetiza sem aprovação
 global. A reserva de tokens é uma margem de melhor esforço, não uma garantia de conclusão.
+
+### Planejamento e cobertura do pedido — etapa 03
+
+Os templates A.1/A.2/C.2 extraem as obrigações reais e planejam investigações sem fixar respostas
+quantitativas ou qualitativas ainda desconhecidas. A.1 distingue conteúdo obrigatório de
+apresentação opcional. A.2/C.2 separam dados literais, método pertinente, hipótese a verificar e
+resultado a obter: usar uma lei física é permitido; impor uma condição não fornecida para aplicá-la
+ou adivinhar a conclusão anterior não é. Descrições conservam dados, unidades e referências
+relevantes, com dependências explícitas pelos aprendizados.
+
+Objetivo único admite dependência lógica. A tarefa que detém a determinação final pode fazer a
+última análise, integração ou comparação, e B.1 permite concluí-la com explicação. C.3 aplica idioma,
+formato e pareamento literal já sustentado. A.2/C.2 revisam a cobertura dentro da própria geração:
+razão de distâncias não basta para período em meses. Não há fase extra de revisão, número fixo de
+tarefas, detector semântico no parser ou dado específico de benchmark injetado.
+
+C.2 recebe a nova variável `global_verification_feedback`, renderizada com o relatório de C.1 já
+validado (decisão, avaliações, justificativas e IDs), usando o mesmo renderizador do registro da fase.
+Ela complementa `unmet_criteria`, que preserva os critérios pendentes sem modificá-los. Feedback não
+vira resultado nem aprendizado. A tarefa corretiva pode investigar um erro ou contradição concreta
+em resultados existentes, sem predeterminar qual conclusão está errada. Os schemas, limites,
+retentativas e chamadas do fluxo permanecem iguais.
+
+Critérios admitem paráfrases, inferência contextual e aproximação fundamentada. Escolher uma opção
+não basta para provar acerto. Explicação interna continua obrigatória mesmo para resposta final
+curta ou com justificativa opcional. A política completa dos validadores B.2/C.1 será alinhada na
+etapa seguinte; esta etapa não altera esses templates.
+
+Os testes novos estão em
+[`test_planning_instruction_contracts.py`](tests/infra/providers/test_planning_instruction_contracts.py)
+e [`test_ralph_planning_evidence_integration.py`](tests/application/usecases/test_ralph_planning_evidence_integration.py).
+A [matriz semântica versionada](tests/fixtures/planning_semantics_v1.json) e seu
+[guia de inspeção](tests/fixtures/README.md) distinguem contratos automatizados de avaliação humana
+posterior. As saídas e os vereditos de LLM são roteirizados: testam dados, fases, memória, isolamento
+e persistência, sem comprovar obediência de um modelo real. Cobertura semântica é orientada no
+planejamento e julgada depois em C.1, nunca certificada pela contagem de tarefas ou aceitação do JSON.
+
+Na integração anterior à etapa 04, conferir as instruções de recuperação de A.2/C.2 da etapa 01:
+uma regeneração completa precisa preservar dados e cobrir a última determinação, sem virar mera
+compactação ou reparo de um fragmento. Conferir também a passagem dos resultados efetivamente
+obtidos pela memória da etapa 02. A etapa 03 não edita a fase base, A.3/B.4 ou os contratos de memória.
+Os detalhes e resultados de testes estão na seção **Melhorias do thinking — 03** de
+[`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
 
 ### Limite de tokens por sessão
 
