@@ -4,11 +4,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { env } from '@/config/env'
 import { MODEL_PROVIDER } from '@/domain/enums/modelProvider'
 import type { BackendLimits } from '@/domain/types/backendLimits'
+import type { ModelInfo } from '@/domain/types/modelInfo'
 import { RunConfigProvider, useRunConfig } from './RunConfigContext'
 
 function ConfigProbe(): JSX.Element {
-  const { config, maxTokensLimit, setModelName, setMaxTokens, setTemperature, setProvider, reset } =
-    useRunConfig()
+  const {
+    config,
+    maxTokensLimit,
+    models,
+    modelsStatus,
+    reloadModels,
+    setModelName,
+    setMaxTokens,
+    setTemperature,
+    setProvider,
+    reset,
+  } = useRunConfig()
   return (
     <div>
       <span data-testid="model">{config.modelName}</span>
@@ -30,6 +41,11 @@ function ConfigProbe(): JSX.Element {
       <button type="button" onClick={() => setMaxTokens(1_000_000)}>
         Tokens altos
       </button>
+      <span data-testid="models">{models.map((model) => model.model_name).join(',')}</span>
+      <span data-testid="models-status">{modelsStatus}</span>
+      <button type="button" onClick={reloadModels}>
+        Recarregar modelos
+      </button>
       <span data-testid="max-tokens-limit">{String(maxTokensLimit)}</span>
       <button type="button" onClick={() => setTemperature(1.4)}>
         Temperatura alta
@@ -43,12 +59,24 @@ function ConfigProbe(): JSX.Element {
 
 function renderProbe(
   loadLimits: (signal: AbortSignal) => Promise<BackendLimits> = () => new Promise(() => {}),
+  loadModels: (signal: AbortSignal) => Promise<ModelInfo[]> = () => new Promise(() => {}),
 ): void {
   render(
-    <RunConfigProvider loadLimits={loadLimits}>
+    <RunConfigProvider loadLimits={loadLimits} loadModels={loadModels}>
       <ConfigProbe />
     </RunConfigProvider>,
   )
+}
+
+function modelo(model_name: string): ModelInfo {
+  return {
+    model_name,
+    display_name: null,
+    input_price_per_million_tokens: null,
+    output_price_per_million_tokens: null,
+    context_length: null,
+    throughput_tokens_per_second: null,
+  }
 }
 
 const BACKEND_LIMIT = { max_tokens_limit: 64000 }
@@ -58,6 +86,69 @@ beforeEach(() => {
 })
 
 describe('RunConfigContext', () => {
+  it('expõe o catálogo de modelos quando ele chega', async () => {
+    renderProbe(undefined, () => Promise.resolve([modelo(env.defaultModel), modelo('vendor/b')]))
+
+    expect(screen.getByTestId('models-status')).toHaveTextContent('loading')
+    await waitFor(() => expect(screen.getByTestId('models-status')).toHaveTextContent('ready'))
+    expect(screen.getByTestId('models')).toHaveTextContent(`${env.defaultModel},vendor/b`)
+  })
+
+  it('falha do catálogo vira status de erro e mantém o modelo em uso', async () => {
+    renderProbe(undefined, () => Promise.reject(new Error('fora do ar')))
+
+    await waitFor(() => expect(screen.getByTestId('models-status')).toHaveTextContent('error'))
+    expect(screen.getByTestId('models')).toBeEmptyDOMElement()
+    expect(screen.getByTestId('model')).toHaveTextContent(env.defaultModel)
+  })
+
+  it('reloadModels busca o catálogo de novo', async () => {
+    const loadModels = vi
+      .fn()
+      .mockResolvedValueOnce([modelo(env.defaultModel)])
+      .mockResolvedValueOnce([modelo(env.defaultModel), modelo('vendor/novo')])
+    renderProbe(undefined, loadModels)
+    await waitFor(() => expect(screen.getByTestId('models')).toHaveTextContent(env.defaultModel))
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Recarregar modelos' }))
+
+    await waitFor(() => expect(screen.getByTestId('models')).toHaveTextContent('vendor/novo'))
+    expect(loadModels).toHaveBeenCalledTimes(2)
+  })
+
+  it('um modelo salvo que está no catálogo é mantido', async () => {
+    window.localStorage.setItem(
+      'tcc.runConfig',
+      JSON.stringify({ modelName: 'vendor/salvo', maxTokens: 900, temperature: 0.5 }),
+    )
+
+    renderProbe(undefined, () => Promise.resolve([modelo(env.defaultModel), modelo('vendor/salvo')]))
+
+    await waitFor(() => expect(screen.getByTestId('models-status')).toHaveTextContent('ready'))
+    expect(screen.getByTestId('model')).toHaveTextContent('vendor/salvo')
+  })
+
+  it('sem o default no catálogo, um modelo fora dele cai para o primeiro do catálogo', async () => {
+    window.localStorage.setItem(
+      'tcc.runConfig',
+      JSON.stringify({ modelName: 'vendor/removido', maxTokens: 900, temperature: 0.5 }),
+    )
+
+    renderProbe(undefined, () => Promise.resolve([modelo('vendor/primeiro'), modelo('vendor/segundo')]))
+
+    await waitFor(() => expect(screen.getByTestId('model')).toHaveTextContent('vendor/primeiro'))
+    expect(JSON.parse(window.localStorage.getItem('tcc.runConfig') ?? '{}').modelName).toBe('vendor/primeiro')
+  })
+
+  it('restaurar os padrões também escolhe um modelo do catálogo', async () => {
+    renderProbe(undefined, () => Promise.resolve([modelo('vendor/unico')]))
+    await waitFor(() => expect(screen.getByTestId('model')).toHaveTextContent('vendor/unico'))
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Restaurar' }))
+
+    expect(screen.getByTestId('model')).toHaveTextContent('vendor/unico')
+  })
+
   it('os defaults vêm de env', () => {
     renderProbe()
 
@@ -117,15 +208,16 @@ describe('RunConfigContext', () => {
     expect(screen.getByTestId('provider')).toHaveTextContent(MODEL_PROVIDER.OPENAI)
   })
 
-  it('um modelo salvo fora de availableModels cai para o default na leitura', () => {
+  it('um modelo salvo fora do catálogo cai para o default quando o catálogo chega', async () => {
     window.localStorage.setItem(
       'tcc.runConfig',
       JSON.stringify({ modelName: 'modelo-que-saiu-da-lista', maxTokens: 900, temperature: 0.5 }),
     )
 
-    renderProbe()
+    renderProbe(undefined, () => Promise.resolve([modelo(env.defaultModel)]))
 
-    expect(screen.getByTestId('model')).toHaveTextContent(env.defaultModel)
+    expect(screen.getByTestId('model')).toHaveTextContent('modelo-que-saiu-da-lista')
+    await waitFor(() => expect(screen.getByTestId('model')).toHaveTextContent(env.defaultModel))
     expect(screen.getByTestId('max-tokens')).toHaveTextContent('900')
   })
 

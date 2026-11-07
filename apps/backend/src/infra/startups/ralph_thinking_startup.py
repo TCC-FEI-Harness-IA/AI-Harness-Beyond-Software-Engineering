@@ -24,11 +24,13 @@ from src.infra.adapters.cost_guard_adapter import CostGuardAdapter
 from src.infra.adapters.id_generator_adapter import IdGeneratorAdapter
 from src.infra.adapters.llm_completions_adapter import LLMCompletionsAdapter
 from src.infra.adapters.model_catalog_adapter import ModelCatalogAdapter
+from src.infra.adapters.mongo_client_adapter import MongoClientAdapter
 from src.infra.adapters.session_recorder_adapter import SessionRecorderAdapter
 from src.infra.adapters.structured_response_parser_adapter import StructuredResponseParserAdapter
 from src.infra.config.settings import Settings
 from src.infra.mappers.session_document_mapper import SessionDocumentMapper
 from src.infra.providers.file_prompt_template_provider import FilePromptTemplateProvider
+from src.infra.repositories.mongo_model_info_repository import MongoModelInfoRepository
 from src.infra.repositories.session_repository_factory import SessionRepositoryFactory
 from src.infra.routes.v1.message.dtos.context_window_dto import ContextWindowDTO
 from src.infra.routes.v1.message.dtos.reasoning_event_dto import ReasoningEventDTO
@@ -91,13 +93,17 @@ class RalphThinkingStartup:
         self.context_window_factory = ContextWindowFactoryAdapter(id_generator=self.id_generator)
 
         llm_services = LLMServiceFactory(settings=self.settings).create_all()
-        model_catalog = ModelCatalogAdapter(
+        self.model_catalog = ModelCatalogAdapter(
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(ModelCatalogAdapter)),
+            model_repository=MongoModelInfoRepository(
+                collection=MongoClientAdapter(settings=self.settings).models_collection,
+                logger=self.settings.logger(module_file=getfile(MongoModelInfoRepository)),
+            ),
         )
         self.llm_completions = LLMCompletionsAdapter(
             llm_services=llm_services,
-            model_catalog=model_catalog,
+            model_catalog=self.model_catalog,
             logger=self.settings.logger(module_file=getfile(LLMCompletionsAdapter)),
             settings=self.settings,
         )
@@ -161,6 +167,9 @@ class RalphThinkingStartup:
             ValueError: Quando o limite pedido passa do teto do backend ou não cabe a reserva da resposta final.
         """
         self.cost_guard.limit_session_tokens(session_token_budget=payload.llm_model_config.max_tokens)
+        await self.model_catalog.include_registered(
+            model_name=payload.llm_model_config.provider_config.model_name
+        )
         input_dto = RalphThinkingInputDTO(
             user_input=payload.message.user_input,
             model_name=payload.llm_model_config.provider_config.model_name,

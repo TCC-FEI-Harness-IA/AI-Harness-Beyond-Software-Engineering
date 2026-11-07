@@ -39,6 +39,7 @@ O front fala com o backend por dois transportes:
 | Ralph Loop Adaptado (harness) | WebSocket | `/v1/message/reasoning` |
 | Histórico | HTTP `GET` | `/v1/sessions`, `/v1/sessions/{id}` |
 | Limite de tokens por sessão do backend | HTTP `GET` | `/v1/limits` |
+| Catálogo de modelos (lista de escolha e tela "Modelos") | HTTP `GET`, `POST`, `PUT`, `DELETE` | `/v1/models` |
 | BenchMark — execução da bateria | WebSocket | `/v1/benchmark/run` |
 | BenchMark — baterias e dataset | HTTP `GET` | `/v1/benchmark/sessions`, `/v1/benchmark/sessions/{id}`, `/v1/benchmark/questions` |
 | BenchMark — reexecutar uma questão errada | WebSocket | `/v1/benchmark/sessions/{id}/questions/{question_id}/rerun` |
@@ -77,7 +78,7 @@ parser de fronteira em `src/api/parsers/`, que devolve o tipo do domínio ou lan
 
 ```bash
 npm install
-cp .env.example .env     # ajuste VITE_AVAILABLE_MODELS, VITE_DEFAULT_MODEL e VITE_AVAILABLE_PROVIDERS
+cp .env.example .env     # ajuste VITE_DEFAULT_MODEL e VITE_AVAILABLE_PROVIDERS
 npm run dev               # http://localhost:5173
 ```
 
@@ -85,10 +86,11 @@ O backend precisa estar rodando em `http://localhost:8000` (ou no que `VITE_API_
 `VITE_WS_BASE_URL` apontarem), com a origem deste front (`http://localhost:5173` por padrão)
 incluída em `CORS_ALLOWED_ORIGINS` no `.env` do backend.
 
-**Alinhamento obrigatório entre front e backend:** os modelos listados em
-`VITE_AVAILABLE_MODELS` precisam ser um subconjunto de `GENAI_AVAILABLE_MODELS` no backend, e os
-de `VITE_AVAILABLE_PROVIDERS` um subconjunto de `GENAI_AVAILABLE_PROVIDERS` — do contrário toda
-chamada volta com erro de modelo/provider indisponível. O provedor escolhido na barra de
+**Alinhamento obrigatório entre front e backend:** os provedores de `VITE_AVAILABLE_PROVIDERS`
+precisam ser um subconjunto de `GENAI_AVAILABLE_PROVIDERS` — do contrário toda chamada volta com erro
+de provider indisponível. Os modelos não ficam mais no `.env`: a lista de escolha vem do catálogo do
+backend (`GET /v1/models`, guardado no MongoDB) e é mantida na tela "Modelos" (`/modelos`), onde se
+cadastra, edita e remove um modelo com preço, contexto e vazão. O provedor escolhido na barra de
 configuração da home viaja em `llm_model_config.provider` e decide qual adapter do backend
 atende a execução.
 
@@ -128,8 +130,7 @@ mensagem que nomeia a variável.
 | `VITE_REQUEST_TIMEOUT_MS` | `60000` | Timeout das chamadas HTTP. |
 | `VITE_AVAILABLE_PROVIDERS` | *(o provedor padrão)* | Provedores oferecidos no seletor (CSV): `open_router`, `azure_ai_foundry`, `openai`. Precisa ser subconjunto de `GENAI_AVAILABLE_PROVIDERS` no backend. |
 | `VITE_DEFAULT_PROVIDER` | `open_router` | `provider` pré-selecionado, enviado no `llm_model_config`. Precisa estar em `VITE_AVAILABLE_PROVIDERS`. |
-| `VITE_AVAILABLE_MODELS` | *(CSV)* | Modelos oferecidos no seletor. Precisa ser subconjunto de `GENAI_AVAILABLE_MODELS` no backend. |
-| `VITE_DEFAULT_MODEL` | — | Modelo pré-selecionado. Precisa estar em `VITE_AVAILABLE_MODELS`. |
+| `VITE_DEFAULT_MODEL` | — | Modelo pré-selecionado. Quando o catálogo chega sem ele, vale o primeiro modelo do catálogo. |
 | `VITE_DEFAULT_MAX_TOKENS` | `50000` | `max_tokens` padrão: limite de tokens (entrada + saída) **por sessão** imposto pelo front, somando todas as chamadas ao modelo. Nunca passa do limite por sessão do backend (`LLM_MAX_TOKENS`, lido em `GET /v1/limits`): o valor salvo ou digitado é rebaixado a ele. Para o Ralph, precisa ser maior que `RALPH_FINAL_ANSWER_TOKEN_RESERVE`. |
 | `VITE_DEFAULT_TEMPERATURE` | `0.3` | `temperature` padrão. Backend exige `[0, 1]`. |
 | `VITE_HISTORY_FETCH_CONCURRENCY` | `6` | Requisições simultâneas ao hidratar a lista de histórico. |

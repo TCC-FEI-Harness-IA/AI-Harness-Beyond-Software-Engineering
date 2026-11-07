@@ -13,7 +13,7 @@ function DestinationProbe({ label }: { label: string }): JSX.Element {
 function renderHome(): void {
   render(
     <MemoryRouter initialEntries={[ROUTES.home]}>
-      <RunConfigProvider>
+      <RunConfigProvider loadModels={() => new Promise(() => {})}>
         <Routes>
           <Route path={ROUTES.home} element={<HomePage />} />
           <Route path={ROUTES.simpleChat} element={<DestinationProbe label="simples" />} />

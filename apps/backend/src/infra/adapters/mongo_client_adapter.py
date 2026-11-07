@@ -40,6 +40,16 @@ class MongoClientAdapter:
         database = self.client[self.settings.mongodb_database]
         return database[self.settings.mongodb_benchmark_sessions_collection]
 
+    @property
+    def models_collection(self) -> AsyncIOMotorCollection:
+        """Coleção configurada para o catálogo de modelos.
+
+        Returns:
+            AsyncIOMotorCollection: Coleção do banco e nome configurados em `ISettings`.
+        """
+        database = self.client[self.settings.mongodb_database]
+        return database[self.settings.mongodb_models_collection]
+
     def close(self) -> None:
         """Fecha a conexão com o MongoDB."""
         self.client.close()

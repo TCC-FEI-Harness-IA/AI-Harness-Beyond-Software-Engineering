@@ -3,9 +3,11 @@ import logging
 import pytest
 
 from src.domain.entities.llm.genai_model import GenaiModel
+from src.domain.entities.llm.model_info import ModelInfo
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.infra.adapters.model_catalog_adapter import ModelCatalogAdapter
 from tests.doubles.fake_settings import FakeSettings
+from tests.doubles.in_memory_model_info_repository import InMemoryModelInfoRepository
 
 
 def _build_adapter(**overrides: object) -> ModelCatalogAdapter:
@@ -85,3 +87,55 @@ def test_nome_em_branco_nao_esta_disponivel() -> None:
     adapter = _build_adapter(genai_available_models=["meta/llama"])
 
     assert adapter.is_model_available(model_name="   ") is False
+
+
+def _build_adapter_com_cadastro(repositorio: InMemoryModelInfoRepository) -> ModelCatalogAdapter:
+    return ModelCatalogAdapter(
+        settings=FakeSettings(genai_available_models=["vendor/da-allowlist"]),
+        logger=logging.getLogger("teste"),
+        model_repository=repositorio,
+    )
+
+
+async def test_modelo_cadastrado_fica_liberado_depois_de_incluido() -> None:
+    adapter = _build_adapter_com_cadastro(InMemoryModelInfoRepository(models=[ModelInfo(model_name="vendor/novo")]))
+
+    await adapter.include_registered(model_name="vendor/novo")
+
+    modelo = adapter.resolve(model_name="vendor/novo", model_provider=ModelProviderEnum.OPEN_ROUTER)
+    assert modelo.model_name == "vendor/novo"
+
+
+async def test_modelo_nao_cadastrado_segue_recusado() -> None:
+    adapter = _build_adapter_com_cadastro(InMemoryModelInfoRepository())
+
+    await adapter.include_registered(model_name="vendor/fantasma")
+
+    with pytest.raises(ValueError, match="vendor/fantasma"):
+        adapter.resolve(model_name="vendor/fantasma", model_provider=ModelProviderEnum.OPEN_ROUTER)
+
+
+async def test_modelo_da_allowlist_nao_consulta_o_repositorio() -> None:
+    repositorio = InMemoryModelInfoRepository(error=RuntimeError("mongo fora do ar"))
+    adapter = _build_adapter_com_cadastro(repositorio)
+
+    await adapter.include_registered(model_name="vendor/da-allowlist")
+
+    assert repositorio.find_calls == []
+    assert adapter.is_model_available(model_name="vendor/da-allowlist") is True
+
+
+async def test_falha_do_repositorio_nao_propaga_e_mantem_o_modelo_recusado() -> None:
+    adapter = _build_adapter_com_cadastro(InMemoryModelInfoRepository(error=RuntimeError("mongo fora do ar")))
+
+    await adapter.include_registered(model_name="vendor/novo")
+
+    assert adapter.is_model_available(model_name="vendor/novo") is False
+
+
+async def test_sem_repositorio_include_registered_nao_faz_nada() -> None:
+    adapter = _build_adapter(genai_available_models=[])
+
+    await adapter.include_registered(model_name="vendor/novo")
+
+    assert adapter.is_model_available(model_name="vendor/novo") is False

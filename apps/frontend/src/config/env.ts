@@ -10,7 +10,6 @@ export interface AppEnv {
   readonly requestTimeoutMs: number
   readonly defaultProvider: ModelProvider
   readonly availableProviders: readonly ModelProvider[]
-  readonly availableModels: readonly string[]
   readonly defaultModel: string
   readonly defaultMaxTokens: number
   readonly defaultTemperature: number
@@ -29,7 +28,6 @@ type EnvKey =
   | 'VITE_WS_OPEN_TIMEOUT_MS'
   | 'VITE_DEFAULT_PROVIDER'
   | 'VITE_AVAILABLE_PROVIDERS'
-  | 'VITE_AVAILABLE_MODELS'
   | 'VITE_DEFAULT_MODEL'
   | 'VITE_DEFAULT_MAX_TOKENS'
   | 'VITE_DEFAULT_TEMPERATURE'
@@ -161,18 +159,9 @@ function loadEnv(): AppEnv {
     )
   }
 
-  const availableModels = readList('VITE_AVAILABLE_MODELS')
-  if (availableModels.length === 0) {
-    throw new ConfigError('VITE_AVAILABLE_MODELS', 'precisa listar ao menos um modelo')
-  }
-
+  // A lista de modelos vem do catálogo do backend (`GET /v1/models`, cadastrado na tela "Modelos");
+  // aqui fica só o modelo pré-selecionado enquanto o catálogo não chega.
   const defaultModel = readString('VITE_DEFAULT_MODEL')
-  if (!availableModels.includes(defaultModel)) {
-    throw new ConfigError(
-      'VITE_DEFAULT_MODEL',
-      `precisa pertencer a VITE_AVAILABLE_MODELS (${availableModels.join(', ')})`,
-    )
-  }
 
   // `max_tokens` é o limite de tokens (entrada + saída) da sessão inteira, e não de uma chamada:
   // o Ralph soma muitas chamadas, e o backend ainda separa dele a reserva da resposta final
@@ -194,7 +183,6 @@ function loadEnv(): AppEnv {
     requestTimeoutMs: readNumber('VITE_REQUEST_TIMEOUT_MS', 60000),
     defaultProvider,
     availableProviders,
-    availableModels,
     defaultModel,
     defaultMaxTokens,
     defaultTemperature,

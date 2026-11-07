@@ -37,3 +37,50 @@
   color: var(--color-text);
   font-size: var(--text-sm);
 }
+
+.modelSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.modelHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.modelHeading {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.modelCurrent {
+  margin-left: var(--space-1);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.manageLink {
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.manageLink:hover {
+  text-decoration: underline;
+}
+
+.modelNotice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-md);
+}

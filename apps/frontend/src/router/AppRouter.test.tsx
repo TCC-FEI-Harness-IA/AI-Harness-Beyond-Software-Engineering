@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as ModelsApiModule from '@/api/modelsApi'
 import type * as SessionApiModule from '@/api/sessionApi'
 import { HttpError } from '@/api/errors/HttpError'
 import { RunConfigProvider } from '@/state/RunConfigContext'
@@ -18,6 +19,12 @@ vi.mock('@/api/sessionApi', async () => {
     listSessionIds: vi.fn().mockResolvedValue([]),
     getSession: vi.fn().mockRejectedValue(new HttpError(404, 'não encontrada')),
   }
+})
+
+// O catálogo de modelos fica pendente: a escolha do modelo mostra o esqueleto, sem rede real.
+vi.mock('@/api/modelsApi', async () => {
+  const actual = await vi.importActual<typeof ModelsApiModule>('@/api/modelsApi')
+  return { ...actual, getModelCatalog: vi.fn(() => new Promise(() => {})) }
 })
 
 function renderAt(path: string, enableDevRoute = false): void {
@@ -62,6 +69,11 @@ describe('AppRouter', () => {
   it('renderiza o detalhe do histórico com o sessionId da URL', async () => {
     renderAt('/historico/sess_ab12cd34ef56')
     expect(await screen.findByText('Esta conversa não existe mais')).toBeInTheDocument()
+  })
+
+  it('renderiza o cadastro de modelos em /modelos', () => {
+    renderAt('/modelos')
+    expect(screen.getByRole('heading', { name: 'Modelos' })).toBeInTheDocument()
   })
 
   it('cai na tela de não encontrado para uma rota desconhecida', () => {

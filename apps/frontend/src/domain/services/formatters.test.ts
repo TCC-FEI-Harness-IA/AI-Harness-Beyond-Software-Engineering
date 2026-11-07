@@ -5,7 +5,9 @@ import {
   formatDuration,
   formatRelative,
   formatPercent,
+  formatPricePerMillion,
   formatTemperature,
+  formatThroughput,
   formatTokens,
   truncate,
 } from './formatters'
@@ -93,5 +95,21 @@ describe('formatPercent', () => {
     expect(formatPercent(0.5)).toBe('50%')
     expect(formatPercent(1 / 3)).toBe('33,3%')
     expect(formatPercent(0)).toBe('0%')
+  })
+})
+
+describe('formatPricePerMillion', () => {
+  it('mostra no mínimo duas casas decimais, em dólar no padrão pt-BR', () => {
+    expect(formatPricePerMillion(0.3).replace(/\s/g, ' ')).toBe('US$ 0,30')
+  })
+
+  it('preserva até quatro casas quando o preço é muito pequeno', () => {
+    expect(formatPricePerMillion(0.0434).replace(/\s/g, ' ')).toBe('US$ 0,0434')
+  })
+})
+
+describe('formatThroughput', () => {
+  it('arredonda para inteiro e acrescenta a unidade', () => {
+    expect(formatThroughput(117.6)).toBe('118 tok/s')
   })
 })

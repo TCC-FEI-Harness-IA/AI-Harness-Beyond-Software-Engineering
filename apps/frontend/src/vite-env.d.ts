@@ -8,7 +8,6 @@ interface ImportMetaEnv {
   readonly VITE_REQUEST_TIMEOUT_MS?: string
   readonly VITE_WS_OPEN_TIMEOUT_MS?: string
   readonly VITE_DEFAULT_PROVIDER?: string
-  readonly VITE_AVAILABLE_MODELS?: string
   readonly VITE_DEFAULT_MODEL?: string
   readonly VITE_DEFAULT_MAX_TOKENS?: string
   readonly VITE_DEFAULT_TEMPERATURE?: string

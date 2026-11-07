@@ -53,3 +53,12 @@ def test_close_encerra_o_cliente_sem_levantar_excecao() -> None:
     adapter = _build_adapter()
 
     adapter.close()
+
+
+def test_models_collection_usa_o_banco_e_a_colecao_configurados() -> None:
+    adapter = _build_adapter(mongodb_database="banco_de_teste", mongodb_models_collection="modelos")
+
+    colecao = adapter.models_collection
+
+    assert colecao.name == "modelos"
+    assert colecao.database.name == "banco_de_teste"

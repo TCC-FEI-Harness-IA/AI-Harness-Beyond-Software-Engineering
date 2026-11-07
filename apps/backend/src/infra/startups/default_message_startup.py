@@ -8,9 +8,11 @@ from src.infra.adapters.clock_adapter import ClockAdapter
 from src.infra.adapters.id_generator_adapter import IdGeneratorAdapter
 from src.infra.adapters.llm_completions_adapter import LLMCompletionsAdapter
 from src.infra.adapters.model_catalog_adapter import ModelCatalogAdapter
+from src.infra.adapters.mongo_client_adapter import MongoClientAdapter
 from src.infra.adapters.session_recorder_adapter import SessionRecorderAdapter
 from src.infra.config.settings import Settings
 from src.infra.mappers.session_document_mapper import SessionDocumentMapper
+from src.infra.repositories.mongo_model_info_repository import MongoModelInfoRepository
 from src.infra.repositories.session_repository_factory import SessionRepositoryFactory
 from src.infra.routes.v1.message.dtos.default_input_dto import DefaultInputDTO
 from src.infra.routes.v1.message.dtos.default_output_dto import DefaultOutputDTO
@@ -30,13 +32,17 @@ class DefaultMessageStartup:
         self.logger = self.settings.logger(module_file=__file__)
 
         llm_services = LLMServiceFactory(settings=self.settings).create_all()
-        model_catalog = ModelCatalogAdapter(
+        self.model_catalog = ModelCatalogAdapter(
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(ModelCatalogAdapter)),
+            model_repository=MongoModelInfoRepository(
+                collection=MongoClientAdapter(settings=self.settings).models_collection,
+                logger=self.settings.logger(module_file=getfile(MongoModelInfoRepository)),
+            ),
         )
         llm_completions_adapter = LLMCompletionsAdapter(
             llm_services=llm_services,
-            model_catalog=model_catalog,
+            model_catalog=self.model_catalog,
             logger=self.settings.logger(module_file=getfile(LLMCompletionsAdapter)),
             settings=self.settings,
         )
@@ -71,6 +77,9 @@ class DefaultMessageStartup:
             DefaultOutputDTO: Corpo da resposta no contrato de transporte.
         """
         self.logger.info("Executando fluxo default message")
+        await self.model_catalog.include_registered(
+            model_name=payload.llm_model_config.provider_config.model_name
+        )
 
         resultado = await self.default_message_use_case.execute(
             user_input=DefaultMessageInputDTO(

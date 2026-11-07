@@ -196,6 +196,12 @@ class ISettings(ABC):
 
     @property
     @abstractmethod
+    def mongodb_models_collection(self) -> str:
+        """Nome da coleção que guarda o catálogo de modelos no MongoDB."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def ralph_session_flush_every_message(self) -> bool:
         """Persiste a sessão a cada mensagem registrada."""
         raise NotImplementedError

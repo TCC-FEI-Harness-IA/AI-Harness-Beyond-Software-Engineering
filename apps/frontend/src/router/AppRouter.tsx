@@ -7,6 +7,7 @@ import { HistoryListPage } from '@/features/history/HistoryListPage'
 import { HistoryDetailPage } from '@/features/history/HistoryDetailPage'
 import { BenchmarkPage } from '@/features/benchmark/BenchmarkPage'
 import { BenchmarkSessionPage } from '@/features/benchmark/BenchmarkSessionPage'
+import { ModelsPage } from '@/features/models/ModelsPage'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
 import { ComponentsGalleryPage } from '@/features/dev/ComponentsGalleryPage'
 import { BenchmarkRunProvider } from '@/state/BenchmarkRunContext'
@@ -41,6 +42,7 @@ function AppShellWithRoutes({ enableDevRoute }: Required<AppRouterProps>): JSX.E
           <Route path={ROUTES.benchmark} element={<BenchmarkPage />} />
           <Route path={ROUTES.benchmarkSession} element={<BenchmarkSessionPage />} />
           <Route path={ROUTES.benchmarkChildSession} element={<HistoryDetailPage source="benchmark" />} />
+          <Route path={ROUTES.models} element={<ModelsPage />} />
           {enableDevRoute ? (
             <Route path={ROUTES.devComponents} element={<ComponentsGalleryPage />} />
           ) : null}

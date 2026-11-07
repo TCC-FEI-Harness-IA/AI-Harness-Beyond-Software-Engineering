@@ -71,6 +71,7 @@ class Settings(ISettings):
             "MONGODB_URI": os.getenv("MONGODB_URI", "mongodb://localhost:27017"),
             "MONGODB_DATABASE": os.getenv("MONGODB_DATABASE", "tcc"),
             "MONGODB_SESSIONS_COLLECTION": os.getenv("MONGODB_SESSIONS_COLLECTION", "sessions"),
+            "MONGODB_MODELS_COLLECTION": os.getenv("MONGODB_MODELS_COLLECTION", "models"),
             "RALPH_SESSION_FLUSH_EVERY_MESSAGE": os.getenv("RALPH_SESSION_FLUSH_EVERY_MESSAGE", "true"),
             "RALPH_SESSION_ID_PREFIX": os.getenv("RALPH_SESSION_ID_PREFIX", "sess"),
             "RALPH_MAX_TASK_ATTEMPTS": os.getenv("RALPH_MAX_TASK_ATTEMPTS", "3"),
@@ -366,6 +367,11 @@ class Settings(ISettings):
     def mongodb_sessions_collection(self) -> str:
         """Nome da coleção que guarda os documentos de sessão no MongoDB."""
         return self.__get_str("MONGODB_SESSIONS_COLLECTION").strip()
+
+    @property
+    def mongodb_models_collection(self) -> str:
+        """Nome da coleção que guarda o catálogo de modelos no MongoDB."""
+        return self.__get_str("MONGODB_MODELS_COLLECTION").strip()
 
     @property
     def ralph_session_flush_every_message(self) -> bool:

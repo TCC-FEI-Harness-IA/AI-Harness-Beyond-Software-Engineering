@@ -84,3 +84,20 @@ export function formatTemperature(temperature: number): string {
 export function formatPercent(ratio: number): string {
   return percentFormatter.format(ratio)
 }
+
+const usdPriceFormatter = new Intl.NumberFormat(LOCALE, {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 4,
+})
+
+/** Preço em USD por 1 milhão de tokens (`0.0434` → `US$ 0,0434`; `0.3` → `US$ 0,30`). */
+export function formatPricePerMillion(usd: number): string {
+  return usdPriceFormatter.format(usd)
+}
+
+/** Vazão em tokens por segundo, arredondada para inteiro (`117.6` → `118 tok/s`). */
+export function formatThroughput(tokensPerSecond: number): string {
+  return `${tokensFormatter.format(Math.round(tokensPerSecond))} tok/s`
+}

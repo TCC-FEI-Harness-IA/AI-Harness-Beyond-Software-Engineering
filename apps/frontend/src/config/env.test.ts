@@ -11,7 +11,6 @@ const BASE_ENV: Record<string, string> = {
   VITE_WS_OPEN_TIMEOUT_MS: '15000',
   VITE_DEFAULT_PROVIDER: 'open_router',
   VITE_AVAILABLE_PROVIDERS: 'open_router,openai',
-  VITE_AVAILABLE_MODELS: 'openai/gpt-4o-mini,openai/gpt-4o',
   VITE_DEFAULT_MODEL: 'openai/gpt-4o-mini',
   VITE_DEFAULT_MAX_TOKENS: '1200',
   VITE_DEFAULT_TEMPERATURE: '0.3',
@@ -44,7 +43,6 @@ describe('config/env', () => {
 
     expect(env.apiBaseUrl).toBe('http://localhost:8000/v1')
     expect(env.wsBaseUrl).toBe('ws://localhost:8000/v1')
-    expect(env.availableModels).toEqual(['openai/gpt-4o-mini', 'openai/gpt-4o'])
     expect(env.availableProviders).toEqual(['open_router', 'openai'])
     expect(env.defaultProvider).toBe('open_router')
     expect(env.defaultModel).toBe('openai/gpt-4o-mini')
@@ -54,8 +52,8 @@ describe('config/env', () => {
     expect(Object.isFrozen(env)).toBe(true)
   })
 
-  it('lança nomeando a variável quando o modelo padrão não está na lista', async () => {
-    stubEnv({ VITE_DEFAULT_MODEL: 'modelo-inexistente' })
+  it('lança nomeando a variável quando o modelo padrão está vazio', async () => {
+    stubEnv({ VITE_DEFAULT_MODEL: '' })
     await expect(importEnv()).rejects.toThrow(/VITE_DEFAULT_MODEL/)
   })
 

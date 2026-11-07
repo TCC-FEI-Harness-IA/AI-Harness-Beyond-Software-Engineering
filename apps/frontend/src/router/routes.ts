@@ -9,6 +9,7 @@ export const ROUTES = {
   benchmark: '/benchmark',
   benchmarkSession: '/benchmark/:benchmarkSessionId',
   benchmarkChildSession: '/benchmark/:benchmarkSessionId/sessao/:sessionId',
+  models: '/modelos',
   devComponents: '/dev/componentes',
 } as const
 

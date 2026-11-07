@@ -39,7 +39,7 @@ async function parseBody<T>(response: Response, parse: (raw: unknown) => T): Pro
 }
 
 async function request<T>(
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
   body: unknown,
   readBody: (response: Response) => Promise<T>,
@@ -104,4 +104,14 @@ export const httpClient = {
     signal?: AbortSignal,
   ): Promise<T> =>
     request('POST', path, body, (response) => parseBody(response, parse), signal),
+  put: <T>(
+    path: string,
+    body: unknown,
+    parse: (raw: unknown) => T,
+    signal?: AbortSignal,
+  ): Promise<T> =>
+    request('PUT', path, body, (response) => parseBody(response, parse), signal),
+  /** Remove um recurso; a resposta (204) não tem corpo. */
+  delete: (path: string, signal?: AbortSignal): Promise<void> =>
+    request('DELETE', path, undefined, () => Promise.resolve(), signal),
 }

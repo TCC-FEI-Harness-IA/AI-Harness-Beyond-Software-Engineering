@@ -34,6 +34,7 @@ _DEFAULTS: dict[str, Any] = {
     "mongodb_uri": "mongodb://localhost:27017",
     "mongodb_database": "tcc",
     "mongodb_sessions_collection": "sessions",
+    "mongodb_models_collection": "models",
     "ralph_session_flush_every_message": True,
     "ralph_session_id_prefix": "sess",
     "ralph_max_task_attempts": 3,
@@ -233,6 +234,10 @@ class FakeSettings(ISettings):
     @property
     def mongodb_benchmark_sessions_collection(self) -> str:
         return self.values["mongodb_benchmark_sessions_collection"]
+
+    @property
+    def mongodb_models_collection(self) -> str:
+        return self.values["mongodb_models_collection"]
 
     @property
     def ralph_benchmark_questions_path(self) -> str:

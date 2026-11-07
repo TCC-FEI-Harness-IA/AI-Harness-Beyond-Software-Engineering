@@ -47,6 +47,19 @@ export function optionalString(
   return value
 }
 
+export function optionalNumber(
+  source: Record<string, unknown>,
+  key: string,
+  path: string,
+): number | null {
+  const value = source[key]
+  if (value === null || value === undefined) return null
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    throw new ContractError(`campo "${path}" deveria ser number ou null, recebeu: ${describe(value)}`)
+  }
+  return value
+}
+
 function describe(value: unknown): string {
   if (value === undefined) return 'undefined'
   if (value === null) return 'null'

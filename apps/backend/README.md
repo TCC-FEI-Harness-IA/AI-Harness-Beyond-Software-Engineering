@@ -99,6 +99,11 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
   - [`GET /v1/sessions/{session_id}`](#get-v1sessionssession_id)
   - [`GET /v1/health`](#get-v1health)
   - [`GET /v1/limits`](#get-v1limits)
+  - [`GET /v1/models`](#get-v1models)
+  - [`POST /v1/models`](#post-v1models)
+  - [`PUT /v1/models/{model_name}`](#put-v1modelsmodel_name)
+  - [`DELETE /v1/models/{model_name}`](#delete-v1modelsmodel_name)
+  - [Catálogo de modelos e allowlist](#catálogo-de-modelos-e-allowlist)
 - [Endpoint WebSocket](#endpoint-websocket)
   - [`WS /v1/message/reasoning`](#ws-v1messagereasoning)
 - [Benchmark](#benchmark)
@@ -420,6 +425,70 @@ Limites do backend que o cliente precisa respeitar ao montar uma requisição. O
 
 **Resposta `200`**: `{ "max_tokens_limit": 120000 }` (o valor de `LLM_MAX_TOKENS`)
 
+### `GET /v1/models`
+
+Lista o catálogo de modelos guardado no MongoDB (coleção `MONGODB_MODELS_COLLECTION`, padrão `models`). O
+front usa para montar a lista de escolha do modelo, com preço, contexto máximo e vazão, ordenável pelas
+colunas.
+
+**Resposta `200`**:
+
+```json
+{
+  "models": [
+    {
+      "model_name": "openai/gpt-5-nano",
+      "display_name": "OpenAI: GPT-5 Nano",
+      "input_price_per_million_tokens": 0.05,
+      "output_price_per_million_tokens": 0.4,
+      "context_length": 400000,
+      "throughput_tokens_per_second": 114
+    }
+  ]
+}
+```
+
+- Ordem alfabética de `model_name`. Preços em USD por 1 milhão de tokens; contexto em tokens; vazão em
+  tokens por segundo.
+- Todo campo além de `model_name` pode ser `null` (dado desconhecido).
+- Cada documento tem `_id` igual a `model_name`, então o banco não aceita dois cadastros do mesmo modelo.
+
+### `POST /v1/models`
+
+Cadastra um modelo. Corpo: o mesmo objeto de um item de `GET /v1/models` (só `model_name` é obrigatório).
+
+- **`201`**: o modelo cadastrado.
+- **`409`**: já existe um modelo com o mesmo `model_name`.
+- **`422`**: `model_name` vazio, preço negativo, ou contexto/vazão menor ou igual a zero.
+
+### `PUT /v1/models/{model_name}`
+
+Substitui as informações de um modelo cadastrado. O identificador vai no caminho, com a barra
+(`/v1/models/meta-llama/llama-3.1-8b-instruct`); o corpo traz os demais campos. **`200`** com o modelo,
+**`404`** quando ele não está cadastrado, **`422`** para valores fora da faixa.
+
+### `DELETE /v1/models/{model_name}`
+
+Remove um modelo do catálogo. **`204`** sem corpo, ou **`404`** quando ele não está cadastrado.
+
+### Catálogo de modelos e allowlist
+
+Um modelo cadastrado no catálogo fica liberado para execução, além dos que estão em
+`GENAI_AVAILABLE_MODELS`. O banco só é consultado quando o modelo pedido não está na allowlist: assim,
+com o MongoDB fora do ar, os modelos da allowlist continuam funcionando.
+
+Para preencher o catálogo com os modelos iniciais (valores da OpenRouter, consultados em 2026-11-07):
+
+```bash
+python scripts/seed_models.py              # cadastra só os que ainda não existem
+python scripts/seed_models.py --overwrite  # substitui os já cadastrados
+```
+
+Os preços na OpenRouter variam por provedor. O seed usa, para cada modelo, os números de um único
+provedor: o primeiro da lista da OpenRouter, que é o de menor preço de entrada. A exceção é a camada
+`flex` da OpenAI, que fica de fora por ser a camada lenta. A vazão é a mediana (p50) dos últimos 30
+minutos desse mesmo provedor. Depois do seed, os valores podem ser ajustados na tela "Modelos" do front.
+
 ---
 
 ## Endpoint WebSocket
@@ -658,13 +727,14 @@ Ver `.env.example` para o arquivo completo.
 | `AZURE_AI_FOUNDRY_API_KEY` | *(vazio)* | Chave do recurso, enviada no header `api-key`. Obrigatória para usar o provedor. |
 | `AZURE_AI_FOUNDRY_API_VERSION` | `2024-10-21` | Versão da API passada na query string. |
 | `AZURE_AI_FOUNDRY_DEPLOYMENT` | *(vazio)* | Nome do deployment. Vazio usa o próprio `model_name` da requisição. |
-| `GENAI_AVAILABLE_MODELS` | *(vazio)* | Allowlist de modelos (JSON array ou CSV). |
+| `GENAI_AVAILABLE_MODELS` | *(vazio)* | Allowlist de modelos (JSON array ou CSV). Os modelos do catálogo no MongoDB também ficam liberados. |
 | `GENAI_AVAILABLE_PROVIDERS` | *(vazio)* | Allowlist de provedores (JSON array ou CSV). |
 | `RALPH_SESSION_STORAGE_BACKEND` | `json_file` | Backend de persistência de sessões: `json_file` ou `mongodb`. |
 | `RALPH_SESSIONS_STORAGE_PATH` | `./data/sessions` | Diretório dos JSON de sessão, quando o backend é `json_file`. |
-| `MONGODB_URI` | `mongodb://localhost:27017` | URI de conexão, quando o backend é `mongodb`. |
+| `MONGODB_URI` | `mongodb://localhost:27017` | URI de conexão do MongoDB (catálogo de modelos e, com o backend `mongodb`, as sessões). |
 | `MONGODB_DATABASE` | `tcc` | Banco de dados usado no MongoDB. |
 | `MONGODB_SESSIONS_COLLECTION` | `sessions` | Coleção que guarda os documentos de sessão no MongoDB. |
+| `MONGODB_MODELS_COLLECTION` | `models` | Coleção do catálogo de modelos (`/v1/models`). |
 | `RALPH_SESSION_FLUSH_EVERY_MESSAGE` | `true` | Persiste a sessão após cada mensagem registrada. |
 | `RALPH_SESSION_ID_PREFIX` | `sess` | Prefixo do identificador de sessão. |
 | `RALPH_MAX_TASK_ATTEMPTS` | `3` | Máximo de tentativas por tarefa. Esgotado sem aprovação, a execução é interrompida: nenhum resultado reprovado é armazenado ou sintetizado. |

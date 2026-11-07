@@ -3,21 +3,56 @@ import logging
 from src.domain.entities.llm.genai_model import GenaiModel
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.interfaces.model_catalog_interface import IModelCatalog
+from src.domain.interfaces.model_info_repository_interface import IModelInfoRepository
 from src.domain.interfaces.settings_interface import ISettings
 
 
 class ModelCatalogAdapter(IModelCatalog):
-    """Catálogo de modelos apoiado nas allowlists expostas pelo `ISettings`."""
+    """Catálogo de modelos apoiado nas allowlists do `ISettings` e nos modelos cadastrados.
 
-    def __init__(self, settings: ISettings, logger: logging.Logger) -> None:
+    Um modelo está liberado quando aparece em `GENAI_AVAILABLE_MODELS` ou quando foi cadastrado
+    no repositório de modelos e incluído por `include_registered` antes da chamada.
+    """
+
+    def __init__(
+        self,
+        settings: ISettings,
+        logger: logging.Logger,
+        model_repository: IModelInfoRepository | None = None,
+    ) -> None:
         """Inicializa o catálogo.
 
         Args:
             settings: Configurações da aplicação, fonte das allowlists.
             logger: Logger do módulo.
+            model_repository: Repositório dos modelos cadastrados; sem ele, vale só a allowlist.
         """
         self.settings: ISettings = settings
         self.logger = logger
+        self.model_repository: IModelInfoRepository | None = model_repository
+        self.registered_models: set[str] = set()
+
+    async def include_registered(self, model_name: str) -> None:
+        """Libera o modelo quando ele está cadastrado no repositório de modelos.
+
+        Só consulta o repositório quando o modelo ainda não está liberado, para que um banco
+        fora do ar não atrase as execuções com modelos da allowlist. Uma falha na consulta é
+        apenas registrada: o modelo segue recusado por `resolve`.
+
+        Args:
+            model_name: Nome do modelo pretendido.
+        """
+        if self.model_repository is None or self.is_model_available(model_name=model_name):
+            return
+
+        try:
+            registered = await self.model_repository.find_by_name(model_name=model_name.strip())
+        except Exception as exc:
+            self.logger.warning("Falha ao consultar o catálogo de modelos cadastrados: %s", exc)
+            return
+
+        if registered is not None:
+            self.registered_models.add(self.__normalize(value=registered.model_name))
 
     def resolve(self, model_name: str, model_provider: ModelProviderEnum) -> GenaiModel:
         """Valida nome e provedor contra as allowlists e devolve o modelo.
@@ -41,7 +76,7 @@ class ModelCatalogAdapter(IModelCatalog):
         return GenaiModel(model_name=model_name, model_provider=model_provider)
 
     def is_model_available(self, model_name: str) -> bool:
-        """Informa se o modelo está na allowlist.
+        """Informa se o modelo está na allowlist ou entre os cadastrados já incluídos.
 
         Args:
             model_name: Nome do modelo pretendido.
@@ -49,7 +84,8 @@ class ModelCatalogAdapter(IModelCatalog):
         Returns:
             bool: `True` quando o modelo é permitido.
         """
-        return self.__normalize(value=model_name) in self.__available_models()
+        normalized = self.__normalize(value=model_name)
+        return normalized in self.__available_models() or normalized in self.registered_models
 
     def is_provider_available(self, model_provider: ModelProviderEnum) -> bool:
         """Informa se o provedor está na allowlist.

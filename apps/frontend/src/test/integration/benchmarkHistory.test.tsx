@@ -51,6 +51,7 @@ function mockBackend(batteries: BenchmarkSessionDocument[] = []) {
       const battery = batteries.find((item) => item.id === decodeURIComponent(path.split('/').at(-1) ?? ''))
       return battery ? respond(battery) : respond({ detail: 'não encontrada' }, 404)
     }
+    if (path === '/v1/models') return respond({ models: [] })
     if (path === '/v1/sessions') return respond({ session_ids: documents.map((document) => document.id) })
     const document = documents.find((item) => item.id === decodeURIComponent(path.split('/').at(-1) ?? ''))
     return document ? respond(document) : respond({ detail: 'não encontrada' }, 404)

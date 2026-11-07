@@ -7,7 +7,6 @@ const BASE_ENV: Record<string, string> = {
   VITE_REQUEST_TIMEOUT_MS: '5000',
   VITE_WS_OPEN_TIMEOUT_MS: '15000',
   VITE_DEFAULT_PROVIDER: 'open_router',
-  VITE_AVAILABLE_MODELS: 'openai/gpt-4o-mini',
   VITE_DEFAULT_MODEL: 'openai/gpt-4o-mini',
   VITE_DEFAULT_MAX_TOKENS: '1200',
   VITE_DEFAULT_TEMPERATURE: '0.3',

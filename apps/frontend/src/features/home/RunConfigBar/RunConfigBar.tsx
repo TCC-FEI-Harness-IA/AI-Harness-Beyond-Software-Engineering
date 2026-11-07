@@ -7,6 +7,7 @@ import { env } from '@/config/env'
 import { PROVIDER_LABELS, providerLabel } from '@/domain/enums/modelProvider'
 import { formatTemperature, formatTokens } from '@/domain/services/formatters'
 import { useRunConfig } from '@/state/RunConfigContext'
+import { ModelPicker } from './ModelPicker'
 import styles from './RunConfigBar.module.css'
 
 const TEMPERATURE_MIN = 0
@@ -21,18 +22,15 @@ function maxTokensHint(limit: number | null): string {
 }
 
 /**
- * Módulo fixo de configuração da home (README, FASE 04, seção 5.4): provedor, modelo, limite
- * de tokens por sessão e temperatura, sempre visíveis — não é mais um popover atrás de um botão. Quando
- * só existe uma opção de provedor ou de modelo, o seletor correspondente some e a barra mostra
- * apenas o valor em uso.
+ * Módulo fixo de configuração da home (README, FASE 04, seção 5.4): provedor, limite de tokens por
+ * sessão, temperatura e modelo, sempre visíveis — não é mais um popover atrás de um botão. Quando só
+ * existe uma opção de provedor, o seletor some e a barra mostra apenas o valor em uso. O modelo é
+ * escolhido numa lista do catálogo, com preço, contexto e vazão (`ModelPicker`).
  */
 export function RunConfigBar(): JSX.Element {
-  const { config, maxTokensLimit, setModelName, setMaxTokens, setTemperature, setProvider, reset } =
-    useRunConfig()
+  const { config, maxTokensLimit, setMaxTokens, setTemperature, setProvider, reset } = useRunConfig()
 
-  const hasModelChoice = env.availableModels.length > 1
   const hasProviderChoice = env.availableProviders.length > 1
-  const modelSummary = hasModelChoice ? config.modelName : (env.availableModels[0] ?? config.modelName)
 
   return (
     <div className={styles.wrapper} role="group" aria-label="Configuração de execução">
@@ -58,20 +56,6 @@ export function RunConfigBar(): JSX.Element {
           )}
         </Field>
 
-        <Field label="Modelo">
-          {hasModelChoice ? (
-            <Select value={config.modelName} onChange={(event) => setModelName(event.target.value)}>
-              {env.availableModels.map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
-            </Select>
-          ) : (
-            <span className={styles.staticValue}>{modelSummary}</span>
-          )}
-        </Field>
-
         <Field label="Máximo de tokens por sessão" hint={maxTokensHint(maxTokensLimit)}>
           <TextInput
             type="number"
@@ -93,6 +77,8 @@ export function RunConfigBar(): JSX.Element {
           />
         </Field>
       </div>
+
+      <ModelPicker />
     </div>
   )
 }
