@@ -1,0 +1,30 @@
+# QUESTÃO 111
+
+Os fones de ouvido  tradicionais transmitem a música
+diretamente para os nossos ouvidos. Já os modelos
+dotados de tecnologia redutora de ruído — Cancelamento
+de Ruído (CR) —  além de transmitirem música, também
+reduzem todo ruído inconsistente à nossa volta, como
+o barulho de turbinas de avião e aspiradores de pó. Os
+fones de ouvido CR não reduzem realmente barulhos
+irregulares como discursos e choros de bebês. Mesmo
+assim, a supressão do ronco das turbinas do avião
+contribui para reduzir a “fadiga de ruído”, um cansaço
+persistente provocado pela exposição a um barulho alto
+por horas a fio. Esses aparelhos também permitem que
+nós ouçamos músicas ou assistamos a vídeos no trem ou
+no avião a um volume muito menor (e mais seguro).
+Disponível em: http://tecnologia.uol.com.br. Acesso em: 21 abr. 2015 (adaptado).
+A tecnologia redutora de ruído CR utilizada na produção
+de fones de ouvido baseia-se em qual fenômeno
+ondulatório?
+
+A) Absorção.
+
+B) Interferência.
+
+C) Polarização.
+
+D) Reflexão.
+
+E) Difração.

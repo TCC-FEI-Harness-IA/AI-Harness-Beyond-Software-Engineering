@@ -25,10 +25,14 @@ def extract_key(source_id: str, path: Path) -> dict[str, str | None]:
                 for number, letters in re.findall(r"\b(\d{1,2})\s+([A-E](?:\s+[A-E])?)", text)
             }
         text = "\n".join(page.get_text() for page in document)
-    return {
+    result = {
         str(int(number)): letter if letter in "ABCDE" else None
         for number, letter in re.findall(r"\b(\d{1,3})\s+([A-E]\b|[Aa]nulad[ao]|\(\*\)|\*)", text)
     }
+    # Only Human Sciences is used from day 1; language answers 1–5 vary by foreign language.
+    if source_id.endswith("d1"):
+        result = {number: answer for number, answer in result.items() if 46 <= int(number) <= 90}
+    return result
 
 
 def main() -> None:

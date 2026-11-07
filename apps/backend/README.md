@@ -711,9 +711,12 @@ questões de teste e os 285 exemplos de desenvolvimento estão incluídos localm
 hashes fixados. Consulte [MMLU na aplicação](src/infra/benchmark/mmlu/README.md) para o protocolo,
 limites de comparabilidade, exemplo de API e auditoria dos dados.
 
-**Dataset.** As questões ficam em [`src/infra/benchmark/questions`](src/infra/benchmark/questions/README.md),
-no mesmo formato de antes: uma pasta por questão, com `enunciado.md` (enunciado e alternativas `A)` a
-`E)`) e `alternativa_correta.md` (letra e texto do gabarito). O dataset inteiro é validado antes de qualquer
+**Dataset.** Vestibulares reúne 270 questões reais: 30 de História, 30 de Geografia, 30 de Filosofia e
+Sociologia (categoria conjunta), 30 de Biologia e 50 de cada uma de Matemática, Química e Física. As
+90 questões anteriores foram preservadas. Consulte o [catálogo de fontes oficiais](src/infra/benchmark/sources/CATALOG.md).
+As questões ficam em [`src/infra/benchmark/questions`](src/infra/benchmark/questions/README.md),
+no mesmo formato de antes: uma pasta por questão, com `enunciado.md` (enunciado e quatro ou cinco alternativas, de `A)` a
+`D)` ou `E)`) e `alternativa_correta.md` (letra e texto do gabarito). O dataset inteiro é validado antes de qualquer
 chamada ao modelo. A instrução de resposta, comum aos dois fluxos, fica em
 [`src/infra/benchmark/prompt.md`](src/infra/benchmark/prompt.md). O gabarito nunca entra no prompt.
 

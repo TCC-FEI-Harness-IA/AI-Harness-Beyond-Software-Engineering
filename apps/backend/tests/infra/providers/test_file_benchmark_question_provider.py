@@ -26,15 +26,15 @@ def _gravar(diretorio: Path, nome: str, enunciado: str | None = None, gabarito: 
     (pasta / "alternativa_correta.md").write_text(gabarito, encoding="utf-8")
 
 
-def test_dataset_real_tem_noventa_questoes_validas_em_ordem() -> None:
+def test_dataset_real_tem_270_questoes_validas_em_ordem() -> None:
     provider = FileBenchmarkQuestionProvider(settings=Settings(), logger=logging.getLogger("teste"))
 
     questoes = provider.list_questions()
 
-    assert len(questoes) == 90
+    assert len(questoes) == 270
     assert [item.id for item in questoes] == sorted(item.id for item in questoes)
     assert all(len(item.options) in (4, 5) for item in questoes)
-    assert sum(len(item.options) == 4 for item in questoes) == 12
+    assert sum(len(item.options) == 4 for item in questoes) == 16
     assert "RESPOSTA_FINAL: LETRA" in provider.answer_instruction()
 
 

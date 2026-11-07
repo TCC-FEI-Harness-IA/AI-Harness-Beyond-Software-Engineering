@@ -207,9 +207,9 @@ def test_opcoes_de_benchmark_invalidas_nao_criam_bateria_nem_chamam_modelo(
 def test_bateria_executa_as_primeiras_questoes_e_grava_a_benchmark_session(
     ambiente: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # ENEM 2022 Q93 e Q100 (gabarito B): simples acerta só a primeira, Ralph acerta ambas.
+    # ENEM 2022 Q92 (D) e Q98 (E): simples acerta só a primeira, Ralph acerta ambas.
     provedor = _Provedor(
-        ["RESPOSTA_FINAL: B", *_roteiro_ralph("RESPOSTA_FINAL: B"), "RESPOSTA_FINAL: A", *_roteiro_ralph("B")]
+        ["RESPOSTA_FINAL: D", *_roteiro_ralph("RESPOSTA_FINAL: D"), "RESPOSTA_FINAL: A", *_roteiro_ralph("E")]
     )
 
     frames, codigo = _executar(_cliente(monkeypatch, provedor), _abertura())
@@ -228,8 +228,8 @@ def test_bateria_executa_as_primeiras_questoes_e_grava_a_benchmark_session(
     assert bateria["status"] == "completed"
     assert bateria["progress"]["finished"] == 2
     assert [questao["question_id"] for questao in bateria["questions"]] == [
-        "FISICA_ENEM_2022_AZUL_Q093",
-        "FISICA_ENEM_2022_AZUL_Q100",
+        "BIOLOGIA_ENEM_2022_AZUL_Q092",
+        "BIOLOGIA_ENEM_2022_AZUL_Q098",
     ]
     assert bateria["summary"]["simple"]["correct"] == 1
     assert bateria["summary"]["simple"]["wrong"] == 1
@@ -299,8 +299,8 @@ def test_consultas_listam_detalham_e_descrevem_o_dataset(ambiente: Path, monkeyp
     listagem = cliente.get("/v1/benchmark/sessions").json()
     detalhe = cliente.get(f"/v1/benchmark/sessions/{bateria['id']}")
 
-    assert len(dataset["question_ids"]) == 90
-    assert dataset["question_ids"][0] == "FISICA_ENEM_2022_AZUL_Q093"
+    assert len(dataset["question_ids"]) == 270
+    assert dataset["question_ids"][0] == "BIOLOGIA_ENEM_2022_AZUL_Q092"
     assert dataset["max_parallel_limit"] == 10
     assert dataset["max_tokens_limit"] == 120000
     assert listagem == {"benchmark_sessions": [bateria]}
@@ -313,7 +313,7 @@ def test_quantidade_acima_do_dataset_e_recusada_antes_de_qualquer_chamada(
 ) -> None:
     provedor = _Provedor([])
 
-    frames, codigo = _executar(_cliente(monkeypatch, provedor), _abertura(question_count=91))
+    frames, codigo = _executar(_cliente(monkeypatch, provedor), _abertura(question_count=271))
 
     assert codigo == 1003
     assert frames == [{"type": "error", "content": frames[0]["content"]}]
@@ -322,7 +322,7 @@ def test_quantidade_acima_do_dataset_e_recusada_antes_de_qualquer_chamada(
     assert not (ambiente / "benchmark-sessions").exists()
 
 
-def test_bateria_completa_usa_as_noventa_questoes_nos_dois_fluxos(
+def test_bateria_completa_usa_as_270_questoes_nos_dois_fluxos(
     ambiente: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     questoes = FileBenchmarkQuestionProvider(Settings(), logging.getLogger("teste.dataset")).list_questions()
@@ -332,18 +332,18 @@ def test_bateria_completa_usa_as_noventa_questoes_nos_dois_fluxos(
         respostas.extend([resposta, *_roteiro_ralph(resposta)])
     provedor = _Provedor(respostas)
 
-    frames, codigo = _executar(_cliente(monkeypatch, provedor), _abertura(question_count=90))
+    frames, codigo = _executar(_cliente(monkeypatch, provedor), _abertura(question_count=270))
 
     assert codigo == 1000
     assert not provedor.respostas
     bateria = frames[-1]["benchmark_session"]
     assert bateria["status"] == "completed"
-    assert bateria["progress"]["finished"] == 90
+    assert bateria["progress"]["finished"] == 270
     assert [item["question_id"] for item in bateria["questions"]] == [questao.id for questao in questoes]
-    assert bateria["summary"]["simple"]["correct"] == 90
-    assert bateria["summary"]["ralph"]["correct"] == 90
-    assert len(bateria["session_ids"]) == 180
-    assert len(provedor.enviados) == 90 * 9
+    assert bateria["summary"]["simple"]["correct"] == 270
+    assert bateria["summary"]["ralph"]["correct"] == 270
+    assert len(bateria["session_ids"]) == 540
+    assert len(provedor.enviados) == 270 * 9
 
 
 @pytest.mark.parametrize("max_tokens", [120_001, 10_000_000, 1_000_000_000])

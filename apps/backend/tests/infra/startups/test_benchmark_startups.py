@@ -101,7 +101,7 @@ async def test_startup_de_consulta_lista_detalha_e_descreve(armazenamento: Path)
     assert await consulta.list_benchmark_session_documents() == [bateria]
     assert consulta.describe_dataset()["max_parallel_limit"] == 10
     assert consulta.describe_dataset()["max_tokens_limit"] == 120000
-    assert len(consulta.describe_dataset()["question_ids"]) == 90
+    assert len(consulta.describe_dataset()["question_ids"]) == 270
 
 
 async def test_startup_de_consulta_recusa_bateria_inexistente(armazenamento: Path) -> None:

@@ -24,12 +24,19 @@ def _normalizar(texto: str) -> str:
 
 def test_totais_disciplinas_instituicoes_e_anos() -> None:
     registros = MANIFEST["questions"]
-    assert len(registros) == len({item["id"] for item in registros}) == 90
-    assert Counter(item["discipline"] for item in registros) == {"FISICA": 30, "MATEMATICA": 30, "QUIMICA": 30}
+    assert len(registros) == len({item["id"] for item in registros}) == 270
+    assert Counter(item["discipline"] for item in registros) == {
+        "HISTORIA": 30, "GEOGRAFIA": 30, "FILOSOFIA_SOCIOLOGIA": 30, "BIOLOGIA": 30,
+        "FISICA": 50, "MATEMATICA": 50, "QUIMICA": 50,
+    }
     assert {item["id"] for item in registros} == {path.name for path in QUESTIONS.iterdir() if path.is_dir()}
-    for disciplina in ("FISICA", "MATEMATICA", "QUIMICA"):
+    for disciplina in {item["discipline"] for item in registros}:
         selecao = [item for item in registros if item["discipline"] == disciplina]
-        assert {item["exam"] for item in selecao} == {"ENEM", "FUVEST", "ITA", "UNICAMP"}
+        instituicoes = {item["exam"] for item in selecao}
+        esperadas = {"ENEM", "FUVEST", "UNICAMP"}
+        if disciplina in {"FISICA", "MATEMATICA", "QUIMICA"}:
+            esperadas.add("ITA")
+        assert instituicoes == esperadas
         assert len({item["year"] for item in selecao}) >= 3
 
 
@@ -77,9 +84,9 @@ def test_nao_ha_questoes_duplicadas_mesmo_com_formatacao_diferente() -> None:
         _normalizar((QUESTIONS / item["id"] / "enunciado.md").read_text(encoding="utf-8"))
         for item in MANIFEST["questions"]
     ]
-    assert len(set(textos)) == 90
+    assert len(set(textos)) == 270
     origens = [(item["source_id"], item["original_number"]) for item in MANIFEST["questions"]]
-    assert len(set(origens)) == 90
+    assert len(set(origens)) == 270
     # Uma transcrição copiada com uma pequena inserção também deve ser investigada.
     for primeiro, segundo in combinations(textos, 2):
         assert primeiro not in segundo and segundo not in primeiro
@@ -115,3 +122,11 @@ def test_as_quinze_questoes_originais_continuam_identificadas() -> None:
     for caminho, esperado in hashes.items():
         relativo = caminho.split("src/infra/benchmark/", 1)[1]
         assert hashlib.sha256((BASE / relativo).read_bytes()).hexdigest() == esperado
+
+
+def test_as_noventa_questoes_anteriores_foram_preservadas_byte_a_byte() -> None:
+    hashes = json.loads((BASE / "sources/preserved_vestibular_90.json").read_text(encoding="utf-8"))
+    assert len(hashes) == 180
+    assert len({Path(caminho).parent.name for caminho in hashes}) == 90
+    for caminho, esperado in hashes.items():
+        assert hashlib.sha256((BASE / caminho).read_bytes()).hexdigest() == esperado, caminho

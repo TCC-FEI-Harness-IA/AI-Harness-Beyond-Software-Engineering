@@ -1,0 +1,28 @@
+# QUESTÃO 72
+
+Brasileiros levam mais tempo de casa para o trabalho
+Pesquisa do IBGE aponta que a situação é mais
+grave no Sudeste: 13% das pessoas levam mais de uma
+hora para chegar ao trabalho. Nas regiões metropolitanas
+de São Paulo e do Rio, o IBGE registrou os maiores
+percentuais de trabalhadores que levam mais de uma
+hora no trajeto até o emprego. Quem vê o Marcelo chegar
+ao trabalho nem imagina a maratona que ele enfrenta
+todos os dias antes das 5 h. “Acordo 4 h 30, saio de casa
+5 h, pego trem 5 h 20, chego na Central umas 6 h 50,
+pego ônibus e chego no trabalho mais ou menos 7 h 10”,
+conta. Segundo especialista, são os mais pobres os que
+moram mais longe do emprego.
+Disponível em: www.portaldotransito.com.br. Acesso em: 23 nov. 2021 (adaptado).
+A pesquisa desenvolvida retrata a seguinte dinâmica
+populacional:
+
+A) Fluxo de retorno.
+
+B) Migração interna.
+
+C) Mudança sazonal.
+
+D) Movimento pendular.
+
+E) Deslocamento forçado.

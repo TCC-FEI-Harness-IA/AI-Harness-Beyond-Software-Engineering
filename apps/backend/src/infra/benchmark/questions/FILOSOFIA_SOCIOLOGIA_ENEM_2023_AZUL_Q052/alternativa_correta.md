@@ -1,0 +1,1 @@
+A) participação sociopolítica.

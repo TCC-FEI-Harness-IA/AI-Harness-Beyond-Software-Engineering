@@ -1,0 +1,1 @@
+C) Comercialização garantida.
