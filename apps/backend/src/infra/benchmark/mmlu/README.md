@@ -84,7 +84,8 @@ Frame inicial de `WS /v1/benchmark/run`:
 `benchmark` ausente equivale a `vestibular`; `few_shot` ausente equivale a 0. `subjects` ausente ou vazio
 seleciona todas as disciplinas; `sample_seed` tem padrão 42 e aceita inteiros de 0 a 4.294.967.295.
 Vestibulares continuam selecionando as primeiras N questões na ordem vigente; `subjects` e exemplos
-5-shot são exclusivos do MMLU. Os limites são validados antes de persistir uma bateria ou chamar um modelo.
+5-shot não são aceitos em Vestibulares. GPQA também aceita disciplinas, mas somente 0-shot.
+Os limites são validados antes de persistir uma bateria ou chamar um modelo.
 
 ## Procedência e auditoria
 

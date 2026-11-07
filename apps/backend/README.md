@@ -626,7 +626,7 @@ tamanho da entrada da última chamada. Um saldo grande pode passar da janela de 
 caso, peça um limite menor.
 
 **Benchmark.** O único executor de dataset é o [benchmark](#benchmark) de questões de múltipla
-escolha, com avaliação determinística pelo gabarito. Datasets como MMLU/GPQA não fazem parte deste backend.
+escolha, com avaliação determinística pelo gabarito. O backend também oferece MMLU e GPQA Diamond pelo seletor da página BenchMark.
 
 ---
 
@@ -702,10 +702,13 @@ pelos endpoints `GET /v1/sessions*`.
 ## Benchmark
 
 O benchmark compara a inferência simples e o Ralph Loop sobre questões de múltipla escolha de
-vestibulares brasileiros ou do MMLU. É uma funcionalidade da API: a página **BenchMark** do front-end inicia uma
+vestibulares brasileiros, do MMLU ou do GPQA Diamond. É uma funcionalidade da API: a página **BenchMark** do front-end inicia uma
 bateria pelo WebSocket, acompanha o progresso e consulta as baterias pelos endpoints `GET`.
 
-**Seleção do benchmark.** Vestibulares continuam sendo o padrão. A página também oferece MMLU
+**Seleção do benchmark.** Vestibulares continuam sendo o padrão. GPQA Diamond oferece 198 questões
+em inglês, protocolo generativo 0-shot, filtros por disciplina e amostragem reproduzível. Consulte
+[GPQA Diamond na aplicação](src/infra/benchmark/gpqa/README.md) para fonte, protocolo e execução.
+A página também oferece MMLU
 generativo 0-shot ou 5-shot, com filtro por disciplina e amostra reproduzível por semente. As 14.042
 questões de teste e os 285 exemplos de desenvolvimento estão incluídos localmente, com revisão e
 hashes fixados. Consulte [MMLU na aplicação](src/infra/benchmark/mmlu/README.md) para o protocolo,
@@ -856,7 +859,7 @@ andamento é cancelado e o desfecho anterior permanece. Só uma reexecução por
 
 ### `GET /v1/benchmark/questions`
 
-Aceita `?benchmark=mmlu` para descrever MMLU; sem o parâmetro, preserva vestibulares. A resposta
+Aceita `?benchmark=mmlu` para descrever MMLU ou `?benchmark=gpqa` para GPQA Diamond; sem o parâmetro, preserva vestibulares. A resposta
 também traz `benchmark` (proveniência) e `subjects` (identificador e quantidade de questões por disciplina).
 
 Questões do dataset, na ordem de execução, e os limites de paralelismo e de `max_tokens` (tokens por

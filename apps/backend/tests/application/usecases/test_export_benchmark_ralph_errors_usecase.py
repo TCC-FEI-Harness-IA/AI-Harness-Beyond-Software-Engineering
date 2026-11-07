@@ -99,12 +99,13 @@ async def test_questao_que_saiu_do_dataset_continua_exportavel_sem_enunciado() -
     assert [erro.question for erro in erros] == [None, questao("Q3")]
 
 
-async def test_exportacao_nao_usa_outra_revisao_do_mmlu() -> None:
+@pytest.mark.parametrize("dataset", [BenchmarkDatasetEnum.MMLU, BenchmarkDatasetEnum.GPQA])
+async def test_exportacao_nao_usa_outra_revisao_do_dataset(dataset: BenchmarkDatasetEnum) -> None:
     baterias = InMemoryBenchmarkSessionRepository()
     sessao = await _bateria_encerrada(baterias)
-    sessao.benchmark = BenchmarkDefinition(dataset=BenchmarkDatasetEnum.MMLU, revision="outra-revisao")
+    sessao.benchmark = BenchmarkDefinition(dataset=dataset, revision="outra-revisao")
     await baterias.save(sessao)
-    with pytest.raises(ValueError, match="Revisão MMLU"):
+    with pytest.raises(ValueError, match=f"Revisão {dataset.value.upper()}"):
         await _caso(baterias).execute("bench_1")
 
 

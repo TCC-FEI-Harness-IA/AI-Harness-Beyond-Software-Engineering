@@ -11,6 +11,7 @@ export const LEGACY_BENCHMARK: BenchmarkDefinition = {
 }
 
 export function benchmarkLabel(benchmark: BenchmarkDefinition): string {
+  if (benchmark.dataset === 'gpqa') return 'GPQA Diamond · generativo · 0-shot'
   return benchmark.dataset === 'mmlu'
     ? `MMLU · generativo · ${benchmark.few_shot}-shot`
     : 'Vestibulares'

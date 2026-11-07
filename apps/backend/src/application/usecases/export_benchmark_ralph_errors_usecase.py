@@ -65,10 +65,12 @@ class ExportBenchmarkRalphErrorsUseCase:
         if self.question_provider_for is not None:
             provider = self.question_provider_for(benchmark_session.benchmark.dataset)
         if (
-            benchmark_session.benchmark.dataset is BenchmarkDatasetEnum.MMLU
+            benchmark_session.benchmark.dataset is not BenchmarkDatasetEnum.VESTIBULAR
             and provider.definition().revision != benchmark_session.benchmark.revision
         ):
-            raise ValueError("Revisão MMLU da bateria indisponível para exportação.")
+            raise ValueError(
+                f"Revisão {benchmark_session.benchmark.dataset.value.upper()} da bateria indisponível para exportação."
+            )
         dataset = {question.id: question for question in provider.list_questions()}
         errors: list[BenchmarkRalphError] = []
         for run in benchmark_session.questions:

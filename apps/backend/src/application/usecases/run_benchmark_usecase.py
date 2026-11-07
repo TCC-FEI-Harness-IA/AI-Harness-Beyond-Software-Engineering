@@ -20,7 +20,7 @@ from src.domain.interfaces.benchmark_session_repository_interface import IBenchm
 from src.domain.interfaces.clock_interface import IClock
 from src.domain.interfaces.id_generator_interface import IIdGenerator
 from src.domain.interfaces.settings_interface import ISettings
-from src.domain.services.benchmark_question_selector import select_mmlu_questions
+from src.domain.services.benchmark_question_selector import select_subject_questions
 
 _FLOW_ORDER = (BenchmarkInferenceModeEnum.SIMPLE, BenchmarkInferenceModeEnum.RALPH)
 _MIN_PARALLEL = 1
@@ -153,12 +153,12 @@ class RunBenchmarkUseCase:
         definition = self.question_provider.definition()
         if input_dto.benchmark is not definition.dataset or input_dto.few_shot != definition.few_shot:
             raise InvalidBenchmarkRequestError("Dataset ou protocolo difere do provider selecionado.")
-        if input_dto.benchmark is BenchmarkDatasetEnum.MMLU:
-            return select_mmlu_questions(
+        if input_dto.benchmark is not BenchmarkDatasetEnum.VESTIBULAR:
+            return select_subject_questions(
                 questions, input_dto.subjects, input_dto.question_count, input_dto.sample_seed,
             )
         if input_dto.subjects:
-            raise InvalidBenchmarkRequestError("subjects é uma opção exclusiva do MMLU.")
+            raise InvalidBenchmarkRequestError("subjects é uma opção de MMLU e GPQA.")
         if input_dto.question_count is None:
             return questions
         if not _MIN_QUESTIONS <= input_dto.question_count <= len(questions):
@@ -186,7 +186,9 @@ class RunBenchmarkUseCase:
             benchmark=replace(
                 self.question_provider.definition(),
                 subjects=tuple(sorted(set(input_dto.subjects))),
-                sample_seed=input_dto.sample_seed if input_dto.benchmark is BenchmarkDatasetEnum.MMLU else None,
+                sample_seed=(
+                    input_dto.sample_seed if input_dto.benchmark is not BenchmarkDatasetEnum.VESTIBULAR else None
+                ),
             ),
             questions=[
                 BenchmarkQuestionRun(

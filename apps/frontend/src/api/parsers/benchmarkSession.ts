@@ -203,13 +203,16 @@ export function parseBenchmarkDataset(raw: unknown): BenchmarkDataset {
 function parseBenchmarkDefinition(raw: unknown, path: string): BenchmarkDefinition {
   if (raw == null) return { ...LEGACY_BENCHMARK, subjects: [] }
   const obj = requireObject(raw, path)
-  if (obj.dataset !== 'vestibular' && obj.dataset !== 'mmlu') {
+  if (obj.dataset !== 'vestibular' && obj.dataset !== 'mmlu' && obj.dataset !== 'gpqa') {
     throw new ContractError(`campo "${path}.dataset" tem valor desconhecido`)
   }
   if (obj.few_shot !== 0 && obj.few_shot !== 5) {
     throw new ContractError(`campo "${path}.few_shot" deveria ser 0 ou 5`)
   }
-  if (obj.protocol !== `generative_${obj.few_shot}shot`) {
+  if (
+    obj.protocol !== `generative_${obj.few_shot}shot` ||
+    (obj.dataset === 'gpqa' && obj.few_shot !== 0)
+  ) {
     throw new ContractError(`campo "${path}.protocol" incompatível com few_shot`)
   }
   return {

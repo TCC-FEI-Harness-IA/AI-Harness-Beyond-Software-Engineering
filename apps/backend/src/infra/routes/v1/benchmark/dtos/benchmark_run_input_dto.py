@@ -13,7 +13,7 @@ class BenchmarkRunInputDTO(BaseModel):
     """Frame de abertura do WebSocket de benchmark, enviado uma única vez.
 
     `question_count` ausente executa todas as questões do dataset; um valor menor executa as
-    primeiras nos vestibulares ou uma amostra estratificada no MMLU. `max_parallel` limita questões
+    primeiras nos vestibulares ou uma amostra estratificada no MMLU/GPQA. `max_parallel` limita questões
     em execução ao mesmo tempo. Os limites dependem do dataset e de `RALPH_BENCHMARK_MAX_PARALLEL`, e são
     conferidos pelo caso de uso.
     """
@@ -30,7 +30,9 @@ class BenchmarkRunInputDTO(BaseModel):
 
     @model_validator(mode="after")
     def validate_protocol(self) -> Self:
-        """Impede aplicar parâmetros exclusivos do MMLU aos vestibulares."""
+        """Confere os protocolos suportados por cada dataset."""
+        if self.benchmark is BenchmarkDatasetEnum.GPQA and self.few_shot:
+            raise ValueError("GPQA Diamond aceita somente few_shot 0.")
         if self.benchmark is BenchmarkDatasetEnum.VESTIBULAR and (self.few_shot or self.subjects):
-            raise ValueError("few_shot e subjects são opções exclusivas do MMLU.")
+            raise ValueError("Vestibulares não aceita few_shot ou subjects.")
         return self

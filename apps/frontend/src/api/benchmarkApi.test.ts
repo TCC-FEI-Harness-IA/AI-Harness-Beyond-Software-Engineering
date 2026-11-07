@@ -121,3 +121,32 @@ describe('ralphErrorsArchiveName', () => {
     expect(ralphErrorsArchiveName('a/b c')).toBe('benchmark-session-a_b_c-ralph-loop-errors.zip')
   })
 })
+
+it('consulta GPQA e envia o protocolo sem exemplos', async () => {
+  const fetchMock = mockFetch({
+    question_ids: ['GPQA_Q1'],
+    max_parallel_limit: 3,
+    max_tokens_limit: 32000,
+  })
+  await getBenchmarkDataset(undefined, 'gpqa')
+  expect(fetchMock.mock.calls[0]?.[0]).toBe(
+    'http://localhost:8000/v1/benchmark/questions?benchmark=gpqa',
+  )
+  expect(
+    buildBenchmarkRunPayload({
+      questionCount: 1,
+      maxParallel: 1,
+      config: CONFIG,
+      benchmark: 'gpqa',
+    }),
+  ).toMatchObject({ benchmark: 'gpqa', few_shot: 0, sample_seed: 42, subjects: [] })
+  expect(() =>
+    buildBenchmarkRunPayload({
+      questionCount: 1,
+      maxParallel: 1,
+      config: CONFIG,
+      benchmark: 'gpqa',
+      fewShot: 5,
+    }),
+  ).toThrow()
+})

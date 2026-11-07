@@ -69,7 +69,7 @@ class BenchmarkRunStartup:
         Yields:
             BenchmarkFrameDTO: Um frame `progress` por mudança de estado e um `result` final.
         """
-        if payload.benchmark is BenchmarkDatasetEnum.MMLU:
+        if payload.benchmark is not BenchmarkDatasetEnum.VESTIBULAR:
             self.question_provider = BenchmarkQuestionProviderFactory(self.settings, self.logger).create(
                 dataset=payload.benchmark, few_shot=payload.few_shot,
             )
