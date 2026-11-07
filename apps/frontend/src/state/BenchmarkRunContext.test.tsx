@@ -57,6 +57,7 @@ describe('BenchmarkRunProvider', () => {
     expect(FakeWebSocket.instances).toHaveLength(1)
     expect(current.isActive).toBe(true)
     expect(current.phase).toBe('connecting')
+    expect(current.benchmark).toBe('vestibular')
   })
 
   it('fechamento 1011 depois do resultado preserva o desfecho', () => {
@@ -123,12 +124,13 @@ describe('BenchmarkRunProvider', () => {
   it('reexecuta uma questão pela rota da questão e termina com o documento atualizado', () => {
     renderProvider()
 
-    act(() => current.rerun('bench_1', 'Q2'))
+    act(() => current.rerun('bench_1', 'Q2', 'mmlu'))
     const socket = FakeWebSocket.latest()
 
     expect(socket.url).toBe('ws://localhost:8000/v1/benchmark/sessions/bench_1/questions/Q2/rerun')
     expect(current.phase).toBe('connecting')
     expect(current.rerunQuestionId).toBe('Q2')
+    expect(current.benchmark).toBe('mmlu')
     expect(current.isActive).toBe(true)
     act(() => socket.emitOpen())
     expect(socket.sentFrames).toEqual([])
@@ -152,13 +154,14 @@ describe('BenchmarkRunProvider', () => {
     expect(current.rerunQuestionId).toBe('Q2')
     act(() => current.dismiss())
     expect(current.rerunQuestionId).toBeNull()
+    expect(current.benchmark).toBeNull()
   })
 
   it('não reexecuta enquanto há bateria ou reexecução ativa', () => {
     renderProvider()
     start()
 
-    act(() => current.rerun('bench_1', 'Q1'))
+    act(() => current.rerun('bench_1', 'Q1', 'vestibular'))
 
     expect(FakeWebSocket.instances).toHaveLength(1)
     expect(current.rerunQuestionId).toBeNull()
@@ -166,7 +169,7 @@ describe('BenchmarkRunProvider', () => {
 
   it('reexecução recusada pelo servidor vira erro com a mensagem do servidor', () => {
     renderProvider()
-    act(() => current.rerun('bench_1', 'Q1'))
+    act(() => current.rerun('bench_1', 'Q1', 'vestibular'))
     const socket = FakeWebSocket.latest()
 
     act(() => socket.emitMessage({ type: 'error', content: 'Q1 não tem fluxo errado' }))
@@ -175,7 +178,7 @@ describe('BenchmarkRunProvider', () => {
     expect(current.phase).toBe('error')
     expect(current.rejection).toBe('Q1 não tem fluxo errado')
     expect(current.finishedCount).toBe(1)
-    act(() => current.rerun('bench_1', 'Q1'))
+    act(() => current.rerun('bench_1', 'Q1', 'vestibular'))
     expect(FakeWebSocket.instances).toHaveLength(2)
   })
 

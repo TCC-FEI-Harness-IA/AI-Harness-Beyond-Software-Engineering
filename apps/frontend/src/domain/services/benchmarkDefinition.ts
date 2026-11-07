@@ -1,4 +1,8 @@
-import type { BenchmarkDefinition, GPQASubset } from '@/domain/types/benchmarkSession'
+import type {
+  BenchmarkDatasetId,
+  BenchmarkDefinition,
+  GPQASubset,
+} from '@/domain/types/benchmarkSession'
 
 export const GPQA_SUBSET_LABELS: Record<GPQASubset, string> = {
   diamond: 'Diamond',
@@ -37,4 +41,37 @@ const VESTIBULAR_SUBJECT_LABELS: Record<string, string> = {
 
 export function benchmarkSubjectLabel(subject: string): string {
   return VESTIBULAR_SUBJECT_LABELS[subject] ?? subject.replaceAll('_', ' ')
+}
+
+/** Benchmarks disponíveis, na ordem das abas da página do BenchMark. */
+export const BENCHMARK_DATASETS: ReadonlyArray<{
+  id: BenchmarkDatasetId
+  label: string
+  description: string
+}> = [
+  {
+    id: 'vestibular',
+    label: 'Vestibulares',
+    description: 'Questões de vestibulares brasileiros, em português, na ordem do dataset.',
+  },
+  {
+    id: 'mmlu',
+    label: 'MMLU',
+    description: 'MMLU em inglês, com quatro alternativas e protocolo 0-shot ou 5-shot.',
+  },
+  {
+    id: 'gpqa',
+    label: 'GPQA',
+    description:
+      'Biologia, química e física em nível de pós-graduação, em inglês, nas variantes Diamond, ' +
+      'Main e Extended.',
+  },
+]
+
+export function isBenchmarkDatasetId(value: string | null): value is BenchmarkDatasetId {
+  return BENCHMARK_DATASETS.some((dataset) => dataset.id === value)
+}
+
+export function benchmarkDatasetLabel(benchmark: BenchmarkDatasetId): string {
+  return BENCHMARK_DATASETS.find((dataset) => dataset.id === benchmark)?.label ?? benchmark
 }

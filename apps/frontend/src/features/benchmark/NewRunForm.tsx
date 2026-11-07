@@ -113,8 +113,8 @@ export function NewRunForm({
         <>
           <p>
             {isMmlu
-              ? 'MMLU em inglês, com quatro alternativas e protocolo 0-shot ou 5-shot.'
-              : `GPQA ${GPQA_SUBSET_LABELS[gpqaSubset]}: ${dataset.question_ids.length} questões em inglês de biologia, química e física, sem exemplos (0-shot).`}{' '}
+              ? ''
+              : `GPQA ${GPQA_SUBSET_LABELS[gpqaSubset]}: ${dataset.question_ids.length} questões, sem exemplos (0-shot). `}
             A avaliação compara a resposta final dos dois fluxos. Resultados dependem do protocolo e
             da amostra escolhidos.
           </p>

@@ -52,7 +52,11 @@ Informe quantas questões deseja em cada uma, usando zero para excluí-la. O tot
 automaticamente, e o botão de início só é habilitado quando pelo menos uma questão está selecionada.
 A bateria usa as primeiras questões de cada matéria na ordem do dataset. A opção **Quantidade total**
 continua disponível. O detalhe da bateria mostra a distribuição por matéria persistida nas questões.
-O seletor **Benchmark** alterna entre vestibulares brasileiros (padrão), **MMLU** e **GPQA Diamond**. No MMLU, escolha o
+A página tem uma aba por benchmark: **Vestibulares** (padrão), **MMLU** e **GPQA**. A aba fica na URL
+(`/benchmark?benchmark=mmlu`). Cada uma tem o próprio formulário de nova bateria, o acompanhamento da
+bateria atual quando ela é daquele benchmark e o histórico só com as baterias dele. Só uma bateria roda
+por vez: as outras abas mostram um aviso com o atalho **Acompanhar**. Na aba GPQA, escolha a variante
+(Diamond, Main ou Extended). No MMLU, escolha o
 protocolo generativo 0-shot ou 5-shot, uma disciplina ou todas, e a semente da amostra. O formulário inicia
 com até 285 questões de teste, e pode executar o conjunto inteiro. O histórico e o detalhe identificam o
 dataset e o protocolo; o detalhe MMLU também mostra disciplinas, semente e revisão. A tabela pagina

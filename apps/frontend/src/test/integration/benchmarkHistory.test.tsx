@@ -98,7 +98,8 @@ describe('Benchmark como funcionalidade da aplicação', () => {
     })
     renderApp('/benchmark')
     await screen.findByRole('button', { name: 'Iniciar bateria' })
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Benchmark' }), 'mmlu')
+    await user.click(screen.getByRole('tab', { name: 'MMLU' }))
+    expect(screen.getByRole('tab', { name: 'MMLU' })).toHaveAttribute('aria-selected', 'true')
     const protocol = await screen.findByRole('combobox', { name: 'Protocolo MMLU' })
     expect(protocol).toHaveValue('5')
     await user.selectOptions(protocol, '0')
@@ -113,7 +114,7 @@ describe('Benchmark como funcionalidade da aplicação', () => {
     expect(JSON.parse(socket.sentFrames[0] ?? '{}')).toMatchObject({
       benchmark: 'mmlu', few_shot: 0, subjects: ['college_physics'], sample_seed: 123, question_count: 2,
     })
-    expect(screen.getByRole('combobox', { name: 'Benchmark' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Iniciar bateria' })).toBeDisabled()
     const session = completedBenchmarkSession()
     session.benchmark = {
       dataset: 'mmlu', revision: 'fixed-revision', protocol: 'generative_0shot', split: 'test',
@@ -164,7 +165,7 @@ describe('Benchmark como funcionalidade da aplicação', () => {
       })
       renderApp('/benchmark')
       await screen.findByRole('button', { name: 'Iniciar bateria' })
-      await user.selectOptions(screen.getByRole('combobox', { name: 'Benchmark' }), 'gpqa')
+      await user.click(screen.getByRole('tab', { name: 'GPQA' }))
       await screen.findByText(/GPQA Diamond: 198 questões/)
       await user.selectOptions(screen.getByRole('combobox', { name: /Variante GPQA/ }), subset)
       await screen.findByText(new RegExp(`GPQA ${label}: ${count} questões`))
@@ -186,7 +187,7 @@ describe('Benchmark como funcionalidade da aplicação', () => {
         sample_seed: 123,
         question_count: 2,
       })
-      expect(screen.getByRole('combobox', { name: 'Benchmark' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Iniciar bateria' })).toBeDisabled()
       expect(screen.getByRole('combobox', { name: /Variante GPQA/ })).toBeDisabled()
       const session = completedBenchmarkSession()
       session.benchmark = {
@@ -216,9 +217,9 @@ describe('Benchmark como funcionalidade da aplicação', () => {
     mockBackend()
     renderApp('/benchmark')
     await screen.findByRole('button', { name: 'Iniciar bateria' })
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Benchmark' }), 'mmlu')
+    await user.click(screen.getByRole('tab', { name: 'MMLU' }))
     await screen.findByRole('combobox', { name: 'Protocolo MMLU' })
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Benchmark' }), 'vestibular')
+    await user.click(screen.getByRole('tab', { name: 'Vestibulares' }))
     await user.click(await screen.findByRole('button', { name: 'Iniciar bateria' }))
     const socket = FakeWebSocket.latest()
     act(() => socket.emitOpen())
@@ -233,7 +234,7 @@ describe('Benchmark como funcionalidade da aplicação', () => {
 
     await user.click(screen.getByRole('link', { name: 'BenchMark' }))
     expect(await screen.findByRole('heading', { name: 'BenchMark', level: 1 })).toBeInTheDocument()
-    expect(await screen.findByText('Nenhuma bateria executada ainda')).toBeInTheDocument()
+    expect(await screen.findByText('Nenhuma bateria de Vestibulares executada ainda')).toBeInTheDocument()
 
     const quantity = await screen.findByRole('spinbutton', { name: /Quantidade de questões/ })
     expect(quantity).toHaveValue(3)
@@ -389,7 +390,7 @@ describe('Benchmark como funcionalidade da aplicação', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('question_count deve estar entre 1 e 3. Valor: 9.')
     expect(screen.getByRole('button', { name: 'Iniciar bateria' })).toBeEnabled()
     // O fim da tentativa recarrega a lista de baterias.
-    expect(await screen.findByText('Nenhuma bateria executada ainda')).toBeInTheDocument()
+    expect(await screen.findByText('Nenhuma bateria de Vestibulares executada ainda')).toBeInTheDocument()
   })
 
   it('o detalhe da bateria compara os fluxos e abre as sessões de cada questão', async () => {
@@ -576,5 +577,62 @@ describe('Vestibulares por matéria', () => {
     mockBackend([stored])
     renderApp(`/benchmark/${stored.id}`)
     expect(await screen.findByLabelText('Questões por matéria')).toHaveTextContent('Biologia: 1 · Matemática: 2')
+  })
+})
+
+describe('Abas do BenchMark', () => {
+  it('cada aba lista só as baterias do seu benchmark e o detalhe volta para a aba de origem', async () => {
+    const user = userEvent.setup()
+    const mmlu = { ...completedBenchmarkSession(), id: 'bench_2' }
+    mmlu.benchmark = { ...mmlu.benchmark, dataset: 'mmlu', revision: 'fixed-revision', sample_seed: 42 }
+    mockBackend([completedBenchmarkSession(), mmlu])
+    renderApp('/benchmark')
+
+    const vestibular = await screen.findByRole('list', { name: 'Baterias de Vestibulares' })
+    expect(within(vestibular).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      '/benchmark/bench_1',
+    ])
+
+    screen.getByRole('tab', { name: 'Vestibulares' }).focus()
+    await user.keyboard('{ArrowRight}')
+    expect(screen.getByRole('tab', { name: 'MMLU' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel', { name: 'MMLU' })).toBeInTheDocument()
+    const mmluList = await screen.findByRole('list', { name: 'Baterias de MMLU' })
+    expect(within(mmluList).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      '/benchmark/bench_2',
+    ])
+
+    await user.click(screen.getByRole('tab', { name: 'GPQA' }))
+    expect(await screen.findByText('Nenhuma bateria de GPQA executada ainda')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: /Variante GPQA/ })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'MMLU' }))
+    expect(screen.queryByRole('combobox', { name: /Variante GPQA/ })).not.toBeInTheDocument()
+    await user.click(within(await screen.findByRole('list', { name: 'Baterias de MMLU' })).getByRole('link'))
+    const back = await screen.findByRole('link', { name: '← BenchMark · MMLU' })
+    expect(back).toHaveAttribute('href', '/benchmark?benchmark=mmlu')
+    await user.click(back)
+    expect(await screen.findByRole('tab', { name: 'MMLU' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('a bateria em execução aparece só na aba do seu benchmark', async () => {
+    const user = userEvent.setup()
+    mockBackend()
+    renderApp('/benchmark')
+
+    await user.click(await screen.findByRole('button', { name: 'Iniciar bateria' }))
+    const socket = FakeWebSocket.latest()
+    act(() => socket.emitOpen())
+    emit(socket, 'progress', benchmarkSession())
+    expect(screen.getByRole('article', { name: 'Bateria atual' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'GPQA' }))
+    expect(screen.queryByRole('article', { name: 'Bateria atual' })).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Uma bateria de Vestibulares está em execução')
+    expect(await screen.findByRole('button', { name: 'Iniciar bateria' })).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Acompanhar' }))
+    expect(screen.getByRole('tab', { name: 'Vestibulares' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('article', { name: 'Bateria atual' })).toBeInTheDocument()
   })
 })
