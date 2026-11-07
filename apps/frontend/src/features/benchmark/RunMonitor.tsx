@@ -9,6 +9,7 @@ import {
 } from '@/domain/enums/benchmarkStatus'
 import { buildBenchmarkSessionPath } from '@/router/routes'
 import { useBenchmarkRun } from '@/state/BenchmarkRunContext'
+import { benchmarkLabel } from '@/domain/services/benchmarkDefinition'
 import { BenchmarkProgressStats } from './BenchmarkProgressStats'
 import { BenchmarkQuestionsTable } from './BenchmarkQuestionsTable'
 import { BenchmarkSummary } from './BenchmarkSummary'
@@ -78,6 +79,7 @@ export function RunMonitor(): JSX.Element | null {
 
       {session ? (
         <>
+          <p>{benchmarkLabel(session.benchmark)}</p>
           <BenchmarkProgressStats session={session} />
           <BenchmarkSummary session={session} />
           <BenchmarkQuestionsTable session={session} />

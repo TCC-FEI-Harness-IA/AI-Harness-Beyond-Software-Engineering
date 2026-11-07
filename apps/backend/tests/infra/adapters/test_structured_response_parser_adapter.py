@@ -6,7 +6,6 @@ import pytest
 
 from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
-from src.domain.enums.output_defect_enum import OutputDefectEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.errors.phase_parsing_error import PhaseParsingError
 from src.infra.adapters.structured_response_parser_adapter import StructuredResponseParserAdapter
@@ -698,4 +697,3 @@ def test_verificacao_sem_unmet_criteria_ids_preenche_a_lista_a_partir_das_avalia
     )
 
     assert parsed["unmet_criteria_ids"] == []
-

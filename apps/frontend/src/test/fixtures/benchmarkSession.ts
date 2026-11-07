@@ -5,6 +5,7 @@ import type {
   BenchmarkQuestionRun,
   BenchmarkSessionDocument,
 } from '@/domain/types/benchmarkSession'
+import { LEGACY_BENCHMARK } from '@/domain/services/benchmarkDefinition'
 
 export function outcome(overrides: Partial<BenchmarkFlowOutcome> = {}): BenchmarkFlowOutcome {
   return {
@@ -22,6 +23,7 @@ export function outcome(overrides: Partial<BenchmarkFlowOutcome> = {}): Benchmar
 export function questionRun(overrides: Partial<BenchmarkQuestionRun> = {}): BenchmarkQuestionRun {
   return {
     question_id: 'Q1',
+    subject: null,
     expected_alternative: 'A',
     status: 'pending',
     current_mode: null,
@@ -48,6 +50,7 @@ export function benchmarkSession(
 ): BenchmarkSessionDocument {
   return {
     id: 'bench_1',
+    benchmark: { ...LEGACY_BENCHMARK, subjects: [] },
     status: 'running',
     model_name: 'openai/gpt-4o-mini',
     provider: 'open_router',

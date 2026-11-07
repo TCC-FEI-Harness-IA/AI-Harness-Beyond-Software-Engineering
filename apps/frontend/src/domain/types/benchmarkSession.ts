@@ -5,6 +5,18 @@ import type { BenchmarkQuestionStatus, BenchmarkSessionStatus } from '../enums/b
 import type { ModelProvider } from '../enums/modelProvider'
 import type { BenchmarkInferenceMode } from './benchmarkDetails'
 
+export type BenchmarkDatasetId = 'vestibular' | 'mmlu'
+
+export interface BenchmarkDefinition {
+  dataset: BenchmarkDatasetId
+  revision: string
+  protocol: 'generative_0shot' | 'generative_5shot'
+  split: string
+  few_shot: 0 | 5
+  subjects: string[]
+  sample_seed: number | null
+}
+
 export interface BenchmarkFlowOutcome {
   mode: BenchmarkInferenceMode
   session_id: string | null
@@ -17,6 +29,7 @@ export interface BenchmarkFlowOutcome {
 
 export interface BenchmarkQuestionRun {
   question_id: string
+  subject: string | null
   expected_alternative: string
   status: BenchmarkQuestionStatus
   current_mode: BenchmarkInferenceMode | null
@@ -47,6 +60,7 @@ export interface BenchmarkProgress {
 
 export interface BenchmarkSessionDocument {
   id: string
+  benchmark: BenchmarkDefinition
   status: BenchmarkSessionStatus
   model_name: string
   provider: ModelProvider
@@ -68,6 +82,8 @@ export interface BenchmarkSessionDocument {
 
 /** `GET /v1/benchmark/questions` — questões na ordem de execução e os limites aceitos numa bateria. */
 export interface BenchmarkDataset {
+  benchmark?: BenchmarkDefinition
+  subjects?: { id: string; question_count: number }[]
   question_ids: string[]
   max_parallel_limit: number
   /** Maior `max_tokens` aceito: o limite de tokens por sessão do backend (`LLM_MAX_TOKENS`). */
@@ -81,6 +97,10 @@ export type BenchmarkFrame =
 
 /** Frame de abertura de `WS /v1/benchmark/run`. */
 export interface BenchmarkRunInput {
+  benchmark?: BenchmarkDatasetId
+  few_shot?: 0 | 5
+  subjects?: string[]
+  sample_seed?: number
   question_count: number
   max_parallel: number
   llm_model_config: {

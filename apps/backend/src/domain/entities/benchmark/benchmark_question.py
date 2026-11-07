@@ -18,6 +18,7 @@ class BenchmarkQuestion:
     statement: str
     options: dict[str, str]
     expected_alternative: str
+    subject: str | None = None
 
     def __post_init__(self) -> None:
         """Garante que o gabarito aponta para uma alternativa existente.

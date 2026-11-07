@@ -4,6 +4,8 @@ import pytest
 
 from src.application.usecases.export_benchmark_ralph_errors_usecase import ExportBenchmarkRalphErrorsUseCase
 from src.domain.enums.benchmark_inference_mode_enum import BenchmarkInferenceModeEnum
+from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
+from src.domain.entities.benchmark.benchmark_definition import BenchmarkDefinition
 from src.domain.enums.benchmark_session_status_enum import BenchmarkSessionStatusEnum
 from src.domain.errors.benchmark_session_not_finished_error import BenchmarkSessionNotFinishedError
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
@@ -95,6 +97,15 @@ async def test_questao_que_saiu_do_dataset_continua_exportavel_sem_enunciado() -
     erros = await _caso(baterias, questoes=["Q2", "Q3"]).execute("bench_1")
 
     assert [erro.question for erro in erros] == [None, questao("Q3")]
+
+
+async def test_exportacao_nao_usa_outra_revisao_do_mmlu() -> None:
+    baterias = InMemoryBenchmarkSessionRepository()
+    sessao = await _bateria_encerrada(baterias)
+    sessao.benchmark = BenchmarkDefinition(dataset=BenchmarkDatasetEnum.MMLU, revision="outra-revisao")
+    await baterias.save(sessao)
+    with pytest.raises(ValueError, match="Revisão MMLU"):
+        await _caso(baterias).execute("bench_1")
 
 
 @pytest.mark.parametrize(

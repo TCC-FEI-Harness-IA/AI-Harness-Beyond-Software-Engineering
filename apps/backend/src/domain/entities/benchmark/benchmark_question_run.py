@@ -26,6 +26,7 @@ class BenchmarkQuestionRun:
     ralph: BenchmarkFlowOutcome | None = None
     current_mode: BenchmarkInferenceModeEnum | None = None
     current_tokens: int = 0
+    subject: str | None = None
 
     @property
     def outcomes(self) -> list[BenchmarkFlowOutcome]:

@@ -4,6 +4,8 @@ from src.domain.enums.benchmark_inference_mode_enum import BenchmarkInferenceMod
 from src.domain.enums.benchmark_session_status_enum import BenchmarkSessionStatusEnum
 from src.infra.mappers.benchmark_session_document_mapper import BenchmarkSessionDocumentMapper
 from tests.doubles.benchmark_factories import CRIADO_EM, bateria, desfecho
+from src.domain.entities.benchmark.benchmark_definition import BenchmarkDefinition
+from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
 
 _SIMPLES = BenchmarkInferenceModeEnum.SIMPLE
 _RALPH = BenchmarkInferenceModeEnum.RALPH
@@ -50,6 +52,25 @@ def test_ida_e_volta_preservam_a_bateria() -> None:
     reconstruida = mapper.from_document(document=mapper.to_document(benchmark_session=original))
 
     assert reconstruida == original
+
+
+def test_leitura_de_bateria_legada_preserva_vestibulares() -> None:
+    mapper = BenchmarkSessionDocumentMapper()
+    original = bateria("Q1")
+    document = mapper.to_document(original)
+    del document["benchmark"], document["questions"][0]["subject"]
+    assert mapper.from_document(document) == original
+
+
+def test_ida_e_volta_preserva_proveniencia_mmlu() -> None:
+    mapper = BenchmarkSessionDocumentMapper()
+    original = bateria("MMLU_physics_test_0000")
+    original.benchmark = BenchmarkDefinition(
+        dataset=BenchmarkDatasetEnum.MMLU, revision="revision", protocol="generative_5shot",
+        few_shot=5, subjects=("physics",), sample_seed=123,
+    )
+    original.questions[0].subject = "physics"
+    assert mapper.from_document(mapper.to_document(original)) == original
 
 
 def test_ida_e_volta_preservam_a_bateria_encerrada() -> None:

@@ -84,6 +84,66 @@ afterEach(() => {
 })
 
 describe('Benchmark como funcionalidade da aplicação', () => {
+  it('alterna para MMLU, configura o protocolo e persiste a identificação no histórico', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    const original = backend.fetchMock.getMockImplementation()!
+    backend.fetchMock.mockImplementation((url: string) => {
+      if (new URL(url).searchParams.get('benchmark') === 'mmlu') return respond({
+        question_ids: ['M1', 'M2', 'M3', 'M4', 'M5'], max_parallel_limit: 4, max_tokens_limit: 32000,
+        benchmark: { ...benchmarkSession().benchmark, dataset: 'mmlu', revision: 'fixed-revision' },
+        subjects: [{ id: 'college_physics', question_count: 2 }, { id: 'history', question_count: 3 }],
+      })
+      return original(url)
+    })
+    renderApp('/benchmark')
+    await screen.findByRole('button', { name: 'Iniciar bateria' })
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Benchmark' }), 'mmlu')
+    const protocol = await screen.findByRole('combobox', { name: 'Protocolo MMLU' })
+    expect(protocol).toHaveValue('5')
+    await user.selectOptions(protocol, '0')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Disciplina' }), 'college_physics')
+    expect(screen.getByRole('spinbutton', { name: /Quantidade de questões/ })).toHaveValue(2)
+    const seed = screen.getByRole('spinbutton', { name: /Semente da amostra/ })
+    await user.clear(seed)
+    await user.type(seed, '123')
+    await user.click(screen.getByRole('button', { name: 'Iniciar bateria' }))
+    const socket = FakeWebSocket.latest()
+    act(() => socket.emitOpen())
+    expect(JSON.parse(socket.sentFrames[0] ?? '{}')).toMatchObject({
+      benchmark: 'mmlu', few_shot: 0, subjects: ['college_physics'], sample_seed: 123, question_count: 2,
+    })
+    expect(screen.getByRole('combobox', { name: 'Benchmark' })).toBeDisabled()
+    const session = completedBenchmarkSession()
+    session.benchmark = {
+      dataset: 'mmlu', revision: 'fixed-revision', protocol: 'generative_0shot', split: 'test',
+      few_shot: 0, subjects: ['college_physics'], sample_seed: 123,
+    }
+    backend.batteries.push(session)
+    emit(socket, 'result', session)
+    act(() => socket.emitClose(1000))
+    const list = await screen.findByRole('list')
+    expect(await within(list).findByText('MMLU · generativo · 0-shot')).toBeInTheDocument()
+    await user.click(within(list).getByRole('link'))
+    expect(await screen.findByText('fixed-revision')).toBeInTheDocument()
+    expect(screen.getByText(/Semente 123/)).toBeInTheDocument()
+  })
+
+  it('volta aos vestibulares e mantém o contrato anterior de execução', async () => {
+    const user = userEvent.setup()
+    mockBackend()
+    renderApp('/benchmark')
+    await screen.findByRole('button', { name: 'Iniciar bateria' })
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Benchmark' }), 'mmlu')
+    await screen.findByRole('combobox', { name: 'Protocolo MMLU' })
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Benchmark' }), 'vestibular')
+    await user.click(await screen.findByRole('button', { name: 'Iniciar bateria' }))
+    const socket = FakeWebSocket.latest()
+    act(() => socket.emitOpen())
+    expect(JSON.parse(socket.sentFrames[0] ?? '{}')).not.toHaveProperty('few_shot')
+    expect(screen.queryByRole('combobox', { name: 'Protocolo MMLU' })).not.toBeInTheDocument()
+  })
+
   it('inicia uma bateria, monitora o progresso ao vivo e lista a bateria ao terminar', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()

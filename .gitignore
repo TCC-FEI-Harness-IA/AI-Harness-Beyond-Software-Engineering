@@ -76,3 +76,4 @@ apps/backend/.env
 # Resultados locais do antigo script de benchmark (o benchmark agora roda pela aplicacao)
 teste benchmark/resultados/
 benchmark-session*
+exemplo_interno_prompt*

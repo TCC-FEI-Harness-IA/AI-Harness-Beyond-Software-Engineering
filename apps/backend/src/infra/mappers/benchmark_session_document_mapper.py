@@ -1,4 +1,5 @@
 from datetime import datetime
+from dataclasses import asdict
 from enum import StrEnum
 from typing import Any, TypeVar
 
@@ -7,6 +8,8 @@ from src.domain.entities.benchmark.benchmark_llm_config import BenchmarkLLMConfi
 from src.domain.entities.benchmark.benchmark_mode_summary import BenchmarkModeSummary
 from src.domain.entities.benchmark.benchmark_question_run import BenchmarkQuestionRun
 from src.domain.entities.benchmark.benchmark_session import BenchmarkSession
+from src.domain.entities.benchmark.benchmark_definition import BenchmarkDefinition
+from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
 from src.domain.enums.benchmark_inference_mode_enum import BenchmarkInferenceModeEnum
 from src.domain.enums.benchmark_question_status_enum import BenchmarkQuestionStatusEnum
 from src.domain.enums.benchmark_session_status_enum import BenchmarkSessionStatusEnum
@@ -43,6 +46,11 @@ class BenchmarkSessionDocumentMapper(IBenchmarkSessionDocumentMapper):
         return {
             _DOCUMENT_ID_KEY: benchmark_session.id,
             "id": benchmark_session.id,
+            "benchmark": {
+                **asdict(benchmark_session.benchmark),
+                "dataset": benchmark_session.benchmark.dataset.value,
+                "subjects": list(benchmark_session.benchmark.subjects),
+            },
             "status": benchmark_session.status.value,
             "model_name": config.model_name,
             "provider": config.provider.value,
@@ -112,6 +120,18 @@ class BenchmarkSessionDocumentMapper(IBenchmarkSessionDocumentMapper):
                 self.__question_from_document(document=item)
                 for item in self.__required(document=document, key="questions", container=container)
             ],
+            benchmark=self.__benchmark_from_document(document.get("benchmark")),
+        )
+
+    @staticmethod
+    def __benchmark_from_document(document: dict[str, Any] | None) -> BenchmarkDefinition:
+        """Documentos anteriores à seleção de benchmark são de vestibulares."""
+        if document is None:
+            return BenchmarkDefinition()
+        return BenchmarkDefinition(
+            dataset=BenchmarkDatasetEnum(document["dataset"]), revision=document["revision"],
+            protocol=document["protocol"], split=document["split"], few_shot=document["few_shot"],
+            subjects=tuple(document["subjects"]), sample_seed=document["sample_seed"],
         )
 
     # ── Bateria → documento ──────────────────────────────────────────────────
@@ -132,6 +152,7 @@ class BenchmarkSessionDocumentMapper(IBenchmarkSessionDocumentMapper):
         """Converte a execução de uma questão no seu documento."""
         return {
             "question_id": question.question_id,
+            "subject": question.subject,
             "expected_alternative": question.expected_alternative,
             "status": question.status.value,
             "current_mode": question.current_mode.value if question.current_mode is not None else None,
@@ -181,6 +202,7 @@ class BenchmarkSessionDocumentMapper(IBenchmarkSessionDocumentMapper):
                 else None
             ),
             current_tokens=self.__required(document=document, key="current_tokens", container=container),
+            subject=document.get("subject"),
         )
 
     def __outcome_from_document(self, document: dict[str, Any] | None) -> BenchmarkFlowOutcome | None:

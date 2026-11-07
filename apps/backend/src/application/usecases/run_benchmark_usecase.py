@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from collections import deque
+from dataclasses import replace
 from typing import AsyncGenerator
 
 from src.application.dtos.run_benchmark_input_dto import RunBenchmarkInputDTO
@@ -10,6 +11,7 @@ from src.domain.entities.benchmark.benchmark_question import BenchmarkQuestion
 from src.domain.entities.benchmark.benchmark_question_run import BenchmarkQuestionRun
 from src.domain.entities.benchmark.benchmark_session import BenchmarkSession
 from src.domain.enums.benchmark_inference_mode_enum import BenchmarkInferenceModeEnum
+from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
 from src.domain.enums.benchmark_session_status_enum import BenchmarkSessionStatusEnum
 from src.domain.errors.invalid_benchmark_request_error import InvalidBenchmarkRequestError
 from src.domain.interfaces.benchmark_flow_runner_interface import IBenchmarkFlowRunner
@@ -18,6 +20,7 @@ from src.domain.interfaces.benchmark_session_repository_interface import IBenchm
 from src.domain.interfaces.clock_interface import IClock
 from src.domain.interfaces.id_generator_interface import IIdGenerator
 from src.domain.interfaces.settings_interface import ISettings
+from src.domain.services.benchmark_question_selector import select_mmlu_questions
 
 _FLOW_ORDER = (BenchmarkInferenceModeEnum.SIMPLE, BenchmarkInferenceModeEnum.RALPH)
 _MIN_PARALLEL = 1
@@ -126,7 +129,7 @@ class RunBenchmarkUseCase:
     # ── Preparação ───────────────────────────────────────────────────────────
 
     def __select_questions(self, input_dto: RunBenchmarkInputDTO) -> list[BenchmarkQuestion]:
-        """Valida os parâmetros e escolhe as primeiras questões do dataset.
+        """Valida os parâmetros e escolhe questões conforme o protocolo do dataset.
 
         Raises:
             InvalidBenchmarkRequestError: Quando `max_tokens`, o paralelismo ou a quantidade de questões
@@ -147,6 +150,15 @@ class RunBenchmarkUseCase:
             )
 
         questions = self.question_provider.list_questions()
+        definition = self.question_provider.definition()
+        if input_dto.benchmark is not definition.dataset or input_dto.few_shot != definition.few_shot:
+            raise InvalidBenchmarkRequestError("Dataset ou protocolo difere do provider selecionado.")
+        if input_dto.benchmark is BenchmarkDatasetEnum.MMLU:
+            return select_mmlu_questions(
+                questions, input_dto.subjects, input_dto.question_count, input_dto.sample_seed,
+            )
+        if input_dto.subjects:
+            raise InvalidBenchmarkRequestError("subjects é uma opção exclusiva do MMLU.")
         if input_dto.question_count is None:
             return questions
         if not _MIN_QUESTIONS <= input_dto.question_count <= len(questions):
@@ -171,8 +183,16 @@ class RunBenchmarkUseCase:
             status=BenchmarkSessionStatusEnum.RUNNING,
             created_at=created_at,
             updated_at=created_at,
+            benchmark=replace(
+                self.question_provider.definition(),
+                subjects=tuple(sorted(set(input_dto.subjects))),
+                sample_seed=input_dto.sample_seed if input_dto.benchmark is BenchmarkDatasetEnum.MMLU else None,
+            ),
             questions=[
-                BenchmarkQuestionRun(question_id=question.id, expected_alternative=question.expected_alternative)
+                BenchmarkQuestionRun(
+                    question_id=question.id, expected_alternative=question.expected_alternative,
+                    subject=question.subject,
+                )
                 for question in questions
             ],
         )
@@ -189,7 +209,7 @@ class RunBenchmarkUseCase:
         """Worker: consome a fila e executa cada questão nos dois fluxos, em sequência."""
         while queue:
             question = queue.popleft()
-            prompt = f"{question.statement}\n\n{instruction}"
+            prompt = self.question_provider.build_prompt(question=question, instruction=instruction)
             for mode in _FLOW_ORDER:
                 benchmark_session.start_flow(question_id=question.id, mode=mode, at=self.clock.now())
                 changed.set()

@@ -46,6 +46,12 @@ O front fala com o backend por dois transportes:
 A página **BenchMark** (`/benchmark`) inicia uma bateria (quantidade de questões, questões em paralelo e a
 configuração de modelo da home), acompanha o progresso pelos frames do WebSocket e lista as baterias; o
 detalhe (`/benchmark/:id`) compara os fluxos e leva ao chat de cada sessão (`/benchmark/:id/sessao/:sessionId`).
+O seletor **Benchmark** alterna entre vestibulares brasileiros (padrão) e **MMLU**. No MMLU, escolha o
+protocolo generativo 0-shot ou 5-shot, uma disciplina ou todas, e a semente da amostra. O formulário inicia
+com até 285 questões de teste, e pode executar o conjunto inteiro. O histórico e o detalhe identificam o
+dataset e o protocolo; o detalhe MMLU também mostra disciplinas, semente e revisão. A tabela pagina
+100 questões por vez. Veja o [guia do MMLU](../backend/src/infra/benchmark/mmlu/README.md) para metodologia,
+reprodução e limites de comparação com rankings externos.
 O detalhe também traz o botão **Exportar erros do Ralph Loop**, que baixa um ZIP com as questões erradas no
 Ralph Loop; fica desabilitado enquanto a bateria executa ou quando nenhuma questão errou nesse fluxo.
 A conexão vive em `BenchmarkRunContext`, acima das rotas: navegar pelo app não interrompe a bateria; cancelar,

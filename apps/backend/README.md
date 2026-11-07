@@ -701,8 +701,14 @@ pelos endpoints `GET /v1/sessions*`.
 ## Benchmark
 
 O benchmark compara a inferência simples e o Ralph Loop sobre questões de múltipla escolha de
-vestibulares brasileiros. É uma funcionalidade da API: a página **BenchMark** do front-end inicia uma
+vestibulares brasileiros ou do MMLU. É uma funcionalidade da API: a página **BenchMark** do front-end inicia uma
 bateria pelo WebSocket, acompanha o progresso e consulta as baterias pelos endpoints `GET`.
+
+**Seleção do benchmark.** Vestibulares continuam sendo o padrão. A página também oferece MMLU
+generativo 0-shot ou 5-shot, com filtro por disciplina e amostra reproduzível por semente. As 14.042
+questões de teste e os 285 exemplos de desenvolvimento estão incluídos localmente, com revisão e
+hashes fixados. Consulte [MMLU na aplicação](src/infra/benchmark/mmlu/README.md) para o protocolo,
+limites de comparabilidade, exemplo de API e auditoria dos dados.
 
 **Dataset.** As questões ficam em [`src/infra/benchmark/questions`](src/infra/benchmark/questions/README.md),
 no mesmo formato de antes: uma pasta por questão, com `enunciado.md` (enunciado e alternativas `A)` a
@@ -746,6 +752,9 @@ em `error`. A acurácia de um fluxo é `correct / executed`.
    ```
 
    `question_count` (opcional, `>= 1`) executa as primeiras questões do dataset; ausente, executa todas.
+   Para MMLU, envie `benchmark: "mmlu"`, `few_shot: 0` ou `5`, `subjects: []` (todas) ou uma lista de
+   disciplinas e `sample_seed` (padrão 42). A quantidade passa a representar uma amostra distribuída entre
+   as disciplinas selecionadas. A bateria persiste esse protocolo no campo `benchmark`.
    `max_parallel` (default `5`) vai de `1` a `RALPH_BENCHMARK_MAX_PARALLEL`. `llm_model_config` é o
    [`ModelConfigDTO`](#modelconfigdto) dos endpoints de mensagem e vale para todos os fluxos; seu
    `max_tokens` vai de `1` a `LLM_MAX_TOKENS` e é o limite de tokens de **cada sessão** gerada pela bateria
@@ -827,6 +836,9 @@ está em execução ou nenhuma questão errou no Ralph Loop (nunca devolve um ZI
 bateria não existe; `400` para identificador inválido; `500` para outras falhas.
 
 ### `GET /v1/benchmark/questions`
+
+Aceita `?benchmark=mmlu` para descrever MMLU; sem o parâmetro, preserva vestibulares. A resposta
+também traz `benchmark` (proveniência) e `subjects` (identificador e quantidade de questões por disciplina).
 
 Questões do dataset, na ordem de execução, e os limites de paralelismo e de `max_tokens` (tokens por
 sessão, igual a `LLM_MAX_TOKENS`):

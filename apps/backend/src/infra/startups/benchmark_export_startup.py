@@ -6,6 +6,7 @@ from src.infra.config.settings import Settings
 from src.infra.mappers.benchmark_session_document_mapper import BenchmarkSessionDocumentMapper
 from src.infra.mappers.session_document_mapper import SessionDocumentMapper
 from src.infra.providers.file_benchmark_question_provider import FileBenchmarkQuestionProvider
+from src.infra.providers.benchmark_question_provider_factory import BenchmarkQuestionProviderFactory
 from src.infra.repositories.benchmark_session_repository_factory import BenchmarkSessionRepositoryFactory
 from src.infra.repositories.session_repository_factory import SessionRepositoryFactory
 from src.infra.services.benchmark_ralph_errors_archive_builder import (
@@ -34,6 +35,7 @@ class BenchmarkExportStartup:
                 logger=self.settings.logger(module_file=getfile(FileBenchmarkQuestionProvider)),
             ),
             logger=self.settings.logger(module_file=getfile(ExportBenchmarkRalphErrorsUseCase)),
+            question_provider_for=BenchmarkQuestionProviderFactory(self.settings, self.logger).create,
         )
         self.archive_builder = BenchmarkRalphErrorsArchiveBuilder(session_mapper=self.session_mapper)
         self.logger.info("BenchmarkExportStartup inicializado")

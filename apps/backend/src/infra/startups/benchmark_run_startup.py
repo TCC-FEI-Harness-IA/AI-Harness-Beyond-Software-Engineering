@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 from src.application.dtos.run_benchmark_input_dto import RunBenchmarkInputDTO
 from src.application.usecases.run_benchmark_usecase import RunBenchmarkUseCase
 from src.domain.enums.benchmark_session_status_enum import BenchmarkSessionStatusEnum
+from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
 from src.domain.interfaces.settings_interface import ISettings
 from src.domain.services.benchmark_answer_evaluator import BenchmarkAnswerEvaluator
 from src.infra.adapters.benchmark_flow_runner_adapter import BenchmarkFlowRunnerAdapter
@@ -12,6 +13,7 @@ from src.infra.adapters.id_generator_adapter import IdGeneratorAdapter
 from src.infra.config.settings import Settings
 from src.infra.mappers.benchmark_session_document_mapper import BenchmarkSessionDocumentMapper
 from src.infra.providers.file_benchmark_question_provider import FileBenchmarkQuestionProvider
+from src.infra.providers.benchmark_question_provider_factory import BenchmarkQuestionProviderFactory
 from src.infra.repositories.benchmark_session_repository_factory import BenchmarkSessionRepositoryFactory
 from src.infra.routes.v1.benchmark.dtos.benchmark_frame_dto import BenchmarkFrameDTO
 from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
@@ -67,6 +69,11 @@ class BenchmarkRunStartup:
         Yields:
             BenchmarkFrameDTO: Um frame `progress` por mudança de estado e um `result` final.
         """
+        if payload.benchmark is BenchmarkDatasetEnum.MMLU:
+            self.question_provider = BenchmarkQuestionProviderFactory(self.settings, self.logger).create(
+                dataset=payload.benchmark, few_shot=payload.few_shot,
+            )
+        self.run_benchmark_use_case.question_provider = self.question_provider
         input_dto = RunBenchmarkInputDTO(
             question_count=payload.question_count,
             max_parallel=payload.max_parallel,
@@ -74,6 +81,10 @@ class BenchmarkRunStartup:
             max_tokens=payload.llm_model_config.max_tokens,
             temperature=payload.llm_model_config.temperature,
             provider=payload.llm_model_config.provider,
+            benchmark=payload.benchmark,
+            few_shot=payload.few_shot,
+            subjects=tuple(payload.subjects),
+            sample_seed=payload.sample_seed,
         )
         async for benchmark_session in self.run_benchmark_use_case.execute(input_dto=input_dto):
             is_running = benchmark_session.status is BenchmarkSessionStatusEnum.RUNNING

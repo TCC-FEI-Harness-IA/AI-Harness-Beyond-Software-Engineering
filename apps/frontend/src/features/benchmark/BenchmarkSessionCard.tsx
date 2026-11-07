@@ -16,6 +16,7 @@ import type {
   BenchmarkSessionDocument,
 } from '@/domain/types/benchmarkSession'
 import { buildBenchmarkSessionPath } from '@/router/routes'
+import { benchmarkLabel } from '@/domain/services/benchmarkDefinition'
 import styles from './BenchmarkSessionCard.module.css'
 
 function scoreLabel(label: string, summary: BenchmarkModeSummary): string {
@@ -42,6 +43,7 @@ export function BenchmarkSessionCard({
           <span>{scoreLabel('Ralph', session.summary.ralph)}</span>
         </p>
         <p className={styles.meta}>
+          <span>{benchmarkLabel(session.benchmark)}</span>
           <span>{session.model_name}</span>
           <span>
             {session.question_count} {session.question_count === 1 ? 'questão' : 'questões'}

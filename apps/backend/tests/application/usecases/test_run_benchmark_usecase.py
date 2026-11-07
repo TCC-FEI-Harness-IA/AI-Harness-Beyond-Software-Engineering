@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from dataclasses import replace
 from collections.abc import Callable
 
 import pytest
@@ -10,6 +11,7 @@ from src.domain.entities.benchmark.benchmark_flow_outcome import BenchmarkFlowOu
 from src.domain.entities.benchmark.benchmark_flow_request import BenchmarkFlowRequest
 from src.domain.entities.benchmark.benchmark_session import BenchmarkSession
 from src.domain.enums.benchmark_inference_mode_enum import BenchmarkInferenceModeEnum
+from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
 from src.domain.enums.benchmark_question_status_enum import BenchmarkQuestionStatusEnum
 from src.domain.enums.benchmark_session_status_enum import BenchmarkSessionStatusEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
@@ -133,6 +135,22 @@ async def test_quantidade_menor_executa_as_primeiras_questoes_na_ordem() -> None
 
     assert [questao.question_id for questao in repositorio.sessions["bench_1"].questions] == ["Q0", "Q1"]
     assert {item.question.id for item in runner.requests} == {"Q0", "Q1"}
+
+
+async def test_provider_nao_pode_executar_dataset_ou_protocolo_diferente_do_pedido() -> None:
+    runner = FakeBenchmarkFlowRunner(_imediato)
+    caso, repositorio = _caso_de_uso(runner)
+    with pytest.raises(InvalidBenchmarkRequestError, match="Dataset ou protocolo"):
+        await _coletar(caso, replace(_entrada(), benchmark=BenchmarkDatasetEnum.MMLU))
+    assert not repositorio.saved
+    assert not runner.requests
+
+
+async def test_disciplinas_sao_exclusivas_do_mmlu() -> None:
+    runner = FakeBenchmarkFlowRunner(_imediato)
+    caso, _ = _caso_de_uso(runner)
+    with pytest.raises(InvalidBenchmarkRequestError, match="subjects"):
+        await _coletar(caso, replace(_entrada(), subjects=("physics",)))
 
 
 async def test_respeita_o_maximo_de_questoes_em_paralelo() -> None:

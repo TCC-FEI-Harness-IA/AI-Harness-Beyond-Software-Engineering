@@ -3,6 +3,7 @@
 
 import type {
   BenchmarkDataset,
+  BenchmarkDatasetId,
   BenchmarkRunInput,
   BenchmarkSessionDocument,
 } from '../domain/types/benchmarkSession'
@@ -22,10 +23,18 @@ export interface BenchmarkRunParams {
   questionCount: number
   maxParallel: number
   config: RunConfig
+  benchmark?: BenchmarkDatasetId
+  fewShot?: 0 | 5
+  subjects?: string[]
+  sampleSeed?: number
 }
 
-export function getBenchmarkDataset(signal?: AbortSignal): Promise<BenchmarkDataset> {
-  return httpClient.get(QUESTIONS_PATH, parseBenchmarkDataset, signal)
+export function getBenchmarkDataset(
+  signal?: AbortSignal,
+  benchmark: BenchmarkDatasetId = 'vestibular',
+): Promise<BenchmarkDataset> {
+  const path = benchmark === 'mmlu' ? `${QUESTIONS_PATH}?benchmark=mmlu` : QUESTIONS_PATH
+  return httpClient.get(path, parseBenchmarkDataset, signal)
 }
 
 export function listBenchmarkSessions(signal?: AbortSignal): Promise<BenchmarkSessionDocument[]> {
@@ -72,6 +81,10 @@ export function buildBenchmarkRunPayload({
   questionCount,
   maxParallel,
   config,
+  benchmark = 'vestibular',
+  fewShot = 0,
+  subjects = [],
+  sampleSeed = 42,
 }: BenchmarkRunParams): BenchmarkRunInput {
   requirePositiveInteger(questionCount, 'question_count')
   requirePositiveInteger(maxParallel, 'max_parallel')
@@ -79,8 +92,25 @@ export function buildBenchmarkRunPayload({
   if (config.temperature < 0 || config.temperature > 1) {
     throw new ContractError(`temperature precisa estar entre 0 e 1, recebeu: ${config.temperature}`)
   }
+  if (
+    benchmark === 'mmlu' &&
+    (![0, 5].includes(fewShot) ||
+      !Number.isInteger(sampleSeed) ||
+      sampleSeed < 0 ||
+      sampleSeed > 4294967295)
+  ) {
+    throw new ContractError('Protocolo MMLU ou semente inválidos.')
+  }
 
   return {
+    ...(benchmark === 'mmlu'
+      ? {
+          benchmark,
+          few_shot: fewShot,
+          subjects,
+          sample_seed: sampleSeed,
+        }
+      : {}),
     question_count: questionCount,
     max_parallel: maxParallel,
     llm_model_config: {

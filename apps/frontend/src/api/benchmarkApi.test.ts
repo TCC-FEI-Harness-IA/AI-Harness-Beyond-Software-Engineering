@@ -35,6 +35,12 @@ describe('consultas de benchmark', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe('http://localhost:8000/v1/benchmark/questions')
   })
 
+  it('consulta MMLU sem trocar o dataset global', async () => {
+    const fetchMock = mockFetch({ question_ids: ['MMLU_Q1'], max_parallel_limit: 3, max_tokens_limit: 32000 })
+    await getBenchmarkDataset(undefined, 'mmlu')
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://localhost:8000/v1/benchmark/questions?benchmark=mmlu')
+  })
+
   it('lista as baterias', async () => {
     mockFetch({ benchmark_sessions: [benchmarkSession()] })
 
@@ -53,6 +59,24 @@ describe('consultas de benchmark', () => {
 })
 
 describe('buildBenchmarkRunPayload', () => {
+  it('envia protocolo, disciplinas e semente da bateria MMLU', () => {
+    const payload = buildBenchmarkRunPayload({
+      questionCount: 285, maxParallel: 3, config: CONFIG,
+      benchmark: 'mmlu', fewShot: 5, subjects: ['college_physics'], sampleSeed: 123,
+    })
+    expect(payload).toMatchObject({
+      benchmark: 'mmlu', few_shot: 5, subjects: ['college_physics'], sample_seed: 123,
+    })
+    expect(buildBenchmarkRunPayload({ questionCount: 1, maxParallel: 1, config: CONFIG, benchmark: 'mmlu' }))
+      .toMatchObject({ few_shot: 0, subjects: [], sample_seed: 42 })
+  })
+
+  it.each([-1, 1.5, 4294967296, NaN])('recusa semente MMLU inválida: %s', (sampleSeed) => {
+    expect(() => buildBenchmarkRunPayload({
+      questionCount: 1, maxParallel: 1, config: CONFIG, benchmark: 'mmlu', sampleSeed,
+    })).toThrow('semente inválidos')
+  })
+
   it('monta a abertura com a configuração do modelo e arredonda a temperatura', () => {
     expect(buildBenchmarkRunPayload({ questionCount: 3, maxParallel: 2, config: CONFIG })).toEqual({
       question_count: 3,

@@ -1,13 +1,19 @@
 // Consultas de benchmark sobre o tripé genérico `useAsync` (README, FASE 02, seção 11).
 
 import { getBenchmarkDataset, getBenchmarkSession, listBenchmarkSessions } from '@/api/benchmarkApi'
-import type { BenchmarkDataset, BenchmarkSessionDocument } from '@/domain/types/benchmarkSession'
+import type {
+  BenchmarkDataset,
+  BenchmarkDatasetId,
+  BenchmarkSessionDocument,
+} from '@/domain/types/benchmarkSession'
 import { type AsyncState, useAsync } from './useAsync'
 
 type WithReload<T> = AsyncState<T> & { reload: () => void }
 
-export function useBenchmarkDataset(): WithReload<BenchmarkDataset> {
-  return useAsync((signal) => getBenchmarkDataset(signal), [])
+export function useBenchmarkDataset(
+  benchmark: BenchmarkDatasetId = 'vestibular',
+): WithReload<BenchmarkDataset> {
+  return useAsync((signal) => getBenchmarkDataset(signal, benchmark), [benchmark])
 }
 
 /** Lista as baterias; `refreshToken` diferente força nova busca (ex.: ao fim de uma bateria). */

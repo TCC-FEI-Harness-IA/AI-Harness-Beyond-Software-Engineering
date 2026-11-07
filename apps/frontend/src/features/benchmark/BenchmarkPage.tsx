@@ -3,6 +3,9 @@ import { Card } from '@/components/primitives/Card'
 import { EmptyState } from '@/components/primitives/EmptyState'
 import { ErrorState } from '@/components/primitives/ErrorState'
 import { Skeleton } from '@/components/primitives/Skeleton'
+import { Field } from '@/components/primitives/Field'
+import { Select } from '@/components/primitives/Select'
+import type { BenchmarkDatasetId } from '@/domain/types/benchmarkSession'
 import { useBenchmarkDataset, useBenchmarkSessions } from '@/hooks/useBenchmarkData'
 import { useBenchmarkRun } from '@/state/BenchmarkRunContext'
 import { useRunConfig } from '@/state/RunConfigContext'
@@ -33,7 +36,8 @@ const BENCHMARK_ICON = (
 export function BenchmarkPage(): JSX.Element {
   const run = useBenchmarkRun()
   const { config } = useRunConfig()
-  const dataset = useBenchmarkDataset()
+  const [benchmark, setBenchmark] = useState<BenchmarkDatasetId>('vestibular')
+  const dataset = useBenchmarkDataset(benchmark)
   const sessions = useBenchmarkSessions(run.finishedCount)
 
   return (
@@ -41,8 +45,8 @@ export function BenchmarkPage(): JSX.Element {
       <div className={styles.header}>
         <h1 className={styles.title}>BenchMark</h1>
         <p className={styles.subtitle}>
-          Questões de vestibular de múltipla escolha respondidas pela inferência simples e pelo
-          Ralph Loop, com avaliação automática pelo gabarito.
+          Compare inferência simples e Ralph Loop em questões de vestibulares ou do MMLU, com
+          avaliação automática pelo gabarito.
         </p>
       </div>
 
@@ -51,12 +55,24 @@ export function BenchmarkPage(): JSX.Element {
           Nova bateria
         </h2>
         <Card padding="lg">
+          <Field label="Benchmark" className={styles.selector ?? ''}>
+            <Select
+              value={benchmark}
+              disabled={run.isActive}
+              onChange={(event) => setBenchmark(event.target.value as BenchmarkDatasetId)}
+            >
+              <option value="vestibular">Vestibulares brasileiros</option>
+              <option value="mmlu">MMLU</option>
+            </Select>
+          </Field>
           {dataset.status === 'success' ? (
             <NewRunForm
+              key={benchmark}
+              benchmark={benchmark}
               dataset={dataset.data}
               disabled={run.isActive}
-              onStart={(questionCount, maxParallel) =>
-                run.start({ questionCount, maxParallel, config })
+              onStart={(questionCount, maxParallel, options) =>
+                run.start({ questionCount, maxParallel, ...options, config })
               }
             />
           ) : dataset.status === 'error' ? (
@@ -96,3 +112,4 @@ export function BenchmarkPage(): JSX.Element {
     </PageContainer>
   )
 }
+import { useState } from 'react'

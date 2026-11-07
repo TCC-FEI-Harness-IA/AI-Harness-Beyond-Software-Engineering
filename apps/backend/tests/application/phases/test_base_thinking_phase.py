@@ -11,7 +11,6 @@ from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
-from src.domain.enums.output_defect_enum import OutputDefectEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.errors.budget_exceeded_error import BudgetExceededError
 from src.domain.errors.empty_completion_error import EmptyCompletionError
@@ -99,6 +98,24 @@ async def test_a_conversa_enviada_e_exatamente_a_janela_na_ordem(recorder: Sessi
     )
 
     assert llm.texts_of(0) == ["prompt da fase"]
+
+
+async def test_fase_recusa_janela_de_outra_fase_antes_de_chamar_o_modelo(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA])
+    context = ContextWindow(context_id="outra", phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION)
+    with pytest.raises(ValueError, match="toda mudança de fase exige uma janela nova"):
+        await _fase(llm_completions=llm, recorder=recorder).execute(context=context, variables={})
+    assert llm.call_count == 0
+
+
+async def test_fase_recusa_reutilizar_contexto_de_execucao_anterior(recorder: SessionRecorderAdapter) -> None:
+    llm = ScriptedLLMCompletions(responses=[_SAIDA_VALIDA])
+    phase = _fase(llm_completions=llm, recorder=recorder)
+    context = _janela()
+    await phase.execute(context=context, variables={})
+    with pytest.raises(ValueError, match="já foi usada"):
+        await phase.execute(context=context, variables={})
+    assert llm.call_count == 1
 
 
 async def test_a_janela_acumula_os_tokens_da_chamada(recorder: SessionRecorderAdapter) -> None:
@@ -1056,4 +1073,3 @@ async def test_saida_invalida_muito_longa_e_truncada_na_janela_mas_preservada_na
     assert llm.texts_of(1)[1] == ("x" * 1000) + "..."
     assert resultado.invalid_outputs[0].raw_output == saida_longa
     assert saida_longa in _auditorias(recorder)[0].content
-

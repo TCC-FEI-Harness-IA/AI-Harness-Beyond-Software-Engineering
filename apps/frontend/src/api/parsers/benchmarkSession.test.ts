@@ -17,6 +17,30 @@ function withQuestion(overrides: Record<string, unknown>): unknown {
 }
 
 describe('parseBenchmarkSession', () => {
+  it('lê baterias antigas como vestibulares', () => {
+    const legacy: Record<string, unknown> = { ...benchmarkSession() }
+    delete legacy.benchmark
+    expect(parseBenchmarkSession(legacy).benchmark.dataset).toBe('vestibular')
+  })
+
+  it('preserva protocolo e disciplina do MMLU', () => {
+    const session = benchmarkSession()
+    session.benchmark = {
+      dataset: 'mmlu', revision: 'revision', protocol: 'generative_5shot', split: 'test',
+      few_shot: 5, subjects: ['college_physics'], sample_seed: 123,
+    }
+    session.questions[0]!.subject = 'college_physics'
+    expect(parseBenchmarkSession(session)).toEqual(session)
+  })
+
+  it.each([
+    { dataset: 'outro' }, { few_shot: 3 }, { protocol: 'generative_5shot' }, { sample_seed: '42' },
+  ])('recusa metadados de benchmark inválidos (%#)', (overrides) => {
+    const session = benchmarkSession()
+    expect(() => parseBenchmarkSession({ ...session, benchmark: { ...session.benchmark, ...overrides } }))
+      .toThrow(ContractError)
+  })
+
   it('aceita o documento completo da API', () => {
     const document = completedBenchmarkSession()
 
@@ -73,6 +97,13 @@ describe('parseBenchmarkSessionList', () => {
 })
 
 describe('parseBenchmarkDataset', () => {
+  it('lê as disciplinas e a revisão da origem', () => {
+    const raw = {
+      question_ids: ['Q1'], max_parallel_limit: 10, max_tokens_limit: 32000,
+      benchmark: benchmarkSession().benchmark, subjects: [{ id: 'college_physics', question_count: 102 }],
+    }
+    expect(parseBenchmarkDataset(raw)).toEqual(raw)
+  })
   it('lê as questões e os limites de paralelismo e de tokens', () => {
     const raw = { question_ids: ['Q1'], max_parallel_limit: 10, max_tokens_limit: 32000 }
 

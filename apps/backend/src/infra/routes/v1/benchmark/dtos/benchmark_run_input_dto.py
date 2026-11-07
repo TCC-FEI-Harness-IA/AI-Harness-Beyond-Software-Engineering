@@ -1,5 +1,8 @@
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal, Self
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
 from src.infra.routes.v1.message.dtos.model_config_dto import ModelConfigDTO
 
 _DEFAULT_MAX_PARALLEL = 5
@@ -10,8 +13,8 @@ class BenchmarkRunInputDTO(BaseModel):
     """Frame de abertura do WebSocket de benchmark, enviado uma única vez.
 
     `question_count` ausente executa todas as questões do dataset; um valor menor executa as
-    primeiras, na ordem do dataset. `max_parallel` é o máximo de questões em execução ao mesmo
-    tempo. Os limites superiores dependem do dataset e de `RALPH_BENCHMARK_MAX_PARALLEL`, e são
+    primeiras nos vestibulares ou uma amostra estratificada no MMLU. `max_parallel` limita questões
+    em execução ao mesmo tempo. Os limites dependem do dataset e de `RALPH_BENCHMARK_MAX_PARALLEL`, e são
     conferidos pelo caso de uso.
     """
 
@@ -20,3 +23,14 @@ class BenchmarkRunInputDTO(BaseModel):
     question_count: int | None = Field(default=None, ge=_MIN_VALUE)
     max_parallel: int = Field(default=_DEFAULT_MAX_PARALLEL, ge=_MIN_VALUE)
     llm_model_config: ModelConfigDTO
+    benchmark: BenchmarkDatasetEnum = BenchmarkDatasetEnum.VESTIBULAR
+    few_shot: Literal[0, 5] = 0
+    subjects: list[str] = Field(default_factory=list)
+    sample_seed: int = Field(default=42, ge=0, le=2**32 - 1)
+
+    @model_validator(mode="after")
+    def validate_protocol(self) -> Self:
+        """Impede aplicar parâmetros exclusivos do MMLU aos vestibulares."""
+        if self.benchmark is BenchmarkDatasetEnum.VESTIBULAR and (self.few_shot or self.subjects):
+            raise ValueError("few_shot e subjects são opções exclusivas do MMLU.")
+        return self

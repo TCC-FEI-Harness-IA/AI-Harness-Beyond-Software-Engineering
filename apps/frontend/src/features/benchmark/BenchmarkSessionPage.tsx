@@ -11,6 +11,7 @@ import {
   BENCHMARK_SESSION_STATUS_TONE,
 } from '@/domain/enums/benchmarkStatus'
 import { providerLabel } from '@/domain/enums/modelProvider'
+import { benchmarkLabel } from '@/domain/services/benchmarkDefinition'
 import { formatDateTime, formatTemperature, formatTokens } from '@/domain/services/formatters'
 import type { BenchmarkSessionDocument } from '@/domain/types/benchmarkSession'
 import { useBenchmarkSession } from '@/hooks/useBenchmarkData'
@@ -58,6 +59,7 @@ function BenchmarkSessionView({
           {isLive ? <Badge tone="accent">Ao vivo</Badge> : null}
         </div>
         <p className={styles.meta}>
+          <span>{benchmarkLabel(session.benchmark)}</span>
           <span>{session.model_name}</span>
           <span>{providerLabel(session.provider)}</span>
           <span>máx. {formatTokens(session.max_tokens)} tokens</span>
@@ -65,6 +67,18 @@ function BenchmarkSessionView({
           <span>{session.max_parallel} em paralelo</span>
           <span className={styles.id}>{session.id}</span>
         </p>
+        {session.benchmark.dataset === 'mmlu' ? (
+          <p>
+            {session.benchmark.subjects.length === 0
+              ? 'Todas as disciplinas'
+              : session.benchmark.subjects
+                  .map((subject) => subject.replaceAll('_', ' '))
+                  .join(', ')}
+            {' · '}Semente {session.benchmark.sample_seed}
+            {' · '}Split {session.benchmark.split}
+            {' · '}Revisão <code>{session.benchmark.revision}</code>
+          </p>
+        ) : null}
       </div>
 
       {session.error ? (

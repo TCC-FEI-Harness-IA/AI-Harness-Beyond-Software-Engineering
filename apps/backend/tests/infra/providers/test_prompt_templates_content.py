@@ -355,8 +355,8 @@ def test_templates_de_verificacao_pedem_decision_por_ultimo_no_json() -> None:
         ), fase
 
 
-
-
+def test_template_b1_delimita_tentativas_anteriores_antes_do_formato_de_saida() -> None:
+    template = _provider().get(phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION)
     assert "## Tentativas anteriores desta tarefa" in template
     assert "<tentativas_anteriores>" in template
     assert template.index("{{previous_attempts}}") < template.index("## Formato de saída")

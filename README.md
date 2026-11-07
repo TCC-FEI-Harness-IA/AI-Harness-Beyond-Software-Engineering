@@ -12,6 +12,11 @@ Este repositório contém o projeto de TCC **“Um Harness de IA para Resoluçã
 
 O frontend fica em [`apps/frontend/`](apps/frontend/) e foi desenvolvido com React, TypeScript e Vite. Ele permite comparar os dois fluxos para uma mesma pergunta: a inferência direta (baseline) e o harness baseado no Ralph Loop. No fluxo adaptado, a interface acompanha a decomposição em tarefas, as tentativas e validações, a reinicialização de contexto (*fresh context*) e a síntese da resposta final. Consulte o [README do frontend](apps/frontend/README.md) para detalhes de execução e arquitetura.
 
+A página **BenchMark** permite escolher entre vestibulares brasileiros e **MMLU**, com protocolos
+generativos 0-shot e 5-shot, filtro de disciplina, amostras reproduzíveis e histórico identificado por
+dataset e protocolo. Os dados MMLU já estão incluídos no backend. Consulte o
+[guia do MMLU](apps/backend/src/infra/benchmark/mmlu/README.md) para configuração e metodologia.
+
 ### Back
 
 O backend fica em [`apps/backend/`](apps/backend/) e fornece a API que executa os fluxos de inferência e registra as sessões. O fluxo do harness foi construído a partir do que é proposto no paper do TCC: planejamento, execução e validação iterativas de tarefas, uso de *fresh context* entre tarefas e síntese de uma resposta final. A implementação também oferece o fluxo de inferência direta para servir de baseline na comparação. A metodologia e sua adaptação estão descritas em [`RALPH_LOOP_ADAPTADO.md`](RALPH_LOOP_ADAPTADO.md); detalhes técnicos da API estão no [README do backend](apps/backend/README.md).

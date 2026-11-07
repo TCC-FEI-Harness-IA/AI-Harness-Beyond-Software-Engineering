@@ -3,7 +3,9 @@ import type { FormEvent } from 'react'
 import { Button } from '@/components/primitives/Button'
 import { Field } from '@/components/primitives/Field'
 import { TextInput } from '@/components/primitives/TextInput'
-import type { BenchmarkDataset } from '@/domain/types/benchmarkSession'
+import { Select } from '@/components/primitives/Select'
+import type { BenchmarkDataset, BenchmarkDatasetId } from '@/domain/types/benchmarkSession'
+import type { BenchmarkRunParams } from '@/api/benchmarkApi'
 import { formatTokens } from '@/domain/services/formatters'
 import { RunConfigBar } from '@/features/home/RunConfigBar'
 import { useRunConfig } from '@/state/RunConfigContext'
@@ -14,9 +16,14 @@ const MIN_VALUE = 1
 
 export interface NewRunFormProps {
   dataset: BenchmarkDataset
+  benchmark?: BenchmarkDatasetId
   /** Uma bateria já está em execução — só uma por vez. */
   disabled: boolean
-  onStart: (questionCount: number, maxParallel: number) => void
+  onStart: (
+    questionCount: number,
+    maxParallel: number,
+    options?: Pick<BenchmarkRunParams, 'benchmark' | 'fewShot' | 'subjects' | 'sampleSeed'>,
+  ) => void
 }
 
 // Os campos guardam o texto digitado (apagar para digitar outro número não pode virar "1" no meio
@@ -28,17 +35,30 @@ function clamp(raw: string, max: number): number {
 }
 
 /**
- * Parâmetros de uma nova bateria: quantas questões (as primeiras do dataset, na ordem) e quantas
- * em paralelo. Modelo, provedor, limite de tokens por sessão e temperatura são os mesmos da tela inicial.
+ * Parâmetros de uma bateria: quantidade, paralelismo e, no MMLU, protocolo, disciplina e semente.
+ * Modelo, provedor, limite de tokens por sessão e temperatura são os mesmos da tela inicial.
  */
-export function NewRunForm({ dataset, disabled, onStart }: NewRunFormProps): JSX.Element {
+export function NewRunForm({
+  dataset,
+  benchmark = 'vestibular',
+  disabled,
+  onStart,
+}: NewRunFormProps): JSX.Element {
   const { config } = useRunConfig()
   // O `max_tokens` é o limite de tokens de cada sessão da bateria (uma por fluxo e questão) e não
   // pode passar do limite por sessão do backend. O servidor recusa esse valor; avisar aqui evita
   // abrir a bateria só para vê-la recusada.
   const tokensTooHigh = config.maxTokens > dataset.max_tokens_limit
-  const available = dataset.question_ids.length
-  const [questionCount, setQuestionCount] = useState(String(available))
+  const isMmlu = benchmark === 'mmlu'
+  const [subject, setSubject] = useState('')
+  const [fewShot, setFewShot] = useState<0 | 5>(5)
+  const [sampleSeed, setSampleSeed] = useState('42')
+  const available = subject
+    ? (dataset.subjects?.find((item) => item.id === subject)?.question_count ?? 0)
+    : dataset.question_ids.length
+  const [questionCount, setQuestionCount] = useState(
+    String(isMmlu ? Math.min(285, available) : available),
+  )
   const [maxParallel, setMaxParallel] = useState(
     String(Math.min(DEFAULT_PARALLEL, dataset.max_parallel_limit)),
   )
@@ -46,15 +66,86 @@ export function NewRunForm({ dataset, disabled, onStart }: NewRunFormProps): JSX
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
     if (tokensTooHigh) return
-    onStart(clamp(questionCount, available), clamp(maxParallel, dataset.max_parallel_limit))
+    const count = clamp(questionCount, available)
+    const parallel = clamp(maxParallel, dataset.max_parallel_limit)
+    if (isMmlu) {
+      const seed = Math.min(4294967295, Math.max(0, Math.trunc(Number(sampleSeed) || 0)))
+      onStart(count, parallel, {
+        benchmark,
+        fewShot,
+        subjects: subject ? [subject] : [],
+        sampleSeed: seed,
+      })
+    } else {
+      onStart(count, parallel)
+    }
   }
 
   return (
     <form className={styles.form} onSubmit={handleSubmit} aria-label="Nova bateria de benchmark">
+      {isMmlu ? (
+        <>
+          <p>
+            MMLU em inglês, com quatro alternativas. A avaliação é generativa e compara a resposta
+            final dos dois fluxos. Resultados dependem do protocolo e da amostra escolhidos.
+          </p>
+          <div className={styles.fields}>
+            <Field label="Protocolo MMLU">
+              <Select
+                value={fewShot}
+                disabled={disabled}
+                onChange={(event) => setFewShot(Number(event.target.value) as 0 | 5)}
+              >
+                <option value={5}>5-shot — cinco exemplos por disciplina</option>
+                <option value={0}>0-shot — sem exemplos</option>
+              </Select>
+            </Field>
+            <Field label="Disciplina">
+              <Select
+                value={subject}
+                disabled={disabled}
+                onChange={(event) => {
+                  const nextSubject = event.target.value
+                  const limit =
+                    dataset.subjects?.find((item) => item.id === nextSubject)?.question_count ??
+                    dataset.question_ids.length
+                  setSubject(nextSubject)
+                  setQuestionCount(String(clamp(questionCount, limit)))
+                }}
+              >
+                <option value="">Todas as disciplinas</option>
+                {dataset.subjects?.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.id.replaceAll('_', ' ')} ({item.question_count})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field
+              label="Semente da amostra"
+              hint="Use a mesma semente e configuração para repetir a seleção de questões."
+            >
+              <TextInput
+                type="number"
+                min={0}
+                max={4294967295}
+                step={1}
+                value={sampleSeed}
+                disabled={disabled}
+                onChange={(event) => setSampleSeed(event.target.value)}
+              />
+            </Field>
+          </div>
+        </>
+      ) : null}
       <div className={styles.fields}>
         <Field
           label="Quantidade de questões"
-          hint={`As ${clamp(questionCount, available)} primeiras de ${available} disponíveis, na ordem do dataset.`}
+          hint={
+            isMmlu
+              ? `Amostra de ${clamp(questionCount, available)} de ${available} disponíveis, distribuída entre as disciplinas selecionadas.`
+              : `As ${clamp(questionCount, available)} primeiras de ${available} disponíveis, na ordem do dataset.`
+          }
         >
           <TextInput
             type="number"
@@ -89,8 +180,8 @@ export function NewRunForm({ dataset, disabled, onStart }: NewRunFormProps): JSX
       {tokensTooHigh ? (
         <p className={styles.warning} role="alert">
           O máximo de tokens ({formatTokens(config.maxTokens)}) passa do limite de{' '}
-          {formatTokens(dataset.max_tokens_limit)} por sessão. Reduza o valor em “Máximo de tokens por
-          sessão” para iniciar a bateria.
+          {formatTokens(dataset.max_tokens_limit)} por sessão. Reduza o valor em “Máximo de tokens
+          por sessão” para iniciar a bateria.
         </p>
       ) : null}
 

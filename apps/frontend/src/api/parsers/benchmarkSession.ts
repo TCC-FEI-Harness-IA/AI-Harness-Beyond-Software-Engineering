@@ -6,6 +6,7 @@ import { isModelProvider } from '@/domain/enums/modelProvider'
 import type { BenchmarkInferenceMode } from '@/domain/types/benchmarkDetails'
 import type {
   BenchmarkDataset,
+  BenchmarkDefinition,
   BenchmarkFlowOutcome,
   BenchmarkFrame,
   BenchmarkModeSummary,
@@ -13,6 +14,7 @@ import type {
   BenchmarkSessionDocument,
 } from '@/domain/types/benchmarkSession'
 import { ContractError } from '../errors/ContractError'
+import { LEGACY_BENCHMARK } from '@/domain/services/benchmarkDefinition'
 import {
   optionalString,
   requireArray,
@@ -68,6 +70,7 @@ function parseQuestion(raw: unknown, path: string): BenchmarkQuestionRun {
   }
   return {
     question_id: requireString(obj, 'question_id', `${path}.question_id`),
+    subject: obj.subject == null ? null : requireString(obj, 'subject', `${path}.subject`),
     expected_alternative: requireString(
       obj,
       'expected_alternative',
@@ -129,6 +132,7 @@ export function parseBenchmarkSession(
 
   return {
     id: requireString(obj, 'id', `${path}.id`),
+    benchmark: parseBenchmarkDefinition(obj.benchmark, `${path}.benchmark`),
     status,
     model_name: requireString(obj, 'model_name', `${path}.model_name`),
     provider,
@@ -170,9 +174,53 @@ export function parseBenchmarkSessionList(raw: unknown): BenchmarkSessionDocumen
 export function parseBenchmarkDataset(raw: unknown): BenchmarkDataset {
   const obj = requireObject(raw, 'benchmarkDataset')
   return {
+    ...(obj.benchmark === undefined
+      ? {}
+      : {
+          benchmark: parseBenchmarkDefinition(obj.benchmark, 'benchmarkDataset.benchmark'),
+        }),
+    ...(obj.subjects === undefined
+      ? {}
+      : {
+          subjects: requireArray(obj, 'subjects', 'subjects').map((rawSubject, index) => {
+            const subject = requireObject(rawSubject, `subjects[${index}]`)
+            return {
+              id: requireString(subject, 'id', `subjects[${index}].id`),
+              question_count: requireNumber(
+                subject,
+                'question_count',
+                `subjects[${index}].question_count`,
+              ),
+            }
+          }),
+        }),
     question_ids: parseStringArray(obj, 'question_ids', 'question_ids'),
     max_parallel_limit: requireNumber(obj, 'max_parallel_limit', 'max_parallel_limit'),
     max_tokens_limit: requireNumber(obj, 'max_tokens_limit', 'max_tokens_limit'),
+  }
+}
+
+function parseBenchmarkDefinition(raw: unknown, path: string): BenchmarkDefinition {
+  if (raw == null) return { ...LEGACY_BENCHMARK, subjects: [] }
+  const obj = requireObject(raw, path)
+  if (obj.dataset !== 'vestibular' && obj.dataset !== 'mmlu') {
+    throw new ContractError(`campo "${path}.dataset" tem valor desconhecido`)
+  }
+  if (obj.few_shot !== 0 && obj.few_shot !== 5) {
+    throw new ContractError(`campo "${path}.few_shot" deveria ser 0 ou 5`)
+  }
+  if (obj.protocol !== `generative_${obj.few_shot}shot`) {
+    throw new ContractError(`campo "${path}.protocol" incompatível com few_shot`)
+  }
+  return {
+    dataset: obj.dataset,
+    revision: requireString(obj, 'revision', `${path}.revision`),
+    protocol: obj.protocol as BenchmarkDefinition['protocol'],
+    split: requireString(obj, 'split', `${path}.split`),
+    few_shot: obj.few_shot,
+    subjects: parseStringArray(obj, 'subjects', `${path}.subjects`),
+    sample_seed:
+      obj.sample_seed === null ? null : requireNumber(obj, 'sample_seed', `${path}.sample_seed`),
   }
 }
 

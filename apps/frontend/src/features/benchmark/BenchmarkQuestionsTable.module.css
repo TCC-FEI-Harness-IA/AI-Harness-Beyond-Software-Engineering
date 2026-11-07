@@ -4,6 +4,15 @@
   border-radius: var(--radius-lg);
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

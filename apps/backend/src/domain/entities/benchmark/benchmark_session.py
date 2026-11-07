@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from src.domain.entities.benchmark.benchmark_definition import BenchmarkDefinition
 from src.domain.entities.benchmark.benchmark_flow_outcome import BenchmarkFlowOutcome
 from src.domain.entities.benchmark.benchmark_llm_config import BenchmarkLLMConfig
 from src.domain.entities.benchmark.benchmark_mode_summary import BenchmarkModeSummary
@@ -41,6 +42,7 @@ class BenchmarkSession:
     finished_at: datetime | None = None
     wall_time_ms: int = 0
     error: str | None = None
+    benchmark: BenchmarkDefinition = field(default_factory=BenchmarkDefinition)
 
     @property
     def question_count(self) -> int:

@@ -58,7 +58,7 @@ class BenchmarkAnswerEvaluator:
             return BenchmarkAnswerEvaluation(selected_alternative=None, is_correct=False, error=error)
 
         selected = self.select_alternative(response=response, options=question.options)
-        if selected is None:
+        if selected not in question.options:
             return BenchmarkAnswerEvaluation(selected_alternative=None, is_correct=False, error=_INVALID_ANSWER)
         return BenchmarkAnswerEvaluation(
             selected_alternative=selected,

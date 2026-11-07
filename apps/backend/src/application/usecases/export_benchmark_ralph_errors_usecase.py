@@ -1,7 +1,9 @@
 import logging
+from collections.abc import Callable
 
 from src.domain.entities.benchmark.benchmark_ralph_error import BenchmarkRalphError
 from src.domain.enums.benchmark_session_status_enum import BenchmarkSessionStatusEnum
+from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
 from src.domain.errors.benchmark_session_not_finished_error import BenchmarkSessionNotFinishedError
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
 from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
@@ -19,6 +21,7 @@ class ExportBenchmarkRalphErrorsUseCase:
         session_repository: ISessionRepository,
         question_provider: IBenchmarkQuestionProvider,
         logger: logging.Logger,
+        question_provider_for: Callable[[BenchmarkDatasetEnum], IBenchmarkQuestionProvider] | None = None,
     ) -> None:
         """Inicializa o caso de uso.
 
@@ -32,6 +35,7 @@ class ExportBenchmarkRalphErrorsUseCase:
         self.session_repository: ISessionRepository = session_repository
         self.question_provider: IBenchmarkQuestionProvider = question_provider
         self.logger = logger
+        self.question_provider_for = question_provider_for
 
     async def execute(self, benchmark_session_id: str) -> list[BenchmarkRalphError]:
         """Lista as questões com desfecho incorreto no Ralph Loop, na ordem da bateria.
@@ -57,7 +61,15 @@ class ExportBenchmarkRalphErrorsUseCase:
         if benchmark_session.status is BenchmarkSessionStatusEnum.RUNNING:
             raise BenchmarkSessionNotFinishedError(benchmark_session_id=benchmark_session_id)
 
-        dataset = {question.id: question for question in self.question_provider.list_questions()}
+        provider = self.question_provider
+        if self.question_provider_for is not None:
+            provider = self.question_provider_for(benchmark_session.benchmark.dataset)
+        if (
+            benchmark_session.benchmark.dataset is BenchmarkDatasetEnum.MMLU
+            and provider.definition().revision != benchmark_session.benchmark.revision
+        ):
+            raise ValueError("Revisão MMLU da bateria indisponível para exportação.")
+        dataset = {question.id: question for question in provider.list_questions()}
         errors: list[BenchmarkRalphError] = []
         for run in benchmark_session.questions:
             outcome = run.ralph

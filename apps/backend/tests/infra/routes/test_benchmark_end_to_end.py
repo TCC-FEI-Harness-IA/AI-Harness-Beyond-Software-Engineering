@@ -5,7 +5,9 @@ MongoDB simulado, mapper e templates reais — com a única substituição na fr
 transporte HTTP do provedor, por `httpx.MockTransport`.
 """
 import json
+import io
 import logging
+import zipfile
 from collections import deque
 from pathlib import Path
 from typing import Any
@@ -19,6 +21,8 @@ from starlette.websockets import WebSocketDisconnect
 from src.infra.adapters import mongo_client_adapter
 from src.infra.config.settings import Settings
 from src.infra.providers.file_benchmark_question_provider import FileBenchmarkQuestionProvider
+from src.infra.providers.mmlu_benchmark_question_provider import MMLUBenchmarkQuestionProvider, MMLU_REVISION
+from src.domain.services.benchmark_question_selector import select_mmlu_questions
 from src.infra.services.llm_service_factory import LLMServiceFactory
 from src.infra.services.openrouter_service import OpenRouterService
 from src.main import create_app
@@ -132,6 +136,72 @@ def _resposta_certa_da_primeira_questao() -> str:
 
 def _sessoes_gravadas(diretorio: Path) -> list[dict[str, Any]]:
     return [json.loads(path.read_text(encoding="utf-8")) for path in sorted(diretorio.glob("*.json"))]
+
+
+@pytest.mark.parametrize("few_shot", [0, 5])
+def test_mmlu_executa_os_dois_fluxos_preserva_protocolo_e_exporta_a_origem_correta(
+    ambiente: Path, monkeypatch: pytest.MonkeyPatch, few_shot: int,
+) -> None:
+    provider = MMLUBenchmarkQuestionProvider(few_shot)
+    question = select_mmlu_questions(provider.list_questions(), ("college_physics",), 1, 123)[0]
+    correct = f"RESPOSTA_FINAL: {question.expected_alternative}"
+    wrong = "RESPOSTA_FINAL: " + next(letter for letter in "ABCD" if letter != question.expected_alternative)
+    transport = _Provedor([correct, *_roteiro_ralph(wrong)])
+    client = _cliente(monkeypatch, transport)
+
+    descriptor = client.get("/v1/benchmark/questions?benchmark=mmlu")
+    assert descriptor.status_code == 200
+    assert len(descriptor.json()["question_ids"]) == 14042
+    assert len(descriptor.json()["subjects"]) == 57
+
+    frames, code = _executar(client, _abertura(
+        benchmark="mmlu", few_shot=few_shot, subjects=["college_physics"], sample_seed=123, question_count=1,
+    ))
+    assert code == 1000
+    session = frames[-1]["benchmark_session"]
+    assert session["benchmark"] == {
+        "dataset": "mmlu", "revision": MMLU_REVISION, "protocol": f"generative_{few_shot}shot",
+        "split": "test", "few_shot": few_shot, "subjects": ["college_physics"], "sample_seed": 123,
+    }
+    assert session["questions"][0]["question_id"] == question.id
+    assert session["questions"][0]["subject"] == "college_physics"
+    assert session["summary"]["simple"]["accuracy"] == 1
+    assert session["summary"]["ralph"]["accuracy"] == 0
+    assert client.get(f"/v1/benchmark/sessions/{session['id']}").json() == session
+    children = _sessoes_gravadas(ambiente / "sessions")
+    assert len(children) == 2
+    prompts = {child["user_question"] for child in children}
+    assert len(prompts) == 1
+    prompt = prompts.pop()
+    assert question.statement in prompt
+    assert prompt.count("Answer: ") == few_shot
+    assert correct not in prompt
+
+    export = client.get(f"/v1/benchmark/sessions/{session['id']}/ralph-loop-errors/export")
+    assert export.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(export.content)) as archive:
+        exported = json.loads(archive.read(f"questao-{question.id}/questao.json"))
+        assert exported["statement"] == question.statement
+        assert exported["options"] == question.options
+    assert client.get("/v1/benchmark/questions").json()["benchmark"]["dataset"] == "vestibular"
+
+
+@pytest.mark.parametrize("options", [
+    {"benchmark": "outro"}, {"benchmark": "mmlu", "few_shot": 3},
+    {"benchmark": "vestibular", "few_shot": 5}, {"subjects": ["college_physics"]},
+    {"benchmark": "mmlu", "sample_seed": -1},
+    {"benchmark": "mmlu", "subjects": ["inexistente"]},
+    {"benchmark": "mmlu", "subjects": ["college_physics"], "question_count": 103},
+])
+def test_opcoes_de_benchmark_invalidas_nao_criam_bateria_nem_chamam_modelo(
+    ambiente: Path, monkeypatch: pytest.MonkeyPatch, options: dict,
+) -> None:
+    transport = _Provedor([])
+    frames, code = _executar(_cliente(monkeypatch, transport), _abertura(**options))
+    assert code == 1003
+    assert frames[-1]["type"] == "error"
+    assert transport.enviados == []
+    assert not (ambiente / "benchmark-sessions").exists()
 
 
 def test_bateria_executa_as_primeiras_questoes_e_grava_a_benchmark_session(

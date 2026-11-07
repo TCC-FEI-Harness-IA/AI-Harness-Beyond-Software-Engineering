@@ -2,6 +2,7 @@ import pytest
 
 from src.domain.services.benchmark_answer_evaluator import BenchmarkAnswerEvaluator
 from tests.doubles.benchmark_factories import OPCOES, questao
+from src.domain.entities.benchmark.benchmark_question import BenchmarkQuestion
 
 
 @pytest.mark.parametrize(
@@ -41,6 +42,14 @@ def test_resposta_invalida_e_erro_com_diagnostico() -> None:
     assert avaliacao.selected_alternative is None
     assert avaliacao.is_correct is False
     assert "sem alternativa" in avaliacao.error
+
+
+def test_alternativa_e_nao_existe_em_questao_mmlu() -> None:
+    question = BenchmarkQuestion("mmlu", "enunciado", {letter: letter for letter in "ABCD"}, "A")
+    evaluation = BenchmarkAnswerEvaluator().evaluate(question, "RESPOSTA_FINAL: E", None)
+    assert evaluation.selected_alternative is None
+    assert evaluation.is_correct is False
+    assert evaluation.error is not None
 
 
 def test_falha_tecnica_e_erro_mesmo_com_resposta_valida() -> None:
