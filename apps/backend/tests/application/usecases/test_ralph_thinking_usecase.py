@@ -436,6 +436,41 @@ async def test_c2_recebe_as_pendencias_os_resultados_e_a_proxima_numeracao() -> 
     assert variaveis["next_task_number"] == "2"
 
 
+async def test_c2_recebe_o_prompt_original_do_usuario() -> None:
+    cenario = RalphScenario(responses=_roteiro_com_replanejamento())
+
+    await cenario.run(question="Quais de 2, 4 e 6 sao primos, pares e maiores que 2?")
+
+    variaveis = cenario.template_provider.variables_of(_FASE.C2_ADDITIONAL_PLANNING)[0]
+    assert variaveis["user_question"] == "Quais de 2, 4 e 6 sao primos, pares e maiores que 2?"
+
+
+async def test_c2_recebe_de_cada_resultado_so_o_enunciado_e_a_conclusao() -> None:
+    resolucao_completa = "Um primo tem exatamente dois divisores; os divisores de 2 sao 1 e 2. Conclusao: 2 e primo."
+    cenario = RalphScenario(
+        responses=[
+            _criterios(),
+            _tarefas("T1"),
+            _anotacoes_do_enunciado(),
+            _resolucao(resolucao_completa, conclusao="2 e primo"),
+            _aprovado("T1"),
+            _aprendizados(),
+            _global_reprovado("AC2"),
+            _tarefas("T2"),
+            *_tarefa_aprovada("T2", "4 e par"),
+            _global_aprovado(),
+            _resposta_final(),
+        ]
+    )
+
+    await cenario.run()
+
+    resultados = cenario.template_provider.variables_of(_FASE.C2_ADDITIONAL_PLANNING)[0]["stored_results"]
+    assert resultados == "## T1 — titulo de T1\n\n**Enunciado:**\n\ndescricao de T1\n\n**Conclusão:** 2 e primo"
+    for fase in (_FASE.C1_GLOBAL_VERIFICATION, _FASE.C3_FINAL_ANSWER):
+        assert resolucao_completa in cenario.template_provider.variables_of(fase)[0]["stored_results"]
+
+
 async def test_c2_recebe_o_teto_de_tarefas_que_a_sessao_ainda_comporta() -> None:
     cenario = RalphScenario(responses=_roteiro_com_replanejamento(), cost_guard=FakeCostGuard(task_slots=9))
 

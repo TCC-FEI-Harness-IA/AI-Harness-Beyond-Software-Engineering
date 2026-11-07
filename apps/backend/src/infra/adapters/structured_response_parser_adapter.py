@@ -524,9 +524,10 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         """Valida o schema de B.1.
 
         Raises:
-            _ContractViolation: Quando 'result' não é uma string não vazia.
+            _ContractViolation: Quando 'result' ou 'conclusion' não é uma string não vazia.
         """
         self.__require_text(source=parsed, key="result", label="result", field="result")
+        self.__require_text(source=parsed, key="conclusion", label="conclusion", field="conclusion")
 
     def __validate_verification(
         self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None

@@ -60,7 +60,7 @@ _CASOS = [
     (
         TaskResolutionPhase,
         ThinkingPhaseEnum.B1_TASK_RESOLUTION,
-        json.dumps({"task_id": "T1", "result": "resolucao"}),
+        json.dumps({"task_id": "T1", "result": "resolucao", "conclusion": "conclusao"}),
         {"task_description": "descricao", "task_acceptance_criteria": "- T1-AC1"},
     ),
     (

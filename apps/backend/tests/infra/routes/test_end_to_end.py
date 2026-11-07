@@ -57,7 +57,7 @@ def _tarefas(*ids: str) -> str:
 
 
 def _resolucao(texto: str) -> str:
-    return json.dumps({"task_id": "T1", "result": texto})
+    return json.dumps({"task_id": "T1", "result": texto, "conclusion": texto})
 
 
 def _reprovado(criterion_id: str = "T1-AC1") -> str:

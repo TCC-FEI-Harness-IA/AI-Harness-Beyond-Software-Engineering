@@ -48,9 +48,15 @@ paráfrases, sínteses e inferências razoáveis, sem descartar todas as opçõe
 correspondência 100% literal palavra por palavra.
 A resolução vai no campo `result`, em markdown.
 
+No campo `conclusion`, escreva **apenas a conclusão final** da resolução, em uma ou poucas frases
+autossuficientes: o resultado obtido (com valor e unidade de medida, quando houver) ou a afirmação
+a que a tarefa chegou, sem fórmulas intermediárias, passos ou justificativas. A conclusão deve ser
+idêntica, em conteúdo, à conclusão apresentada em `result` — por exemplo: "A velocidade média do
+trajeto é 20 m/s."
+
 ## Formato de saída
 
 Responda **exclusivamente** com um objeto JSON, sem nenhum texto antes ou depois e sem cerca de
 código, no formato:
 
-{"task_id": "...", "result": "markdown com a resolucao"}
+{"task_id": "...", "result": "markdown com a resolucao", "conclusion": "conclusao final, sem o raciocinio"}

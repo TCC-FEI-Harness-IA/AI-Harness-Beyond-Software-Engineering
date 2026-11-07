@@ -68,7 +68,9 @@ def _tarefa_com_tentativas(status: TaskStatusEnum, *relatorios: VerificationRepo
     tarefa = _nova_tarefa()
     tarefa.status = status
     tarefa.attempts = [
-        TaskAttempt(number=indice + 1, output=f"saida {indice + 1}", report=relatorio)
+        TaskAttempt(
+            number=indice + 1, output=f"saida {indice + 1}", conclusion=f"conclusao {indice + 1}", report=relatorio
+        )
         for indice, relatorio in enumerate(relatorios)
     ]
     return tarefa
@@ -79,7 +81,9 @@ def test_resultado_aprovado_usa_apenas_a_ultima_tentativa() -> None:
 
     resultado = tarefa.approved_result()
 
-    assert resultado == TaskResult(task_id="t1", task_title="titulo", content="saida 2")
+    assert resultado == TaskResult(
+        task_id="t1", task_title="titulo", task_description="descricao", content="saida 2", conclusion="conclusao 2"
+    )
 
 
 def test_tarefa_nao_aprovada_nao_gera_resultado() -> None:

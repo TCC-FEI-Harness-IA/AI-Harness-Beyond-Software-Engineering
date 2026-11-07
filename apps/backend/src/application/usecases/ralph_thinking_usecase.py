@@ -84,6 +84,7 @@ _INVALID_VERIFIER_OUTPUT_CONTENT = (
     "**Saída inválida:**\n\n{raw_output}\n\n**Motivo da recusa:** {reason}"
 )
 _RESULT_BLOCK = "## {task_id} — {title}\n\n{content}"
+_RESULT_SUMMARY_BLOCK = "## {task_id} — {title}\n\n**Enunciado:**\n\n{description}\n\n**Conclusão:** {conclusion}"
 _HISTORY_ATTEMPT_HEADER = "### Tentativa {attempt} — {status}"
 _HISTORY_OUTPUT_CONTENT = "**Resultado preliminar:**\n\n{output}"
 _HISTORY_APPROVED_OUTPUT_CONTENT = "**Resultado preliminar:** é o resultado aprovado, apresentado na área própria."
@@ -406,6 +407,7 @@ class RalphThinkingUseCase:
                 is_retry=attempt > _FIRST_ATTEMPT,
             )
             preliminary = outcome.parsed["result"]
+            conclusion = outcome.parsed["conclusion"]
             resolution_invalid_outputs = outcome.invalid_outputs
             yield await self.__record_and_build(
                 subtype=ThinkingEventSubtypeEnum.REASONING,
@@ -431,6 +433,7 @@ class RalphThinkingUseCase:
                 TaskAttempt(
                     number=attempt,
                     output=preliminary,
+                    conclusion=conclusion,
                     report=report,
                     resolution_invalid_outputs=resolution_invalid_outputs,
                     verification_invalid_outputs=outcome.invalid_outputs,
@@ -1045,15 +1048,17 @@ class RalphThinkingUseCase:
             report: Relatório de C.1 com os critérios gerais não atendidos.
 
         Returns:
-            dict[str, str]: Critérios pendentes, resultados armazenados e o
-            número a partir do qual as novas tarefas devem ser numeradas.
+            dict[str, str]: Prompt original do usuário, critérios pendentes, resultados armazenados
+            resumidos (enunciado e conclusão de cada tarefa) e o número a partir do qual as novas
+            tarefas devem ser numeradas.
         """
         unmet = tuple(
             criterion for criterion in self.__general_criteria if criterion.id in report.unmet_criteria_ids
         )
         return {
+            "user_question": self.__user_question,
             "unmet_criteria": self.__render_criteria(criteria=unmet),
-            "stored_results": self.__render_results(),
+            "stored_results": self.__render_result_summaries(),
             "next_task_number": str(self.task_queue.total_created() + _FIRST_TASK_NUMBER),
         }
 
@@ -1327,5 +1332,25 @@ class RalphThinkingUseCase:
         """
         return _BLOCK_SEPARATOR.join(
             _RESULT_BLOCK.format(task_id=result.task_id, title=result.task_title, content=result.content)
+            for result in self.__results.values()
+        )
+
+    def __render_result_summaries(self) -> str:
+        """Renderiza os resultados armazenados em B.3 sem o raciocínio que levou a eles.
+
+        É a visão que C.2 recebe: basta saber o que cada tarefa pedia e a que conclusão chegou para
+        planejar só o que falta, sem herdar as resoluções completas.
+
+        Returns:
+            str: Um bloco markdown por resultado, com o enunciado e a conclusão da tarefa, na ordem
+            de armazenamento.
+        """
+        return _BLOCK_SEPARATOR.join(
+            _RESULT_SUMMARY_BLOCK.format(
+                task_id=result.task_id,
+                title=result.task_title,
+                description=result.task_description,
+                conclusion=result.conclusion,
+            )
             for result in self.__results.values()
         )

@@ -251,7 +251,7 @@ def test_recusas_estruturais_nao_apontam_limite() -> None:
 
 
 def test_b1_valido() -> None:
-    payload = {"task_id": "T1", "result": "markdown da resolucao"}
+    payload = {"task_id": "T1", "result": "markdown da resolucao", "conclusion": "conclusao final"}
 
     assert _parser().parse(
         raw_output=json.dumps(payload),
@@ -259,7 +259,18 @@ def test_b1_valido() -> None:
     ) == payload
 
 
-@pytest.mark.parametrize("payload", [{}, {"result": ""}, {"result": "   "}, {"result": ["x"]}])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"result": "", "conclusion": "c"},
+        {"result": "   ", "conclusion": "c"},
+        {"result": ["x"], "conclusion": "c"},
+        {"result": "r"},
+        {"result": "r", "conclusion": "   "},
+        {"result": "r", "conclusion": ["c"]},
+    ],
+)
 def test_b1_invalido_e_recusado(payload: dict[str, Any]) -> None:
     with pytest.raises(PhaseParsingError):
         _parser().parse(
@@ -503,7 +514,9 @@ _PAYLOAD_VALIDO_POR_FASE: dict[ThinkingPhaseEnum, dict[str, Any]] = {
     ThinkingPhaseEnum.A1_GENERAL_CRITERIA: _CRITERIOS_VALIDOS,
     ThinkingPhaseEnum.A2_TASK_DECOMPOSITION: {"tasks": [_TAREFA_VALIDA]},
     ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: {"learnings": ["Velocidade: 20 m/s"]},
-    ThinkingPhaseEnum.B1_TASK_RESOLUTION: {"task_id": "T1", "result": "markdown da resolucao"},
+    ThinkingPhaseEnum.B1_TASK_RESOLUTION: {
+        "task_id": "T1", "result": "markdown da resolucao", "conclusion": "conclusao final"
+    },
     ThinkingPhaseEnum.B2_TASK_VERIFICATION: _VERIFICACAO_VALIDA,
     ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: {"learnings": ["fato seco"]},
     ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: _VERIFICACAO_VALIDA,
@@ -590,6 +603,7 @@ def test_chaves_colchetes_e_aspas_escapadas_dentro_de_strings_nao_contam_como_es
     payload = {
         "task_id": "T1",
         "result": 'Use $\\frac{a}{b}$, o vetor [1, 2} e a "citação \\" com aspas" {[',
+        "conclusion": 'O vetor [1, 2} e a "citação \\" com aspas" {[',
     }
     bruto = json.dumps(payload, ensure_ascii=False)[:-1]
 
@@ -670,7 +684,7 @@ def test_array_json_duplicado_continua_recusado() -> None:
 
 
 def test_escapes_latex_invalidos_em_strings_json_sao_reparados() -> None:
-    bruto = '{"task_id": "T1", "result": "Equação \\( \\omega = 2\\pi \\)\\nLinha 2"}'
+    bruto = '{"task_id": "T1", "result": "Equação \\( \\omega = 2\\pi \\)\\nLinha 2", "conclusion": "\\( \\omega \\)"}'
 
     parsed = _parser().parse(raw_output=bruto, phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION)
 

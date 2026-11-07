@@ -15,7 +15,7 @@ _PLACEHOLDERS_POR_FASE = {
     ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: {"task_description", "approved_result", "task_history", "learnings"},
     ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: {"stored_results", "general_acceptance_criteria", "learnings"},
     ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING: {
-        "unmet_criteria", "stored_results", "next_task_number", "max_tasks", "learnings"
+        "user_question", "unmet_criteria", "stored_results", "next_task_number", "max_tasks", "learnings"
     },
     ThinkingPhaseEnum.C3_FINAL_ANSWER: {"stored_results", "general_acceptance_criteria", "learnings"},
 }
@@ -371,3 +371,18 @@ def test_template_b4_extrai_do_historico_delimitado_e_nao_do_contexto_acima() ->
     assert "contexto acima" not in normalizado
     assert "não continue" in normalizado
     assert template.index("{{task_history}}") < template.index("## Formato de saída")
+
+
+def test_template_de_resolucao_pede_a_conclusao_separada_do_raciocinio() -> None:
+    template = " ".join(_provider().get(phase=ThinkingPhaseEnum.B1_TASK_RESOLUTION).split())
+
+    assert "No campo `conclusion`" in template
+    assert '"conclusion":' in template
+
+
+def test_template_de_planejamento_adicional_traz_o_prompt_original_antes_dos_resultados() -> None:
+    template = _provider().get(phase=ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING)
+
+    assert template.index("## Prompt Original\n") < template.index("{{user_question}}")
+    assert template.index("{{user_question}}") < template.index("## Resultados já armazenados")
+    assert "o seu enunciado e a conclusão" in template

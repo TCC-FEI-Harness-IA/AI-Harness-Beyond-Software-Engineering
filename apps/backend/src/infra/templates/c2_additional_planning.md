@@ -2,11 +2,22 @@
 
 Crie novas tarefas independentes **apenas** para suprir as lacunas de conteúdo apontadas abaixo.
 
+## Prompt Original
+
+Pedido original do usuário, do qual todas as tarefas derivam. É a fonte dos dados literais do
+enunciado (alternativas, valores com unidades de medida, fórmulas, condições) que as novas tarefas
+precisarem.
+
+{{user_question}}
+
 ## Critérios gerais ainda não atendidos
 
 {{unmet_criteria}}
 
 ## Resultados já armazenados
+
+Para cada tarefa já aprovada, o seu enunciado e a conclusão a que ela chegou. O raciocínio que
+levou a cada conclusão foi omitido.
 
 {{stored_results}}
 
@@ -15,7 +26,8 @@ Crie novas tarefas independentes **apenas** para suprir as lacunas de conteúdo 
 Anotações compactas acumuladas ao longo do fluxo: os pontos de atenção do enunciado e os fatos
 registrados pelas tarefas já concluídas, na ordem em que surgiram. Use-as para escrever
 descrições autossuficientes: copie para a descrição de cada nova tarefa os dados do enunciado de que
-ela precisa (alternativas, valores com unidades de medida, fórmulas, condições).
+ela precisa (alternativas, valores com unidades de medida, fórmulas, condições), conferindo-os no
+**Prompt Original**.
 
 {{learnings}}
 
@@ -23,15 +35,6 @@ ela precisa (alternativas, valores com unidades de medida, fórmulas, condiçõe
 
 As novas tarefas existem para cobrir **somente** os critérios não atendidos. Não crie tarefas que
 refaçam o que já está nos resultados armazenados e não reabra o que já foi verificado.
-
-Exceção: quando o critério pendente exige selecionar uma alternativa disponível e os resultados
-anteriores não sustentam nenhuma delas, a divergência é uma lacuna de conteúdo. Planeje a
-investigação da interpretação do enunciado, dos dados e dos cálculos ou conclusões responsáveis
-pela incompatibilidade, mesmo que tenham sido aprovados anteriormente. Não trate essas conclusões
-como premissas imutáveis nem crie apenas uma tarefa para escolher uma letra. A nova tarefa deve
-produzir uma conclusão explicada compatível com as alternativas e explicitar qual resultado
-anterior corrige, quando houver correção. Não escolha por proximidade numérica sem que o enunciado
-admita aproximação.
 
 Cada tarefa deve:
 
@@ -60,8 +63,9 @@ Cada tarefa deve:
    explicitar a justificativa do resultado para ser verificável.
 5. **Jamais pré-calcular resultados da nova tarefa nos critérios de aceite.** Não resolva a nova
    tarefa dentro de `description` ou `acceptance_criteria` (`T*-AC*`), nem crave de antemão o valor
-   numérico que a nova tarefa ainda deverá calcular: apoie-se apenas nos dados literais de
-   **Aprendizados Pontuais** e nos resultados já aprovados em **Resultados já armazenados**. Garanta
+   numérico que a nova tarefa ainda deverá calcular: apoie-se apenas nos dados literais do
+   **Prompt Original** e de **Aprendizados Pontuais** e nos resultados já aprovados em **Resultados
+   já armazenados**. Garanta
    que a última tarefa planejada conclua o cálculo ou a determinação exata da grandeza final pedida
    pela questão, deixando apenas a apresentação e a escolha da letra da alternativa para `C.3`.
 

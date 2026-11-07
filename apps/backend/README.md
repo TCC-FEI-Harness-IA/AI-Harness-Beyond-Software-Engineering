@@ -592,7 +592,7 @@ persistida antes do evento `result`.
 | B.2 reprova e as tentativas acabam | Nada é armazenado, B.4 não roda, a execução é interrompida. |
 | B.2/C.1 devolve um relatório vazio, incompleto, duplicado, com ID desconhecido ou contraditório | O verificador é chamado de novo, na mesma janela e com temperatura `1`, para conferir e corrigir o próprio relatório (chamada contada); não consome tentativa de B.1. O veredito nunca é ajustado automaticamente. Sem correção, a fase falha. |
 | Qualquer fase devolve um JSON ilegível ou interrompido pelo limite de comprimento | Erro de sintaxe: o modelo é chamado de novo para devolver o mesmo conteúdo em JSON válido, sem nova resolução. Interrupção por comprimento: pede-se uma nova saída completa e concisa, nunca a continuação da anterior. Os únicos reparos locais são a extração de cercas e o fechamento estrutural inequívoco. |
-| C.1 reprova e há recursos | C.2 cria tarefas para os critérios pendentes, que entram no topo da fila. |
+| C.1 reprova e há recursos | C.2 cria tarefas para os critérios pendentes, que entram no topo da fila. O template recebe o **Prompt Original** do usuário e, em **Resultados já armazenados**, só o enunciado e a conclusão (campo `conclusion` de B.1) de cada tarefa aprovada, sem a resolução completa; C.1 e C.3 continuam recebendo as resoluções completas. |
 | C.1 reprova e não há recursos para C.2 | A execução é interrompida; os critérios pendentes ficam em `failure`. Nunca há C.3. |
 | C.1 aprova e C.3 falha ou não pode rodar | A execução termina sem resposta final. |
 | Qualquer limite é atingido em qualquer fase ou retentativa | A execução é interrompida (`failure.reason = resource_limit`), sem nenhuma chamada depois do bloqueio. |

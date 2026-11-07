@@ -36,7 +36,7 @@ def _task(task_id: str, description: str, *criteria: str) -> str:
 
 
 def _result(task_id: str, text: str) -> str:
-    return _json(task_id=task_id, result=text)
+    return _json(task_id=task_id, result=text, conclusion=text)
 
 
 def _scenario(responses: list[str]) -> RalphScenario:
@@ -202,6 +202,7 @@ async def test_resultado_sem_alternativa_sustentada_encaminha_ac2_a_investigacao
     _isolated_inputs(scenario)
     c2 = _prompts(scenario, Phase.C2_ADDITIONAL_PLANNING)[0]
     assert _area(c2, "Critérios gerais ainda não atendidos") == f"- `AC2`: {selection}"
+    assert _area(c2, "Prompt Original").endswith(f"\n\n{question}")
     assert inconsistent in _area(c2, "Resultados já armazenados")
     assert question in _area(c2, "Aprendizados Pontuais")
     assert investigation in _area(_prompts(scenario, Phase.B1_TASK_RESOLUTION)[1], "Tarefa")

@@ -43,7 +43,7 @@ def _roteiro_ralph(resposta: str) -> list[str]:
         json.dumps({"general_acceptance_criteria": [{"id": "AC1", "description": "Responder"}]}),
         json.dumps({"tasks": [_TAREFA]}),
         json.dumps({"learnings": []}),
-        json.dumps({"task_id": "T1", "result": "resolvido"}),
+        json.dumps({"task_id": "T1", "result": "resolvido", "conclusion": "resolvido"}),
         json.dumps(_APROVADO),
         json.dumps({"learnings": []}),
         json.dumps(_APROVADO),

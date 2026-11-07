@@ -57,17 +57,6 @@ não a resposta final já formatada:
   sem exigir correspondência 100% literal palavra por palavra. Essa flexibilidade interpretativa
   não autoriza aceitar valores matematicamente incompatíveis nem escolher a alternativa de valor
   mais próximo quando o enunciado não admitir essa aproximação.
-- **Selecionar uma alternativa disponível é um requisito de conteúdo, não apenas de formatação.**
-  Quando os critérios exigirem exatamente uma das alternativas e os resultados não sustentarem
-  nenhuma delas, marque como `met: false` o critério de seleção da alternativa (usando seu
-  identificador real, por exemplo `AC2`), inclua-o em `unmet_criteria_ids` e emita `reproved`.
-  Isso também vale quando os resultados concluírem "nenhuma", apresentarem um valor ausente das
-  opções ou forem incompatíveis com todas elas. Não aprove sob a justificativa de que C.3 poderá
-  escolher uma letra, nem escolha você uma opção aproximada para suprir a lacuna. A divergência
-  deve seguir para C.2 como necessidade de investigar a interpretação, os dados, os cálculos ou
-  as conclusões anteriores, mesmo que tenham sido aprovados individualmente em B.2.
-  Se "nenhuma das anteriores" for o texto de uma alternativa realmente disponível e sustentada,
-  sua seleção pela letra original é válida; isso difere de inventar uma resposta fora das opções.
 - Confira se os resultados armazenados concluíram **até o último passo lógico ou cálculo final pedido
   pela pergunta** (por exemplo: se a pergunta pede o *mês seguinte* ao de uma ultrapassagem, ou a
   *quantidade adicional* a acrescentar, não basta ter apenas o mês da ultrapassagem ou a quantidade

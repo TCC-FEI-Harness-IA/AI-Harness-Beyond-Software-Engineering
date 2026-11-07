@@ -30,8 +30,9 @@ def tarefas(*ids: str) -> str:
     return json.dumps({"tasks": [tarefa(task_id) for task_id in ids]})
 
 
-def resolucao(texto: str) -> str:
-    return json.dumps({"task_id": "T1", "result": texto})
+def resolucao(texto: str, conclusao: str | None = None) -> str:
+    """Saída de B.1. Sem conclusão informada, a própria resolução faz as vezes de conclusão."""
+    return json.dumps({"task_id": "T1", "result": texto, "conclusion": texto if conclusao is None else conclusao})
 
 
 def relatorio(*avaliacoes: tuple[str, bool]) -> str:

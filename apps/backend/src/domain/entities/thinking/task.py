@@ -47,7 +47,13 @@ class Task:
         if last_attempt is None or last_attempt.report is None or not last_attempt.report.approved:
             raise ValueError(f"A tarefa '{self.id}' não tem um relatório aprovado na última tentativa.")
 
-        return TaskResult(task_id=self.id, task_title=self.title, content=last_attempt.output)
+        return TaskResult(
+            task_id=self.id,
+            task_title=self.title,
+            task_description=self.description,
+            content=last_attempt.output,
+            conclusion=last_attempt.conclusion,
+        )
 
     def verified_attempts(self) -> tuple[tuple[TaskAttempt, VerificationReport], ...]:
         """Devolve as tentativas já verificadas, cada uma com o seu relatório: o histórico que B.4 recebe.

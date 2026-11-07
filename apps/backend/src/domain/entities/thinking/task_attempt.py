@@ -14,6 +14,7 @@ class TaskAttempt:
     Attributes:
         number: Número sequencial da tentativa, começando em 1.
         output: Saída produzida por B.1 nessa tentativa.
+        conclusion: Conclusão final dessa saída, sem o raciocínio que levou a ela.
         report: Relatório de verificação de B.2, ou `None` antes de verificar.
         resolution_invalid_outputs: Saídas de B.1 recusadas pelo parser e corrigidas nessa tentativa.
         verification_invalid_outputs: Saídas de B.2 recusadas pelo parser e corrigidas nessa tentativa.
@@ -21,6 +22,7 @@ class TaskAttempt:
 
     number: int
     output: str
+    conclusion: str
     report: VerificationReport | None
     resolution_invalid_outputs: tuple[InvalidOutput, ...] = ()
     verification_invalid_outputs: tuple[InvalidOutput, ...] = ()
