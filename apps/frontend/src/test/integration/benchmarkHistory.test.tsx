@@ -129,68 +129,87 @@ describe('Benchmark como funcionalidade da aplicação', () => {
     expect(screen.getByText(/Semente 123/)).toBeInTheDocument()
   })
 
-  it('alterna para GPQA Diamond, filtra as disciplinas e persiste a identificação no histórico', async () => {
-    const user = userEvent.setup()
-    const backend = mockBackend()
-    const original = backend.fetchMock.getMockImplementation()!
-    backend.fetchMock.mockImplementation((url: string) => {
-      if (new URL(url).searchParams.get('benchmark') === 'gpqa')
-        return respond({
-          question_ids: ['M1', 'M2', 'M3', 'M4', 'M5'],
-          max_parallel_limit: 4,
-          max_tokens_limit: 32000,
-          benchmark: {
-            ...benchmarkSession().benchmark,
-            dataset: 'gpqa',
-            revision: 'fixed-revision',
-          },
-          subjects: [
-            { id: 'physics', question_count: 2 },
-            { id: 'history', question_count: 3 },
-          ],
-        })
-      return original(url)
-    })
-    renderApp('/benchmark')
-    await screen.findByRole('button', { name: 'Iniciar bateria' })
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Benchmark' }), 'gpqa')
-    await screen.findByText(/GPQA Diamond: 198 questões/)
-    expect(screen.queryByRole('combobox', { name: 'Protocolo MMLU' })).not.toBeInTheDocument()
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Disciplina' }), 'physics')
-    expect(screen.getByRole('spinbutton', { name: /Quantidade de questões/ })).toHaveValue(2)
-    const seed = screen.getByRole('spinbutton', { name: /Semente da amostra/ })
-    await user.clear(seed)
-    await user.type(seed, '123')
-    await user.click(screen.getByRole('button', { name: 'Iniciar bateria' }))
-    const socket = FakeWebSocket.latest()
-    act(() => socket.emitOpen())
-    expect(JSON.parse(socket.sentFrames[0] ?? '{}')).toMatchObject({
-      benchmark: 'gpqa',
-      few_shot: 0,
-      subjects: ['physics'],
-      sample_seed: 123,
-      question_count: 2,
-    })
-    expect(screen.getByRole('combobox', { name: 'Benchmark' })).toBeDisabled()
-    const session = completedBenchmarkSession()
-    session.benchmark = {
-      dataset: 'gpqa',
-      revision: 'fixed-revision',
-      protocol: 'generative_0shot',
-      split: 'diamond',
-      few_shot: 0,
-      subjects: ['physics'],
-      sample_seed: 123,
-    }
-    backend.batteries.push(session)
-    emit(socket, 'result', session)
-    act(() => socket.emitClose(1000))
-    const list = await screen.findByRole('list')
-    expect(await within(list).findByText('GPQA Diamond · generativo · 0-shot')).toBeInTheDocument()
-    await user.click(within(list).getByRole('link'))
-    expect(await screen.findByText('fixed-revision')).toBeInTheDocument()
-    expect(screen.getByText(/Semente 123/)).toBeInTheDocument()
-  })
+  it.each([
+    ['diamond', 'Diamond', 198],
+    ['main', 'Main', 448],
+    ['extended', 'Extended', 546],
+  ] as const)(
+    'executa GPQA %s e preserva a variante no histórico',
+    async (subset, label, count) => {
+      const user = userEvent.setup()
+      const backend = mockBackend()
+      const original = backend.fetchMock.getMockImplementation()!
+      backend.fetchMock.mockImplementation((url: string) => {
+        if (new URL(url).searchParams.get('benchmark') === 'gpqa') {
+          const variant = (new URL(url).searchParams.get('gpqa_subset') ?? 'diamond') as
+            'diamond' | 'main' | 'extended'
+          const total = { diamond: 198, main: 448, extended: 546 }[variant]!
+          return respond({
+            question_ids: Array.from({ length: total }, (_, i) => `GPQA_${variant}_${i}`),
+            max_parallel_limit: 4,
+            max_tokens_limit: 32000,
+            benchmark: {
+              ...benchmarkSession().benchmark,
+              dataset: 'gpqa',
+              split: variant,
+              revision: 'fixed-revision',
+            },
+            subjects: [
+              { id: 'physics', question_count: 2 },
+              { id: 'chemistry', question_count: total - 2 },
+            ],
+          })
+        }
+        return original(url)
+      })
+      renderApp('/benchmark')
+      await screen.findByRole('button', { name: 'Iniciar bateria' })
+      await user.selectOptions(screen.getByRole('combobox', { name: 'Benchmark' }), 'gpqa')
+      await screen.findByText(/GPQA Diamond: 198 questões/)
+      await user.selectOptions(screen.getByRole('combobox', { name: /Variante GPQA/ }), subset)
+      await screen.findByText(new RegExp(`GPQA ${label}: ${count} questões`))
+      expect(screen.getByRole('spinbutton', { name: /Quantidade de questões/ })).toHaveValue(count)
+      expect(screen.queryByRole('combobox', { name: 'Protocolo MMLU' })).not.toBeInTheDocument()
+      await user.selectOptions(screen.getByRole('combobox', { name: 'Disciplina' }), 'physics')
+      expect(screen.getByRole('spinbutton', { name: /Quantidade de questões/ })).toHaveValue(2)
+      const seed = screen.getByRole('spinbutton', { name: /Semente da amostra/ })
+      await user.clear(seed)
+      await user.type(seed, '123')
+      await user.click(screen.getByRole('button', { name: 'Iniciar bateria' }))
+      const socket = FakeWebSocket.latest()
+      act(() => socket.emitOpen())
+      expect(JSON.parse(socket.sentFrames[0] ?? '{}')).toMatchObject({
+        benchmark: 'gpqa',
+        gpqa_subset: subset,
+        few_shot: 0,
+        subjects: ['physics'],
+        sample_seed: 123,
+        question_count: 2,
+      })
+      expect(screen.getByRole('combobox', { name: 'Benchmark' })).toBeDisabled()
+      expect(screen.getByRole('combobox', { name: /Variante GPQA/ })).toBeDisabled()
+      const session = completedBenchmarkSession()
+      session.benchmark = {
+        dataset: 'gpqa',
+        revision: 'fixed-revision',
+        protocol: 'generative_0shot',
+        split: subset,
+        few_shot: 0,
+        subjects: ['physics'],
+        sample_seed: 123,
+      }
+      backend.batteries.push(session)
+      emit(socket, 'result', session)
+      act(() => socket.emitClose(1000))
+      const list = await screen.findByRole('list')
+      expect(
+        await within(list).findByText(`GPQA ${label} · generativo · 0-shot`),
+      ).toBeInTheDocument()
+      await user.click(within(list).getByRole('link'))
+      expect(await screen.findByText('fixed-revision')).toBeInTheDocument()
+      expect(screen.getByText(/Semente 123/)).toBeInTheDocument()
+    },
+  )
 
   it('volta aos vestibulares e mantém o contrato anterior de execução', async () => {
     const user = userEvent.setup()

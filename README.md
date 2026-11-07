@@ -12,12 +12,12 @@ Este repositório contém o projeto de TCC **“Um Harness de IA para Resoluçã
 
 O frontend fica em [`apps/frontend/`](apps/frontend/) e foi desenvolvido com React, TypeScript e Vite. Ele permite comparar os dois fluxos para uma mesma pergunta: a inferência direta (baseline) e o harness baseado no Ralph Loop. No fluxo adaptado, a interface acompanha a decomposição em tarefas, as tentativas e validações, a reinicialização de contexto (*fresh context*) e a síntese da resposta final. Consulte o [README do frontend](apps/frontend/README.md) para detalhes de execução e arquitetura.
 
-A página **BenchMark** permite escolher entre vestibulares brasileiros, **MMLU** e **GPQA Diamond**, com protocolos
+A página **BenchMark** permite escolher entre vestibulares brasileiros, **MMLU** e **GPQA**, com protocolos
 generativos (0-shot; também 5-shot no MMLU), filtro de disciplina, amostras reproduzíveis e histórico identificado por
 dataset e protocolo. Os dados MMLU já estão incluídos no backend. Consulte o
 [guia do MMLU](apps/backend/src/infra/benchmark/mmlu/README.md) para configuração e metodologia.
-O [guia do GPQA Diamond](apps/backend/src/infra/benchmark/gpqa/README.md) descreve as 198 questões,
-o protocolo generativo 0-shot e a execução pela interface ou API. O dataset oficial protegido já está incluído.
+O [guia do GPQA](apps/backend/src/infra/benchmark/gpqa/README.md) descreve as variantes Diamond (198 questões),
+Main (448) e Extended (546), o protocolo generativo 0-shot e a execução pela interface ou API. O dataset oficial protegido já está incluído.
 
 ### Back
 

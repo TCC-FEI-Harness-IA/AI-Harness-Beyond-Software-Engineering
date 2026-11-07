@@ -281,3 +281,12 @@ async def test_falha_ao_persistir_propaga_e_descarta_a_reexecucao_em_andamento()
     assert repositorio.sessions["bench_1"].question("Q1").ralph.session_id == "Q1_ralph_antiga"
     assert sessoes[-1].question("Q1").current_mode is None
     await _coletar(caso)
+
+
+async def test_recusa_reexecutar_com_provider_de_outro_subconjunto() -> None:
+    sessao = _bateria_encerrada()
+    sessao.benchmark = replace(sessao.benchmark, split="main")
+    caso, runner, _, _ = _caso_de_uso(_acerta, sessao)
+    with pytest.raises(InvalidBenchmarkRequestError, match="Subconjunto"):
+        await _coletar(caso)
+    assert not runner.requests

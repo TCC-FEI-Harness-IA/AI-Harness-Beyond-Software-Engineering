@@ -6,6 +6,7 @@ import type { ModelProvider } from '../enums/modelProvider'
 import type { BenchmarkInferenceMode } from './benchmarkDetails'
 
 export type BenchmarkDatasetId = 'vestibular' | 'mmlu' | 'gpqa'
+export type GPQASubset = 'diamond' | 'main' | 'extended'
 
 export interface BenchmarkDefinition {
   dataset: BenchmarkDatasetId
@@ -98,6 +99,7 @@ export type BenchmarkFrame =
 /** Frame de abertura de `WS /v1/benchmark/run`. */
 export interface BenchmarkRunInput {
   benchmark?: BenchmarkDatasetId
+  gpqa_subset?: GPQASubset
   few_shot?: 0 | 5
   subjects?: string[]
   sample_seed?: number

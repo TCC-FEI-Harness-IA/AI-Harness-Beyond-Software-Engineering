@@ -187,29 +187,32 @@ def test_mmlu_executa_os_dois_fluxos_preserva_protocolo_e_exporta_a_origem_corre
     assert client.get("/v1/benchmark/questions").json()["benchmark"]["dataset"] == "vestibular"
 
 
+@pytest.mark.parametrize("subset,count", [("diamond", 198), ("main", 448), ("extended", 546)])
 def test_gpqa_executa_os_dois_fluxos_preserva_protocolo_e_exporta_a_origem_correta(
-    ambiente: Path, monkeypatch: pytest.MonkeyPatch,
+    ambiente: Path, monkeypatch: pytest.MonkeyPatch, subset: str, count: int,
 ) -> None:
-    provider = GPQABenchmarkQuestionProvider()
+    provider = GPQABenchmarkQuestionProvider(subset=subset)
     question = select_mmlu_questions(provider.list_questions(), ("physics",), 1, 123)[0]
     correct = f"RESPOSTA_FINAL: {question.expected_alternative}"
     wrong = "RESPOSTA_FINAL: " + next(letter for letter in "ABCD" if letter != question.expected_alternative)
     transport = _Provedor([correct, *_roteiro_ralph(wrong)])
     client = _cliente(monkeypatch, transport)
 
-    descriptor = client.get("/v1/benchmark/questions?benchmark=gpqa")
+    suffix = f"&gpqa_subset={subset}" if subset != "diamond" else ""
+    descriptor = client.get(f"/v1/benchmark/questions?benchmark=gpqa{suffix}")
     assert descriptor.status_code == 200
-    assert len(descriptor.json()["question_ids"]) == 198
+    assert len(descriptor.json()["question_ids"]) == count
     assert len(descriptor.json()["subjects"]) == 3
 
     frames, code = _executar(client, _abertura(
         benchmark="gpqa", few_shot=0, subjects=["physics"], sample_seed=123, question_count=1,
+        **({"gpqa_subset": subset} if subset != "diamond" else {}),
     ))
     assert code == 1000
     session = frames[-1]["benchmark_session"]
     assert session["benchmark"] == {
         "dataset": "gpqa", "revision": GPQA_REVISION, "protocol": "generative_0shot",
-        "split": "diamond", "few_shot": 0, "subjects": ["physics"], "sample_seed": 123,
+        "split": subset, "few_shot": 0, "subjects": ["physics"], "sample_seed": 123,
     }
     assert session["questions"][0]["question_id"] == question.id
     assert session["questions"][0]["subject"] == "physics"
@@ -249,6 +252,10 @@ def test_gpqa_executa_os_dois_fluxos_preserva_protocolo_e_exporta_a_origem_corre
 
 
 @pytest.mark.parametrize("options", [
+    {"benchmark": "gpqa", "gpqa_subset": "unknown"},
+    {"benchmark": "mmlu", "gpqa_subset": "main"},
+    {"benchmark": "gpqa", "gpqa_subset": "main", "subjects": ["biology"], "question_count": 79},
+    {"benchmark": "gpqa", "gpqa_subset": "extended", "subjects": ["biology"], "question_count": 106},
     {"benchmark": "gpqa", "few_shot": 5},
     {"benchmark": "gpqa", "sample_seed": -1},
     {"benchmark": "gpqa", "subjects": ["unknown"]},
@@ -470,3 +477,9 @@ def test_limite_da_sessao_que_nao_comporta_a_reserva_falha_o_ralph_sem_chamar_o_
     assert bateria["summary"]["ralph"]["failures"] == 1
     assert "RALPH_FINAL_ANSWER_TOKEN_RESERVE" in bateria["questions"][0]["ralph"]["error"]
     assert len(provedor.enviados) == 1
+
+
+@pytest.mark.parametrize("query", ["benchmark=gpqa&gpqa_subset=unknown", "benchmark=mmlu&gpqa_subset=main"])
+def test_descricao_recusa_subconjunto_invalido(ambiente: Path, monkeypatch: pytest.MonkeyPatch, query: str) -> None:
+    client = _cliente(monkeypatch, _Provedor([]))
+    assert client.get(f"/v1/benchmark/questions?{query}").status_code == 422

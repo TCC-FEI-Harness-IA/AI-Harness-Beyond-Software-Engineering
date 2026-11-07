@@ -4,7 +4,12 @@ import { Button } from '@/components/primitives/Button'
 import { Field } from '@/components/primitives/Field'
 import { TextInput } from '@/components/primitives/TextInput'
 import { Select } from '@/components/primitives/Select'
-import type { BenchmarkDataset, BenchmarkDatasetId } from '@/domain/types/benchmarkSession'
+import type {
+  BenchmarkDataset,
+  BenchmarkDatasetId,
+  GPQASubset,
+} from '@/domain/types/benchmarkSession'
+import { GPQA_SUBSET_LABELS } from '@/domain/services/benchmarkDefinition'
 import type { BenchmarkRunParams } from '@/api/benchmarkApi'
 import { formatTokens } from '@/domain/services/formatters'
 import { RunConfigBar } from '@/features/home/RunConfigBar'
@@ -17,12 +22,16 @@ const MIN_VALUE = 1
 export interface NewRunFormProps {
   dataset: BenchmarkDataset
   benchmark?: BenchmarkDatasetId
+  gpqaSubset?: GPQASubset
   /** Uma bateria já está em execução — só uma por vez. */
   disabled: boolean
   onStart: (
     questionCount: number,
     maxParallel: number,
-    options?: Pick<BenchmarkRunParams, 'benchmark' | 'fewShot' | 'subjects' | 'sampleSeed'>,
+    options?: Pick<
+      BenchmarkRunParams,
+      'benchmark' | 'fewShot' | 'subjects' | 'sampleSeed' | 'gpqaSubset'
+    >,
   ) => void
 }
 
@@ -41,6 +50,7 @@ function clamp(raw: string, max: number): number {
 export function NewRunForm({
   dataset,
   benchmark = 'vestibular',
+  gpqaSubset = 'diamond',
   disabled,
   onStart,
 }: NewRunFormProps): JSX.Element {
@@ -73,6 +83,7 @@ export function NewRunForm({
       const seed = Math.min(4294967295, Math.max(0, Math.trunc(Number(sampleSeed) || 0)))
       onStart(count, parallel, {
         benchmark,
+        ...(benchmark === 'gpqa' ? { gpqaSubset } : {}),
         fewShot: isMmlu ? fewShot : 0,
         subjects: subject ? [subject] : [],
         sampleSeed: seed,
@@ -89,7 +100,7 @@ export function NewRunForm({
           <p>
             {isMmlu
               ? 'MMLU em inglês, com quatro alternativas e protocolo 0-shot ou 5-shot.'
-              : 'GPQA Diamond: 198 questões em inglês de biologia, química e física, sem exemplos (0-shot).'}{' '}
+              : `GPQA ${GPQA_SUBSET_LABELS[gpqaSubset]}: ${dataset.question_ids.length} questões em inglês de biologia, química e física, sem exemplos (0-shot).`}{' '}
             A avaliação compara a resposta final dos dois fluxos. Resultados dependem do protocolo e
             da amostra escolhidos.
           </p>

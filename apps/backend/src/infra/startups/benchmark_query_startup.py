@@ -7,6 +7,7 @@ from src.application.usecases.get_benchmark_session_usecase import GetBenchmarkS
 from src.application.usecases.list_benchmark_sessions_usecase import ListBenchmarkSessionsUseCase
 from src.domain.interfaces.settings_interface import ISettings
 from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
+from src.domain.enums.gpqa_subset_enum import GPQASubsetEnum
 from src.infra.config.settings import Settings
 from src.infra.mappers.benchmark_session_document_mapper import BenchmarkSessionDocumentMapper
 from src.infra.providers.file_benchmark_question_provider import FileBenchmarkQuestionProvider
@@ -70,6 +71,7 @@ class BenchmarkQueryStartup:
 
     def describe_dataset(
         self, benchmark: BenchmarkDatasetEnum = BenchmarkDatasetEnum.VESTIBULAR,
+        gpqa_subset: GPQASubsetEnum = GPQASubsetEnum.DIAMOND,
     ) -> dict[str, Any]:
         """Descreve o dataset e os limites aceitos para uma nova bateria.
 
@@ -82,7 +84,9 @@ class BenchmarkQueryStartup:
         """
         provider = self.question_provider
         if benchmark is not BenchmarkDatasetEnum.VESTIBULAR:
-            provider = BenchmarkQuestionProviderFactory(self.settings, self.logger).create(benchmark)
+            provider = BenchmarkQuestionProviderFactory(self.settings, self.logger).create(
+                benchmark, gpqa_subset=gpqa_subset,
+            )
         questions = provider.list_questions()
         subjects = Counter(question.subject for question in questions if question.subject is not None)
         return {

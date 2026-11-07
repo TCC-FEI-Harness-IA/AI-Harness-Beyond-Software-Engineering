@@ -71,7 +71,7 @@ class BenchmarkRunStartup:
         """
         if payload.benchmark is not BenchmarkDatasetEnum.VESTIBULAR:
             self.question_provider = BenchmarkQuestionProviderFactory(self.settings, self.logger).create(
-                dataset=payload.benchmark, few_shot=payload.few_shot,
+                dataset=payload.benchmark, few_shot=payload.few_shot, gpqa_subset=payload.gpqa_subset,
             )
         self.run_benchmark_use_case.question_provider = self.question_provider
         input_dto = RunBenchmarkInputDTO(
@@ -85,6 +85,7 @@ class BenchmarkRunStartup:
             few_shot=payload.few_shot,
             subjects=tuple(payload.subjects),
             sample_seed=payload.sample_seed,
+            gpqa_subset=payload.gpqa_subset,
         )
         async for benchmark_session in self.run_benchmark_use_case.execute(input_dto=input_dto):
             is_running = benchmark_session.status is BenchmarkSessionStatusEnum.RUNNING

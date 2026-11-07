@@ -209,6 +209,9 @@ function parseBenchmarkDefinition(raw: unknown, path: string): BenchmarkDefiniti
   if (obj.few_shot !== 0 && obj.few_shot !== 5) {
     throw new ContractError(`campo "${path}.few_shot" deveria ser 0 ou 5`)
   }
+  if (obj.dataset === 'gpqa' && !['diamond', 'main', 'extended'].includes(String(obj.split))) {
+    throw new ContractError(`campo "${path}.split" tem subconjunto GPQA desconhecido`)
+  }
   if (
     obj.protocol !== `generative_${obj.few_shot}shot` ||
     (obj.dataset === 'gpqa' && obj.few_shot !== 0)

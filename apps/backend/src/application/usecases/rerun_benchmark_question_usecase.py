@@ -148,6 +148,8 @@ class RerunBenchmarkQuestionUseCase:
                 f"A revisão do dataset ('{benchmark_session.benchmark.revision}') da bateria "
                 f"'{benchmark_session.id}' não está mais disponível."
             )
+        if provider.definition().split != benchmark_session.benchmark.split:
+            raise InvalidBenchmarkRequestError("Subconjunto da bateria indisponível para reexecução.")
         for question in provider.list_questions():
             if question.id == question_id:
                 return provider, question

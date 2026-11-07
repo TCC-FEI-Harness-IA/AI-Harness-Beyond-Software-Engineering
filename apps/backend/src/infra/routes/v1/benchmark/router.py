@@ -9,6 +9,7 @@ from src.domain.errors.benchmark_session_not_finished_error import BenchmarkSess
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
 from src.domain.errors.invalid_benchmark_request_error import InvalidBenchmarkRequestError
 from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
+from src.domain.enums.gpqa_subset_enum import GPQASubsetEnum
 from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
 from src.infra.config.settings import Settings
 from src.infra.routes.v1.benchmark.dtos.benchmark_frame_dto import BenchmarkFrameDTO
@@ -33,10 +34,17 @@ router = APIRouter(prefix="/benchmark", tags=["benchmark"])
     status_code=200,
     responses={500: {"description": "Internal Server Error"}},
 )
-async def describe_questions(benchmark: BenchmarkDatasetEnum = BenchmarkDatasetEnum.VESTIBULAR) -> dict[str, Any]:
+async def describe_questions(
+    benchmark: BenchmarkDatasetEnum = BenchmarkDatasetEnum.VESTIBULAR,
+    gpqa_subset: GPQASubsetEnum = GPQASubsetEnum.DIAMOND,
+) -> dict[str, Any]:
     """Lista as questões do dataset, na ordem de execução, e o limite de paralelismo."""
+    if benchmark is not BenchmarkDatasetEnum.GPQA and gpqa_subset is not GPQASubsetEnum.DIAMOND:
+        raise HTTPException(status_code=422, detail="gpqa_subset é uma opção exclusiva do GPQA.")
     try:
         startup = BenchmarkQueryStartup()
+        if benchmark is BenchmarkDatasetEnum.GPQA:
+            return startup.describe_dataset(benchmark=benchmark, gpqa_subset=gpqa_subset)
         if benchmark is BenchmarkDatasetEnum.VESTIBULAR:
             return startup.describe_dataset()
         return startup.describe_dataset(benchmark=benchmark)

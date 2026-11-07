@@ -153,6 +153,8 @@ class RunBenchmarkUseCase:
         definition = self.question_provider.definition()
         if input_dto.benchmark is not definition.dataset or input_dto.few_shot != definition.few_shot:
             raise InvalidBenchmarkRequestError("Dataset ou protocolo difere do provider selecionado.")
+        if input_dto.benchmark is BenchmarkDatasetEnum.GPQA and input_dto.gpqa_subset != definition.split:
+            raise InvalidBenchmarkRequestError("Subconjunto GPQA difere do provider selecionado.")
         if input_dto.benchmark is not BenchmarkDatasetEnum.VESTIBULAR:
             return select_subject_questions(
                 questions, input_dto.subjects, input_dto.question_count, input_dto.sample_seed,

@@ -150,3 +150,24 @@ it('consulta GPQA e envia o protocolo sem exemplos', async () => {
     }),
   ).toThrow()
 })
+
+it.each(['diamond', 'main', 'extended'] as const)('consulta e inicia GPQA %s', async (subset) => {
+  const fetchMock = mockFetch({
+    question_ids: ['GPQA_Q1'],
+    max_parallel_limit: 3,
+    max_tokens_limit: 32000,
+  })
+  await getBenchmarkDataset(undefined, 'gpqa', subset)
+  const url = new URL(String(fetchMock.mock.calls[0]?.[0]))
+  expect(url.searchParams.get('benchmark')).toBe('gpqa')
+  expect(url.searchParams.get('gpqa_subset') ?? 'diamond').toBe(subset)
+  expect(
+    buildBenchmarkRunPayload({
+      questionCount: 1,
+      maxParallel: 1,
+      config: CONFIG,
+      benchmark: 'gpqa',
+      gpqaSubset: subset,
+    }),
+  ).toMatchObject({ benchmark: 'gpqa', gpqa_subset: subset })
+})

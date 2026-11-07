@@ -1,6 +1,7 @@
 import logging
 from collections.abc import Callable
 
+from src.domain.entities.benchmark.benchmark_definition import BenchmarkDefinition
 from src.domain.entities.benchmark.benchmark_ralph_error import BenchmarkRalphError
 from src.domain.enums.benchmark_session_status_enum import BenchmarkSessionStatusEnum
 from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
@@ -21,7 +22,7 @@ class ExportBenchmarkRalphErrorsUseCase:
         session_repository: ISessionRepository,
         question_provider: IBenchmarkQuestionProvider,
         logger: logging.Logger,
-        question_provider_for: Callable[[BenchmarkDatasetEnum], IBenchmarkQuestionProvider] | None = None,
+        question_provider_for: Callable[[BenchmarkDefinition], IBenchmarkQuestionProvider] | None = None,
     ) -> None:
         """Inicializa o caso de uso.
 
@@ -63,7 +64,7 @@ class ExportBenchmarkRalphErrorsUseCase:
 
         provider = self.question_provider
         if self.question_provider_for is not None:
-            provider = self.question_provider_for(benchmark_session.benchmark.dataset)
+            provider = self.question_provider_for(benchmark_session.benchmark)
         if (
             benchmark_session.benchmark.dataset is not BenchmarkDatasetEnum.VESTIBULAR
             and provider.definition().revision != benchmark_session.benchmark.revision
@@ -71,6 +72,8 @@ class ExportBenchmarkRalphErrorsUseCase:
             raise ValueError(
                 f"Revisão {benchmark_session.benchmark.dataset.value.upper()} da bateria indisponível para exportação."
             )
+        if provider.definition().split != benchmark_session.benchmark.split:
+            raise ValueError("Subconjunto da bateria indisponível para exportação.")
         dataset = {question.id: question for question in provider.list_questions()}
         errors: list[BenchmarkRalphError] = []
         for run in benchmark_session.questions:

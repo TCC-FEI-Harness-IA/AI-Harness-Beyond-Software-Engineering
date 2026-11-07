@@ -17,3 +17,13 @@ describe('identificação do benchmark', () => {
     ).toBe('MMLU · generativo · 5-shot')
   })
 })
+
+it.each([
+  ['diamond', 'Diamond'],
+  ['main', 'Main'],
+  ['extended', 'Extended'],
+])('identifica GPQA %s', (split, label) => {
+  expect(benchmarkLabel({ ...LEGACY_BENCHMARK, dataset: 'gpqa', split })).toBe(
+    `GPQA ${label} · generativo · 0-shot`,
+  )
+})

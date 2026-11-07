@@ -5,7 +5,7 @@ import { ErrorState } from '@/components/primitives/ErrorState'
 import { Skeleton } from '@/components/primitives/Skeleton'
 import { Field } from '@/components/primitives/Field'
 import { Select } from '@/components/primitives/Select'
-import type { BenchmarkDatasetId } from '@/domain/types/benchmarkSession'
+import type { BenchmarkDatasetId, GPQASubset } from '@/domain/types/benchmarkSession'
 import { useBenchmarkDataset, useBenchmarkSessions } from '@/hooks/useBenchmarkData'
 import { useBenchmarkRun } from '@/state/BenchmarkRunContext'
 import { useRunConfig } from '@/state/RunConfigContext'
@@ -37,7 +37,8 @@ export function BenchmarkPage(): JSX.Element {
   const run = useBenchmarkRun()
   const { config } = useRunConfig()
   const [benchmark, setBenchmark] = useState<BenchmarkDatasetId>('vestibular')
-  const dataset = useBenchmarkDataset(benchmark)
+  const [gpqaSubset, setGpqaSubset] = useState<GPQASubset>('diamond')
+  const dataset = useBenchmarkDataset(benchmark, gpqaSubset)
   const sessions = useBenchmarkSessions(run.finishedCount)
 
   return (
@@ -63,13 +64,30 @@ export function BenchmarkPage(): JSX.Element {
             >
               <option value="vestibular">Vestibulares brasileiros</option>
               <option value="mmlu">MMLU</option>
-              <option value="gpqa">GPQA Diamond</option>
+              <option value="gpqa">GPQA</option>
             </Select>
           </Field>
+          {benchmark === 'gpqa' ? (
+            <Field
+              label="Variante GPQA"
+              hint="Cada variante é avaliada separadamente; os conjuntos se sobrepõem."
+            >
+              <Select
+                value={gpqaSubset}
+                disabled={run.isActive}
+                onChange={(event) => setGpqaSubset(event.target.value as GPQASubset)}
+              >
+                <option value="diamond">Diamond — 198 questões</option>
+                <option value="main">Main — 448 questões</option>
+                <option value="extended">Extended — 546 questões</option>
+              </Select>
+            </Field>
+          ) : null}
           {dataset.status === 'success' ? (
             <NewRunForm
-              key={benchmark}
+              key={`${benchmark}-${gpqaSubset}`}
               benchmark={benchmark}
+              gpqaSubset={gpqaSubset}
               dataset={dataset.data}
               disabled={run.isActive}
               onStart={(questionCount, maxParallel, options) =>

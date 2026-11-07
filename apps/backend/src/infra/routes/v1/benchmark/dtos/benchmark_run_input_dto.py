@@ -3,6 +3,7 @@ from typing import Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
+from src.domain.enums.gpqa_subset_enum import GPQASubsetEnum
 from src.infra.routes.v1.message.dtos.model_config_dto import ModelConfigDTO
 
 _DEFAULT_MAX_PARALLEL = 5
@@ -27,12 +28,15 @@ class BenchmarkRunInputDTO(BaseModel):
     few_shot: Literal[0, 5] = 0
     subjects: list[str] = Field(default_factory=list)
     sample_seed: int = Field(default=42, ge=0, le=2**32 - 1)
+    gpqa_subset: GPQASubsetEnum = GPQASubsetEnum.DIAMOND
 
     @model_validator(mode="after")
     def validate_protocol(self) -> Self:
         """Confere os protocolos suportados por cada dataset."""
         if self.benchmark is BenchmarkDatasetEnum.GPQA and self.few_shot:
-            raise ValueError("GPQA Diamond aceita somente few_shot 0.")
+            raise ValueError("GPQA aceita somente few_shot 0.")
+        if self.benchmark is not BenchmarkDatasetEnum.GPQA and self.gpqa_subset is not GPQASubsetEnum.DIAMOND:
+            raise ValueError("gpqa_subset é uma opção exclusiva do GPQA.")
         if self.benchmark is BenchmarkDatasetEnum.VESTIBULAR and (self.few_shot or self.subjects):
             raise ValueError("Vestibulares não aceita few_shot ou subjects.")
         return self

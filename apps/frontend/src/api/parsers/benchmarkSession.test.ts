@@ -34,6 +34,7 @@ describe('parseBenchmarkSession', () => {
   })
 
   it.each([
+    { dataset: 'gpqa', split: 'unknown' },
     { dataset: 'gpqa', few_shot: 5, protocol: 'generative_5shot' },
     { dataset: 'outro' }, { few_shot: 3 }, { protocol: 'generative_5shot' }, { sample_seed: '42' },
   ])('recusa metadados de benchmark inválidos (%#)', (overrides) => {

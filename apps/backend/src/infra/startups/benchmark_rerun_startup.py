@@ -53,7 +53,7 @@ class BenchmarkRerunStartup:
 
     def __provider_for(self, definition: BenchmarkDefinition) -> IBenchmarkQuestionProvider:
         """Dataset e protocolo (few-shot) com que a bateria foi executada."""
-        return self.provider_factory.create(dataset=definition.dataset, few_shot=definition.few_shot)
+        return self.provider_factory.for_definition(definition)
 
     async def run(self, benchmark_session_id: str, question_id: str) -> AsyncGenerator[BenchmarkFrameDTO, None]:
         """Reexecuta os fluxos errados da questão.

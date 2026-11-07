@@ -1,4 +1,5 @@
 import logging
+from dataclasses import replace
 
 import pytest
 
@@ -151,4 +152,13 @@ async def test_bateria_sem_erros_do_ralph_e_recusada() -> None:
     await baterias.save(sessao)
 
     with pytest.raises(NoBenchmarkErrorsToExportError):
+        await _caso(baterias).execute("bench_1")
+
+
+async def test_recusa_exportar_com_provider_de_outro_subconjunto() -> None:
+    baterias = InMemoryBenchmarkSessionRepository()
+    sessao = await _bateria_encerrada(baterias)
+    sessao.benchmark = replace(sessao.benchmark, split="main")
+    await baterias.save(sessao)
+    with pytest.raises(ValueError, match="Subconjunto"):
         await _caso(baterias).execute("bench_1")

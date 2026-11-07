@@ -6,6 +6,7 @@ import type {
   BenchmarkDatasetId,
   BenchmarkRunInput,
   BenchmarkSessionDocument,
+  GPQASubset,
 } from '../domain/types/benchmarkSession'
 import { ContractError } from './errors/ContractError'
 import { httpClient } from './httpClient'
@@ -27,14 +28,17 @@ export interface BenchmarkRunParams {
   fewShot?: 0 | 5
   subjects?: string[]
   sampleSeed?: number
+  gpqaSubset?: GPQASubset
 }
 
 export function getBenchmarkDataset(
   signal?: AbortSignal,
   benchmark: BenchmarkDatasetId = 'vestibular',
+  gpqaSubset: GPQASubset = 'diamond',
 ): Promise<BenchmarkDataset> {
-  const path =
+  let path =
     benchmark !== 'vestibular' ? `${QUESTIONS_PATH}?benchmark=${benchmark}` : QUESTIONS_PATH
+  if (benchmark === 'gpqa' && gpqaSubset !== 'diamond') path += `&gpqa_subset=${gpqaSubset}`
   return httpClient.get(path, parseBenchmarkDataset, signal)
 }
 
@@ -86,6 +90,7 @@ export function buildBenchmarkRunPayload({
   fewShot = 0,
   subjects = [],
   sampleSeed = 42,
+  gpqaSubset = 'diamond',
 }: BenchmarkRunParams): BenchmarkRunInput {
   requirePositiveInteger(questionCount, 'question_count')
   requirePositiveInteger(maxParallel, 'max_parallel')
@@ -96,7 +101,8 @@ export function buildBenchmarkRunPayload({
   if (
     benchmark !== 'vestibular' &&
     (![0, 5].includes(fewShot) ||
-      (benchmark === 'gpqa' && fewShot !== 0) ||
+      (benchmark === 'gpqa' &&
+        (fewShot !== 0 || !['diamond', 'main', 'extended'].includes(gpqaSubset))) ||
       !Number.isInteger(sampleSeed) ||
       sampleSeed < 0 ||
       sampleSeed > 4294967295)
@@ -105,6 +111,7 @@ export function buildBenchmarkRunPayload({
   }
 
   return {
+    ...(benchmark === 'gpqa' ? { gpqa_subset: gpqaSubset } : {}),
     ...(benchmark !== 'vestibular'
       ? {
           benchmark,

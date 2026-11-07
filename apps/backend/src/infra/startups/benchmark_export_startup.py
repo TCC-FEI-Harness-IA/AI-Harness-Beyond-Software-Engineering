@@ -35,7 +35,7 @@ class BenchmarkExportStartup:
                 logger=self.settings.logger(module_file=getfile(FileBenchmarkQuestionProvider)),
             ),
             logger=self.settings.logger(module_file=getfile(ExportBenchmarkRalphErrorsUseCase)),
-            question_provider_for=BenchmarkQuestionProviderFactory(self.settings, self.logger).create,
+            question_provider_for=BenchmarkQuestionProviderFactory(self.settings, self.logger).for_definition,
         )
         self.archive_builder = BenchmarkRalphErrorsArchiveBuilder(session_mapper=self.session_mapper)
         self.logger.info("BenchmarkExportStartup inicializado")

@@ -8,6 +8,8 @@ import pytest
 from src.application.dtos.run_benchmark_input_dto import RunBenchmarkInputDTO
 from src.application.usecases.run_benchmark_usecase import RunBenchmarkUseCase
 from src.domain.entities.benchmark.benchmark_flow_outcome import BenchmarkFlowOutcome
+from src.domain.entities.benchmark.benchmark_definition import BenchmarkDefinition
+from src.domain.enums.gpqa_subset_enum import GPQASubsetEnum
 from src.domain.entities.benchmark.benchmark_flow_request import BenchmarkFlowRequest
 from src.domain.entities.benchmark.benchmark_session import BenchmarkSession
 from src.domain.enums.benchmark_inference_mode_enum import BenchmarkInferenceModeEnum
@@ -334,3 +336,16 @@ async def test_quantidade_fora_do_dataset_e_recusada_antes_de_criar_a_bateria(qu
 
     assert repositorio.saved == []
     assert runner.requests == []
+
+
+async def test_recusa_provider_de_outra_variante_gpqa(monkeypatch: pytest.MonkeyPatch) -> None:
+    runner = FakeBenchmarkFlowRunner(_imediato)
+    caso, repositorio = _caso_de_uso(runner)
+    monkeypatch.setattr(caso.question_provider, "definition", lambda: BenchmarkDefinition(
+        dataset=BenchmarkDatasetEnum.GPQA, split="diamond",
+    ))
+    entrada = replace(_entrada(), benchmark=BenchmarkDatasetEnum.GPQA, gpqa_subset=GPQASubsetEnum.MAIN)
+    with pytest.raises(InvalidBenchmarkRequestError, match="Subconjunto GPQA"):
+        await _coletar(caso, entrada)
+    assert not runner.requests
+    assert not repositorio.saved

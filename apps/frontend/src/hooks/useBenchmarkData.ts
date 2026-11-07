@@ -5,6 +5,7 @@ import type {
   BenchmarkDataset,
   BenchmarkDatasetId,
   BenchmarkSessionDocument,
+  GPQASubset,
 } from '@/domain/types/benchmarkSession'
 import { type AsyncState, useAsync } from './useAsync'
 
@@ -12,8 +13,12 @@ type WithReload<T> = AsyncState<T> & { reload: () => void }
 
 export function useBenchmarkDataset(
   benchmark: BenchmarkDatasetId = 'vestibular',
+  gpqaSubset: GPQASubset = 'diamond',
 ): WithReload<BenchmarkDataset> {
-  return useAsync((signal) => getBenchmarkDataset(signal, benchmark), [benchmark])
+  return useAsync(
+    (signal) => getBenchmarkDataset(signal, benchmark, gpqaSubset),
+    [benchmark, gpqaSubset],
+  )
 }
 
 /** Lista as baterias; `refreshToken` diferente força nova busca (ex.: ao fim de uma bateria). */

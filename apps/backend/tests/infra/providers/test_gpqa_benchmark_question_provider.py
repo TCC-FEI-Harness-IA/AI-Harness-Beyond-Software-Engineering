@@ -29,12 +29,14 @@ def _write_dataset(path: Path, records: list[dict]) -> None:
     writer.writerows(records)
     content = text.getvalue().encode("utf-8")
     with ZipFile(path / "dataset.zip", "w") as archive:
-        archive.writestr("dataset/gpqa_diamond.csv", content)
+        for subset in ("diamond", "main", "extended"):
+            archive.writestr(f"dataset/gpqa_{subset}.csv", content)
     manifest = {
         "revision": GPQA_REVISION, "choice_seed": 0,
         "archive_sha256": hashlib.sha256((path / "dataset.zip").read_bytes()).hexdigest(),
-        "diamond_sha256": hashlib.sha256(content).hexdigest(), "count": len(records),
-        "subjects": {"physics": len(records)},
+        "subsets": {subset: {"sha256": hashlib.sha256(content).hexdigest(), "count": len(records),
+                             "subjects": {"physics": len(records)}}
+                    for subset in ("diamond", "main", "extended")},
     }
     (path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
 
@@ -45,22 +47,28 @@ def dataset(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_corpus_oficial_protegido_tem_198_questoes_e_tres_disciplinas() -> None:
-    provider = GPQABenchmarkQuestionProvider()
+@pytest.mark.parametrize("subset,count,subjects", [
+    ("diamond", 198, {"biology": 19, "chemistry": 93, "physics": 86}),
+    ("main", 448, {"biology": 78, "chemistry": 183, "physics": 187}),
+    ("extended", 546, {"biology": 105, "chemistry": 214, "physics": 227}),
+])
+def test_corpus_oficial_protegido_por_subconjunto(subset: str, count: int, subjects: dict) -> None:
+    provider = GPQABenchmarkQuestionProvider(subset=subset)
     questions = provider.list_questions()
-    assert len(questions) == len({q.id for q in questions}) == 198
-    assert Counter(q.subject for q in questions) == {"biology": 19, "chemistry": 93, "physics": 86}
+    assert len(questions) == len({q.id for q in questions}) == count
+    assert Counter(q.subject for q in questions) == subjects
     assert all(list(q.options) == list("ABCD") for q in questions)
     assert set(q.expected_alternative for q in questions) == set("ABCD")
-    assert all(q.id.startswith("GPQA_diamond_") for q in questions)
+    assert all(q.id.startswith(f"GPQA_{subset}_") for q in questions)
     definition = provider.definition()
     assert definition.dataset is BenchmarkDatasetEnum.GPQA
     assert definition.revision == GPQA_REVISION
-    assert (definition.split, definition.protocol, definition.few_shot) == ("diamond", "generative_0shot", 0)
+    assert (definition.split, definition.protocol, definition.few_shot) == (subset, "generative_0shot", 0)
 
 
-def test_permutacao_reproduzivel_preserva_gabarito_e_prompt_sem_metadados(dataset: Path) -> None:
-    provider = GPQABenchmarkQuestionProvider(data_path=dataset)
+@pytest.mark.parametrize("subset", ["diamond", "main", "extended"])
+def test_permutacao_reproduzivel_preserva_gabarito_e_prompt_sem_metadados(dataset: Path, subset: str) -> None:
+    provider = GPQABenchmarkQuestionProvider(data_path=dataset, subset=subset)
     questions = provider.list_questions()
     rng = random.Random(0)
     for question in questions:
@@ -74,7 +82,7 @@ def test_permutacao_reproduzivel_preserva_gabarito_e_prompt_sem_metadados(datase
         assert "EXPLICACAO_PRIVADA" not in prompt
         assert "REVISAO_ANTIGA" not in prompt
         assert "RESPOSTA_FINAL: LETTER" in prompt
-    assert questions == GPQABenchmarkQuestionProvider(data_path=dataset).list_questions()
+    assert questions == GPQABenchmarkQuestionProvider(data_path=dataset, subset=subset).list_questions()
     provider.list_questions().clear()
     assert provider.list_questions() == questions
 
@@ -92,12 +100,15 @@ def test_dataset_ausente_e_recusado(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("mutation,message", [
     ({"revision": "outra"}, "Revisão"), ({"choice_seed": 42}, "semente"),
-    ({"archive_sha256": "alterado"}, "Hash do arquivo"), ({"diamond_sha256": "alterado"}, "Hash do CSV"),
+    ({"archive_sha256": "alterado"}, "Hash do arquivo"), ({"sha256": "alterado"}, "Hash do CSV"),
     ({"count": 99}, "Contagem"), ({"subjects": {}}, "Contagem"),
 ])
 def test_confere_integridade(dataset: Path, mutation: dict, message: str) -> None:
     path = dataset / "manifest.json"
-    path.write_text(json.dumps(json.loads(path.read_text()) | mutation))
+    manifest = json.loads(path.read_text())
+    target = manifest["subsets"]["diamond"] if set(mutation) & {"sha256", "count", "subjects"} else manifest
+    target.update(mutation)
+    path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match=message):
         GPQABenchmarkQuestionProvider(data_path=dataset).list_questions()
 
@@ -122,3 +133,8 @@ def test_preserva_distratores_duplicados_presentes_no_original(dataset: Path) ->
     _write_dataset(dataset, [_record() | {"Incorrect Answer 2": "incorreta 1"}])
     question = GPQABenchmarkQuestionProvider(data_path=dataset).list_questions()[0]
     assert list(question.options.values()).count("incorreta 1") == 2
+
+
+def test_rejeita_subconjunto_desconhecido() -> None:
+    with pytest.raises(ValueError):
+        GPQABenchmarkQuestionProvider(subset="unknown")

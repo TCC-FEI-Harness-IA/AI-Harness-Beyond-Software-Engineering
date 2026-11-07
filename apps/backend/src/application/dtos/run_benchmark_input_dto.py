@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
+from src.domain.enums.gpqa_subset_enum import GPQASubsetEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 
 
@@ -20,6 +21,7 @@ class RunBenchmarkInputDTO:
         few_shot: Exemplos dev no prompt MMLU, zero ou cinco.
         subjects: Disciplinas MMLU/GPQA desejadas; vazio seleciona todas.
         sample_seed: Semente da amostragem MMLU/GPQA reproduzível.
+        gpqa_subset: Subconjunto GPQA; Diamond por padrão para preservar clientes anteriores.
     """
 
     question_count: int | None
@@ -32,3 +34,4 @@ class RunBenchmarkInputDTO:
     few_shot: int = 0
     subjects: tuple[str, ...] = ()
     sample_seed: int = 42
+    gpqa_subset: GPQASubsetEnum = GPQASubsetEnum.DIAMOND
