@@ -470,3 +470,47 @@ def test_limite_da_sessao_que_nao_comporta_a_reserva_falha_o_ralph_sem_chamar_o_
     assert bateria["summary"]["ralph"]["failures"] == 1
     assert "RALPH_FINAL_ANSWER_TOKEN_RESERVE" in bateria["questions"][0]["ralph"]["error"]
     assert len(provedor.enviados) == 1
+
+
+def test_bateria_por_materia_executa_as_cotas_nos_dois_fluxos_e_persiste_a_distribuicao(
+    ambiente: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    questions = FileBenchmarkQuestionProvider(Settings(), logging.getLogger("teste.cotas")).list_questions()
+    selected = [q for q in questions if q.subject == "BIOLOGIA"][:1] + [
+        q for q in questions if q.subject == "MATEMATICA"
+    ][:2]
+    responses = []
+    for question in selected:
+        correct = f"RESPOSTA_FINAL: {question.expected_alternative}"
+        responses.extend([correct, *_roteiro_ralph(correct)])
+    provider = _Provedor(responses)
+    client = _cliente(monkeypatch, provider)
+    frames, code = _executar(client, _abertura(
+        question_count=3, subject_counts={"BIOLOGIA": 1, "MATEMATICA": 2, "FISICA": 0},
+    ))
+    assert code == 1000
+    final = frames[-1]["benchmark_session"]
+    assert [q["question_id"] for q in final["questions"]] == [q.id for q in selected]
+    assert [q["subject"] for q in final["questions"]] == ["BIOLOGIA", "MATEMATICA", "MATEMATICA"]
+    assert final["summary"]["simple"]["correct"] == final["summary"]["ralph"]["correct"] == 3
+    assert len(final["session_ids"]) == 6
+    assert len(provider.enviados) == 27
+    assert client.get(f"/v1/benchmark/sessions/{final['id']}").json() == final
+
+
+@pytest.mark.parametrize("counts, count", [
+    ({}, None), ({"MATEMATICA": 0}, None), ({"INEXISTENTE": 1}, None),
+    ({"HISTORIA": 31}, None), ({"MATEMATICA": 51}, None), ({"FISICA": 2}, 3),
+])
+def test_cotas_invalidas_sao_recusadas_antes_de_criar_bateria_ou_chamar_llm(
+    ambiente: Path, monkeypatch: pytest.MonkeyPatch, counts: dict, count: int | None,
+) -> None:
+    provider = _Provedor([])
+    frames, code = _executar(_cliente(monkeypatch, provider), _abertura(
+        question_count=count, subject_counts=counts,
+    ))
+    assert code == 1003
+    assert frames[-1]["type"] == "error"
+    assert "subject_counts" in frames[-1]["content"]
+    assert not provider.enviados
+    assert not (ambiente / "benchmark-sessions").exists()

@@ -189,3 +189,24 @@ async def test_startup_de_reexecucao_monta_o_grafo_e_emite_progress_ate_o_result
     assert documento["questions"][0]["ralph"]["session_id"] == f"{questao}_ralph"
     gravada = json.loads((armazenamento / "benchmark-sessions" / "bench_1.json").read_text("utf-8"))
     assert gravada == documento
+
+
+async def test_cotas_da_abertura_chegam_a_selecao_e_sao_persistidas(armazenamento: Path) -> None:
+    startup = BenchmarkRunStartup()
+    startup.run_benchmark_use_case.flow_runner = _RunnerImediato()
+    frames = [frame async for frame in startup.run(payload=_abertura(
+        question_count=3, subject_counts={"FISICA": 1, "FILOSOFIA_SOCIOLOGIA": 2, "BIOLOGIA": 0},
+    ))]
+    final = frames[-1].benchmark_session
+    assert final["question_count"] == 3
+    assert [q["subject"] for q in final["questions"]] == ["FILOSOFIA_SOCIOLOGIA"] * 2 + ["FISICA"]
+    assert final["benchmark"]["subjects"] == ["FILOSOFIA_SOCIOLOGIA", "FISICA"]
+    assert (await BenchmarkQueryStartup().get_benchmark_session_document(final["id"])) == final
+
+
+def test_descricao_expoe_os_limites_por_materia(armazenamento: Path) -> None:
+    descriptor = BenchmarkQueryStartup().describe_dataset()
+    assert {item["id"]: item["question_count"] for item in descriptor["subjects"]} == {
+        "HISTORIA": 30, "GEOGRAFIA": 30, "FILOSOFIA_SOCIOLOGIA": 30, "BIOLOGIA": 30,
+        "MATEMATICA": 50, "QUIMICA": 50, "FISICA": 50,
+    }

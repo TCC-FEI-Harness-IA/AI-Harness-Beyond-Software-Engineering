@@ -32,7 +32,9 @@ def test_sem_saidas_invalidas_do_validador_por_padrao() -> None:
 def test_guarda_as_saidas_invalidas_que_o_validador_corrigiu() -> None:
     invalida = InvalidOutput(raw_output="{}", reason="Faltam avaliações")
 
-    tentativa = TaskAttempt(number=1, output="resultado", conclusion="conclusao", report=None, verification_invalid_outputs=(invalida,))
+    tentativa = TaskAttempt(
+        number=1, output="resultado", conclusion="conclusao", report=None, verification_invalid_outputs=(invalida,),
+    )
 
     assert tentativa.verification_invalid_outputs == (invalida,)
 

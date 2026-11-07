@@ -46,3 +46,33 @@ def test_disciplina_desconhecida_e_recusada() -> None:
 def test_semente_fora_do_intervalo(seed: int) -> None:
     with pytest.raises(InvalidBenchmarkRequestError, match="sample_seed"):
         select_mmlu_questions(_questions(), (), 1, seed)
+
+
+def test_cotas_por_materia_mantem_ordem_excluem_zeros_e_nao_alteram_o_dataset() -> None:
+    from src.domain.services.benchmark_question_selector import select_vestibular_questions
+
+    questions = _questions()
+    counts = {"math": 2, "physics": 1, "history": 0}
+    selected = select_vestibular_questions(questions, counts, 3)
+    assert [q.id for q in selected] == ["physics_0", "math_0", "math_1"]
+    assert counts == {"math": 2, "physics": 1, "history": 0}
+    assert questions == _questions()
+    assert select_vestibular_questions(questions, {"history": 3}) == questions[-3:]
+
+
+@pytest.mark.parametrize("counts, total, message", [
+    ({}, None, "pelo menos uma"),
+    ({"history": 0}, None, "pelo menos uma"),
+    ({"unknown": 0}, None, "desconhecidas"),
+    ({"history": 4}, None, "entre 0 e 3"),
+    ({"math": -1}, None, "inteiro"),
+    ({"math": 1.5}, None, "inteiro"),
+    ({"math": True}, None, "inteiro"),
+    ({"math": "2"}, None, "inteiro"),
+    ({"history": 2}, 3, "coincidir"),
+])
+def test_cotas_invalidas_sao_recusadas(counts: dict, total: int | None, message: str) -> None:
+    from src.domain.services.benchmark_question_selector import select_vestibular_questions
+
+    with pytest.raises(InvalidBenchmarkRequestError, match=message):
+        select_vestibular_questions(_questions(), counts, total)

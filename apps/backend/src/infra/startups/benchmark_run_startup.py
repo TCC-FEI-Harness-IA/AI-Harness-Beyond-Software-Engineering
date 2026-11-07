@@ -85,6 +85,7 @@ class BenchmarkRunStartup:
             few_shot=payload.few_shot,
             subjects=tuple(payload.subjects),
             sample_seed=payload.sample_seed,
+            subject_counts=payload.subject_counts,
         )
         async for benchmark_session in self.run_benchmark_use_case.execute(input_dto=input_dto):
             is_running = benchmark_session.status is BenchmarkSessionStatusEnum.RUNNING

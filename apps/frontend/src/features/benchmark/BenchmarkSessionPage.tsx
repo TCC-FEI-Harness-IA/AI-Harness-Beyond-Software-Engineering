@@ -11,7 +11,7 @@ import {
   BENCHMARK_SESSION_STATUS_TONE,
 } from '@/domain/enums/benchmarkStatus'
 import { providerLabel } from '@/domain/enums/modelProvider'
-import { benchmarkLabel } from '@/domain/services/benchmarkDefinition'
+import { benchmarkLabel, benchmarkSubjectLabel } from '@/domain/services/benchmarkDefinition'
 import { formatDateTime, formatTemperature, formatTokens } from '@/domain/services/formatters'
 import type { BenchmarkSessionDocument } from '@/domain/types/benchmarkSession'
 import { useBenchmarkSession } from '@/hooks/useBenchmarkData'
@@ -46,6 +46,12 @@ function BenchmarkSessionView({
   isLive: boolean
 }): JSX.Element {
   const { isActive, rerun } = useBenchmarkRun()
+  const subjectCounts = new Map<string, number>()
+  for (const question of session.questions) {
+    if (question.subject !== null) {
+      subjectCounts.set(question.subject, (subjectCounts.get(question.subject) ?? 0) + 1)
+    }
+  }
   return (
     <>
       <div className={styles.header}>
@@ -78,6 +84,14 @@ function BenchmarkSessionView({
             {' · '}Semente {session.benchmark.sample_seed}
             {' · '}Split {session.benchmark.split}
             {' · '}Revisão <code>{session.benchmark.revision}</code>
+          </p>
+        ) : null}
+        {session.benchmark.dataset === 'vestibular' && subjectCounts.size > 0 ? (
+          <p aria-label="Questões por matéria">
+            {Array.from(
+              subjectCounts,
+              ([subject, count]) => `${benchmarkSubjectLabel(subject)}: ${count}`,
+            ).join(' · ')}
           </p>
         ) : null}
       </div>

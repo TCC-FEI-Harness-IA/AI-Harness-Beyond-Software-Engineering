@@ -334,3 +334,41 @@ async def test_quantidade_fora_do_dataset_e_recusada_antes_de_criar_a_bateria(qu
 
     assert repositorio.saved == []
     assert runner.requests == []
+
+
+async def test_executa_cotas_e_preserva_as_materias_na_bateria() -> None:
+    runner = FakeBenchmarkFlowRunner(_imediato)
+    caso, repositorio = _caso_de_uso(runner)
+    caso.question_provider = FakeBenchmarkQuestionProvider([
+        replace(questao("BIO1"), subject="BIOLOGIA"),
+        replace(questao("BIO2"), subject="BIOLOGIA"),
+        replace(questao("MAT1"), subject="MATEMATICA"),
+        replace(questao("MAT2"), subject="MATEMATICA"),
+        replace(questao("QUI1"), subject="QUIMICA"),
+    ])
+    await _coletar(caso, replace(_entrada(max_parallel=1), subject_counts={"BIOLOGIA": 1, "MATEMATICA": 2}))
+    session = repositorio.sessions["bench_1"]
+    assert [q.question_id for q in session.questions] == ["BIO1", "MAT1", "MAT2"]
+    assert [q.subject for q in session.questions] == ["BIOLOGIA", "MATEMATICA", "MATEMATICA"]
+    assert session.benchmark.subjects == ("BIOLOGIA", "MATEMATICA")
+    assert session.benchmark.sample_seed is None
+    assert len(runner.requests) == 6
+
+
+async def test_cotas_invalidas_nao_chamam_fluxos_nem_persistem_bateria() -> None:
+    runner = FakeBenchmarkFlowRunner(_imediato)
+    caso, repositorio = _caso_de_uso(runner)
+    with pytest.raises(InvalidBenchmarkRequestError, match="subject_counts"):
+        await _coletar(caso, replace(_entrada(), subject_counts={"INEXISTENTE": 1}))
+    assert not runner.requests
+    assert not repositorio.saved
+
+
+async def test_cotas_nao_sao_aceitas_pelos_outros_datasets() -> None:
+    runner = FakeBenchmarkFlowRunner(_imediato)
+    caso, _ = _caso_de_uso(runner)
+    caso.question_provider.definition = lambda: replace(
+        FakeBenchmarkQuestionProvider([]).definition(), dataset=BenchmarkDatasetEnum.MMLU,
+    )
+    with pytest.raises(InvalidBenchmarkRequestError, match="exclusiva de Vestibulares"):
+        await _coletar(caso, replace(_entrada(), benchmark=BenchmarkDatasetEnum.MMLU, subject_counts={"math": 1}))

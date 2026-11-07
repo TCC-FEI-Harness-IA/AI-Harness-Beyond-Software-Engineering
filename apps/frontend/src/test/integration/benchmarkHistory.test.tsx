@@ -461,3 +461,101 @@ describe('Benchmark como funcionalidade da aplicação', () => {
     expect(within(list).getAllByRole('link')).toHaveLength(1)
   })
 })
+
+
+function mockVestibularSubjects() {
+  const backend = mockBackend()
+  const original = backend.fetchMock.getMockImplementation()!
+  const subjects = [
+    { id: 'BIOLOGIA', question_count: 30 },
+    { id: 'FILOSOFIA_SOCIOLOGIA', question_count: 30 },
+    { id: 'FISICA', question_count: 50 },
+    { id: 'GEOGRAFIA', question_count: 30 },
+    { id: 'HISTORIA', question_count: 30 },
+    { id: 'MATEMATICA', question_count: 50 },
+    { id: 'QUIMICA', question_count: 50 },
+  ]
+  backend.fetchMock.mockImplementation((url: string) => {
+    if (new URL(url).pathname === '/v1/benchmark/questions') return respond({
+      subjects,
+      question_ids: subjects.flatMap((subject) =>
+        Array.from({ length: subject.question_count }, (_, index) => `${subject.id}_${index}`)),
+      max_parallel_limit: 4,
+      max_tokens_limit: 32000,
+    })
+    return original(url)
+  })
+  return backend
+}
+
+describe('Vestibulares por matéria', () => {
+  it('calcula o total e envia somente a distribuição escolhida', async () => {
+    const user = userEvent.setup()
+    mockVestibularSubjects()
+    renderApp('/benchmark')
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Seleção de questões' }), 'subject')
+    const submit = screen.getByRole('button', { name: 'Iniciar bateria' })
+    expect(submit).toBeDisabled()
+    expect(screen.queryByRole('spinbutton', { name: /Quantidade de questões/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: /Filosofia e Sociologia/ })).toHaveAttribute('max', '30')
+    const biology = screen.getByRole('spinbutton', { name: /Biologia/ })
+    const math = screen.getByRole('spinbutton', { name: /Matemática/ })
+    await user.clear(biology)
+    await user.type(biology, '1')
+    expect(screen.getByRole('status')).toHaveTextContent('Total da bateria: 1 questão.')
+    await user.clear(math)
+    await user.type(math, '2')
+    expect(screen.getByRole('status')).toHaveTextContent('Total da bateria: 3 questões.')
+    expect(submit).toBeEnabled()
+    await user.click(submit)
+    const socket = FakeWebSocket.latest()
+    act(() => socket.emitOpen())
+    expect(JSON.parse(socket.sentFrames[0] ?? '{}')).toMatchObject({
+      question_count: 3,
+      subject_counts: {
+        BIOLOGIA: 1, FILOSOFIA_SOCIOLOGIA: 0, FISICA: 0, GEOGRAFIA: 0,
+        HISTORIA: 0, MATEMATICA: 2, QUIMICA: 0,
+      },
+    })
+    expect(biology).toBeDisabled()
+    expect(math).toBeDisabled()
+  })
+
+  it('limita cada matéria e preserva as escolhas ao alternar os modos', async () => {
+    const user = userEvent.setup()
+    mockVestibularSubjects()
+    renderApp('/benchmark')
+    const mode = await screen.findByRole('combobox', { name: 'Seleção de questões' })
+    await user.selectOptions(mode, 'subject')
+    const history = screen.getByRole('spinbutton', { name: /História/ })
+    fireEvent.change(history, { target: { value: '80' } })
+    fireEvent.blur(history)
+    expect(history).toHaveValue(30)
+    fireEvent.change(history, { target: { value: '-3' } })
+    fireEvent.blur(history)
+    expect(history).toHaveValue(0)
+    fireEvent.change(history, { target: { value: '2.8' } })
+    fireEvent.blur(history)
+    expect(history).toHaveValue(2)
+    await user.selectOptions(mode, 'total')
+    expect(screen.getByRole('spinbutton', { name: /Quantidade de questões/ })).toHaveValue(270)
+    await user.selectOptions(mode, 'subject')
+    expect(screen.getByRole('spinbutton', { name: /História/ })).toHaveValue(2)
+    expect(screen.getByRole('status')).toHaveTextContent('Total da bateria: 2 questões.')
+  })
+
+  it('mostra a distribuição persistida no detalhe da bateria', async () => {
+    const stored: BenchmarkSessionDocument = {
+      ...completedBenchmarkSession(),
+      question_count: 3,
+      questions: [
+        questionRun({ question_id: 'BIO1', subject: 'BIOLOGIA' }),
+        questionRun({ question_id: 'MAT1', subject: 'MATEMATICA' }),
+        questionRun({ question_id: 'MAT2', subject: 'MATEMATICA' }),
+      ],
+    }
+    mockBackend([stored])
+    renderApp(`/benchmark/${stored.id}`)
+    expect(await screen.findByLabelText('Questões por matéria')).toHaveTextContent('Biologia: 1 · Matemática: 2')
+  })
+})

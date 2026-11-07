@@ -16,3 +16,17 @@ export function benchmarkLabel(benchmark: BenchmarkDefinition): string {
     ? `MMLU · generativo · ${benchmark.few_shot}-shot`
     : 'Vestibulares'
 }
+
+const VESTIBULAR_SUBJECT_LABELS: Record<string, string> = {
+  HISTORIA: 'História',
+  GEOGRAFIA: 'Geografia',
+  FILOSOFIA_SOCIOLOGIA: 'Filosofia e Sociologia',
+  BIOLOGIA: 'Biologia',
+  MATEMATICA: 'Matemática',
+  QUIMICA: 'Química',
+  FISICA: 'Física',
+}
+
+export function benchmarkSubjectLabel(subject: string): string {
+  return VESTIBULAR_SUBJECT_LABELS[subject] ?? subject.replaceAll('_', ' ')
+}

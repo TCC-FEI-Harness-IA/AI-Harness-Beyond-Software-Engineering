@@ -9,6 +9,7 @@ from src.domain.interfaces.settings_interface import ISettings
 _STATEMENT_FILE = "enunciado.md"
 _ANSWER_FILE = "alternativa_correta.md"
 _OPTION_PATTERN = re.compile(r"^([A-E])\)\s+(.+)$", re.MULTILINE)
+_SUBJECT_PATTERN = re.compile(r"^(.+?)_(?:ENEM|FUVEST|ITA|UNICAMP)_")
 _EXPECTED_LETTERS = (list("ABCD"), list("ABCDE"))
 _FILE_ENCODING = "utf-8"
 
@@ -103,9 +104,11 @@ class FileBenchmarkQuestionProvider(IBenchmarkQuestionProvider):
         mapping = dict(options)
         if mapping.get(expected[1]) != expected[2]:
             raise ValueError(f"Texto do gabarito difere da alternativa: {folder.name}")
+        subject = _SUBJECT_PATTERN.match(folder.name)
         return BenchmarkQuestion(
             id=folder.name,
             statement=statement,
             options=mapping,
             expected_alternative=expected[1],
+            subject=subject[1] if subject is not None else None,
         )

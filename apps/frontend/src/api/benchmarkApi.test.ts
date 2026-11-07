@@ -150,3 +150,49 @@ it('consulta GPQA e envia o protocolo sem exemplos', async () => {
     }),
   ).toThrow()
 })
+
+describe('quantidades por matéria de Vestibulares', () => {
+  it('envia as quantidades e o total sem adicionar protocolo de amostragem', () => {
+    const counts = { MATEMATICA: 2, FILOSOFIA_SOCIOLOGIA: 1, FISICA: 0 }
+    const payload = buildBenchmarkRunPayload({
+      questionCount: 3,
+      maxParallel: 2,
+      config: CONFIG,
+      subjectCounts: counts,
+    })
+    expect(payload).toMatchObject({ question_count: 3, subject_counts: counts })
+    expect(payload).not.toHaveProperty('sample_seed')
+    expect(payload).not.toHaveProperty('few_shot')
+    expect(payload.subject_counts).not.toBe(counts)
+  })
+
+  it.each([
+    {},
+    { FISICA: 0 },
+    { FISICA: -1, MATEMATICA: 4 },
+    { FISICA: 1.5, MATEMATICA: 1.5 },
+    { FISICA: NaN },
+    { FISICA: 2 },
+  ])('recusa quantidades inválidas ou com total divergente (%#)', (subjectCounts) => {
+    expect(() =>
+      buildBenchmarkRunPayload({
+        questionCount: 3,
+        maxParallel: 1,
+        config: CONFIG,
+        subjectCounts,
+      }),
+    ).toThrow('subject_counts')
+  })
+
+  it.each(['mmlu', 'gpqa'] as const)('recusa cotas em %s', (benchmark) => {
+    expect(() =>
+      buildBenchmarkRunPayload({
+        benchmark,
+        questionCount: 3,
+        maxParallel: 1,
+        config: CONFIG,
+        subjectCounts: { physics: 3 },
+      }),
+    ).toThrow('exclusivo de Vestibulares')
+  })
+})

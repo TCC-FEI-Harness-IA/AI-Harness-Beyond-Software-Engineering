@@ -468,3 +468,21 @@ def test_falha_na_reexecucao_nao_envia_frame_quando_o_socket_ja_esta_desconectad
     asyncio.run(rerun_benchmark_question(websocket, "bench_1", "Q1"))
 
     assert websocket.sent == []
+
+
+@pytest.mark.parametrize("counts", [{"FISICA": -1}, {"FISICA": 1.5}, {"FISICA": True}, {"FISICA": "2"}])
+def test_contrato_de_cotas_recusa_valores_nao_inteiros_nao_negativos(counts: dict) -> None:
+    from pydantic import ValidationError
+    from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
+
+    with pytest.raises(ValidationError):
+        BenchmarkRunInputDTO.model_validate(_abertura(subject_counts=counts))
+
+
+@pytest.mark.parametrize("dataset", ["mmlu", "gpqa"])
+def test_contrato_de_cotas_recusa_outros_datasets(dataset: str) -> None:
+    from pydantic import ValidationError
+    from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
+
+    with pytest.raises(ValidationError, match="exclusiva de Vestibulares"):
+        BenchmarkRunInputDTO.model_validate(_abertura(benchmark=dataset, subject_counts={"FISICA": 1}))
