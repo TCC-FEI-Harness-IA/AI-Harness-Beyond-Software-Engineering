@@ -87,11 +87,8 @@ export function NewRunForm({
       {hasSubjects ? (
         <>
           <p>
-            {isMmlu
-              ? 'MMLU em inglês, com quatro alternativas e protocolo 0-shot ou 5-shot.'
-              : 'GPQA Diamond: 198 questões em inglês de biologia, química e física, sem exemplos (0-shot).'}{' '}
-            A avaliação compara a resposta final dos dois fluxos. Resultados dependem do protocolo e
-            da amostra escolhidos.
+            {isMmlu ? '' : 'Sem exemplos (0-shot). '}A avaliação compara a resposta final dos dois
+            fluxos. Resultados dependem do protocolo e da amostra escolhidos.
           </p>
           <div className={styles.fields}>
             {isMmlu ? (

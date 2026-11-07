@@ -11,11 +11,11 @@ import {
   BENCHMARK_SESSION_STATUS_TONE,
 } from '@/domain/enums/benchmarkStatus'
 import { providerLabel } from '@/domain/enums/modelProvider'
-import { benchmarkLabel } from '@/domain/services/benchmarkDefinition'
+import { benchmarkDatasetLabel, benchmarkLabel } from '@/domain/services/benchmarkDefinition'
 import { formatDateTime, formatTemperature, formatTokens } from '@/domain/services/formatters'
 import type { BenchmarkSessionDocument } from '@/domain/types/benchmarkSession'
 import { useBenchmarkSession } from '@/hooks/useBenchmarkData'
-import { ROUTES } from '@/router/routes'
+import { buildBenchmarkPath, ROUTES } from '@/router/routes'
 import { useBenchmarkRun } from '@/state/BenchmarkRunContext'
 import { BenchmarkRalphErrorsExport } from './BenchmarkRalphErrorsExport'
 import { BenchmarkProgressStats } from './BenchmarkProgressStats'
@@ -49,8 +49,8 @@ function BenchmarkSessionView({
   return (
     <>
       <div className={styles.header}>
-        <Link to={ROUTES.benchmark} className={styles.backLink}>
-          ← BenchMark
+        <Link to={buildBenchmarkPath(session.benchmark.dataset)} className={styles.backLink}>
+          ← BenchMark · {benchmarkDatasetLabel(session.benchmark.dataset)}
         </Link>
         <div className={styles.titleRow}>
           <h1 className={styles.title}>Bateria de {formatDateTime(session.created_at)}</h1>
@@ -99,7 +99,7 @@ function BenchmarkSessionView({
       <h2 className={styles.sectionTitle}>Questões e sessões</h2>
       <BenchmarkQuestionsTable
         session={session}
-        onRerun={(questionId) => rerun(session.id, questionId)}
+        onRerun={(questionId) => rerun(session.id, questionId, session.benchmark.dataset)}
         rerunDisabled={isActive}
       />
     </>

@@ -87,7 +87,7 @@ export function RunMonitor(): JSX.Element | null {
           <BenchmarkSummary session={session} />
           <BenchmarkQuestionsTable
             session={session}
-            onRerun={(questionId) => rerun(session.id, questionId)}
+            onRerun={(questionId) => rerun(session.id, questionId, session.benchmark.dataset)}
             rerunDisabled={isActive}
           />
         </>

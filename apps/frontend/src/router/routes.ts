@@ -16,6 +16,11 @@ export function buildHistoryDetailPath(sessionId: string): string {
   return ROUTES.historyDetail.replace(':sessionId', encodeURIComponent(sessionId))
 }
 
+/** Página do BenchMark já na aba do benchmark informado. */
+export function buildBenchmarkPath(benchmark: string): string {
+  return `${ROUTES.benchmark}?benchmark=${encodeURIComponent(benchmark)}`
+}
+
 export function buildBenchmarkSessionPath(benchmarkSessionId: string): string {
   return ROUTES.benchmarkSession.replace(':benchmarkSessionId', encodeURIComponent(benchmarkSessionId))
 }
