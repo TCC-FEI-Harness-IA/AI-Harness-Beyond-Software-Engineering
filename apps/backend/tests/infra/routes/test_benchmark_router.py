@@ -496,4 +496,3 @@ def test_contrato_recusa_cotas_junto_de_subjects(dataset: str) -> None:
         BenchmarkRunInputDTO.model_validate(
             _abertura(benchmark=dataset, subject_counts={"physics": 1}, subjects=["physics"]),
         )
-
