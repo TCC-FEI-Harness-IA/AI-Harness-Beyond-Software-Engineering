@@ -97,10 +97,10 @@ def _build_adapter_com_cadastro(repositorio: InMemoryModelInfoRepository) -> Mod
     )
 
 
-async def test_modelo_cadastrado_fica_liberado_depois_de_incluido() -> None:
+async def test_modelo_cadastrado_fica_liberado_depois_de_carregado() -> None:
     adapter = _build_adapter_com_cadastro(InMemoryModelInfoRepository(models=[ModelInfo(model_name="vendor/novo")]))
 
-    await adapter.include_registered(model_name="vendor/novo")
+    await adapter.load_model_info(model_name="vendor/novo")
 
     modelo = adapter.resolve(model_name="vendor/novo", model_provider=ModelProviderEnum.OPEN_ROUTER)
     assert modelo.model_name == "vendor/novo"
@@ -109,33 +109,47 @@ async def test_modelo_cadastrado_fica_liberado_depois_de_incluido() -> None:
 async def test_modelo_nao_cadastrado_segue_recusado() -> None:
     adapter = _build_adapter_com_cadastro(InMemoryModelInfoRepository())
 
-    await adapter.include_registered(model_name="vendor/fantasma")
+    await adapter.load_model_info(model_name="vendor/fantasma")
 
     with pytest.raises(ValueError, match="vendor/fantasma"):
         adapter.resolve(model_name="vendor/fantasma", model_provider=ModelProviderEnum.OPEN_ROUTER)
 
 
-async def test_modelo_da_allowlist_nao_consulta_o_repositorio() -> None:
-    repositorio = InMemoryModelInfoRepository(error=RuntimeError("mongo fora do ar"))
+async def test_resolve_leva_o_contexto_do_cadastro_inclusive_para_modelo_da_allowlist() -> None:
+    repositorio = InMemoryModelInfoRepository(
+        models=[ModelInfo(model_name="vendor/da-allowlist", context_length=131072)]
+    )
     adapter = _build_adapter_com_cadastro(repositorio)
 
-    await adapter.include_registered(model_name="vendor/da-allowlist")
+    await adapter.load_model_info(model_name="vendor/da-allowlist")
 
-    assert repositorio.find_calls == []
+    modelo = adapter.resolve(model_name="vendor/da-allowlist", model_provider=ModelProviderEnum.OPEN_ROUTER)
+    assert repositorio.find_calls == ["vendor/da-allowlist"]
+    assert modelo.context_length == 131072
+
+
+async def test_modelo_sem_cadastro_resolve_sem_contexto() -> None:
+    adapter = _build_adapter_com_cadastro(InMemoryModelInfoRepository())
+
+    await adapter.load_model_info(model_name="vendor/da-allowlist")
+
+    modelo = adapter.resolve(model_name="vendor/da-allowlist", model_provider=ModelProviderEnum.OPEN_ROUTER)
+    assert modelo.context_length is None
+
+
+async def test_falha_do_repositorio_nao_propaga_e_mantem_a_allowlist() -> None:
+    adapter = _build_adapter_com_cadastro(InMemoryModelInfoRepository(error=RuntimeError("mongo fora do ar")))
+
+    await adapter.load_model_info(model_name="vendor/novo")
+    await adapter.load_model_info(model_name="vendor/da-allowlist")
+
+    assert adapter.is_model_available(model_name="vendor/novo") is False
     assert adapter.is_model_available(model_name="vendor/da-allowlist") is True
 
 
-async def test_falha_do_repositorio_nao_propaga_e_mantem_o_modelo_recusado() -> None:
-    adapter = _build_adapter_com_cadastro(InMemoryModelInfoRepository(error=RuntimeError("mongo fora do ar")))
-
-    await adapter.include_registered(model_name="vendor/novo")
-
-    assert adapter.is_model_available(model_name="vendor/novo") is False
-
-
-async def test_sem_repositorio_include_registered_nao_faz_nada() -> None:
+async def test_sem_repositorio_load_model_info_nao_faz_nada() -> None:
     adapter = _build_adapter(genai_available_models=[])
 
-    await adapter.include_registered(model_name="vendor/novo")
+    await adapter.load_model_info(model_name="vendor/novo")
 
     assert adapter.is_model_available(model_name="vendor/novo") is False

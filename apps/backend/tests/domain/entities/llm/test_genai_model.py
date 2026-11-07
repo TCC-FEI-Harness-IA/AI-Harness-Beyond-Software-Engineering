@@ -30,4 +30,4 @@ def test_instancias_com_os_mesmos_dados_sao_iguais() -> None:
 def test_nao_depende_de_configuracao() -> None:
     campos = {campo.name for campo in dataclasses.fields(GenaiModel)}
 
-    assert campos == {"model_name", "model_provider"}
+    assert campos == {"model_name", "model_provider", "context_length"}

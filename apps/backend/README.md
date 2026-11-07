@@ -474,8 +474,14 @@ Remove um modelo do catálogo. **`204`** sem corpo, ou **`404`** quando ele não
 ### Catálogo de modelos e allowlist
 
 Um modelo cadastrado no catálogo fica liberado para execução, além dos que estão em
-`GENAI_AVAILABLE_MODELS`. O banco só é consultado quando o modelo pedido não está na allowlist: assim,
+`GENAI_AVAILABLE_MODELS`. Cada execução consulta o cadastro do modelo pedido, com espera máxima de 2 s:
 com o MongoDB fora do ar, os modelos da allowlist continuam funcionando.
+
+O `context_length` cadastrado também limita o `max_tokens` de cada chamada. O limite de tokens da
+sessão pode passar do contexto do modelo (ex.: 500 mil numa sessão com um modelo de 131 mil), e o
+provedor recusa a chamada quando entrada + saída não cabem. Por isso a saída pedida é reduzida ao
+contexto menos uma estimativa conservadora da entrada (3 caracteres por token). Sem `context_length`
+no catálogo, o valor segue como foi pedido.
 
 Para preencher o catálogo com os modelos iniciais (valores da OpenRouter, consultados em 2026-11-07):
 

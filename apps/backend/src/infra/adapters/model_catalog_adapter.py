@@ -1,6 +1,7 @@
 import logging
 
 from src.domain.entities.llm.genai_model import GenaiModel
+from src.domain.entities.llm.model_info import ModelInfo
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.interfaces.model_catalog_interface import IModelCatalog
 from src.domain.interfaces.model_info_repository_interface import IModelInfoRepository
@@ -11,7 +12,8 @@ class ModelCatalogAdapter(IModelCatalog):
     """Catálogo de modelos apoiado nas allowlists do `ISettings` e nos modelos cadastrados.
 
     Um modelo está liberado quando aparece em `GENAI_AVAILABLE_MODELS` ou quando foi cadastrado
-    no repositório de modelos e incluído por `include_registered` antes da chamada.
+    no repositório de modelos e carregado por `load_model_info` antes da chamada. O cadastro também
+    informa o contexto máximo do modelo, que viaja em `GenaiModel.context_length`.
     """
 
     def __init__(
@@ -30,19 +32,19 @@ class ModelCatalogAdapter(IModelCatalog):
         self.settings: ISettings = settings
         self.logger = logger
         self.model_repository: IModelInfoRepository | None = model_repository
-        self.registered_models: set[str] = set()
+        self.registered_models: dict[str, ModelInfo] = {}
 
-    async def include_registered(self, model_name: str) -> None:
-        """Libera o modelo quando ele está cadastrado no repositório de modelos.
+    async def load_model_info(self, model_name: str) -> None:
+        """Carrega o cadastro do modelo no repositório de modelos.
 
-        Só consulta o repositório quando o modelo ainda não está liberado, para que um banco
-        fora do ar não atrase as execuções com modelos da allowlist. Uma falha na consulta é
-        apenas registrada: o modelo segue recusado por `resolve`.
+        Um modelo cadastrado fica liberado mesmo fora da allowlist, e o contexto máximo dele passa a
+        acompanhar o `GenaiModel` devolvido por `resolve`. Uma falha na consulta é apenas registrada:
+        o modelo da allowlist segue liberado, só que sem o contexto máximo.
 
         Args:
             model_name: Nome do modelo pretendido.
         """
-        if self.model_repository is None or self.is_model_available(model_name=model_name):
+        if self.model_repository is None:
             return
 
         try:
@@ -52,7 +54,7 @@ class ModelCatalogAdapter(IModelCatalog):
             return
 
         if registered is not None:
-            self.registered_models.add(self.__normalize(value=registered.model_name))
+            self.registered_models[self.__normalize(value=registered.model_name)] = registered
 
     def resolve(self, model_name: str, model_provider: ModelProviderEnum) -> GenaiModel:
         """Valida nome e provedor contra as allowlists e devolve o modelo.
@@ -73,7 +75,12 @@ class ModelCatalogAdapter(IModelCatalog):
         if not self.is_provider_available(model_provider=model_provider):
             raise ValueError(f"Provider '{model_provider.value}' is not available.")
 
-        return GenaiModel(model_name=model_name, model_provider=model_provider)
+        registered = self.registered_models.get(self.__normalize(value=model_name))
+        return GenaiModel(
+            model_name=model_name,
+            model_provider=model_provider,
+            context_length=registered.context_length if registered is not None else None,
+        )
 
     def is_model_available(self, model_name: str) -> bool:
         """Informa se o modelo está na allowlist ou entre os cadastrados já incluídos.

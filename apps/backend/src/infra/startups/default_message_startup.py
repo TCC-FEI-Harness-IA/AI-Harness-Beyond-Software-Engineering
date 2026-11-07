@@ -19,6 +19,10 @@ from src.infra.routes.v1.message.dtos.default_output_dto import DefaultOutputDTO
 from src.infra.services.llm_service_factory import LLMServiceFactory
 
 
+# O catálogo só complementa a allowlist: com o MongoDB fora do ar, a execução espera pouco por ele.
+_MODEL_CATALOG_TIMEOUT_MS = 2000
+
+
 class DefaultMessageStartup:
     """Composition root do fluxo baseline.
 
@@ -36,7 +40,10 @@ class DefaultMessageStartup:
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(ModelCatalogAdapter)),
             model_repository=MongoModelInfoRepository(
-                collection=MongoClientAdapter(settings=self.settings).models_collection,
+                collection=MongoClientAdapter(
+                    settings=self.settings,
+                    server_selection_timeout_ms=_MODEL_CATALOG_TIMEOUT_MS,
+                ).models_collection,
                 logger=self.settings.logger(module_file=getfile(MongoModelInfoRepository)),
             ),
         )
@@ -77,7 +84,7 @@ class DefaultMessageStartup:
             DefaultOutputDTO: Corpo da resposta no contrato de transporte.
         """
         self.logger.info("Executando fluxo default message")
-        await self.model_catalog.include_registered(
+        await self.model_catalog.load_model_info(
             model_name=payload.llm_model_config.provider_config.model_name
         )
 

@@ -38,6 +38,10 @@ from src.infra.routes.v1.message.dtos.reasoning_input_dto import ReasoningInputD
 from src.infra.services.llm_service_factory import LLMServiceFactory
 
 
+# O catálogo só complementa a allowlist: com o MongoDB fora do ar, a execução espera pouco por ele.
+_MODEL_CATALOG_TIMEOUT_MS = 2000
+
+
 class RalphThinkingStartup:
     """Composition root do fluxo harness (Ralph Loop adaptado).
 
@@ -97,7 +101,10 @@ class RalphThinkingStartup:
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(ModelCatalogAdapter)),
             model_repository=MongoModelInfoRepository(
-                collection=MongoClientAdapter(settings=self.settings).models_collection,
+                collection=MongoClientAdapter(
+                    settings=self.settings,
+                    server_selection_timeout_ms=_MODEL_CATALOG_TIMEOUT_MS,
+                ).models_collection,
                 logger=self.settings.logger(module_file=getfile(MongoModelInfoRepository)),
             ),
         )
@@ -167,7 +174,7 @@ class RalphThinkingStartup:
             ValueError: Quando o limite pedido passa do teto do backend ou não cabe a reserva da resposta final.
         """
         self.cost_guard.limit_session_tokens(session_token_budget=payload.llm_model_config.max_tokens)
-        await self.model_catalog.include_registered(
+        await self.model_catalog.load_model_info(
             model_name=payload.llm_model_config.provider_config.model_name
         )
         input_dto = RalphThinkingInputDTO(

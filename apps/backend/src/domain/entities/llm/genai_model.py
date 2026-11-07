@@ -13,7 +13,9 @@ class GenaiModel:
     Attributes:
         model_name: Nome do modelo.
         model_provider: Provedor do modelo.
+        context_length: Contexto máximo (entrada + saída) em tokens, quando o catálogo o conhece.
     """
 
     model_name: str
     model_provider: ModelProviderEnum
+    context_length: int | None = None

@@ -11,14 +11,19 @@ class MongoClientAdapter:
     o adapter nunca bloqueia nem falha por um MongoDB fora do ar.
     """
 
-    def __init__(self, settings: ISettings) -> None:
+    def __init__(self, settings: ISettings, server_selection_timeout_ms: int | None = None) -> None:
         """Inicializa o adapter e o cliente do driver.
 
         Args:
             settings: Configurações da aplicação, fonte da URI, do banco e da coleção.
+            server_selection_timeout_ms: Espera máxima por um servidor disponível; sem ela, vale o
+                padrão do driver (30 s).
         """
         self.settings: ISettings = settings
-        self.client: AsyncIOMotorClient = AsyncIOMotorClient(settings.mongodb_uri)
+        options: dict[str, int] = {}
+        if server_selection_timeout_ms is not None:
+            options["serverSelectionTimeoutMS"] = server_selection_timeout_ms
+        self.client: AsyncIOMotorClient = AsyncIOMotorClient(settings.mongodb_uri, **options)
 
     @property
     def sessions_collection(self) -> AsyncIOMotorCollection:

@@ -14,6 +14,11 @@ from src.domain.interfaces.llm_service_interface import ILLMService
 from src.domain.interfaces.model_catalog_interface import IModelCatalog
 from src.domain.interfaces.settings_interface import ISettings
 
+# Estimativa conservadora dos tokens de entrada, para caber a saída no contexto do modelo: português
+# fica perto de 3,5 caracteres por token, e cada mensagem carrega alguns tokens de formatação.
+_CHARS_PER_TOKEN_ESTIMATE = 3
+_TOKENS_PER_MESSAGE_OVERHEAD = 8
+
 _PROVIDER_ROLE_BY_SOURCE = {
     MessageSourceEnum.USER: "user",
     MessageSourceEnum.LLM_AGENT: "assistant",
@@ -205,10 +210,15 @@ class LLMCompletionsAdapter(ILLMCompletions):
             model_name=self.__resolve_model_name(model_name=model_name),
             model_provider=model_provider,
         )
+        messages = [self.__to_provider_message(message=message) for message in conversation]
         request = LLMProviderRequest(
             llm_model=llm_model,
-            messages=[self.__to_provider_message(message=message) for message in conversation],
-            max_tokens=self.__resolve_max_tokens(max_tokens=max_tokens),
+            messages=messages,
+            max_tokens=self.__fit_to_context(
+                max_tokens=self.__resolve_max_tokens(max_tokens=max_tokens),
+                context_length=llm_model.context_length,
+                messages=messages,
+            ),
             temperature=self.__resolve_temperature(temperature=temperature),
         )
         llm_service = self.__services_by_provider[model_provider]
@@ -253,6 +263,41 @@ class LLMCompletionsAdapter(ILLMCompletions):
         if model_name is None:
             return self.__model_name
         return self.__validate_model_name(model_name=model_name)
+
+    def __fit_to_context(
+        self,
+        max_tokens: int,
+        context_length: int | None,
+        messages: list[LLMProviderMessage],
+    ) -> int:
+        """Limita a saída pedida ao que cabe no contexto do modelo depois da entrada.
+
+        O limite de tokens da sessão pode passar do contexto do modelo (ex.: 500 mil numa sessão com
+        um modelo de 131 mil), e o provedor recusa a chamada inteira quando entrada + saída não cabem.
+        Sem o contexto do modelo no catálogo, o valor pedido segue como está.
+
+        Args:
+            max_tokens: Saída pedida para a chamada.
+            context_length: Contexto máximo do modelo, quando conhecido.
+            messages: Mensagens enviadas, usadas para estimar os tokens de entrada.
+
+        Returns:
+            int: Saída que cabe no contexto, nunca abaixo de 1 nem acima do pedido.
+        """
+        if context_length is None:
+            return max_tokens
+
+        input_chars = sum(len(message.content) for message in messages)
+        estimated_input = -(-input_chars // _CHARS_PER_TOKEN_ESTIMATE) + _TOKENS_PER_MESSAGE_OVERHEAD * len(messages)
+        fitted = max(1, min(max_tokens, context_length - estimated_input))
+        if fitted < max_tokens:
+            self.logger.info(
+                "max_tokens reduzido de %d para %d para caber no contexto de %d tokens do modelo",
+                max_tokens,
+                fitted,
+                context_length,
+            )
+        return fitted
 
     def __resolve_max_tokens(self, max_tokens: int | None) -> int:
         """Devolve o limite de tokens da chamada, ou o padrão do adapter."""

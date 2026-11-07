@@ -62,3 +62,13 @@ def test_models_collection_usa_o_banco_e_a_colecao_configurados() -> None:
 
     assert colecao.name == "modelos"
     assert colecao.database.name == "banco_de_teste"
+
+
+def test_timeout_de_selecao_de_servidor_e_repassado_ao_driver() -> None:
+    adapter = MongoClientAdapter(settings=FakeSettings(), server_selection_timeout_ms=2000)
+
+    assert adapter.client.options.server_selection_timeout == 2
+
+
+def test_sem_timeout_vale_o_padrao_do_driver() -> None:
+    assert _build_adapter().client.options.server_selection_timeout == 30

@@ -347,7 +347,7 @@ def test_bateria_no_mongodb_grava_as_baterias_na_colecao_propria(
     monkeypatch.setenv("RALPH_SESSION_STORAGE_BACKEND", "mongodb")
     monkeypatch.setenv("MONGODB_DATABASE", "benchmark_teste")
     cliente_mongo = AsyncMongoMockClient()
-    monkeypatch.setattr(mongo_client_adapter, "AsyncIOMotorClient", lambda *args: cliente_mongo)
+    monkeypatch.setattr(mongo_client_adapter, "AsyncIOMotorClient", lambda *args, **kwargs: cliente_mongo)
     provedor = _Provedor(["RESPOSTA_FINAL: D", *_roteiro_ralph("RESPOSTA_FINAL: D")])
     cliente = _cliente(monkeypatch, provedor)
 

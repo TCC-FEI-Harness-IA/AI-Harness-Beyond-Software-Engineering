@@ -38,6 +38,43 @@ def _build_all_providers() -> dict[ModelProviderEnum, FakeLLMService]:
 
 # ── Defaults e sobrescritas ──────────────────────────────────────────────────
 
+async def test_max_tokens_acima_do_contexto_e_reduzido_ao_que_cabe_depois_da_entrada() -> None:
+    service = FakeLLMService()
+    adapter = _build_adapter(llm_services=[service], model_catalog=FakeModelCatalog(context_length=131072))
+
+    await adapter.send_message(input_message=_build_message(text="x" * 300), max_tokens=500000)
+
+    # 300 caracteres ≈ 100 tokens de entrada, mais a formatação de uma mensagem.
+    assert service.requests[0].max_tokens == 131072 - 100 - 8
+
+
+async def test_max_tokens_que_cabe_no_contexto_e_mantido() -> None:
+    service = FakeLLMService()
+    adapter = _build_adapter(llm_services=[service], model_catalog=FakeModelCatalog(context_length=131072))
+
+    await adapter.send_message(input_message=_build_message(), max_tokens=4000)
+
+    assert service.requests[0].max_tokens == 4000
+
+
+async def test_entrada_maior_que_o_contexto_ainda_pede_ao_menos_um_token() -> None:
+    service = FakeLLMService()
+    adapter = _build_adapter(llm_services=[service], model_catalog=FakeModelCatalog(context_length=10))
+
+    await adapter.send_message(input_message=_build_message(text="x" * 300), max_tokens=500)
+
+    assert service.requests[0].max_tokens == 1
+
+
+async def test_sem_contexto_no_catalogo_o_max_tokens_segue_como_pedido() -> None:
+    service = FakeLLMService()
+    adapter = _build_adapter(llm_services=[service])
+
+    await adapter.send_message(input_message=_build_message(), max_tokens=500000)
+
+    assert service.requests[0].max_tokens == 500000
+
+
 async def test_sem_sobrescritas_usa_os_defaults_das_configuracoes() -> None:
     service = FakeLLMService()
     adapter = _build_adapter(
