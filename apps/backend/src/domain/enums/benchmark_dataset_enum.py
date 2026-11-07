@@ -6,3 +6,4 @@ class BenchmarkDatasetEnum(StrEnum):
 
     VESTIBULAR = "vestibular"
     MMLU = "mmlu"
+    GPQA = "gpqa"

@@ -68,7 +68,7 @@ function BenchmarkSessionView({
           <span>{session.max_parallel} em paralelo</span>
           <span className={styles.id}>{session.id}</span>
         </p>
-        {session.benchmark.dataset === 'mmlu' ? (
+        {session.benchmark.dataset !== 'vestibular' ? (
           <p>
             {session.benchmark.subjects.length === 0
               ? 'Todas as disciplinas'

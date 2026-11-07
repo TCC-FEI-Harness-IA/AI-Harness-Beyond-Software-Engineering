@@ -81,7 +81,7 @@ class BenchmarkQueryStartup:
             ValueError: Quando o dataset é inválido.
         """
         provider = self.question_provider
-        if benchmark is BenchmarkDatasetEnum.MMLU:
+        if benchmark is not BenchmarkDatasetEnum.VESTIBULAR:
             provider = BenchmarkQuestionProviderFactory(self.settings, self.logger).create(benchmark)
         questions = provider.list_questions()
         subjects = Counter(question.subject for question in questions if question.subject is not None)

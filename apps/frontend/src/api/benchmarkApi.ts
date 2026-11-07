@@ -33,7 +33,8 @@ export function getBenchmarkDataset(
   signal?: AbortSignal,
   benchmark: BenchmarkDatasetId = 'vestibular',
 ): Promise<BenchmarkDataset> {
-  const path = benchmark === 'mmlu' ? `${QUESTIONS_PATH}?benchmark=mmlu` : QUESTIONS_PATH
+  const path =
+    benchmark !== 'vestibular' ? `${QUESTIONS_PATH}?benchmark=${benchmark}` : QUESTIONS_PATH
   return httpClient.get(path, parseBenchmarkDataset, signal)
 }
 
@@ -93,17 +94,18 @@ export function buildBenchmarkRunPayload({
     throw new ContractError(`temperature precisa estar entre 0 e 1, recebeu: ${config.temperature}`)
   }
   if (
-    benchmark === 'mmlu' &&
+    benchmark !== 'vestibular' &&
     (![0, 5].includes(fewShot) ||
+      (benchmark === 'gpqa' && fewShot !== 0) ||
       !Number.isInteger(sampleSeed) ||
       sampleSeed < 0 ||
       sampleSeed > 4294967295)
   ) {
-    throw new ContractError('Protocolo MMLU ou semente inválidos.')
+    throw new ContractError('Protocolo do benchmark ou semente inválidos.')
   }
 
   return {
-    ...(benchmark === 'mmlu'
+    ...(benchmark !== 'vestibular'
       ? {
           benchmark,
           few_shot: fewShot,

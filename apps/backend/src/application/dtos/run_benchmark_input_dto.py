@@ -9,7 +9,8 @@ class RunBenchmarkInputDTO:
     """Entrada de uma bateria de benchmark, no vocabulário da camada de aplicação.
 
     Attributes:
-        question_count: Quantas questões executar; primeiras nos vestibulares, amostra no MMLU; `None` executa todas.
+        question_count: Quantas questões executar; primeiras nos vestibulares, amostra no MMLU/GPQA;
+            `None` executa todas.
         max_parallel: Máximo de questões executadas em paralelo (workers).
         model_name: Modelo usado em todos os fluxos.
         max_tokens: Limite de tokens de cada sessão gerada pela bateria.
@@ -17,8 +18,8 @@ class RunBenchmarkInputDTO:
         provider: Provedor que atende as chamadas.
         benchmark: Dataset da bateria, vestibular por padrão.
         few_shot: Exemplos dev no prompt MMLU, zero ou cinco.
-        subjects: Disciplinas MMLU desejadas; vazio seleciona todas.
-        sample_seed: Semente da amostragem MMLU reproduzível.
+        subjects: Disciplinas MMLU/GPQA desejadas; vazio seleciona todas.
+        sample_seed: Semente da amostragem MMLU/GPQA reproduzível.
     """
 
     question_count: int | None

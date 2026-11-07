@@ -23,6 +23,7 @@ from src.infra.config.settings import Settings
 from src.infra.providers.file_benchmark_question_provider import FileBenchmarkQuestionProvider
 from src.infra.providers.mmlu_benchmark_question_provider import MMLUBenchmarkQuestionProvider, MMLU_REVISION
 from src.domain.services.benchmark_question_selector import select_mmlu_questions
+from src.infra.providers.gpqa_benchmark_question_provider import GPQABenchmarkQuestionProvider, GPQA_REVISION
 from src.infra.services.llm_service_factory import LLMServiceFactory
 from src.infra.services.openrouter_service import OpenRouterService
 from src.main import create_app
@@ -186,7 +187,72 @@ def test_mmlu_executa_os_dois_fluxos_preserva_protocolo_e_exporta_a_origem_corre
     assert client.get("/v1/benchmark/questions").json()["benchmark"]["dataset"] == "vestibular"
 
 
+def test_gpqa_executa_os_dois_fluxos_preserva_protocolo_e_exporta_a_origem_correta(
+    ambiente: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    provider = GPQABenchmarkQuestionProvider()
+    question = select_mmlu_questions(provider.list_questions(), ("physics",), 1, 123)[0]
+    correct = f"RESPOSTA_FINAL: {question.expected_alternative}"
+    wrong = "RESPOSTA_FINAL: " + next(letter for letter in "ABCD" if letter != question.expected_alternative)
+    transport = _Provedor([correct, *_roteiro_ralph(wrong)])
+    client = _cliente(monkeypatch, transport)
+
+    descriptor = client.get("/v1/benchmark/questions?benchmark=gpqa")
+    assert descriptor.status_code == 200
+    assert len(descriptor.json()["question_ids"]) == 198
+    assert len(descriptor.json()["subjects"]) == 3
+
+    frames, code = _executar(client, _abertura(
+        benchmark="gpqa", few_shot=0, subjects=["physics"], sample_seed=123, question_count=1,
+    ))
+    assert code == 1000
+    session = frames[-1]["benchmark_session"]
+    assert session["benchmark"] == {
+        "dataset": "gpqa", "revision": GPQA_REVISION, "protocol": "generative_0shot",
+        "split": "diamond", "few_shot": 0, "subjects": ["physics"], "sample_seed": 123,
+    }
+    assert session["questions"][0]["question_id"] == question.id
+    assert session["questions"][0]["subject"] == "physics"
+    assert session["summary"]["simple"]["accuracy"] == 1
+    assert session["summary"]["ralph"]["accuracy"] == 0
+    assert client.get(f"/v1/benchmark/sessions/{session['id']}").json() == session
+    children = _sessoes_gravadas(ambiente / "sessions")
+    assert len(children) == 2
+    prompts = {child["user_question"] for child in children}
+    assert len(prompts) == 1
+    prompt = prompts.pop()
+    assert question.statement in prompt
+    assert prompt.count("Answer: ") == 0
+    assert correct not in prompt
+
+    export = client.get(f"/v1/benchmark/sessions/{session['id']}/ralph-loop-errors/export")
+    assert export.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(export.content)) as archive:
+        exported = json.loads(archive.read(f"questao-{question.id}/questao.json"))
+        assert exported["statement"] == question.statement
+        assert exported["options"] == question.options
+    assert client.get("/v1/benchmark/questions").json()["benchmark"]["dataset"] == "vestibular"
+
+    # O rerun usa a mesma permutação e corrige apenas o fluxo que errou.
+    transport.respostas.extend(_roteiro_ralph(correct))
+    path = f"/v1/benchmark/sessions/{session['id']}/questions/{question.id}/rerun"
+    with client.websocket_connect(path) as socket:
+        while True:
+            frame = socket.receive_json()
+            if frame["type"] == "result":
+                break
+    rerun_session = frame["benchmark_session"]
+    assert rerun_session["benchmark"] == session["benchmark"]
+    assert rerun_session["questions"][0]["expected_alternative"] == question.expected_alternative
+    assert rerun_session["summary"]["ralph"]["accuracy"] == 1
+    assert rerun_session["questions"][0]["simple"] == session["questions"][0]["simple"]
+
+
 @pytest.mark.parametrize("options", [
+    {"benchmark": "gpqa", "few_shot": 5},
+    {"benchmark": "gpqa", "sample_seed": -1},
+    {"benchmark": "gpqa", "subjects": ["unknown"]},
+    {"benchmark": "gpqa", "subjects": ["biology"], "question_count": 20},
     {"benchmark": "outro"}, {"benchmark": "mmlu", "few_shot": 3},
     {"benchmark": "vestibular", "few_shot": 5}, {"subjects": ["college_physics"]},
     {"benchmark": "mmlu", "sample_seed": -1},

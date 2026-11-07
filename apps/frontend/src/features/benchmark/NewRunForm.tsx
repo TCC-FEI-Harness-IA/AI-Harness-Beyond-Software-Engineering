@@ -35,7 +35,7 @@ function clamp(raw: string, max: number): number {
 }
 
 /**
- * Parâmetros de uma bateria: quantidade, paralelismo e, no MMLU, protocolo, disciplina e semente.
+ * Parâmetros de uma bateria: quantidade, paralelismo e, nos datasets científicos, disciplina e semente.
  * Modelo, provedor, limite de tokens por sessão e temperatura são os mesmos da tela inicial.
  */
 export function NewRunForm({
@@ -50,6 +50,7 @@ export function NewRunForm({
   // abrir a bateria só para vê-la recusada.
   const tokensTooHigh = config.maxTokens > dataset.max_tokens_limit
   const isMmlu = benchmark === 'mmlu'
+  const hasSubjects = benchmark !== 'vestibular'
   const [subject, setSubject] = useState('')
   const [fewShot, setFewShot] = useState<0 | 5>(5)
   const [sampleSeed, setSampleSeed] = useState('42')
@@ -68,11 +69,11 @@ export function NewRunForm({
     if (tokensTooHigh) return
     const count = clamp(questionCount, available)
     const parallel = clamp(maxParallel, dataset.max_parallel_limit)
-    if (isMmlu) {
+    if (hasSubjects) {
       const seed = Math.min(4294967295, Math.max(0, Math.trunc(Number(sampleSeed) || 0)))
       onStart(count, parallel, {
         benchmark,
-        fewShot,
+        fewShot: isMmlu ? fewShot : 0,
         subjects: subject ? [subject] : [],
         sampleSeed: seed,
       })
@@ -83,23 +84,28 @@ export function NewRunForm({
 
   return (
     <form className={styles.form} onSubmit={handleSubmit} aria-label="Nova bateria de benchmark">
-      {isMmlu ? (
+      {hasSubjects ? (
         <>
           <p>
-            MMLU em inglês, com quatro alternativas. A avaliação é generativa e compara a resposta
-            final dos dois fluxos. Resultados dependem do protocolo e da amostra escolhidos.
+            {isMmlu
+              ? 'MMLU em inglês, com quatro alternativas e protocolo 0-shot ou 5-shot.'
+              : 'GPQA Diamond: 198 questões em inglês de biologia, química e física, sem exemplos (0-shot).'}{' '}
+            A avaliação compara a resposta final dos dois fluxos. Resultados dependem do protocolo e
+            da amostra escolhidos.
           </p>
           <div className={styles.fields}>
-            <Field label="Protocolo MMLU">
-              <Select
-                value={fewShot}
-                disabled={disabled}
-                onChange={(event) => setFewShot(Number(event.target.value) as 0 | 5)}
-              >
-                <option value={5}>5-shot — cinco exemplos por disciplina</option>
-                <option value={0}>0-shot — sem exemplos</option>
-              </Select>
-            </Field>
+            {isMmlu ? (
+              <Field label="Protocolo MMLU">
+                <Select
+                  value={fewShot}
+                  disabled={disabled}
+                  onChange={(event) => setFewShot(Number(event.target.value) as 0 | 5)}
+                >
+                  <option value={5}>5-shot — cinco exemplos por disciplina</option>
+                  <option value={0}>0-shot — sem exemplos</option>
+                </Select>
+              </Field>
+            ) : null}
             <Field label="Disciplina">
               <Select
                 value={subject}
@@ -142,7 +148,7 @@ export function NewRunForm({
         <Field
           label="Quantidade de questões"
           hint={
-            isMmlu
+            hasSubjects
               ? `Amostra de ${clamp(questionCount, available)} de ${available} disponíveis, distribuída entre as disciplinas selecionadas.`
               : `As ${clamp(questionCount, available)} primeiras de ${available} disponíveis, na ordem do dataset.`
           }

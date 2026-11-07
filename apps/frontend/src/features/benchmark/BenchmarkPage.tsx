@@ -45,7 +45,7 @@ export function BenchmarkPage(): JSX.Element {
       <div className={styles.header}>
         <h1 className={styles.title}>BenchMark</h1>
         <p className={styles.subtitle}>
-          Compare inferência simples e Ralph Loop em questões de vestibulares ou do MMLU, com
+          Compare inferência simples e Ralph Loop em questões de Vestibulares, MMLU ou GPQA, com
           avaliação automática pelo gabarito.
         </p>
       </div>
@@ -63,6 +63,7 @@ export function BenchmarkPage(): JSX.Element {
             >
               <option value="vestibular">Vestibulares brasileiros</option>
               <option value="mmlu">MMLU</option>
+              <option value="gpqa">GPQA Diamond</option>
             </Select>
           </Field>
           {dataset.status === 'success' ? (

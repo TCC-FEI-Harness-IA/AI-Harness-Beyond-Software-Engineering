@@ -5,7 +5,7 @@ import type { BenchmarkQuestionStatus, BenchmarkSessionStatus } from '../enums/b
 import type { ModelProvider } from '../enums/modelProvider'
 import type { BenchmarkInferenceMode } from './benchmarkDetails'
 
-export type BenchmarkDatasetId = 'vestibular' | 'mmlu'
+export type BenchmarkDatasetId = 'vestibular' | 'mmlu' | 'gpqa'
 
 export interface BenchmarkDefinition {
   dataset: BenchmarkDatasetId
