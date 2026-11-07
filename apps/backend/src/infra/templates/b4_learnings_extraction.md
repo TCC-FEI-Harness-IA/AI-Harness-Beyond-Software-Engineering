@@ -48,6 +48,8 @@ Record **exclusively concrete facts about the content of the problem**. Each lea
 sentence with two parts: the **compact fact** and a **brief explanation** (the reason, property or
 formula that supports it, in a few words). Do not copy the complete resolution: no step-by-step,
 intermediate calculations or excerpts transcribed from the result.
+Do not omit a useful intermediate result merely because it is intermediate: keep its compact fact
+and supported reason, rather than the calculation trace.
 
 - **Values:** preserve the quantity (what the value measures and what it refers to), the value, the
   unit of measurement and the relevant conditions (the hypotheses, data and approximations under
@@ -55,6 +57,26 @@ intermediate calculations or excerpts transcribed from the result.
 - **Classifications:** identify the statement, option or item classified, its classification (true
   or false, correct or incorrect, satisfies or does not satisfy the condition) and a brief reason.
 - **Relations:** preserve the formula or relation and the hypotheses needed for it to hold.
+
+For every fact, retain every condition needed for it to hold: name the object, the quantity and
+its unit, the sign and reference frame, the spatial reference (distance measured from which object)
+or temporal reference, and all relevant hypotheses. A result "under constant pressure" must retain
+that condition. Facts about different objects or hypotheses remain distinct even when their
+numerical values coincide. Do not silently swap a reference, object, unit or condition.
+
+Preserve whether the result is **exact or approximate**, including its stated precision, bounds
+and qualifiers. Never turn an approximation into an equality or replace "approximately" with
+"exactly". Distinguish the **calculated value** from a **best-fit selection**: if the approved
+result selects the closest available option, record both the calculated value with its qualifier
+and the selected option with its identifier, value or full meaning, and the approved reason for
+the fit. Do not equate different values or claim an exact match that the result did not establish.
+Do not introduce a new selection, conversion or calculation to fill a gap in the approved result.
+
+Only supplied data belong to A.3; B.4 records newly derived conclusions. Do not relabel a literal
+from the question as a discovery or repeat it instead of the new result. A supplied value or
+condition may be repeated **inside a new fact** when needed to identify what the conclusion refers
+to. Keep the compact fact and its brief supported reason; do not invent a missing reason, infer an
+unstated hypothesis or copy the complete reasoning to make a note look self-sufficient.
 
 Write each learning in a self-sufficient way: explicitly name the statement, quantity or object (for
 example, "statement I", "the car's average speed"), never "it", "the value above" or "the case
@@ -67,6 +89,9 @@ the approved result does not contradict.
 
 Before answering, go through the Approved result conclusion by conclusion and check, for each one,
 whether it is already in **Key Learnings**. Every conclusion not yet there must be in your list.
+For each new fact, also check that its referent, unit, sign, reference, hypotheses and exactness or
+approximation survive in the note, and that a best-fit selection remains distinct from its
+calculated value. Do this review in the same call, without reporting the review.
 
 State each fact directly about the problem domain, never as a report about the task or about your
 answer.

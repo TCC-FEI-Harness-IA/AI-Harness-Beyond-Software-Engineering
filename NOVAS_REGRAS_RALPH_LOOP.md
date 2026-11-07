@@ -1653,3 +1653,187 @@ Arquivos principais:
 ### 8.11 Integração com a recuperação e o isolamento de contexto
 
 O diagnóstico estruturado e a classificação operacional `OutputDefectEnum` coexistem: sintaxe inválida com corte confirmado pede uma nova saída completa e concisa; sintaxe inválida sem corte confirmado pede o mesmo conteúdo em JSON válido; contrato inválido pede que o modelo confira e corrija a própria saída. O indicador de comprimento continua independente do contrato, inclusive quando um JSON válido termina com `length`. As correções preservam a janela da mesma fase e tarefa, e toda transição abre uma janela nova. B.4 recebe a tarefa, o resultado aprovado, as saídas recusadas de resolução e verificação e os vereditos como entradas explícitas, separados da memória transversal.
+
+---
+
+## Melhorias do thinking — 02: aprendizados completos e autossuficientes
+
+### Problema, alcance e fontes
+
+Uma tarefa em *fresh context* recebe a descrição e a memória; não recebe automaticamente o
+enunciado original ou as resoluções anteriores. Preservar o número sem seu referente pode manter
+os dígitos e alterar o fato. Uma tabela sem as alternativas também pode impedir a associação
+correta entre o resultado aprovado e a letra a apresentar. Este reforço cobre A.3/B.4, o contrato
+da memória e seu transporte. As extensões anteriores e a transcrição literal do paper são preservadas.
+
+| Etapa | Entradas e fonte dos fatos | Saída e limite |
+|---|---|---|
+| A.3 | Apenas `user_question`, o pedido textual original, em janela própria. | `{"learnings": ["..."]}`: dados fornecidos e determinação solicitada, sem solução ou inferência. |
+| B.4 | `task_description`, `approved_result`, `task_history` e memória `learnings`, em áreas próprias. | Mesmo envelope: fatos novos derivados, com motivo breve e referência explícita; prevalece a conclusão aprovada. |
+| Conversão | Strings da lista já validada pelo parser. | `Learning(content, source_task_id)`, sem interpretação ou alteração do conteúdo. |
+| Acumulação | Anotações de A.3, depois extrações de B.4 em ordem de chegada. | Lista ordenada, sem brancos ou repetições por espaços; eventos auditam aceitos e repetidos. |
+| Renderização | Todos os aprendizados acumulados no momento da chamada. | Lista Markdown em `## Key Learnings` de cada destino B/C, ou aviso de memória vazia. |
+
+O schema existente é suficiente: não se criam campos para alternativas, distâncias, condições ou
+tipos de grandeza. A origem `source_task_id = None` identifica A.3; B.4 conserva o ID da tarefa.
+A nota inteira expressa a relação, sem parser de domínio ou reconstrução posterior de fatos.
+
+### Regras de A.3: dados literais com suas associações
+
+O template percorre o pedido para registrar nomes de objetos, nomenclaturas, siglas e suas
+definições quando fornecidas, símbolos/referentes, valores/unidades, fórmulas/relações, tabelas
+com linhas, colunas e cabeçalhos, listas, identificadores e textos integrais das alternativas,
+condições simultâneas e o que exatamente se solicita determinar. O objetivo solicitado aparece
+como pedido, nunca como resultado estabelecido ou novo critério de aceite.
+
+Cada anotação mantém as associações: código e significado, teste e parâmetro, valor e objeto,
+distância e referência espacial, prazo e evento que inicia a contagem, unidade e grandeza. Uma
+tabela ou lista completa pode permanecer numa nota para conservar seus vínculos. Uma alternativa
+mantém a letra ou número junto de todo o seu texto; a tabela não substitui esse mapeamento.
+
+A.3 não corrige aparentes erros do enunciado, converte unidades, arredonda, classifica dados como
+solução ou os complementa com conhecimento inferido. Siglas sem definição continuam sem definição.
+Redação ambígua conserva a ambiguidade relevante em vez de escolher uma interpretação como dado.
+Qualificadores fornecidos, como “aproximadamente” e “pelo menos”, também são dados.
+
+Antes de responder, a mesma chamada faz uma revisão de completude: confere cada grupo de dados,
+suas associações, condições simultâneas e determinação pedida contra as notas propostas, para
+restaurar o que seria perdido no contexto seguinte. O modelo retorna somente o envelope JSON;
+não há chamada adicional de revisão. Essa é uma obrigação do prompt, sem detector semântico no parser.
+
+### Regras de B.4: conclusões utilizáveis sem o histórico
+
+Cada fato novo útil leva um motivo breve sustentado pelo resultado: objeto, grandeza, valor/unidade,
+sinal e referencial, referência espacial ou temporal, condições, hipóteses e caráter exato ou
+aproximado. Resultados novos simples ou intermediários úteis não podem ser omitidos por parecerem
+óbvios. Isso não autoriza copiar a resolução: preserva-se o fato e seu motivo, sem o passo a passo.
+
+Um valor calculado e uma opção escolhida por melhor ajuste são fatos diferentes. B.4 conserva o
+valor e sua qualificação e, quando a escolha já foi aprovada, registra a opção com identificador,
+valor/significado e motivo do ajuste. Não cria escolha, conversão ou cálculo para preencher lacunas,
+não inventa motivo ou hipótese ausentes e não converte aproximação em igualdade.
+
+Dados fornecidos pertencem a A.3; B.4 não os apresenta como descoberta nem os repete no lugar de
+uma conclusão nova. Pode repetir um dado dentro de um fato novo para explicitar seu referente.
+Tentativa rejeitada continua no histórico delimitado, mas sua conclusão refutada não vira fato
+vigente. Instruções, critérios, vereditos, relatos das tentativas e raciocínio integral ficam fora
+da memória. Lista vazia continua válida quando não há fato novo ou todos já foram registrados.
+Não há revisão ou substituição retroativa de conclusões de tarefas já aprovadas nesta etapa.
+
+### Exemplos de anotação
+
+**Pergunta aberta.** “SLA significa Acordo de Nível de Serviço. A Bomba Alfa entrega 12 L/min;
+a Bomba Alfa II, 8 L/min. O relatório SLR vence 2 dias após o ensaio. Determine o volume em litros
+entregue pela Bomba Alfa em 3 min, mantendo vazão constante.” A.3 registra a definição de SLA,
+ambas as associações bomba–vazão, o relatório SLR com seu prazo contado após o ensaio, e o volume
+solicitado com objeto, intervalo, unidade e condição. Não inventa expansão de SLR. Apenas “SLA”,
+“12”, “8” ou “2 dias” perderia a definição, as bombas ou o evento de referência. Após o cálculo
+aprovado, B.4 pode registrar “O volume da Bomba Alfa em 3 min é 36 L sob vazão constante:
+V = vazão × tempo.” Esse resultado não pertence a A.3.
+
+**Tabela e alternativas.** Para a tabela `1-Cálcio, 2-Cloreto, 3-Turbidez, 4-Coliformes totais,
+5-Sólidos sedimentáveis` e alternativas `A) 1, B) 2, C) 3, D) 4, E) 5`, A.3 registra as duas
+associações completas: teste–parâmetro e letra–código. Se o resultado aprovado identifica `1-Cálcio`,
+C.3 recebe na área separada o mapeamento `A) 1`. O teste verifica a presença desse mapeamento no
+prompt; a resposta final do fake não constitui prova de que um LLM real escolherá sempre a letra certa.
+
+**Referência espacial.** “A imagem intermediária está a 130 mm da objetiva” conserva `da objetiva`.
+Trocar por `da ocular` altera o fato mesmo mantendo o número e a unidade. No teste, uma tentativa
+com a referência errada é rejeitada: seu texto só aparece nas entradas explícitas da própria
+tarefa e na auditoria; não entra na memória nem nos resultados aprovados enviados a C.1/C.3.
+
+**Hipótese.** Um gás A ideal aquecido de 300 K para 600 K sob pressão constante pode ter como
+conclusão aprovada “Sob pressão constante, o volume do gás A ideal dobra: V/T constante.” Para
+um gás B ideal no recipiente rígido, “Em recipiente rígido, o volume do gás B ideal permanece
+constante: a rigidez fixa o volume.” As condições e os objetos não são removidos ou unificados.
+
+**Aproximação e ajuste.** No cenário sintético de lentes delgadas, imagem a 130 mm da objetiva e
+focal de 34,5 mm levam ao resultado roteirizado `p = (1/34,5 − 1/130)⁻¹ mm ≈ 47 mm` para a distância
+do objeto à objetiva. A opção `A) 44 mm`, diante de `B) 60 mm`, é registrada separadamente como
+melhor ajuste aprovado, com diferença aproximada de 3 mm. Não se registra `47 = 44`, nem se troca
+“aproximadamente 47 mm” por “exatamente 44 mm”. Esse cenário exercita transporte, sem avaliação
+semântica de um modelo de óptica.
+
+### Memória, destinos e auditoria
+
+`LearningsMemory` já satisfazia a preservação programática, portanto sua lógica permanece. A
+comparação normaliza somente espaços: conserva o primeiro conteúdo literal, sua origem e a ordem
+de inserção. Não ignora caixa nem interpreta equivalência física ou lógica. `A` e `a`, `m` e `mm`,
+objetiva e ocular, objetos diferentes, hipóteses diferentes e “aproximadamente” versus “exatamente”
+permanecem distintos. Duplicatas em lotes posteriores não reatribuem a origem da primeira nota.
+Notas multilinha mantêm suas associações; a normalização usada para comparar não reescreve o texto.
+
+| Destino | Memória recebida e uso permitido |
+|---|---|
+| B.1 | A.3 e B.4 anteriores à tarefa, para apoiar sua resolução. Inclui primeira tarefa, retentativas e tarefas adicionais. |
+| B.2 | A mesma memória anterior, somente referência para dados, nunca novos critérios. |
+| B.4 | Memória anterior à própria extração, para registrar novidades sem repetir dados ou conclusões existentes. |
+| C.1 | Toda a memória disponível, separada dos resultados; não conta como cobertura dos critérios. |
+| C.2 | Toda a memória disponível, para apoiar descrições autossuficientes das novas tarefas. |
+| C.3 | Toda a memória disponível, para conferir dados, inclusive letras de alternativas; não substitui evidência nos resultados aprovados. |
+
+O orquestrador já entregava a variável `learnings` aos seis destinos e mantém esse transporte.
+`learn` registra aceitos e repetidos descartados; as mensagens persistidas mantêm o conteúdo dos
+eventos. Listas vazias não alteram a memória. Os resultados armazenados continuam sendo somente
+os resultados aprovados em B.3; nenhuma nota é anexada como evidência. A extração de B.4 conserva
+histórico delimitado da própria tarefa, sem restaurar conversas de outras fases.
+
+### Implementação, TDD e integração
+
+A branch `feature/thinking-02-aprendizados`, criada a partir de `945f7fe`, utiliza a worktree
+`/private/tmp/ai-harness-thinking-02`. As alterações de comportamento estão nos dois templates
+reais em inglês e Markdown, preservando os envelopes JSON. As docstrings de `Learning`, da
+interface/memória e da conversão no caso de uso explicitam a preservação do conteúdo e da origem;
+nenhum schema ou algoritmo de transporte/deduplicação precisou mudar.
+
+Foram adicionados três arquivos próprios, sem modificar helpers/contratos compartilhados:
+
+- `apps/backend/tests/infra/providers/test_learnings_annotation_contract.py`: oito casos verificam
+  obrigações nos templates efetivamente renderizados. Antes da implementação, os oito falharam por
+  instruções ausentes; após o reforço, passaram.
+- `apps/backend/tests/application/usecases/test_ralph_learnings_self_contained_integration.py`:
+  quatro cenários verificam as notas em B.1/B.2/B.4/C.1/C.2/C.3, tarefas adicionais, retentativa,
+  referências, hipóteses, aproximações, origem, ordem, auditoria e separação dos resultados.
+- `apps/backend/tests/domain/services/test_learnings_memory_associations.py`: sete casos verificam
+  distinções de significado, espaços, origem, listas vazias e preservação de conteúdo multilinha.
+
+Na rodada vermelha válida, **8 testes falharam e 11 passaram**; os 11 já confirmavam as garantias
+programáticas existentes. Depois da implementação, a rodada pertinente, incluindo os testes
+existentes de extração, memória, escopo/suficiência e conteúdo dos templates, passou com **91 testes**.
+
+Não há dependência de integração com as etapas 01/03: a recuperação integral de saídas, os
+providers, os fakes, o planejamento, os validadores e seus contratos funcionais não foram alterados.
+As mudanças comuns em documentação são acréscimos: ao integrar branches, preservar também as
+seções das outras frentes. A transcrição literal do paper não deve sofrer alterações.
+
+### Limites da evidência e generalidade
+
+As fixtures completas são saídas roteirizadas de A.3/B.4. Os testes demonstram contrato de prompt
+e preservação/transporte dos fatos extraídos, não completude universal, correção de julgamento,
+ganho de acurácia ou adequação semântica de um modelo real. O parser continua validando apenas
+estrutura e contrato; não detecta uma omissão ou um referente incorreto dentro de uma string válida.
+Nenhuma chamada real paga foi realizada. Uma avaliação semântica antes/depois ainda exigiria
+execuções controladas com um modelo real, prompts auditados e análise das omissões/associações.
+
+O núcleo continua recebendo um pedido textual genérico. Não há consulta a `question.options`,
+gabaritos, IDs de questões ou campos especializados, nem parser de provas ou injeção programática
+de alternativas. Os exemplos de prova são casos de teste/documentação; as instruções de extração
+tratam relações gerais presentes também em perguntas abertas.
+
+### Verificações do workspace
+
+Na pasta `apps/backend`, executados com o ambiente `.venv` já instalado no checkout de origem:
+
+- `pytest --cov=src --cov-report=term-missing --cov-fail-under=100`: **2.053 testes passaram** em
+  1.330,43 s (22 min 10 s), com **100,00% de cobertura**, incluindo branches: 5.158 statements e
+  856 branches, nenhum ausente. A bateria de 270 questões usa `httpx.MockTransport` e persiste
+  540 sessões simuladas; não é uma avaliação semântica com modelo real.
+- `flake8 src tests`: **falhou com cinco avisos preexistentes**, reproduzidos também no checkout
+  de origem em `945f7fe`: E501 em `src/domain/services/benchmark_question_selector.py:63`,
+  `src/infra/routes/v1/benchmark/dtos/benchmark_run_input_dto.py:17` e
+  `tests/domain/services/test_benchmark_question_selector.py:91,103`; W391 em
+  `tests/infra/routes/test_benchmark_router.py:499`. Esses arquivos não foram alterados, para manter
+  o escopo de 02. O lint de todos os arquivos Python alterados/adicionados **passou**.
+- `git diff --check`: **passou**. A transcrição literal em `RALPH_LOOP_ADAPTADO.md` foi comparada
+  byte a byte com `945f7fe` e permaneceu idêntica; o conteúdo anterior completo de
+  `NOVAS_REGRAS_RALPH_LOOP.md` permanece como prefixo integral do arquivo atualizado.

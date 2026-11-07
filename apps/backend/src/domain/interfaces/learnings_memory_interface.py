@@ -11,6 +11,9 @@ class ILearningsMemory(ABC):
     def append(self, learnings: Sequence[Learning]) -> tuple[Learning, ...]:
         """Acumula novos aprendizados extraídos por A.3 ou B.4, descartando os já registrados.
 
+        Compara apenas normalizando espaços. Preserva o primeiro texto, sua origem e a ordem;
+        não interpreta equivalências de símbolos, valores, unidades, referentes ou condições.
+
         Args:
             learnings: Aprendizados a acumular.
 

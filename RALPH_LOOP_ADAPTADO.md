@@ -53,6 +53,10 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 
 ### Aprendizados Pontuais em todo prompt das fases B e C
 
+O reforço de completude e autossuficiência de A.3/B.4 está descrito na extensão
+**Aprendizados completos e autossuficientes (thinking — 02)** abaixo e na seção de mesmo número em
+[`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
 **Problema observado.** Na versão do paper (e na primeira versão de A.3), os aprendizados só chegavam ao contexto de B.1, como um bloco no início da janela da tarefa. O validador de tarefa (B.2), a extração de aprendizados (B.4) e toda a fase C não os recebiam. Nos testes, isso fez dados do enunciado se perderem ao longo do *thinking*: B.2 julgava um resultado sem saber quais eram as alternativas, C.2 criava tarefas sem os dados de que elas precisavam e C.3 não tinha como associar o valor obtido à letra da alternativa.
 
 **Regra.** Todo template enviado ao modelo nas fases B e C tem a área **Aprendizados Pontuais**, preenchida com **todos** os aprendizados acumulados até o momento da chamada: as anotações de A.3 seguidas dos aprendizados de B.4, na ordem em que surgiram.
@@ -164,6 +168,41 @@ Os únicos reparos locais são os que não alteram conteúdo: a extração de de
 - **Isolamento de contexto:** B.4 roda numa janela própria e não herda a conversa de B.1. O histórico da tarefa exigido pelo paper continua disponível, mas como **dado delimitado** do template, separado da memória de aprendizados. O resultado aprovado é o mesmo que B.3 armazenou; B.4 só o lê. Os aprendizados continuam fora dos resultados armazenados, e nenhuma resposta completa passa de uma tarefa para outra.
 
 > *Tarefa* + *Resultado Aprovado* + *Histórico da Tarefa* + *Aprendizados Pontuais* + *Template B.4* → *Novos Aprendizados Pontuais*
+
+### Aprendizados completos e autossuficientes (thinking — 02)
+
+Este reforço atua nos templates A.3 e B.4. As chamadas, os envelopes JSON, a memória, a recuperação
+de saídas e as políticas das outras fases conservam seus contratos.
+
+- **A.3 copia dados fornecidos:** nomes e nomenclaturas, objetos, siglas e definições explicitadas,
+  símbolos e referentes, valores e unidades, fórmulas, relações, tabelas completas, listas,
+  identificadores e textos integrais das alternativas, condições simultâneas e a determinação
+  solicitada. A revisão de completude ocorre na mesma chamada, antes da resposta JSON.
+- **Associações fazem parte do dado:** código–significado, teste–parâmetro, valor–objeto,
+  distância–referência espacial, prazo–evento, unidade–grandeza. Preservar só o número ou a sigla
+  não basta. A.3 não corrige dados aparentes, converte unidades, arredonda, interpreta ambiguidades,
+  expande siglas não definidas ou acrescenta conhecimento inferido.
+- **B.4 registra conclusões novas:** fato compacto e motivo breve, com objeto, grandeza, unidade,
+  sinal/referencial, hipóteses, condições e caráter exato ou aproximado. Resultado calculado e
+  alternativa escolhida por melhor ajuste permanecem distintos; valores diferentes não viram uma
+  igualdade. Resultados simples ou intermediários úteis também são registrados.
+- **Papéis separados:** dados fornecidos entram por A.3; conclusões derivadas entram por B.4.
+  Uma conclusão nova pode repetir um dado necessário para identificar seu referente. Não entram
+  critérios, instruções, vereditos, raciocínio integral nem conclusões refutadas de tentativas rejeitadas.
+- **Transporte:** todos os aprendizados, na ordem de extração, chegam à área `## Key Learnings`
+  de B.1, B.2, B.4, C.1, C.2 e C.3, inclusive nas tarefas adicionais. Não contam como cobertura de
+  critérios nem substituem evidência nos resultados aprovados.
+- **Memória:** `Learning(content, source_task_id)` mantém o contrato. A origem é `None` em A.3
+  e o identificador da tarefa em B.4. A deduplicação compara apenas espaços; preserva o primeiro
+  texto, sua origem e a ordem. Diferenças de caixa, unidades, referentes e hipóteses permanecem.
+  Listas vazias e auditoria dos aprendizados aceitos e repetidos continuam funcionando.
+
+O núcleo continua recebendo somente o pedido textual genérico; não consulta campos de alternativas,
+identificadores de questões ou gabaritos do benchmark. Os testes de contrato usam templates reais;
+os testes de transporte usam extrações roteirizadas e verificam preservação programática, sem
+demonstrar que um modelo real sempre extrairá todos os dados. Exemplos e validação estão em
+**Melhorias do thinking — 02: aprendizados completos e autossuficientes**, em
+[`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
 
 ### Reforço da separação entre escopo, suficiência e apresentação
 
