@@ -12,6 +12,7 @@ import type {
 import { GPQA_SUBSET_LABELS } from '@/domain/services/benchmarkDefinition'
 import type { BenchmarkRunParams } from '@/api/benchmarkApi'
 import { formatTokens } from '@/domain/services/formatters'
+import { benchmarkSubjectLabel } from '@/domain/services/benchmarkDefinition'
 import { RunConfigBar } from '@/features/home/RunConfigBar'
 import { useRunConfig } from '@/state/RunConfigContext'
 import styles from './NewRunForm.module.css'
@@ -30,21 +31,22 @@ export interface NewRunFormProps {
     maxParallel: number,
     options?: Pick<
       BenchmarkRunParams,
-      'benchmark' | 'fewShot' | 'subjects' | 'sampleSeed' | 'gpqaSubset'
+      'benchmark' | 'fewShot' | 'subjects' | 'sampleSeed' | 'gpqaSubset' | 'subjectCounts'
     >,
   ) => void
 }
 
 // Os campos guardam o texto digitado (apagar para digitar outro número não pode virar "1" no meio
 // do caminho); o valor efetivo é limitado ao intervalo válido no blur e no envio.
-function clamp(raw: string, max: number): number {
+function clamp(raw: string, max: number, min = MIN_VALUE): number {
   const value = Number(raw)
-  if (raw.trim() === '' || !Number.isFinite(value)) return MIN_VALUE
-  return Math.min(max, Math.max(MIN_VALUE, Math.trunc(value)))
+  if (raw.trim() === '' || !Number.isFinite(value)) return min
+  return Math.min(max, Math.max(min, Math.trunc(value)))
 }
 
 /**
- * Parâmetros de uma bateria: quantidade, paralelismo e, nos datasets científicos, disciplina e semente.
+ * Parâmetros de uma bateria: quantidade total ou por matéria nos vestibulares, paralelismo e,
+ * nos datasets científicos, disciplina e semente.
  * Modelo, provedor, limite de tokens por sessão e temperatura são os mesmos da tela inicial.
  */
 export function NewRunForm({
@@ -64,6 +66,16 @@ export function NewRunForm({
   const [subject, setSubject] = useState('')
   const [fewShot, setFewShot] = useState<0 | 5>(5)
   const [sampleSeed, setSampleSeed] = useState('42')
+  const [selectionMode, setSelectionMode] = useState('total')
+  const [subjectQuantities, setSubjectQuantities] = useState<Record<string, string>>({})
+  const perSubject = !hasSubjects && selectionMode === 'subject'
+  const subjectCounts = Object.fromEntries(
+    (dataset.subjects ?? []).map((item) => [
+      item.id,
+      clamp(subjectQuantities[item.id] ?? '0', item.question_count, 0),
+    ]),
+  )
+  const subjectTotal = Object.values(subjectCounts).reduce((sum, count) => sum + count, 0)
   const available = subject
     ? (dataset.subjects?.find((item) => item.id === subject)?.question_count ?? 0)
     : dataset.question_ids.length
@@ -76,8 +88,8 @@ export function NewRunForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
-    if (tokensTooHigh) return
-    const count = clamp(questionCount, available)
+    if (tokensTooHigh || (perSubject && subjectTotal === 0)) return
+    const count = perSubject ? subjectTotal : clamp(questionCount, available)
     const parallel = clamp(maxParallel, dataset.max_parallel_limit)
     if (hasSubjects) {
       const seed = Math.min(4294967295, Math.max(0, Math.trunc(Number(sampleSeed) || 0)))
@@ -88,6 +100,8 @@ export function NewRunForm({
         subjects: subject ? [subject] : [],
         sampleSeed: seed,
       })
+    } else if (perSubject) {
+      onStart(count, parallel, { subjectCounts })
     } else {
       onStart(count, parallel)
     }
@@ -155,26 +169,77 @@ export function NewRunForm({
           </div>
         </>
       ) : null}
-      <div className={styles.fields}>
-        <Field
-          label="Quantidade de questões"
-          hint={
-            hasSubjects
-              ? `Amostra de ${clamp(questionCount, available)} de ${available} disponíveis, distribuída entre as disciplinas selecionadas.`
-              : `As ${clamp(questionCount, available)} primeiras de ${available} disponíveis, na ordem do dataset.`
-          }
-        >
-          <TextInput
-            type="number"
-            min={MIN_VALUE}
-            max={available}
-            step={1}
-            value={questionCount}
+      {!hasSubjects && (dataset.subjects?.length ?? 0) > 0 ? (
+        <Field label="Seleção de questões">
+          <Select
+            value={selectionMode}
             disabled={disabled}
-            onChange={(event) => setQuestionCount(event.target.value)}
-            onBlur={() => setQuestionCount(String(clamp(questionCount, available)))}
-          />
+            onChange={(event) => setSelectionMode(event.target.value)}
+          >
+            <option value="total">Quantidade total</option>
+            <option value="subject">Por matéria</option>
+          </Select>
         </Field>
+      ) : null}
+      {perSubject ? (
+        <fieldset className={styles.subjects} disabled={disabled}>
+          <legend>Questões por matéria</legend>
+          <p>
+            Use zero para excluir uma matéria. Serão usadas as primeiras questões de cada matéria.
+          </p>
+          <div className={styles.fields}>
+            {dataset.subjects?.map((item) => (
+              <Field
+                key={item.id}
+                label={benchmarkSubjectLabel(item.id)}
+                hint={`Até ${item.question_count} questões disponíveis.`}
+              >
+                <TextInput
+                  type="number"
+                  min={0}
+                  max={item.question_count}
+                  step={1}
+                  value={subjectQuantities[item.id] ?? '0'}
+                  onChange={(event) =>
+                    setSubjectQuantities({ ...subjectQuantities, [item.id]: event.target.value })
+                  }
+                  onBlur={() =>
+                    setSubjectQuantities({
+                      ...subjectQuantities,
+                      [item.id]: String(subjectCounts[item.id]),
+                    })
+                  }
+                />
+              </Field>
+            ))}
+          </div>
+          <p role="status">
+            Total da bateria: {subjectTotal} {subjectTotal === 1 ? 'questão' : 'questões'}.
+          </p>
+        </fieldset>
+      ) : null}
+      <div className={styles.fields}>
+        {!perSubject ? (
+          <Field
+            label="Quantidade de questões"
+            hint={
+              hasSubjects
+                ? `Amostra de ${clamp(questionCount, available)} de ${available} disponíveis, distribuída entre as disciplinas selecionadas.`
+                : `As ${clamp(questionCount, available)} primeiras de ${available} disponíveis, na ordem do dataset.`
+            }
+          >
+            <TextInput
+              type="number"
+              min={MIN_VALUE}
+              max={available}
+              step={1}
+              value={questionCount}
+              disabled={disabled}
+              onChange={(event) => setQuestionCount(event.target.value)}
+              onBlur={() => setQuestionCount(String(clamp(questionCount, available)))}
+            />
+          </Field>
+        ) : null}
         <Field
           label="Questões em paralelo"
           hint={`Até ${dataset.max_parallel_limit}. Cada questão roda a inferência simples e depois o Ralph.`}
@@ -203,7 +268,10 @@ export function NewRunForm({
       ) : null}
 
       <div className={styles.actions}>
-        <Button type="submit" disabled={disabled || tokensTooHigh}>
+        <Button
+          type="submit"
+          disabled={disabled || tokensTooHigh || (perSubject && subjectTotal === 0)}
+        >
           Iniciar bateria
         </Button>
       </div>

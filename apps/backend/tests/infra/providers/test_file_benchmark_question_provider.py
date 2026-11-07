@@ -144,3 +144,13 @@ def test_instrucao_vazia_e_recusada(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="vazia"):
         _provider(tmp_path, instrucao).answer_instruction()
+
+
+def test_materias_do_corpus_incluem_filosofia_e_sociologia_como_uma_categoria() -> None:
+    from collections import Counter
+
+    questions = FileBenchmarkQuestionProvider(Settings(), logging.getLogger("teste")).list_questions()
+    assert Counter(q.subject for q in questions) == {
+        "HISTORIA": 30, "GEOGRAFIA": 30, "FILOSOFIA_SOCIOLOGIA": 30, "BIOLOGIA": 30,
+        "MATEMATICA": 50, "QUIMICA": 50, "FISICA": 50,
+    }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { benchmarkLabel, LEGACY_BENCHMARK } from './benchmarkDefinition'
+import { benchmarkLabel, benchmarkSubjectLabel, LEGACY_BENCHMARK } from './benchmarkDefinition'
 
 describe('identificação do benchmark', () => {
   it('identifica vestibulares e protocolos MMLU separadamente', () => {
@@ -26,4 +26,17 @@ it.each([
   expect(benchmarkLabel({ ...LEGACY_BENCHMARK, dataset: 'gpqa', split })).toBe(
     `GPQA ${label} · generativo · 0-shot`,
   )
+})
+
+it.each([
+  ['HISTORIA', 'História'],
+  ['GEOGRAFIA', 'Geografia'],
+  ['FILOSOFIA_SOCIOLOGIA', 'Filosofia e Sociologia'],
+  ['BIOLOGIA', 'Biologia'],
+  ['MATEMATICA', 'Matemática'],
+  ['QUIMICA', 'Química'],
+  ['FISICA', 'Física'],
+  ['college_physics', 'college physics'],
+])('apresenta o nome da matéria %s', (id, label) => {
+  expect(benchmarkSubjectLabel(id)).toBe(label)
 })

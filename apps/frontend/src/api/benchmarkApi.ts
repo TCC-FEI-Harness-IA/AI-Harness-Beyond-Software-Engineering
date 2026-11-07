@@ -29,6 +29,7 @@ export interface BenchmarkRunParams {
   subjects?: string[]
   sampleSeed?: number
   gpqaSubset?: GPQASubset
+  subjectCounts?: Record<string, number>
 }
 
 export function getBenchmarkDataset(
@@ -91,10 +92,25 @@ export function buildBenchmarkRunPayload({
   subjects = [],
   sampleSeed = 42,
   gpqaSubset = 'diamond',
+  subjectCounts,
 }: BenchmarkRunParams): BenchmarkRunInput {
   requirePositiveInteger(questionCount, 'question_count')
   requirePositiveInteger(maxParallel, 'max_parallel')
   requirePositiveInteger(config.maxTokens, 'max_tokens')
+  if (subjectCounts !== undefined) {
+    if (benchmark !== 'vestibular') {
+      throw new ContractError('subject_counts é exclusivo de Vestibulares.')
+    }
+    const counts = Object.values(subjectCounts)
+    if (
+      counts.some((count) => !Number.isInteger(count) || count < 0) ||
+      counts.reduce((sum, count) => sum + count, 0) !== questionCount
+    ) {
+      throw new ContractError(
+        'subject_counts deve conter inteiros não negativos cuja soma seja question_count.',
+      )
+    }
+  }
   if (config.temperature < 0 || config.temperature > 1) {
     throw new ContractError(`temperature precisa estar entre 0 e 1, recebeu: ${config.temperature}`)
   }
@@ -112,6 +128,7 @@ export function buildBenchmarkRunPayload({
 
   return {
     ...(benchmark === 'gpqa' ? { gpqa_subset: gpqaSubset } : {}),
+    ...(subjectCounts === undefined ? {} : { subject_counts: { ...subjectCounts } }),
     ...(benchmark !== 'vestibular'
       ? {
           benchmark,

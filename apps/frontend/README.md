@@ -47,7 +47,12 @@ O front fala com o backend por dois transportes:
 A página **BenchMark** (`/benchmark`) inicia uma bateria (quantidade de questões, questões em paralelo e a
 configuração de modelo da home), acompanha o progresso pelos frames do WebSocket e lista as baterias; o
 detalhe (`/benchmark/:id`) compara os fluxos e leva ao chat de cada sessão (`/benchmark/:id/sessao/:sessionId`).
-O seletor **Benchmark** alterna entre vestibulares brasileiros (padrão) e **MMLU**. No MMLU, escolha o
+Em Vestibulares, **Seleção de questões → Por matéria** mostra as sete matérias e seus limites.
+Informe quantas questões deseja em cada uma, usando zero para excluí-la. O total é calculado
+automaticamente, e o botão de início só é habilitado quando pelo menos uma questão está selecionada.
+A bateria usa as primeiras questões de cada matéria na ordem do dataset. A opção **Quantidade total**
+continua disponível. O detalhe da bateria mostra a distribuição por matéria persistida nas questões.
+O seletor **Benchmark** alterna entre vestibulares brasileiros (padrão), **MMLU** e **GPQA Diamond**. No MMLU, escolha o
 protocolo generativo 0-shot ou 5-shot, uma disciplina ou todas, e a semente da amostra. O formulário inicia
 com até 285 questões de teste, e pode executar o conjunto inteiro. O histórico e o detalhe identificam o
 dataset e o protocolo; o detalhe MMLU também mostra disciplinas, semente e revisão. A tabela pagina

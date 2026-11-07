@@ -103,6 +103,7 @@ export interface BenchmarkRunInput {
   few_shot?: 0 | 5
   subjects?: string[]
   sample_seed?: number
+  subject_counts?: Record<string, number>
   question_count: number
   max_parallel: number
   llm_model_config: {

@@ -759,6 +759,34 @@ em `error`. A acurácia de um fluxo é `correct / executed`.
    ```
 
    `question_count` (opcional, `>= 1`) executa as primeiras questões do dataset; ausente, executa todas.
+   Em Vestibulares, a opção **Por matéria** permite definir uma quantidade para cada disciplina,
+   com total calculado automaticamente. Na API, envie `subject_counts`, por exemplo:
+
+   ```json
+   {
+     "subject_counts": { "HISTORIA": 5, "FILOSOFIA_SOCIOLOGIA": 3, "MATEMATICA": 10 },
+     "question_count": 18,
+     "max_parallel": 5,
+     "llm_model_config": {
+       "provider": "open_router",
+       "provider_config": { "model_name": "deepseek/deepseek-v4-flash-0731" },
+       "max_tokens": 4096,
+       "temperature": 0
+     }
+   }
+   ```
+
+   As chaves são os IDs de matérias de `GET /v1/benchmark/questions`: `HISTORIA`, `GEOGRAFIA`,
+   `FILOSOFIA_SOCIOLOGIA`, `BIOLOGIA`, `MATEMATICA`, `QUIMICA` e `FISICA`. As cotas são inteiros de
+   zero até a quantidade disponível em cada matéria. Matérias omitidas ou com zero ficam fora da
+   bateria; a soma deve ser positiva. Filosofia e Sociologia constituem uma única categoria.
+   São usadas as primeiras questões de cada matéria, mantendo a ordem do dataset.
+   `question_count` pode ser omitido nesse modo; quando enviado, deve coincidir com a soma das cotas.
+   Matérias desconhecidas, cotas acima do disponível, totais divergentes e cotas em MMLU/GPQA são
+   recusados antes de criar a bateria ou chamar o modelo. Sem `subject_counts`, a seleção por total
+   mantém o comportamento anterior. A distribuição escolhida fica registrada em `questions[].subject`
+   e as matérias com cota positiva em `benchmark.subjects`.
+
    Para MMLU, envie `benchmark: "mmlu"`, `few_shot: 0` ou `5`, `subjects: []` (todas) ou uma lista de
    disciplinas e `sample_seed` (padrão 42). A quantidade passa a representar uma amostra distribuída entre
    as disciplinas selecionadas. A bateria persiste esse protocolo no campo `benchmark`.
@@ -864,6 +892,7 @@ andamento é cancelado e o desfecho anterior permanece. Só uma reexecução por
 
 Aceita `?benchmark=mmlu` para descrever MMLU ou `?benchmark=gpqa` para GPQA (Diamond por padrão; `gpqa_subset=main` ou `extended` escolhe as outras variantes); sem o parâmetro, preserva vestibulares. A resposta
 também traz `benchmark` (proveniência) e `subjects` (identificador e quantidade de questões por disciplina).
+Em Vestibulares, `subjects` informa os limites das sete matérias para configurar `subject_counts`.
 
 Questões do dataset, na ordem de execução, e os limites de paralelismo e de `max_tokens` (tokens por
 sessão, igual a `LLM_MAX_TOKENS`):
