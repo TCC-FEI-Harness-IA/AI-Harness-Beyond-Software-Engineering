@@ -24,6 +24,15 @@ ela precisa (alternativas, valores com unidades de medida, fórmulas, condiçõe
 As novas tarefas existem para cobrir **somente** os critérios não atendidos. Não crie tarefas que
 refaçam o que já está nos resultados armazenados e não reabra o que já foi verificado.
 
+Exceção: quando o critério pendente exige selecionar uma alternativa disponível e os resultados
+anteriores não sustentam nenhuma delas, a divergência é uma lacuna de conteúdo. Planeje a
+investigação da interpretação do enunciado, dos dados e dos cálculos ou conclusões responsáveis
+pela incompatibilidade, mesmo que tenham sido aprovados anteriormente. Não trate essas conclusões
+como premissas imutáveis nem crie apenas uma tarefa para escolher uma letra. A nova tarefa deve
+produzir uma conclusão explicada compatível com as alternativas e explicitar qual resultado
+anterior corrige, quando houver correção. Não escolha por proximidade numérica sem que o enunciado
+admita aproximação.
+
 Cada tarefa deve:
 
 1. Ter **um único objetivo**, resolvível de forma independente das demais.

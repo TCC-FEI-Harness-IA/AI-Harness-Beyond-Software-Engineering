@@ -151,6 +151,67 @@ async def test_analise_conjunta_ausente_exige_c2_e_resultado_explicado_antes_de_
     assert scenario.session.final_answer == "D"
 
 
+@pytest.mark.parametrize(("question", "inconsistent", "investigation", "corrected", "letter"), [
+    (
+        "A urna A tem P(preta)=20%. A urna B tem 4 pretas e P(preta)=25%. "
+        "Quantas brancas adicionar para P(voucher)<=1%? A) 20 B) 60 C) 64 D) 68 E) 80.",
+        "P(voucher)=0,20*4/(4+x)<=0,01; x>=76. Nenhuma alternativa corresponde ao mínimo 76.",
+        "Investigue se o total inicial da urna B foi considerado na modelagem e determine "
+        "o mínimo de brancas adicionais, explicando a correção e comparando com as opções.",
+        "Correção de T1: 4/0,25=16 bolinhas iniciais, incluindo 12 brancas. "
+        "O denominador 4+x estava incorreto: 0,20*4/(16+x)<=0,01 implica x>=64. "
+        "O mínimo é 64, correspondente a C.",
+        "C",
+    ),
+    (
+        "Pacote básico: 2.000 gemas e 100.000 moedas. O especial terá 6.000 gemas a mais "
+        "que dois básicos. Quantas moedas inserir para manter a proporção? "
+        "A) 50.000 B) 100.000 C) 200.000 D) 300.000 E) 400.000.",
+        "O especial tem 10.000 gemas e deve conter 500.000 moedas. "
+        "Nenhuma alternativa corresponde ao total calculado.",
+        "Investigue a diferença entre o total de moedas do especial e o acréscimo sobre "
+        "o pacote básico, determinando a quantidade pedida e explicando a correção.",
+        "Correção de T1: 500.000 é o total de moedas, mas falta determinar o acréscimo "
+        "sobre as 100.000 do básico: 500.000-100.000=400.000 moedas adicionais, alternativa E.",
+        "E",
+    ),
+], ids=["urnas_sem_bolinhas_iniciais", "moedas_total_em_vez_de_acrescimo"])
+async def test_resultado_sem_alternativa_sustentada_encaminha_ac2_a_investigacao_em_c2(
+    question: str, inconsistent: str, investigation: str, corrected: str, letter: str,
+) -> None:
+    selection = "Selecionar exatamente uma alternativa disponível, preservando sua letra original."
+    final = f"RESPOSTA_FINAL: {letter}"
+    scenario = _scenario([
+        _criteria("Terminar com RESPOSTA_FINAL: LETRA.", selection),
+        _task("T1", "Determine a quantidade pedida com explicação.", "Cálculo explicado."),
+        aprendizados(question),
+        _result("T1", inconsistent), relatorio(("T1-AC1", True)), aprendizados(inconsistent),
+        relatorio(("AC1", True), ("AC2", False)),
+        _task("T2", investigation, "Investiga a incompatibilidade e explica a correção de T1."),
+        _result("T2", corrected), relatorio(("T2-AC1", True)), aprendizados(corrected),
+        relatorio(("AC1", True), ("AC2", True)), resposta_final(final),
+    ])
+
+    events = await scenario.run(question=question)
+
+    assert [i.phase for i in scenario.session.invocations][6:] == [
+        Phase.C1_GLOBAL_VERIFICATION, Phase.C2_ADDITIONAL_PLANNING,
+        Phase.B1_TASK_RESOLUTION, Phase.B2_TASK_VERIFICATION, Phase.B4_LEARNINGS_EXTRACTION,
+        Phase.C1_GLOBAL_VERIFICATION, Phase.C3_FINAL_ANSWER,
+    ]
+    _isolated_inputs(scenario)
+    c2 = _prompts(scenario, Phase.C2_ADDITIONAL_PLANNING)[0]
+    assert _area(c2, "Critérios gerais ainda não atendidos") == f"- `AC2`: {selection}"
+    assert inconsistent in _area(c2, "Resultados já armazenados")
+    assert question in _area(c2, "Aprendizados Pontuais")
+    assert investigation in _area(_prompts(scenario, Phase.B1_TASK_RESOLUTION)[1], "Tarefa")
+    first, second = _prompts(scenario, Phase.C1_GLOBAL_VERIFICATION)
+    assert corrected not in _area(first, "Resultados armazenados")
+    assert corrected in _area(second, "Resultados armazenados")
+    assert corrected in _area(_prompts(scenario, Phase.C3_FINAL_ANSWER)[0], "Resultados armazenados")
+    assert scenario.session.final_answer == final == events[-1].content
+
+
 @pytest.mark.parametrize(("outside_scope", "scope_criterion"), [
     (False, "Não calcular a massa por colher."),
     (True, "Não calcular a massa por colher."),

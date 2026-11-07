@@ -54,7 +54,20 @@ não a resposta final já formatada:
 - Em questões de múltipla escolha, considere atendidos os critérios de aderência e sustentação pelo
   enunciado quando os resultados apontarem a **alternativa relativamente mais coerente por
   eliminação das demais**, admitindo paráfrases, sínteses ou inferências interpretativas razoáveis
-  sem exigir correspondência 100% literal palavra por palavra.
+  sem exigir correspondência 100% literal palavra por palavra. Essa flexibilidade interpretativa
+  não autoriza aceitar valores matematicamente incompatíveis nem escolher a alternativa de valor
+  mais próximo quando o enunciado não admitir essa aproximação.
+- **Selecionar uma alternativa disponível é um requisito de conteúdo, não apenas de formatação.**
+  Quando os critérios exigirem exatamente uma das alternativas e os resultados não sustentarem
+  nenhuma delas, marque como `met: false` o critério de seleção da alternativa (usando seu
+  identificador real, por exemplo `AC2`), inclua-o em `unmet_criteria_ids` e emita `reproved`.
+  Isso também vale quando os resultados concluírem "nenhuma", apresentarem um valor ausente das
+  opções ou forem incompatíveis com todas elas. Não aprove sob a justificativa de que C.3 poderá
+  escolher uma letra, nem escolha você uma opção aproximada para suprir a lacuna. A divergência
+  deve seguir para C.2 como necessidade de investigar a interpretação, os dados, os cálculos ou
+  as conclusões anteriores, mesmo que tenham sido aprovados individualmente em B.2.
+  Se "nenhuma das anteriores" for o texto de uma alternativa realmente disponível e sustentada,
+  sua seleção pela letra original é válida; isso difere de inventar uma resposta fora das opções.
 - Confira se os resultados armazenados concluíram **até o último passo lógico ou cálculo final pedido
   pela pergunta** (por exemplo: se a pergunta pede o *mês seguinte* ao de uma ultrapassagem, ou a
   *quantidade adicional* a acrescentar, não basta ter apenas o mês da ultrapassagem ou a quantidade
@@ -78,6 +91,11 @@ permanecem referência separada e não substituem essa evidência.
   Reprovar só pela ausência da linha seria incorreto.
 - Aprovar a apresentação enxuta: o pedido é "apenas a letra, sem justificativa" e os resultados
   explicados já sustentam C. As explicações internas não violam o formato final; C.3 pode omiti-las.
+- Reprovar seleção sem suporte: os resultados obtêm 12, mas as alternativas são 2, 4, 6, 8 e
+  10, e o pedido exige selecionar exatamente uma delas. Marque o critério de seleção como
+  `met: false` e encaminhe a inconsistência a C.2. Não declare 10 correto por ser próximo ou por
+  satisfazer apenas parte das condições, nem considere "RESPOSTA_FINAL: NENHUMA" uma formatação
+  possível da resposta exigida.
 - Reprovar conteúdo ausente: o critério exige análise conjunta explícita de três condições e só
   há listas de verificações isoladas. Mesmo que pareça possível escolher ou formatar uma letra,
   falta a análise conjunta exigida. Marque esse critério como não atendido e encaminhe a lacuna a C.2.
