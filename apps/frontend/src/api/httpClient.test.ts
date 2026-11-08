@@ -187,3 +187,37 @@ describe('httpClient.getBlob', () => {
     })
   })
 })
+
+describe('httpClient.upload', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('envia o Blob bruto com o próprio tipo e interpreta a resposta JSON', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(201, JSON.stringify({ id: 'bench_1' })))
+    vi.stubGlobal('fetch', fetchMock)
+    const { httpClient } = await importHttpClient()
+    const zip = new Blob(['PK'], { type: 'application/zip' })
+
+    const result = await httpClient.upload('/importar', zip, (raw) => raw)
+
+    expect(result).toEqual({ id: 'bench_1' })
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('http://localhost:8000/v1/importar')
+    expect(init.method).toBe('POST')
+    expect(init.body).toBe(zip)
+    expect(init.headers).toEqual({ 'Content-Type': 'application/zip' })
+  })
+
+  it('usa application/octet-stream quando o Blob não tem tipo', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(201, '{}'))
+    vi.stubGlobal('fetch', fetchMock)
+    const { httpClient } = await importHttpClient()
+
+    await httpClient.upload('/importar', new Blob(['PK']), (raw) => raw)
+
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit
+    expect(init.headers).toEqual({ 'Content-Type': 'application/octet-stream' })
+  })
+})

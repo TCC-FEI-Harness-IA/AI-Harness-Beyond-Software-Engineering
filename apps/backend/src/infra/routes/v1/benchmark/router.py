@@ -1,12 +1,14 @@
 from typing import Any, AsyncGenerator
 
-from fastapi import APIRouter, HTTPException, Response, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 from starlette.websockets import WebSocketState
 
 from src.domain.errors.benchmark_question_not_rerunnable_error import BenchmarkQuestionNotRerunnableError
 from src.domain.errors.benchmark_session_not_finished_error import BenchmarkSessionNotFinishedError
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
+from src.domain.errors.benchmark_session_import_conflict_error import BenchmarkSessionImportConflictError
+from src.domain.errors.invalid_benchmark_archive_error import InvalidBenchmarkArchiveError
 from src.domain.errors.invalid_benchmark_request_error import InvalidBenchmarkRequestError
 from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
 from src.domain.enums.gpqa_subset_enum import GPQASubsetEnum
@@ -15,6 +17,7 @@ from src.infra.config.settings import Settings
 from src.infra.routes.v1.benchmark.dtos.benchmark_frame_dto import BenchmarkFrameDTO
 from src.infra.routes.v1.benchmark.dtos.benchmark_alias_input_dto import BenchmarkAliasInputDTO
 from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
+from src.infra.services.benchmark_session_archive_codec import MAX_ARCHIVE_BYTES
 from src.infra.startups.benchmark_export_startup import BenchmarkExportStartup
 from src.infra.startups.benchmark_query_startup import BenchmarkQueryStartup
 from src.infra.startups.benchmark_alias_startup import BenchmarkAliasStartup
@@ -65,6 +68,55 @@ async def list_benchmark_sessions() -> dict[str, list[dict[str, Any]]]:
         return {"benchmark_sessions": await BenchmarkQueryStartup().list_benchmark_session_documents()}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post(
+    "/sessions/import",
+    status_code=201,
+    responses={
+        201: {"description": "Bateria importada; devolve o documento dela"},
+        400: {"description": "Arquivo vazio, inválido ou inconsistente"},
+        409: {"description": "A bateria ou alguma das suas sessões já existe"},
+        413: {"description": "Arquivo grande demais"},
+        500: {"description": "Internal Server Error"},
+    },
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {"application/zip": {"schema": {"type": "string", "format": "binary"}}},
+        }
+    },
+)
+async def import_benchmark_session(request: Request) -> dict[str, Any]:
+    """Importa uma bateria completa a partir do ZIP gerado pela exportação (corpo bruto `application/zip`)."""
+    content = await _read_limited_body(request=request, limit=MAX_ARCHIVE_BYTES)
+    if not content:
+        raise HTTPException(status_code=400, detail="Envie o arquivo ZIP no corpo da requisição.")
+    try:
+        return await BenchmarkExportStartup().import_session(content=content)
+    except InvalidBenchmarkArchiveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except BenchmarkSessionImportConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+async def _read_limited_body(request: Request, limit: int) -> bytes:
+    """Lê o corpo da requisição em partes, recusando com 413 o que passa do limite."""
+    declared = request.headers.get("content-length")
+    if declared is not None and declared.isdigit() and int(declared) > limit:
+        raise HTTPException(status_code=413, detail="O arquivo enviado excede o tamanho máximo permitido.")
+    chunks: list[bytes] = []
+    received = 0
+    async for chunk in request.stream():
+        received += len(chunk)
+        if received > limit:
+            raise HTTPException(status_code=413, detail="O arquivo enviado excede o tamanho máximo permitido.")
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 @router.get(
@@ -132,6 +184,37 @@ async def export_ralph_loop_errors(benchmark_session_id: str) -> Response:
     except BenchmarkSessionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (BenchmarkSessionNotFinishedError, NoBenchmarkErrorsToExportError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return Response(
+        content=archive.content,
+        media_type=archive.media_type,
+        headers={"Content-Disposition": f'attachment; filename="{archive.filename}"'},
+    )
+
+
+@router.get(
+    "/sessions/{benchmark_session_id}/export",
+    status_code=200,
+    response_class=Response,
+    responses={
+        200: {"content": {"application/zip": {}}, "description": "ZIP com a bateria completa"},
+        400: {"description": "Bad Request"},
+        404: {"description": "Not Found"},
+        409: {"description": "Bateria em execução"},
+        500: {"description": "Internal Server Error"},
+    },
+)
+async def export_benchmark_session(benchmark_session_id: str) -> Response:
+    """Baixa a bateria encerrada completa: bateria, enunciados, gabaritos e as execuções simples e Ralph."""
+    try:
+        archive = await BenchmarkExportStartup().export_session(benchmark_session_id=benchmark_session_id)
+    except BenchmarkSessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except BenchmarkSessionNotFinishedError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

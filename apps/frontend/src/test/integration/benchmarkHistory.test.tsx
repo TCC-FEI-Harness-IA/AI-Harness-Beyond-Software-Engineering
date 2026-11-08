@@ -751,3 +751,30 @@ describe('Abas do BenchMark', () => {
     expect(screen.getByRole('article', { name: 'Bateria atual' })).toBeInTheDocument()
   })
 })
+
+describe('Exportação e importação de bateria completa', () => {
+  it('importa o ZIP, abre a bateria importada e oferece exportá-la de novo', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    const original = backend.fetchMock.getMockImplementation()!
+    const imported = { ...completedBenchmarkSession(), id: 'bench_importada', alias: 'Bateria importada' }
+    backend.fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (new URL(url).pathname === '/v1/benchmark/sessions/import' && init?.method === 'POST') {
+        backend.batteries.push(imported)
+        return respond(imported, 201)
+      }
+      return original(url, init)
+    })
+    renderApp('/benchmark')
+
+    await user.upload(
+      await screen.findByLabelText('Arquivo ZIP da sessão'),
+      new File(['PK'], 'bateria.zip', { type: 'application/zip' }),
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Bateria importada' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Exportar sessão completa' })).toBeEnabled()
+    const importCall = backend.fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')
+    expect(importCall?.[1]?.headers).toEqual({ 'Content-Type': 'application/zip' })
+  })
+})

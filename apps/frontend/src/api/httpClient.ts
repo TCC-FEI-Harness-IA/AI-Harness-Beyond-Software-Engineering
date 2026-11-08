@@ -56,13 +56,17 @@ async function request<T>(
   callerSignal?.addEventListener('abort', forwardAbort)
 
   try {
+    // `Blob` (arquivo) segue bruto, com o próprio tipo; o resto vira JSON.
+    const isRaw = body instanceof Blob
     const init: RequestInit = {
       method,
-      body: body === undefined ? null : JSON.stringify(body),
+      body: body === undefined ? null : isRaw ? body : JSON.stringify(body),
       signal: controller.signal,
     }
     if (body !== undefined) {
-      init.headers = { 'Content-Type': 'application/json' }
+      init.headers = {
+        'Content-Type': isRaw ? body.type || 'application/octet-stream' : 'application/json',
+      }
     }
 
     const response = await fetch(buildUrl(path), init)
@@ -111,6 +115,14 @@ export const httpClient = {
     signal?: AbortSignal,
   ): Promise<T> =>
     request('PUT', path, body, (response) => parseBody(response, parse), signal),
+  /** Envia um arquivo como corpo bruto (`Content-Type` do próprio `Blob`) e interpreta a resposta JSON. */
+  upload: <T>(
+    path: string,
+    file: Blob,
+    parse: (raw: unknown) => T,
+    signal?: AbortSignal,
+  ): Promise<T> =>
+    request('POST', path, file, (response) => parseBody(response, parse), signal),
   /** Remove um recurso; a resposta (204) não tem corpo. */
   delete: (path: string, signal?: AbortSignal): Promise<void> =>
     request('DELETE', path, undefined, () => Promise.resolve(), signal),

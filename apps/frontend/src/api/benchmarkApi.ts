@@ -91,6 +91,43 @@ export function ralphErrorsArchiveName(benchmarkSessionId: string): string {
   return `benchmark-session-${benchmarkSessionId.replace(UNSAFE_FILENAME_CHARS, '_')}-ralph-loop-errors.zip`
 }
 
+const SESSION_EXPORT_SEGMENT = 'export'
+const SESSION_IMPORT_PATH = `${SESSIONS_PATH}/import`
+const ZIP_MEDIA_TYPE = 'application/zip'
+
+/**
+ * `GET /v1/benchmark/sessions/{id}/export` — ZIP padronizado com a bateria completa: o documento
+ * da bateria e, por questão, enunciado, gabarito e as execuções simples e Ralph Loop.
+ */
+export function exportBenchmarkSession(benchmarkSessionId: string, signal?: AbortSignal): Promise<Blob> {
+  return httpClient.getBlob(
+    `${SESSIONS_PATH}/${encodeURIComponent(benchmarkSessionId)}/${SESSION_EXPORT_SEGMENT}`,
+    signal,
+  )
+}
+
+/** Mesmo nome que o backend sugere em `Content-Disposition` para a bateria completa. */
+export function benchmarkSessionArchiveName(benchmarkSessionId: string): string {
+  return `benchmark-session-${benchmarkSessionId.replace(UNSAFE_FILENAME_CHARS, '_')}.zip`
+}
+
+/**
+ * `POST /v1/benchmark/sessions/import` — importa o ZIP gerado por `exportBenchmarkSession` e
+ * devolve a bateria importada. O arquivo vai bruto, sempre como `application/zip` (o navegador
+ * pode rotular `.zip` de formas diferentes, ou nem rotular).
+ */
+export function importBenchmarkSession(
+  file: Blob,
+  signal?: AbortSignal,
+): Promise<BenchmarkSessionDocument> {
+  return httpClient.upload(
+    SESSION_IMPORT_PATH,
+    file.slice(0, file.size, ZIP_MEDIA_TYPE),
+    (raw) => parseBenchmarkSession(raw),
+    signal,
+  )
+}
+
 function requirePositiveInteger(value: number, field: string): void {
   if (!Number.isInteger(value) || value <= 0) {
     throw new ContractError(`${field} precisa ser um inteiro positivo, recebeu: ${value}`)

@@ -22,6 +22,7 @@ import { useBenchmarkSession } from '@/hooks/useBenchmarkData'
 import { buildBenchmarkPath, ROUTES } from '@/router/routes'
 import { useBenchmarkRun } from '@/state/BenchmarkRunContext'
 import { BenchmarkRalphErrorsExport } from './BenchmarkRalphErrorsExport'
+import { BenchmarkSessionExport } from './BenchmarkSessionExport'
 import { BenchmarkProgressStats } from './BenchmarkProgressStats'
 import { BenchmarkQuestionsTable } from './BenchmarkQuestionsTable'
 import { BenchmarkSummary } from './BenchmarkSummary'
@@ -122,6 +123,7 @@ function BenchmarkSessionView({
         <h2 className={styles.sectionTitle}>Simples × Ralph</h2>
         <BenchmarkSummary session={session} />
       </Card>
+      <BenchmarkSessionExport session={session} />
       <BenchmarkRalphErrorsExport session={session} />
       <h2 className={styles.sectionTitle}>Questões e sessões</h2>
       <BenchmarkQuestionsTable

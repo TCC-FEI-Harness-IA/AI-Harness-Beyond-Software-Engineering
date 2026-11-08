@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { benchmarkSession } from '@/test/fixtures/benchmarkSession'
+import { benchmarkSession, completedBenchmarkSession } from '@/test/fixtures/benchmarkSession'
 import { ContractError } from './errors/ContractError'
 import {
+  benchmarkSessionArchiveName,
   buildBenchmarkRunPayload,
   exportBenchmarkRalphErrors,
+  exportBenchmarkSession,
+  importBenchmarkSession,
   getBenchmarkDataset,
   getBenchmarkSession,
   listBenchmarkSessions,
@@ -112,6 +115,46 @@ describe('exportBenchmarkRalphErrors', () => {
       'http://localhost:8000/v1/benchmark/sessions/bench%201/ralph-loop-errors/export',
     )
     vi.unstubAllGlobals()
+  })
+})
+
+describe('exportBenchmarkSession', () => {
+  it('baixa o ZIP da bateria completa com o identificador codificado', async () => {
+    const zip = new Blob(['PK'], { type: 'application/zip' })
+    const fetchMock = vi.fn().mockResolvedValue({ status: 200, blob: () => Promise.resolve(zip) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await exportBenchmarkSession('bench 1')).toBe(zip)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      'http://localhost:8000/v1/benchmark/sessions/bench%201/export',
+    )
+  })
+})
+
+describe('benchmarkSessionArchiveName', () => {
+  it('segue o nome sugerido pelo backend, trocando caracteres inseguros', () => {
+    expect(benchmarkSessionArchiveName('bench_1')).toBe('benchmark-session-bench_1.zip')
+    expect(benchmarkSessionArchiveName('a/b c')).toBe('benchmark-session-a_b_c.zip')
+  })
+})
+
+describe('importBenchmarkSession', () => {
+  it('envia o ZIP bruto como application/zip e devolve a bateria importada', async () => {
+    const document = completedBenchmarkSession()
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 201,
+      text: () => Promise.resolve(JSON.stringify(document)),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const file = new File(['PK'], 'bateria.zip', { type: 'application/x-zip-compressed' })
+
+    expect(await importBenchmarkSession(file)).toEqual(document)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('http://localhost:8000/v1/benchmark/sessions/import')
+    expect(init.method).toBe('POST')
+    expect(init.headers).toEqual({ 'Content-Type': 'application/zip' })
+    expect(init.body).toBeInstanceOf(Blob)
+    expect((init.body as Blob).size).toBe(2)
   })
 })
 

@@ -17,6 +17,9 @@ from src.domain.enums.benchmark_inference_mode_enum import BenchmarkInferenceMod
 from src.domain.enums.benchmark_session_status_enum import BenchmarkSessionStatusEnum
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
 from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
+from src.domain.errors.benchmark_session_import_conflict_error import BenchmarkSessionImportConflictError
+from src.application.usecases.export_benchmark_session_usecase import ExportBenchmarkSessionUseCase
+from src.application.usecases.import_benchmark_session_usecase import ImportBenchmarkSessionUseCase
 from tests.doubles.benchmark_factories import bateria, desfecho
 from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
 from src.infra.startups.benchmark_export_startup import BenchmarkExportStartup
@@ -126,6 +129,39 @@ def test_startup_de_exportacao_monta_todo_o_grafo(armazenamento: Path) -> None:
     assert all(valor is not None for valor in vars(startup).values())
     assert isinstance(startup.export_use_case, ExportBenchmarkRalphErrorsUseCase)
     assert startup.archive_builder.session_mapper is startup.session_mapper
+    assert isinstance(startup.export_session_use_case, ExportBenchmarkSessionUseCase)
+    assert isinstance(startup.import_session_use_case, ImportBenchmarkSessionUseCase)
+    assert startup.session_archive_codec.session_mapper is startup.session_mapper
+    assert startup.session_archive_codec.benchmark_mapper is startup.benchmark_mapper
+
+
+async def test_startup_exporta_a_bateria_completa_e_a_importa_de_volta(armazenamento: Path) -> None:
+    execucao = BenchmarkRunStartup()
+    execucao.run_benchmark_use_case.flow_runner = _RunnerQueErraNoRalph()
+    frames = [frame async for frame in execucao.run(payload=_abertura(question_count=2))]
+    bateria = frames[-1].benchmark_session
+
+    arquivo = await BenchmarkExportStartup().export_session(benchmark_session_id=bateria["id"])
+
+    assert arquivo.filename == f"benchmark-session-{bateria['id']}.zip"
+    with zipfile.ZipFile(io.BytesIO(arquivo.content)) as zip_:
+        manifesto = json.loads(zip_.read("manifest.json"))
+        primeira = manifesto["questions"][0]["folder"]
+        enunciado = json.loads(zip_.read(f"{primeira}/enunciado.json"))
+        assert json.loads(zip_.read("bateria.json")) == bateria
+    assert [item["question_id"] for item in manifesto["questions"]] == [
+        item["question_id"] for item in bateria["questions"]
+    ]
+    assert enunciado["statement"]  # enunciado original do dataset de vestibulares
+
+    with pytest.raises(BenchmarkSessionImportConflictError):
+        await BenchmarkExportStartup().import_session(content=arquivo.content)
+
+    (armazenamento / "benchmark-sessions" / f"{bateria['id']}.json").unlink()
+    importada = await BenchmarkExportStartup().import_session(content=arquivo.content)
+
+    assert importada == bateria
+    assert await BenchmarkQueryStartup().get_benchmark_session_document(benchmark_session_id=bateria["id"]) == bateria
 
 
 async def test_startup_de_exportacao_gera_o_zip_com_os_erros_do_ralph(armazenamento: Path) -> None:

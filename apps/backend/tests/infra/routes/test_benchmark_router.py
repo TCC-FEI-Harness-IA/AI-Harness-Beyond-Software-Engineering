@@ -10,6 +10,8 @@ from starlette.websockets import WebSocketDisconnect, WebSocketState
 from src.domain.errors.benchmark_question_not_rerunnable_error import BenchmarkQuestionNotRerunnableError
 from src.domain.errors.benchmark_session_not_finished_error import BenchmarkSessionNotFinishedError
 from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
+from src.domain.errors.benchmark_session_import_conflict_error import BenchmarkSessionImportConflictError
+from src.domain.errors.invalid_benchmark_archive_error import InvalidBenchmarkArchiveError
 from src.domain.errors.invalid_benchmark_request_error import InvalidBenchmarkRequestError
 from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
 from src.infra.routes.v1.benchmark import router as benchmark_router_module
@@ -80,6 +82,7 @@ class _FakeExportStartup:
 
     error: Exception | None = None
     requested: list[str] = []
+    imported: list[bytes] = []
 
     async def export_ralph_errors(self, benchmark_session_id: str) -> BenchmarkArchive:
         _FakeExportStartup.requested.append(benchmark_session_id)
@@ -88,6 +91,18 @@ class _FakeExportStartup:
         return BenchmarkArchive(
             filename=f"benchmark-session-{benchmark_session_id}-ralph-loop-errors.zip", content=b"PK-zip"
         )
+
+    async def export_session(self, benchmark_session_id: str) -> BenchmarkArchive:
+        _FakeExportStartup.requested.append(benchmark_session_id)
+        if _FakeExportStartup.error is not None:
+            raise _FakeExportStartup.error
+        return BenchmarkArchive(filename=f"benchmark-session-{benchmark_session_id}.zip", content=b"PK-completo")
+
+    async def import_session(self, content: bytes) -> dict[str, Any]:
+        _FakeExportStartup.imported.append(content)
+        if _FakeExportStartup.error is not None:
+            raise _FakeExportStartup.error
+        return {"id": "bench_importada", "status": "completed"}
 
 
 def _abertura(**sobrescritas: Any) -> dict[str, Any]:
@@ -170,6 +185,7 @@ def test_erros_conhecidos_da_consulta_viram_404_e_400(
 def exportacao(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     _FakeExportStartup.error = None
     _FakeExportStartup.requested = []
+    _FakeExportStartup.imported = []
     monkeypatch.setattr(benchmark_router_module, "BenchmarkExportStartup", _FakeExportStartup)
     return client
 
@@ -202,6 +218,99 @@ def test_falhas_da_exportacao_viram_o_status_http_correspondente(
     _FakeExportStartup.error = erro
 
     resposta = exportacao.get("/v1/benchmark/sessions/bench_9/ralph-loop-errors/export")
+
+    assert resposta.status_code == status
+    assert resposta.json()["detail"] == str(erro)
+
+
+def test_exportacao_completa_devolve_o_zip_da_bateria(exportacao: TestClient) -> None:
+    resposta = exportacao.get("/v1/benchmark/sessions/bench_7/export")
+
+    assert resposta.status_code == 200
+    assert resposta.content == b"PK-completo"
+    assert resposta.headers["content-type"] == "application/zip"
+    assert resposta.headers["content-disposition"] == 'attachment; filename="benchmark-session-bench_7.zip"'
+    assert _FakeExportStartup.requested == ["bench_7"]
+
+
+@pytest.mark.parametrize(
+    ("erro", "status"),
+    [
+        (BenchmarkSessionNotFoundError("bench_9"), 404),
+        (BenchmarkSessionNotFinishedError("bench_9"), 409),
+        (ValueError("identificador inválido"), 400),
+        (RuntimeError("disco fora do ar"), 500),
+    ],
+)
+def test_falhas_da_exportacao_completa_viram_o_status_http_correspondente(
+    exportacao: TestClient, erro: Exception, status: int
+) -> None:
+    _FakeExportStartup.error = erro
+
+    resposta = exportacao.get("/v1/benchmark/sessions/bench_9/export")
+
+    assert resposta.status_code == status
+    assert resposta.json()["detail"] == str(erro)
+
+
+def test_importacao_recebe_o_zip_bruto_e_devolve_a_bateria(exportacao: TestClient) -> None:
+    resposta = exportacao.post(
+        "/v1/benchmark/sessions/import", content=b"PK-zip", headers={"Content-Type": "application/zip"}
+    )
+
+    assert resposta.status_code == 201
+    assert resposta.json() == {"id": "bench_importada", "status": "completed"}
+    assert _FakeExportStartup.imported == [b"PK-zip"]
+
+
+def test_importacao_sem_corpo_e_recusada(exportacao: TestClient) -> None:
+    resposta = exportacao.post("/v1/benchmark/sessions/import", content=b"")
+
+    assert resposta.status_code == 400
+    assert _FakeExportStartup.imported == []
+
+
+def test_importacao_recusa_corpo_declarado_maior_que_o_limite(
+    exportacao: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(benchmark_router_module, "MAX_ARCHIVE_BYTES", 4)
+
+    resposta = exportacao.post("/v1/benchmark/sessions/import", content=b"PK-zip")
+
+    assert resposta.status_code == 413
+    assert _FakeExportStartup.imported == []
+
+
+def test_importacao_recusa_corpo_em_partes_maior_que_o_limite(
+    exportacao: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(benchmark_router_module, "MAX_ARCHIVE_BYTES", 4)
+
+    def partes():
+        yield b"PK-"
+        yield b"zip"
+
+    resposta = exportacao.post("/v1/benchmark/sessions/import", content=partes())
+
+    assert resposta.status_code == 413
+    assert _FakeExportStartup.imported == []
+
+
+@pytest.mark.parametrize(
+    ("erro", "status"),
+    [
+        (InvalidBenchmarkArchiveError("manifesto ausente."), 400),
+        (BenchmarkSessionImportConflictError("bench_1", ["bench_1"]), 409),
+        (ValueError("identificador inválido"), 400),
+        (RuntimeError("disco fora do ar"), 500),
+    ],
+)
+def test_falhas_da_importacao_viram_o_status_http_correspondente(
+    exportacao: TestClient, erro: Exception, status: int
+) -> None:
+    _FakeExportStartup.error = erro
+
+    resposta = exportacao.post("/v1/benchmark/sessions/import", content=b"PK-zip")
 
     assert resposta.status_code == status
     assert resposta.json()["detail"] == str(erro)

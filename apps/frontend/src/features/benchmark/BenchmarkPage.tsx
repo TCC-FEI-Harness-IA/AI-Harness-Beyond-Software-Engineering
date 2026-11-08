@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { Button } from '@/components/primitives/Button'
 import { Card } from '@/components/primitives/Card'
@@ -15,9 +15,11 @@ import {
 } from '@/domain/services/benchmarkDefinition'
 import type { BenchmarkDatasetId, GPQASubset } from '@/domain/types/benchmarkSession'
 import { useBenchmarkDataset, useBenchmarkSessions } from '@/hooks/useBenchmarkData'
+import { buildBenchmarkSessionPath } from '@/router/routes'
 import { useBenchmarkRun } from '@/state/BenchmarkRunContext'
 import { useRunConfig } from '@/state/RunConfigContext'
 import { BenchmarkSessionCard } from './BenchmarkSessionCard'
+import { BenchmarkSessionImport } from './BenchmarkSessionImport'
 import { BenchmarkTabs, benchmarkPanelId, benchmarkTabId } from './BenchmarkTabs'
 import { NewRunForm } from './NewRunForm'
 import { RunMonitor } from './RunMonitor'
@@ -49,6 +51,7 @@ export function BenchmarkPage(): JSX.Element {
   const run = useBenchmarkRun()
   const { config } = useRunConfig()
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const requested = searchParams.get(TAB_PARAM)
   // Sem aba na URL, abre na bateria em andamento (se houver) para não escondê-la.
   const benchmark: BenchmarkDatasetId = isBenchmarkDatasetId(requested)
@@ -154,6 +157,9 @@ export function BenchmarkPage(): JSX.Element {
           <h2 id="baterias" className={styles.sectionTitle}>
             Histórico de baterias
           </h2>
+          <BenchmarkSessionImport
+            onImported={(imported) => navigate(buildBenchmarkSessionPath(imported.id))}
+          />
           {sessions.status === 'success' ? (
             ownSessions.length === 0 ? (
               <EmptyState
