@@ -15,8 +15,8 @@ class BenchmarkRunInputDTO(BaseModel):
 
     `subject_counts` escolhe quantidades por matéria (ou disciplina, no MMLU/GPQA, onde a amostra de cada
     uma segue `sample_seed`); `question_count`, se enviado, deve coincidir com a soma das cotas.
-    Sem cotas, `question_count` ausente executa todas as questões do dataset; um valor menor executa as
-    primeiras nos vestibulares ou uma amostra estratificada no MMLU/GPQA. `max_parallel` limita questões
+    Sem cotas, `question_count` ausente executa todas as questões do dataset; um valor menor executa
+    as primeiras nos vestibulares ou uma amostra estratificada no MMLU/GPQA. `max_parallel` limita questões
     em execução ao mesmo tempo. Os limites dependem do dataset e de `RALPH_BENCHMARK_MAX_PARALLEL`, e são
     conferidos pelo caso de uso.
     """

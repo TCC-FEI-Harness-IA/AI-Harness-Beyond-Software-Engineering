@@ -1913,6 +1913,7 @@ esgotamento de retentativas; negação de orçamento pelo guardião real; cancel
 persistência dos diagnósticos e recuperações; e o fluxo completo com templates reais tanto para
 uma pergunta aberta quanto para uma pergunta com alternativas. A chamada posterior à recuperação
 usa uma janela nova e volta à temperatura da sessão.
+
 ---
 
 ## Melhorias do thinking — 02: aprendizados completos e autossuficientes
@@ -2096,6 +2097,7 @@ Na pasta `apps/backend`, executados com o ambiente `.venv` já instalado no chec
 - `git diff --check`: **passou**. A transcrição literal em `RALPH_LOOP_ADAPTADO.md` foi comparada
   byte a byte com `945f7fe` e permaneceu idêntica; o conteúdo anterior completo de
   `NOVAS_REGRAS_RALPH_LOOP.md` permanece como prefixo integral do arquivo atualizado.
+
 ---
 
 ## Melhorias do thinking — 03: planejamento sem respostas antecipadas e cobertura do pedido
