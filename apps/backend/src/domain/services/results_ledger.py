@@ -17,8 +17,11 @@ class ResultsLedger(IResultsLedger):
     interpreta palavras ou usa a ordem temporal como evidência; nenhum resultado é apagado.
 
     A confirmação de um resultado vale como revalidação: as dependências que já não eram vigentes
-    nesse momento deixam de suspendê-lo. Dependentes transitivos de um resultado restaurado não são
-    restaurados automaticamente; continuam à espera da própria revisão.
+    nesse momento deixam de suspendê-lo. As confirmações de um mesmo resultado aprovado valem em
+    conjunto: todos os confirmados voltam ao estado vigente antes de qualquer base ser filtrada, de
+    modo que uma dependência entre dois resultados confirmados juntos é preservada qualquer que seja a
+    ordem dos vereditos. Dependentes transitivos de um resultado restaurado não são restaurados
+    automaticamente; continuam à espera da própria revisão.
     """
 
     def __init__(self) -> None:
@@ -32,7 +35,8 @@ class ResultsLedger(IResultsLedger):
         """Armazena um resultado aprovado e aplica, de forma atômica, os vereditos aprovados que ele traz.
 
         Toda referência é validada antes de qualquer mudança. As substituições são aplicadas antes das
-        confirmações, e a suspensão por dependência é propagada até estabilizar.
+        confirmações; as confirmações são aplicadas em conjunto, independentemente da ordem dos
+        vereditos; e a suspensão por dependência é propagada até estabilizar.
 
         Args:
             result: Resultado aprovado em B.2.
@@ -56,10 +60,11 @@ class ResultsLedger(IResultsLedger):
             self.__status[task_id] = ResultStatusEnum.SUPERSEDED
             self.__superseded_by[task_id] = result.task_id
         for task_id in confirmed:
+            self.__status[task_id] = ResultStatusEnum.CURRENT
+        for task_id in confirmed:
             self.__basis[task_id] = frozenset(
                 dependency for dependency in self.__basis[task_id] if self.__is_current(task_id=dependency)
             )
-            self.__status[task_id] = ResultStatusEnum.CURRENT
         self.__propagate_suspension()
 
         return LedgerChange(

@@ -175,7 +175,7 @@ async def test_notas_autossuficientes_chegam_a_todos_os_destinos_inclusive_taref
         Phase.C1_GLOBAL_VERIFICATION, Phase.C2_ADDITIONAL_PLANNING, Phase.C3_FINAL_ANSWER,
     }
     a3_event = next(event for event in events if event.phase is Phase.A3_PLANNING_LEARNINGS)
-    assert "## Discarded repeated learnings" in a3_event.content
+    assert "## Repeated learnings already recorded (not stored again)" in a3_event.content
     assert given[0] in a3_event.content
     b4_events = [event for event in events if event.phase is Phase.B4_LEARNINGS_EXTRACTION]
     assert all(fact in b4_events[0].content for fact in derived)

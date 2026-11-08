@@ -303,7 +303,7 @@ def test_template_b4_proibe_instrucoes_criterios_vereditos_relatos_e_duplicatas(
     assert "acceptance criteria" in template
     assert "verdicts" in template
     assert "reports of the execution process" in template
-    assert "facts that are already in **key learnings**, even in other words" in template
+    assert "rewordings of facts already in **key learnings**" in template
 
 
 def test_template_b4_so_admite_lista_vazia_sem_fato_novo() -> None:
@@ -311,7 +311,7 @@ def test_template_b4_so_admite_lista_vazia_sem_fato_novo() -> None:
 
     assert '`{"learnings": []}` **only**' in template
     assert "no new fact" in template
-    assert "all of its conclusions are already in **Key Learnings**" in template
+    assert "re-establishes none of the facts already in **Key Learnings**" in template
 
 
 def test_templates_orientam_avaliacao_relativa_por_eliminacao_sem_hiper_literalismo() -> None:

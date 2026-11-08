@@ -60,7 +60,7 @@ def test_c2_explica_review_e_depends_on_como_unico_caminho_de_mudanca_de_estado(
     assert "`<task id>-REV`" in c2
     assert "which prior claim it confirms or corrects" in c2
     assert '"review": {"task_ids": ["..."], "reason": "..."}, "depends_on": ["..."]' in c2
-    assert "omit them in an ordinary task" in c2
+    assert "omit `review` unless the task reviews stored results" in c2
 
 
 def test_a2_declara_dependencias_so_de_tarefas_anteriores_e_nao_planeja_revisoes() -> None:
@@ -80,3 +80,27 @@ def test_b4_registra_so_fatos_vigentes_sem_relatar_a_revisao() -> None:
 
 def test_c3_nao_recebe_o_registro_de_revisoes() -> None:
     assert "{{result_revisions}}" not in _template(Phase.C3_FINAL_ANSWER)
+
+
+def test_c2_separa_as_regras_de_review_e_de_depends_on() -> None:
+    c2 = _template(Phase.C2_ADDITIONAL_PLANNING)
+
+    assert "Ordinary tasks omit both fields" not in c2
+    assert "omit them in an ordinary task" not in c2
+    assert "The two fields are independent" in c2
+    assert "Using a stored conclusion does not make a task a reviewing task" in c2
+    assert "declares `depends_on` and omits `review`" in c2
+    assert "omit `depends_on` only when the task uses no finding of another task" in c2
+
+
+def test_b4_repete_literalmente_o_fato_que_a_tarefa_estabeleceu_de_novo_para_registrar_a_fonte() -> None:
+    b4 = _template(Phase.B4_LEARNINGS_EXTRACTION)
+
+    assert "**do not repeat** any of them" not in b4
+    assert "even in other words" not in b4
+    assert "Facts this task re-established independently" in b4
+    assert "copied exactly, character for character" in b4
+    assert "records this task as an additional source" in b4
+    assert "only took from Key Learnings as an input" in b4
+    assert "it is a different fact" in b4
+    assert "rewordings of facts already in **Key Learnings**" in b4

@@ -30,8 +30,9 @@ last attempt is the approved one; its result is the one in the **Approved result
 
 Compact notes accumulated throughout the flow: the points of attention from the question and the
 facts recorded by the tasks already completed, in the order in which they appeared. These are the
-learnings already recorded: **do not repeat** any of them. Record only new facts, discovered in this
-task.
+learnings already recorded. Record the new facts discovered in this task; do not repeat a recorded
+fact that this task merely used or cited. The only recorded facts written again are those this
+task re-established independently, as described in the instructions below.
 
 {{learnings}}
 
@@ -86,14 +87,26 @@ analyzed".
 approved review were withdrawn. When this task reviewed stored results, record its confirmed or
 corrected conclusions as facts about the problem, never as a report about the review.
 
+**Facts this task re-established independently.** Each recorded fact keeps the tasks that support
+it, and it leaves Key Learnings only when none of them remains current. When the Approved result
+establishes, by its own derivation, verification or evidence, a fact that is already in **Key
+Learnings**, include that fact in your list **copied exactly, character for character**, as it
+appears there: the repetition records this task as an additional source and is not stored twice.
+This also applies to a recorded fact that this task confirmed in a review. Do not write again a
+fact that this task only took from Key Learnings as an input or quoted without establishing it, nor
+a point of attention supplied by the question. If your conclusion differs from the recorded one in
+any referent, unit, sign, condition, precision or qualifier, it is a different fact: record it as a
+new learning instead of copying the recorded one.
+
 **Prioritize the finally approved conclusion.** Values, classifications or relations that appear in
 the rejected attempts and were refuted, corrected or replaced in the approved attempt **are not
 current learnings**: do not record them. From the history, use only facts that remain valid and that
 the approved result does not contradict.
 
 Before answering, go through the Approved result conclusion by conclusion and check, for each one,
-whether it is already in **Key Learnings**. Every conclusion not yet there must be in your list.
-For each new fact, also check that its referent, unit, sign, reference, hypotheses and exactness or
+whether it is already in **Key Learnings**. Every conclusion not yet there must be in your list; a
+conclusion already there that this task established independently is copied exactly from Key
+Learnings. For each new fact, also check that its referent, unit, sign, reference, hypotheses and exactness or
 approximation survive in the note, and that a best-fit selection remains distinct from its
 calculated value. Do this review in the same call, without reporting the review.
 
@@ -110,7 +123,9 @@ It is forbidden to record:
 - reports of the execution process or of the attempts, and indirect phrasings such as "The approved
   answer concluded that..." or "In task T1 it was identified that..." — write the concluded fact
   directly;
-- facts that are already in **Key Learnings**, even in other words;
+- facts already in **Key Learnings** that this task did not establish independently, and
+  rewordings of facts already in **Key Learnings**: a re-established fact is copied exactly, never
+  paraphrased;
 - values or conclusions refuted, corrected or replaced throughout the attempts;
 - a copy of the complete answer of the task.
 
@@ -135,7 +150,7 @@ Examples of an **invalid** learning:
 - "Task T1 requires listing the prime numbers without solving the final question."
 
 Return `{"learnings": []}` **only** when the Approved result brings no new fact about the problem
-or when all of its conclusions are already in **Key Learnings**.
+and re-establishes none of the facts already in **Key Learnings**.
 
 ## Output format
 

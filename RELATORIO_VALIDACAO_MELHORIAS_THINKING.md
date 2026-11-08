@@ -178,3 +178,18 @@ modelo, temperatura, saída bruta, sessão exportada e evidência textual para c
     `superseded` ou `confirmed`.
 11. Custo: efeito do registro maior e das instruções acrescentadas nos tokens, na latência e na taxa de
     recusas de contrato.
+
+## 8. Complemento — pendências da revisão manual das etapas 05–07
+
+Uma revisão manual posterior encontrou três incoerências, corrigidas com TDD e descritas em
+**Melhorias do thinking — 07 (complemento)** de [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md):
+
+| Pendência | Tipo de evidência | Correção |
+|---|---|---|
+| B.4 proibia repetir fato já registrado, e a memória só registra fonte adicional quando o recebe de novo | Contrato de prompt | B.4 copia literalmente o fato que a tarefa reestabeleceu de forma independente (não o que só usou como entrada); o evento `learn` rotula essas entradas como `Repeated learnings already recorded (not stored again)`. |
+| Confirmações encadeadas no livro dependiam da ordem dos vereditos | Garantia programática | `ResultsLedger.store` restaura todos os confirmados antes de filtrar as bases. |
+| C.2 mandava declarar `depends_on` e, em seguida, omitir os dois campos em tarefas comuns | Contrato de prompt | Regras independentes: `review` só em revisora; `depends_on` em toda tarefa que usa achado de outra. |
+
+Antes das correções falharam 5 testes (1 do livro, na ordem `T3, T2`; 4 de contrato). Depois:
+`flake8 src tests` sem saída; `pytest --cov=src --cov-report=term-missing --cov-fail-under=100` com
+**2.442 aprovados** e cobertura **100,00%** (5.599 statements, 1.006 branches). Nenhuma inferência paga.

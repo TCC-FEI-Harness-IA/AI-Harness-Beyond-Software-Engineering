@@ -51,7 +51,7 @@ _FIRST_ATTEMPT = 1
 _CRITERIA_HEADING = "## General acceptance criteria"
 _TASKS_HEADING = "## Planned tasks"
 _LEARNINGS_HEADING = "## Extracted learnings"
-_DISCARDED_LEARNINGS_HEADING = "## Discarded repeated learnings"
+_DISCARDED_LEARNINGS_HEADING = "## Repeated learnings already recorded (not stored again)"
 _NO_LEARNINGS_CONTENT = "No learnings were extracted from this task."
 _NO_PLANNING_LEARNINGS_CONTENT = "No learnings were extracted from the question."
 _RESET_CONTENT = "Context reset for task `{task_id}`. New window: `{context_id}`."
@@ -574,9 +574,11 @@ class RalphThinkingUseCase:
         B.4 não herda a conversa de B.1: tudo o que a extração precisa chega como entrada explícita
         do template — a tarefa, o resultado aprovado (o mesmo que B.3 armazenou), o histórico de
         todas as tentativas com as interações com o validador e os aprendizados já registrados,
-        para que a extração não os repita. A memória descarta o que já constava nela, e o evento
-        mostra o que entrou e o que foi descartado por repetição. Quando o resultado aguarda
-        revalidação, os aprendizados ficam registrados, mas retidos fora da visão vigente.
+        para que a extração não repita o que a tarefa só usou. Um fato já registrado que a tarefa
+        reestabeleceu de forma independente volta, copiado literalmente, para que a memória registre
+        a tarefa como fonte adicional sem armazená-lo duas vezes; o evento mostra o que entrou e o que
+        já constava na memória. Quando o resultado aguarda revalidação, os aprendizados ficam
+        registrados, mas retidos fora da visão vigente.
 
         Args:
             task: Tarefa recém-aprovada.
@@ -1453,7 +1455,7 @@ class RalphThinkingUseCase:
 
         Returns:
             str: Bloco markdown com os aprendizados acumulados (ou o aviso de que nada foi extraído),
-            seguido, quando houver, dos que foram descartados por repetirem a memória.
+            seguido, quando houver, dos que repetiam a memória e não foram armazenados de novo.
         """
         blocks = [
             f"{_LEARNINGS_HEADING}\n\n{self.__render_items(learnings=stored)}" if stored else empty_content

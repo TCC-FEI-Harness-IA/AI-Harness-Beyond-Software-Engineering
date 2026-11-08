@@ -96,8 +96,8 @@ an image at infinity.
 ## Task scope and criteria
 
 1. **Single goal permits logical dependence.** A task may consume prior findings through Key
-   Learnings while retaining a clear objective. Order new tasks so their dependencies are obtained
-   before use. Preserve the literal data, references and existing findings relevant to each goal.
+   Learnings while retaining a clear objective, and declares the tasks that produce them in
+   `depends_on`. Order new tasks so their dependencies are obtained before use. Preserve the literal data, references and existing findings relevant to each goal.
 2. **Fresh context preserves explicit memory.** The solver receives its own description, criteria
    and accumulated Key Learnings, not the original conversation or complete prior resolutions.
    Each description must be self-sufficient for its objective and name any finding to retrieve
@@ -146,12 +146,17 @@ session changes which results are current; titles and descriptions never do.
   results that merely differ, rest on other hypotheses or are unrelated to the gap. Each result is
   reviewed by at most one task of the batch; a task cannot review itself or another new task, and a
   superseded result cannot be reviewed again.
-- `depends_on`: list the tasks whose findings this task explicitly uses, either current stored
-  results or earlier tasks of this batch. If a listed result is later superseded, this task's
-  result will await revalidation. Do not list a result that the same task reviews.
+- `depends_on`: list the tasks whose findings this task explicitly uses as inputs, either current
+  stored results or earlier tasks of this batch, whether or not the task reviews anything. If a
+  listed result is later superseded, this task's result will await revalidation. Do not list a
+  result that the same task reviews.
 
-Ordinary tasks omit both fields. A reviewing task automatically receives the criterion
-`<task id>-REV`, which evaluates its verdicts; do not use that identifier yourself.
+The two fields are independent; fill each one by its own rule. Include `review` only in a
+reviewing task, as described above. Include `depends_on` in every task, reviewing or not, that uses
+a finding of another task, and omit it only when the task uses no such finding. Using a stored
+conclusion does not make a task a reviewing task: a task that builds on a stored result without
+investigating it declares `depends_on` and omits `review`. A reviewing task automatically receives
+the criterion `<task id>-REV`, which evaluates its verdicts; do not use that identifier yourself.
 
 ## Final plan review
 
@@ -181,4 +186,5 @@ the format:
 "acceptance_criteria": [{"id": "T{{next_task_number}}-AC1", "description": "..."}],
 "review": {"task_ids": ["..."], "reason": "..."}, "depends_on": ["..."]}]}
 
-`review` and `depends_on` are optional: omit them in an ordinary task.
+`review` and `depends_on` are optional and independent: omit `review` unless the task reviews stored
+results; omit `depends_on` only when the task uses no finding of another task.

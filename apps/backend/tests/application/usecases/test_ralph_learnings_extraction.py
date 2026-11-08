@@ -287,7 +287,7 @@ async def test_aprendizados_ja_registrados_sao_descartados_e_so_o_fato_novo_entr
         _APRENDIZADO_T2,
     ]
     conteudo = _evento_learn(eventos, "T2").content
-    extraidos, descartados = conteudo.split("## Discarded repeated learnings")
+    extraidos, descartados = conteudo.split("## Repeated learnings already recorded (not stored again)")
     assert f"- {_APRENDIZADO_T2}" in extraidos
     assert _ANOTACOES_Q037[0] not in extraidos
     assert repetido_com_outra_forma.strip() in descartados
@@ -301,7 +301,7 @@ async def test_quando_todos_os_aprendizados_ja_constam_a_tarefa_registra_que_nad
 
     conteudo = _evento_learn(eventos, "T2").content
     assert conteudo.startswith("No learnings were extracted from this task.")
-    assert f"## Discarded repeated learnings\n\n- {_APRENDIZADO_T1}" in conteudo
+    assert f"## Repeated learnings already recorded (not stored again)\n\n- {_APRENDIZADO_T1}" in conteudo
     assert [a.content for a in cenario.learnings_memory.all()].count(_APRENDIZADO_T1) == 1
     prompt_de_c3 = cenario.llm.texts_of(_chamadas(cenario, _FASE.C3_FINAL_ANSWER)[0])[0]
     assert prompt_de_c3.count(f"- {_APRENDIZADO_T1}") == 1

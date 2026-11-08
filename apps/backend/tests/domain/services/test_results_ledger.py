@@ -173,3 +173,21 @@ def test_referencias_invalidas_sao_recusadas_sem_mutacao_parcial(resultado: Task
 def test_consulta_de_resultado_inexistente_e_recusada() -> None:
     with pytest.raises(KeyError):
         ResultsLedger().get(task_id="T1")
+
+
+@pytest.mark.parametrize("ordem", [("T2", "T3"), ("T3", "T2")])
+def test_confirmacoes_encadeadas_na_mesma_revisao_preservam_a_dependencia_qualquer_que_seja_a_ordem(
+    ordem: tuple[str, str],
+) -> None:
+    livro = _livro(_resultado("T1"), _resultado("T2", "T1"), _resultado("T3", "T2"))
+    livro.store(result=_resultado("T4", verdicts=(("T1", _SUBSTITUI),)))
+
+    mudanca = livro.store(result=_resultado("T5", verdicts=tuple((alvo, _CONFIRMA) for alvo in ordem)))
+
+    assert _ids(livro.current()) == ("T2", "T3", "T4", "T5")
+    assert set(mudanca.reinstated_task_ids) == {"T2", "T3"}
+
+    substituicao = livro.store(result=_resultado("T6", verdicts=(("T2", _SUBSTITUI),)))
+
+    assert substituicao.suspended_task_ids == ("T3",)
+    assert _ids(livro.awaiting_revalidation()) == ("T3",)

@@ -3405,3 +3405,90 @@ Nenhuma etapa nova. Na extensão de revisão de resultados, acrescentar: *“O r
 entregue à verificação global e ao planejamento adicional lista os resultados substituídos, os que
 aguardam revalidação e os confirmados por revisão aprovada; a confirmação, e não a ordem temporal,
 sustenta um resultado que já foi investigado.”* A transcrição literal da Metodologia não muda.
+
+---
+
+## Melhorias do thinking — 07 (complemento): pendências da revisão manual das etapas 05–07
+
+A revisão manual das etapas 05, 06 e 07, comparando a implementação com os prompts planejados,
+encontrou três incoerências que impediam considerar a integração concluída. Esta seção registra a
+correção de cada uma. Ela **refina** afirmações das seções 05 e 07 sem apagá-las: onde a seção 05 diz
+que a área **Aprendizados Pontuais** “não repete fatos”, isso continua valendo para a visão vigente
+(um fato nunca é armazenado duas vezes), mas a extração de B.4 passa a repetir literalmente o fato
+que a tarefa reestabeleceu de forma independente, para registrar a fonte.
+
+### 1. Fonte independente de um fato já registrado (B.4 × memória)
+
+**Problema.** `LearningsMemory.append` só acrescenta uma fonte a um fato já registrado quando recebe
+o mesmo texto de novo, mas o template B.4 proibia repetir qualquer fato já registrado. Se T1
+estabelece um fato e T2 chega a ele de forma independente, B.4 o omitia, T2 não virava fonte e, se T1
+fosse substituída depois, o fato saía da memória embora T2 continuasse vigente — contrariando o
+item 8 da etapa 05 (não remover fato ainda sustentado por fonte vigente).
+
+**Correção (contrato de prompt; o mecanismo da memória não muda).** B.4 ganhou a instrução
+**Facts this task re-established independently**: quando o resultado aprovado estabelece, por
+derivação, verificação ou evidência próprias, um fato que já está em **Key Learnings**, B.4 o inclui
+**copiado literalmente**; a repetição registra a tarefa como fonte adicional e não é armazenada duas
+vezes. Vale também para o fato que uma revisora confirmou. Continuam proibidos: repetir o fato que a
+tarefa só usou como entrada ou citou (não é fonte independente — se o usou, a dependência vai em
+`depends_on`), repetir notas de A.3 e reformular um fato já registrado. Se a conclusão difere em
+referente, unidade, sinal, condição, precisão ou qualificador, é outro fato. A lista vazia só é
+devolvida quando não há fato novo **nem** fato reestabelecido.
+
+A cópia literal é necessária porque a memória compara só com espaços normalizados; nenhuma
+comparação semântica foi introduzida. O evento `learn` passou a rotular essas entradas como
+`## Repeated learnings already recorded (not stored again)` (antes, `## Discarded repeated
+learnings`), porque deixaram de ser descarte: registram a fonte.
+
+Exemplo: T1 registra “A variação de energia cinética do carro é a mesma nos dois casos: mesma massa
+e Δv.”; T2 calcula a energia de modo próprio e B.4 de T2 devolve a mesma frase. A memória guarda
+`[T1, T2]` como fontes. Uma revisora aprovada substitui T1: o fato continua vigente, sustentado por T2.
+Se T2 apenas tivesse lido o fato em Key Learnings, B.4 não o repetiria, e a tarefa declararia
+`depends_on: ["T1"]` — sendo suspensa com a substituição.
+
+### 2. Confirmações encadeadas independentes da ordem dos vereditos (livro de resultados)
+
+**Problema.** Em `ResultsLedger.store`, cada confirmação filtrava a base de dependências do alvo
+antes de os demais confirmados voltarem a `current`. Com T3 dependente de T2, ambas aguardando
+revalidação e confirmadas pela mesma revisora, a ordem `[T3, T2]` removia a dependência de T3 em T2
+(T2 ainda estava suspensa); a ordem `[T2, T3]` a mantinha. Uma substituição futura de T2 suspendia
+T3 ou não conforme a ordem do JSON.
+
+**Correção.** As confirmações de um mesmo resultado aprovado são aplicadas em conjunto: primeiro
+todos os confirmados voltam a `current`; só então cada base é filtrada, descartando as dependências
+que continuam não vigentes (substituídas ou suspensas sem confirmação). A semântica anterior — a
+confirmação vale como revalidação — é mantida; o resultado agora é o mesmo para qualquer ordem.
+
+### 3. Regras separadas para `review` e `depends_on` em C.2
+
+**Problema.** C.2 mandava declarar em `depends_on` os achados usados, mas logo depois dizia que
+tarefas comuns omitem `review` e `depends_on`, e o formato de saída repetia “omit them in an ordinary
+task”. Uma tarefa que usa uma conclusão anterior sem revisá-la poderia omitir a dependência, que
+então não seria suspensa quando a base fosse substituída.
+
+**Correção.** Os campos são descritos como independentes, cada um com sua regra: `review` só em
+tarefa revisora; `depends_on` em toda tarefa, revisora ou não, que usa achado de outra tarefa, omitido
+só quando não usa nenhum. O texto explicita que usar uma conclusão armazenada não torna a tarefa
+revisora (`declares depends_on and omits review`), e o item “Single goal permits logical dependence”
+passa a pedir a declaração. O parser já aceitava `depends_on` sem `review`; nada mudou nele. A.2 já
+tinha a regra correta.
+
+### Testes
+
+| Pendência | Teste (falhou antes, passa depois) |
+|---|---|
+| 1 | `test_b4_repete_literalmente_o_fato_que_a_tarefa_estabeleceu_de_novo_para_registrar_a_fonte` (`tests/infra/providers/test_revision_prompt_contracts.py`); asserções ajustadas em `test_template_b4_proibe_instrucoes_criterios_vereditos_relatos_e_duplicatas` e `test_template_b4_so_admite_lista_vazia_sem_fato_novo`, que codificavam a regra antiga. O mecanismo da memória já era coberto por `test_fato_repetido_por_outra_fonte_continua_vigente_quando_a_primeira_e_retirada`. |
+| 2 | `test_confirmacoes_encadeadas_na_mesma_revisao_preservam_a_dependencia_qualquer_que_seja_a_ordem` (parametrizado nas duas ordens; falhava na ordem `T3, T2`). |
+| 3 | `test_c2_separa_as_regras_de_review_e_de_depends_on`; asserção atualizada em `test_c2_explica_review_e_depends_on_como_unico_caminho_de_mudanca_de_estado`. |
+
+Resultados em `apps/backend`: `flake8 src tests` sem saída (código 0);
+`pytest --cov=src --cov-report=term-missing --cov-fail-under=100` com **2.442 testes aprovados** e
+cobertura **100,00%** (5.599 statements, 1.006 branches). Nenhuma chamada paga a modelos.
+
+### Limites
+
+Os itens 1 e 3 são contratos de prompt: os testes verificam as instruções, não que um modelo real
+copie o fato literalmente, distinga fonte independente de uso como entrada ou declare toda
+dependência. Uma paráfrase do fato reestabelecido continua entrando como fato novo (sem retirar o
+original), e dependências não declaradas continuam não detectadas; C.1 segue responsável por
+contradições residuais. O item 2 é garantia programática.

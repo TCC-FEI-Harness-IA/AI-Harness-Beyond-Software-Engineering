@@ -358,7 +358,8 @@ resultados e aprendizados vigentes**, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_RE
 - **Contrato mínimo e opcional.** C.2 marca uma tarefa como revisora com
   `review: {task_ids, reason}` (resultados sob investigação e motivo concreto, sem antecipar o
   desfecho). A.2 e C.2 podem declarar `depends_on` (tarefas anteriores do lote ou resultados
-  vigentes). A B.1 de uma revisora devolve `revision`, um veredito `confirmed` ou `superseded` por
+  vigentes); os dois campos são independentes: toda tarefa que usa achado de outra o declara, seja
+  ou não revisora. A B.1 de uma revisora devolve `revision`, um veredito `confirmed` ou `superseded` por
   alvo, com justificativa. O parser valida existência, unicidade, escopo, autorreferência e ordem
   (o que impede ciclos); uma recusa é defeito de contrato recuperável, sem mutação de estado.
 - **Aprovação explícita.** B.2 recebe a proposta numa área própria e avalia o critério gerado
@@ -366,11 +367,13 @@ resultados e aprendizados vigentes**, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_RE
   confirmar o resultado anterior é desfecho válido.
 - **Aplicação só em B.3.** Depois da aprovação, o livro de resultados aplica os vereditos de forma
   atômica: `superseded` tira o alvo do estado vigente (sem apagá-lo), `confirmed` o mantém ou o
-  restaura, e dependentes declarados de um resultado não vigente passam a aguardar revalidação, sem
+  restaura (as confirmações de uma mesma revisora valem em conjunto, sem depender da ordem dos
+  vereditos), e dependentes declarados de um resultado não vigente passam a aguardar revalidação, sem
   refazer tarefas independentes. Reprovação, saída inválida e interrupção não mudam nada.
 - **Memória vigente com proveniência.** Cada fato guarda todas as suas fontes. Só sai da área
   **Aprendizados Pontuais** o fato sem outra fonte vigente; notas de A.3 nunca saem por revisão.
-  Nada é apagado nem comparado semanticamente.
+  Nada é apagado nem comparado semanticamente. B.4 repete, copiado literalmente, o fato já
+  registrado que a tarefa reestabeleceu de forma independente, para registrá-la como fonte.
 - **Visões e aprovação global.** C.1, C.2 e C.3 recebem só resultados vigentes; C.1 e C.2 recebem
   também um registro de revisões rotulado como histórico e estado (C.2 vê a conclusão dos resultados
   em revalidação, para revisá-los). Desde a integração da etapa 07, o registro também lista os
