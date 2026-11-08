@@ -17,9 +17,9 @@ from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.output_defect_enum import OutputDefectEnum
-
 from src.domain.enums.recovery_result_enum import RecoveryResultEnum
 from src.domain.enums.recovery_strategy_enum import RecoveryStrategyEnum
+from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.errors.budget_exceeded_error import BudgetExceededError
 from src.domain.errors.empty_completion_error import EmptyCompletionError
 from src.domain.errors.phase_parsing_error import PhaseParsingError
@@ -37,25 +37,40 @@ from src.domain.interfaces.thinking_phase_interface import IThinkingPhase
 # já está na janela, e instruções e aprendizados não mudam dentro de uma mesma execução.
 _CORRECTION_BY_DEFECT: dict[OutputDefectEnum, str] = {
     OutputDefectEnum.SYNTAX: (
+        "## JSON syntax correction\n\n"
         "The previous output is not valid JSON: {reason}\n"
         "Do not redo the resolution and do not change the content: return the same content as the previous "
         "output, serialized as a single valid JSON object in the format already requested, with no text "
         "before or after it and no code fence."
     ),
     OutputDefectEnum.CONTRACT: (
+        "## Phase contract correction\n\n"
         "The previous output is readable JSON, but it does not fulfill the contract of this stage: {reason}\n"
         "Check your own output — in a verification report, your report — against the instructions "
         "and fix whatever is inconsistent: every decision must be yours and consistent with your "
-        "evaluations, and nothing will be adjusted automatically. Return the complete corrected output, "
+        "evaluations, and nothing will be adjusted automatically. Preserve all unaffected content. "
+        "Do not remove necessary tasks or steps merely to satisfy the parser. "
+        "Return the complete corrected output, "
         "as a single valid JSON object, with no text before or after it and no code fence."
     ),
     OutputDefectEnum.TRUNCATED: (
+        "## Length interruption recovery\n\n"
         "The previous output was cut off by the length limit and is incomplete: {reason}\n"
-        "Do not continue the previous output: it was discarded and will not be joined to the next one. "
+        "Do not continue the previous output: it was discarded as a phase result and will not be joined "
+        "to the next one. "
         "Produce a new, complete and more concise output that fits within the limit, as a single valid "
         "JSON object in the format already requested, with no text before or after it and no code fence."
     ),
 }
+_PLANNING_PHASES = frozenset({ThinkingPhaseEnum.A2_TASK_DECOMPOSITION, ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING})
+_PLANNING_RECOVERY_INSTRUCTIONS = (
+    "\n\n### Planning coverage\n\n"
+    "The complete corrected plan must still cover the requested determination, including the final steps "
+    "needed to obtain it. In additional planning, cover the remaining gaps using the supplied approved results. "
+    "A missing title does not authorize dropping other necessary tasks. Preserve unaffected content; "
+    "change the batch, task IDs or content when the reported defect requires it, such as a task limit "
+    "or duplicate IDs, while preserving the necessary coverage."
+)
 _INVALID_OUTPUT_AUDIT_TEMPLATE = (
     "Saída inválida descartada na fase {phase} ({defect}): {reason}\n"
     "Diagnóstico: invocação {invocation_id}; problema {code}; sintaxe {syntax}; contrato {contract}; "
@@ -66,8 +81,6 @@ _UNKNOWN_VALUE = "desconhecido"
 _NO_TOKENS = 0
 _NO_ELAPSED_MS = 0
 _NO_RETRIES_LEFT = 0
-_INVALID_CONTEXT_MAX_LENGTH = 1000
-_TRUNCATION_SUFFIX = "..."
 # Temperatura de toda chamada de retentativa. Repetir um pedido que falhou com a temperatura do usuário
 # — em geral baixa — tende a reproduzir a mesma saída e a mesma falha até esgotar as tentativas.
 _RETRY_TEMPERATURE = 1.0
@@ -218,12 +231,14 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         sido recusada, e uma recusa do parser não consome tentativas de resolução da tarefa.
 
         A correção reaproveita a janela da execução: as respostas recusadas e as mensagens de
-        correção permanecem, e o template não é acrescentado de novo, porque instruções e
+        correção permanecem integralmente, e o template não é acrescentado de novo, porque instruções e
         aprendizados não mudam dentro de uma execução. A mensagem de correção depende do defeito
         (`OutputDefectEnum`): um erro de sintaxe pede o mesmo conteúdo em JSON válido, sem nova
         resolução; uma violação de contrato pede ao modelo que confira e corrija a própria saída;
         uma interrupção por comprimento pede uma nova saída completa e concisa, nunca a continuação
         da anterior — a saída aceita é sempre uma única resposta do modelo, sem emendas.
+        A recuperação de A.2/C.2 orienta preservar a cobertura da determinação solicitada, inclusive
+        seus passos finais; isso é instrução ao modelo, não uma validação semântica programática.
 
         Cada saída recusada pelo parser fica registrada na sessão no momento da recusa, inclusive a
         última, que encerra a fase com erro: a auditoria independe de a fase terminar bem.
@@ -380,11 +395,10 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                     chain=chain, invocation_id=invocation_id, has_retry=retries_left > _NO_RETRIES_LEFT
                 )
                 retries_left = self.__consume_retry(retries_left=retries_left, error=error)
-                self.__compact_invalid_message(context=context)
                 context.append(
                     message=Message(
                         creation_timestamp=self.clock.now(),
-                        text=_CORRECTION_BY_DEFECT[error.defect].format(reason=error.reason),
+                        text=self.__correction_message(error=error),
                         source=MessageSourceEnum.USER,
                     )
                 )
@@ -525,24 +539,22 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             raw_output=invalid_output.raw_output,
         )
 
-    def __compact_invalid_message(self, context: ContextWindow) -> None:
-        """Trunca na janela a saída inválida quando ela é longa demais para ser reenviada inteira.
+    def __correction_message(self, error: PhaseParsingError) -> str:
+        """Pede correção pelo defeito, com orientação de cobertura nas fases de planejamento.
 
-        A saída bruta completa já ficou registrada em `InvalidOutput` e na auditoria da sessão;
-        manter dezenas de milhares de caracteres de uma resposta cortada na janela infla o custo
-        das retentativas e das fases seguintes que compartilham a conversa.
+        O conteúdo recusado já está integralmente na janela. A orientação não congela o lote:
+        corrigir um teto ou identificadores duplicados pode exigir alterar tarefas.
 
         Args:
-            context: Janela de contexto onde a última mensagem é a saída recusada pelo parser.
+            error: Recusa do parser com o defeito e o motivo específico.
+
+        Returns:
+            str: Instruções em inglês e Markdown, sem repetir o template da fase.
         """
-        last_message = context.messages[-1]
-        if len(last_message.text) <= _INVALID_CONTEXT_MAX_LENGTH:
-            return
-        context.messages[-1] = Message(
-            creation_timestamp=last_message.creation_timestamp,
-            text=f"{last_message.text[:_INVALID_CONTEXT_MAX_LENGTH]}{_TRUNCATION_SUFFIX}",
-            source=last_message.source,
-        )
+        correction = _CORRECTION_BY_DEFECT[error.defect].format(reason=error.reason)
+        if self.phase in _PLANNING_PHASES:
+            return correction + _PLANNING_RECOVERY_INSTRUCTIONS
+        return correction
 
     def __consume_retry(self, retries_left: int, error: RalphError) -> int:
         """Gasta uma retentativa de saída inválida, ou deixa a falha subir.

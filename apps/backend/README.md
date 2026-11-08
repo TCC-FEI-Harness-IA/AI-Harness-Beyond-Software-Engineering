@@ -340,8 +340,9 @@ Invocações gravadas antes deste campo voltam com `temperature: null`.
 ao modelo na chamada que produziu essa saída, em ordem (`source` `user` para prompts e correções,
 `llm_agent` para respostas anteriores da mesma janela). Toda execução de fase começa numa janela nova,
 então a primeira chamada de cada fase leva só o prompt dela. Quando a fase precisou de correção de JSON,
-é a conversa da última chamada, já com a saída recusada e a mensagem de correção (o template não é
-repetido); a auditoria de uma saída inválida (`source` `system`) guarda a conversa da chamada que a
+é a conversa da última chamada, já com todas as saídas recusadas e mensagens de correção **integrais**,
+em ordem, inclusive quando ultrapassam 1.000 caracteres (o template não é repetido). A auditoria de
+uma saída inválida (`source` `system`) guarda a conversa da chamada que a
 produziu e o tipo de defeito (erro de sintaxe, violação de contrato ou interrupção por comprimento). A pergunta do usuário e as etapas
 programáticas têm `prompt_input` vazio, assim como sessões gravadas antes deste campo existir.
 
@@ -367,6 +368,9 @@ incompleto ou contraditório, lote acima do teto) é registrada na sessão como 
 `Saída inválida descartada na fase ...`, com o motivo e a saída bruta, no momento da recusa. O registro
 independe de a fase terminar bem: quando as correções se esgotam e a execução é interrompida, as
 saídas inválidas continuam no documento.
+O texto completo auditado também permanece na janela enviada à correção da mesma execução;
+nenhum resumo, corte ou ponteiro para essa auditoria o substitui. `PhaseOutcome.raw_output` e
+`parsed` vêm somente da resposta aceita, sem concatenação ou união com partes das recusas.
 
 **Encerramento e persistência.** Uma sessão só vale como encerrada depois de gravada. Se a gravação
 do encerramento falha, a sessão em memória volta a `running` e a falha original é propagada, em vez
@@ -668,6 +672,8 @@ persistida antes do evento `result`.
 | B.2 reprova e há tentativas | B.1 repete numa janela nova, com temperatura `1`; as tentativas reprovadas e os vereditos chegam pela variável `previous_attempts` do Template B.1, delimitados por `<previous_attempts>`. A verificação dessa tentativa e as fases seguintes voltam à temperatura do usuário. |
 | B.2 reprova e as tentativas acabam | Nada é armazenado, B.4 não roda, a execução é interrompida. |
 | B.2/C.1 devolve um relatório vazio, incompleto, duplicado, com ID desconhecido ou contraditório | O verificador é chamado de novo, na mesma janela e com temperatura `1`, para conferir e corrigir o próprio relatório (chamada contada); não consome tentativa de B.1. O veredito nunca é ajustado automaticamente. Sem correção, a fase falha. |
+| Qualquer saída estruturada é recusada e há retentativa | A resposta bruta completa e os feedbacks permanecem na janela da execução, sem corte aos 1.000 caracteres nem repetição do template. A correção de contrato pede saída completa e preservação do conteúdo não afetado e das etapas necessárias. |
+| A.2/C.2 precisa corrigir o planejamento | A instrução exige manter a cobertura da determinação solicitada, inclusive os passos finais. Um título ausente não autoriza remover outras tarefas necessárias. Excesso de tarefas e IDs duplicados podem exigir alterar o lote; quantidade, IDs e conteúdo não são congelados. A cobertura semântica continua dependendo do modelo. |
 | Qualquer fase devolve um JSON ilegível ou interrompido pelo limite de comprimento | Erro de sintaxe: o modelo é chamado de novo para devolver o mesmo conteúdo em JSON válido, sem nova resolução. Interrupção por comprimento: pede-se uma nova saída completa e concisa, nunca a continuação da anterior. Os únicos reparos locais são a extração de cercas e o fechamento estrutural inequívoco. |
 | C.1 reprova e há recursos | C.2 cria tarefas para os critérios pendentes, que entram no topo da fila. O template recebe o **Prompt Original** do usuário e, em **Resultados já armazenados**, só o enunciado e a conclusão (campo `conclusion` de B.1) de cada tarefa aprovada, sem a resolução completa; C.1 e C.3 continuam recebendo as resoluções completas. |
 | C.1 reprova e não há recursos para C.2 | A execução é interrompida; os critérios pendentes ficam em `failure`. Nunca há C.3. |
@@ -680,6 +686,31 @@ uma avaliação para cada critério, sem omissões, repetições ou IDs extras; 
 exatamente igual aos critérios com `met=false`; `approved` somente com todos `met=true`. Isso garante
 a consistência estrutural do relatório; não garante que o julgamento do modelo verificador esteja
 semanticamente correto.
+
+**Recuperação integral de saídas.** `BaseThinkingPhase` mantém na mesma execução todas as respostas
+recusadas e correções, enviadas integralmente à chamada seguinte. A sintaxe inválida pede o mesmo
+conteúdo em JSON válido, sem nova resolução; o contrato inválido pede a saída completa corrigida,
+preservando conteúdo não afetado; a interrupção por comprimento pede uma nova saída completa e
+concisa, sem continuar a anterior. As instruções são em inglês e Markdown e não repetem o template.
+A abreviação de `PhaseParsingError.raw_output` para erro/log não altera o texto usado na janela
+nem confirma `finish_reason=length`. JSON legível com contrato inválido e término `length` continua
+sendo defeito de contrato; JSON válido para o contrato com `length` continua aceito com diagnóstico
+de corte confirmado e sem garantia semântica.
+
+Em A.2/C.2, a orientação de cobertura inclui os passos finais necessários e, em C.2, as lacunas
+restantes a partir dos resultados aprovados. O parser continua validando o contrato, sem verificar
+semanticamente se o plano é suficiente. A nova orientação não compara significados por regex,
+não completa campos localmente e não promove objetos recusados. O detalhe e o exemplo de três
+tarefas com título ausente estão em
+[Melhorias do thinking — 01](../../NOVAS_REGRAS_RALPH_LOOP.md#melhorias-do-thinking--01-recuperação-integral-de-saídas).
+
+Reenviar conteúdo longo pode aumentar tokens de entrada, latência e espaço no contexto e no
+armazenamento dos `prompt_input`. Cada chamada mantém seu consumo, diagnóstico, temperatura e
+vínculo à invocação original; a chamada aceita resolve a recuperação. Os limites de retentativa,
+chamadas, tokens e tempo seguem valendo. Se faltar orçamento, a execução é interrompida conforme
+a política existente, sem encurtar a conversa para forçar nova tentativa. Cancelamento controlado
+persiste as recuperações pendentes como `failed` e é propagado. A fase/tarefa seguinte recebe
+janela nova e a temperatura da sessão, conforme suas regras próprias de retentativa.
 
 **O que não vem do paper.** O paper repete até aprovar e não define limites de recursos nem estados
 de interrupção. Os limites (`RALPH_*` e o limite de tokens por sessão) e o encerramento sem conclusão são

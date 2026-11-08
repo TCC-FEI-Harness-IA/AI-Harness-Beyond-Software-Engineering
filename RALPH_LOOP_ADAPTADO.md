@@ -26,7 +26,7 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 10. **Planejamento adicional:** se a validação global reprovar, identificar critérios pendentes, gerar novas tarefas específicas e retornar ao loop de execução. O `Template C.2` traz a área **Aprendizados Pontuais**, para que as descrições das novas tarefas repitam os dados do enunciado de que precisam. As novas tarefas seguem as mesmas **regras de redação** de A.2 (item 2).
 11. **Resposta final:** após aprovação global, sintetizar a resposta a partir dos resultados aprovados, obedecendo idioma, formato e restrições gerais. O `Template C.3` traz a área **Aprendizados Pontuais** só para conferir dados do enunciado (por exemplo, a letra da alternativa); o conteúdo da resposta continua vindo apenas dos resultados aprovados.
 12. **Temperatura das retentativas (extensão):** toda chamada de retentativa sai com temperatura `1`: a nova tentativa de B.1 depois de uma reprovação em B.2 e a correção de uma saída inválida (JSON ilegível, relatório inconsistente, lote de tarefas inválido) ou vazia, em qualquer fase. Assim que as retentativas acabam, as chamadas voltam à temperatura pedida pelo usuário.
-13. **Isolamento de contexto e recuperação de saídas (extensão):** cada execução de fase tem a sua janela; só a correção de uma saída inválida, na mesma fase e tarefa, reaproveita a janela, sem repetir o template. A correção depende do defeito: erro de sintaxe pede o mesmo conteúdo em JSON válido, sem nova resolução; violação de contrato pede ao modelo que confira e corrija a própria saída; interrupção por comprimento pede uma nova saída completa e concisa, sem continuar a anterior. Os únicos reparos locais são a extração de cercas e o fechamento estrutural inequívoco.
+13. **Isolamento de contexto e recuperação de saídas (extensão):** cada execução de fase tem a sua janela; só a correção de uma saída inválida, na mesma fase e tarefa, reaproveita a janela, preservando integralmente respostas recusadas e feedbacks, sem repetir o template. A correção depende do defeito: erro de sintaxe pede o mesmo conteúdo em JSON válido, sem nova resolução; violação de contrato pede a saída completa corrigida, preservando conteúdo não afetado; interrupção por comprimento pede uma nova saída completa e concisa, sem continuar a anterior. Em A.2/C.2, a recuperação exige manter a cobertura da determinação solicitada, incluindo passos finais, sem congelar o lote quando o defeito exige alterá-lo. Essa cobertura é orientação ao modelo, não garantia semântica do parser. Os únicos reparos locais são a extração de cercas e o fechamento estrutural inequívoco.
 
 **Separação de estados:** mantenha, no mínimo, `original_question`, `general_acceptance_criteria`, `task_queue`, `approved_task_results`, `accumulated_learnings`, `task_attempts` (o registro das tentativas da tarefa, de onde saem o feedback da nova tentativa e o histórico de B.4), `active_window` (a janela da execução de fase corrente, nunca herdada por outra fase) e o histórico auditado da sessão, separado das janelas. `accumulated_learnings` recebe primeiro as anotações de A.3 e depois os aprendizados de B.4, na ordem em que surgem, e é renderizado na área **Aprendizados Pontuais** de cada template das fases B e C. A temperatura do usuário é um parâmetro fixo da sessão; a temperatura de retentativa vale só para a chamada que repete um pedido que falhou. Os nomes são sugestões de implementação, não nomes exigidos pelo paper. O texto acadêmico define o comportamento conceitual dos templates, mas não fornece seus prompts completos; eles precisam ser implementados de acordo com as responsabilidades descritas, sem alegar que são transcrições do trabalho.
 
@@ -141,10 +141,50 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 | Defeito | Correção pedida |
 |---|---|
 | Erro de sintaxe (sem JSON legível) | O mesmo conteúdo em JSON válido, sem nova resolução. |
-| Violação de contrato (JSON legível que contraria o schema ou a coerência da fase) | O próprio modelo confere e corrige a saída ou o relatório; o veredito nunca é ajustado automaticamente. |
+| Violação de contrato (JSON legível que contraria o schema ou a coerência da fase) | O próprio modelo confere e devolve a saída completa corrigida, preservando conteúdo não afetado e etapas necessárias; o veredito nunca é ajustado automaticamente. |
 | Interrupção por comprimento (sem JSON legível e `finish_reason = "length"`) | Uma nova saída completa e concisa, sem continuar a anterior; nada é emendado. |
 
 Os únicos reparos locais são os que não alteram conteúdo: a extração de dentro de cercas ou de texto solto e o fechamento estrutural inequívoco das chaves e colchetes finais. Nunca se fabricam campos, se completam strings interrompidas, se inventam explicações ou se transforma uma reprovação em aprovação. A temperatura `1` das correções, os limites de correção, o schema estrito, a contabilização de todas as chamadas e a política de orçamento não mudam. Uma correção de formato continua distinta de uma nova tentativa de resolução depois de uma reprovação: a correção reaproveita a janela e não consome tentativa da tarefa; a nova tentativa consome uma tentativa e abre uma janela nova.
+
+### Melhorias do thinking — 01: recuperação integral de saídas
+
+**Problema observado.** Uma A.2 pode ser JSON legível e ainda faltar `title` em uma tarefa.
+No caso relatado de Física ITA 2024 Q005, o plano tinha três tarefas, chegando à aplicação da
+terceira lei de Kepler para determinar o período de Marte em meses. O backend auditava o plano
+inteiro, mas reenviava apenas os primeiros 1.000 caracteres e `...` à chamada de correção.
+O modelo perdeu T2/T3 e devolveu só T1; o parser aceitou esse lote estruturalmente válido.
+O julgamento posterior de C.1 sobre sua suficiência constitui um segundo problema.
+
+**Regra.** A janela da execução mantém toda resposta recusada e toda correção integralmente,
+em ordem, para qualquer fase e qualquer defeito. A auditoria registra o mesmo conteúdo bruto
+completo, mas não substitui o reenvio. O template aparece uma única vez. A resposta aceita é
+sempre uma única saída completa do modelo; nunca é montada com objetos ou fragmentos recusados.
+As correções, em inglês e Markdown, distinguem sintaxe, contrato e interrupção por comprimento
+conforme a tabela anterior.
+
+Em A.2/C.2, a correção pede explicitamente que o plano continue cobrindo a determinação
+solicitada, incluindo os passos finais necessários. Em C.2, deve cobrir as lacunas restantes
+com os resultados aprovados fornecidos. Corrigir um título não autoriza eliminar outras
+tarefas necessárias apenas para satisfazer o parser. Um defeito como excesso de tarefas ou
+IDs duplicados pode exigir mudar o lote, IDs ou conteúdo, preservando a orientação de cobertura.
+Não há quantidade fixa de tarefas nem detecção semântica por regex.
+
+> *Janela da fase: template único + saídas recusadas integrais + correções integrais*
+> → *Nova saída completa, avaliada sozinha pelo parser*
+
+Uma fase/tarefa seguinte abre contexto novo e volta à temperatura da sessão; só as retentativas
+da execução corrente usam temperatura `1`. O reenvio integral pode aumentar consumo de entrada,
+latência e espaço de contexto/persistência. Os limites existentes continuam autorizando ou
+interrompendo cada chamada, sem corte silencioso para fazê-la caber. Diagnósticos, vínculos de
+recuperação, contabilização e persistência permanecem; cancelamento controlado encerra as
+recuperações como falha e é propagado.
+
+**Limite da garantia.** O código preserva o conteúdo para a correção. O modelo ainda pode devolver
+um plano incompleto que passe no parser. A cobertura semântica é orientação nesta etapa; a
+revisão do planejamento e de C.1 será reforçada depois. Testes com respostas e vereditos
+roteirizados não provam qualidade semântica de um modelo real. O relato detalhado, o exemplo
+com três tarefas e os resultados dos testes estão em
+[Melhorias do thinking — 01](NOVAS_REGRAS_RALPH_LOOP.md#melhorias-do-thinking--01-recuperação-integral-de-saídas).
 
 ### B.4 — Registro dos resultados parciais da tarefa aprovada
 

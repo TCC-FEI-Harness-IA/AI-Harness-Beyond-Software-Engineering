@@ -1653,3 +1653,263 @@ Arquivos principais:
 ### 8.11 Integração com a recuperação e o isolamento de contexto
 
 O diagnóstico estruturado e a classificação operacional `OutputDefectEnum` coexistem: sintaxe inválida com corte confirmado pede uma nova saída completa e concisa; sintaxe inválida sem corte confirmado pede o mesmo conteúdo em JSON válido; contrato inválido pede que o modelo confira e corrija a própria saída. O indicador de comprimento continua independente do contrato, inclusive quando um JSON válido termina com `length`. As correções preservam a janela da mesma fase e tarefa, e toda transição abre uma janela nova. B.4 recebe a tarefa, o resultado aprovado, as saídas recusadas de resolução e verificação e os vereditos como entradas explícitas, separados da memória transversal.
+
+## Melhorias do thinking — 01: recuperação integral de saídas
+
+### Problema, motivo e alcance
+
+Esta é a primeira de sete melhorias do thinking. Ela corrige a perda programática de conteúdo
+durante a recuperação de saídas e explicita a obrigação de manter a cobertura do planejamento.
+A revisão do planejamento e da suficiência semântica em C.1 permanece para etapas posteriores.
+As seções anteriores são mantidas como histórico; esta seção torna **integral** a preservação
+prevista na seção 5 e complementa os diagnósticos da seção 8.
+
+No caso relatado de Física ITA 2024 Q005, o pedido era determinar o período de Marte em meses.
+A primeira A.2 continha três tarefas: obter a razão de distâncias, obter a razão dos raios
+orbitais e aplicar a terceira lei de Kepler. A terceira tarefa estava sem `title`. A saída
+era JSON legível, mas violava o contrato de planejamento.
+
+`BaseThinkingPhase.__run_until_accepted` auditava a saída inteira, mas depois chamava
+`__compact_invalid_message`: qualquer resposta acima de 1.000 caracteres era substituída na
+janela pelos primeiros 1.000 caracteres e `...`. Isso acontecia em erros de sintaxe, contrato
+e comprimento. A chamada seguinte recebia só o começo de T1. O modelo devolveu apenas T1,
+o parser aceitou esse lote estruturalmente válido e C.1 posteriormente considerou suficiente
+uma razão de distâncias para responder um período em meses.
+
+Há dois problemas distintos: o código retirou material necessário à recuperação; o modelo
+também julgou insuficientemente a cobertura da pergunta. A auditoria completa não corrige o
+primeiro problema, porque ela não é a conversa reenviada ao modelo. Esta implementação remove
+o corte e acrescenta orientação de cobertura, sem alegar resolver o segundo problema.
+
+### Regra nova e contratos das correções
+
+Toda saída recusada permanece **integralmente** na janela da própria execução de fase,
+junto de todas as mensagens de correção, na ordem original. Foram removidos o método de
+compactação e suas constantes. Não há outro corte, resumo livre, ponteiro para a auditoria
+ou aproveitamento parcial dos objetos recusados. O template da fase é renderizado uma vez.
+As instruções de recuperação são escritas em inglês e Markdown; os envelopes JSON das fases
+e o idioma final solicitado pelo usuário continuam valendo.
+
+| Defeito operacional | Instrução enviada |
+|---|---|
+| `syntax`: não há objeto JSON legível, sem corte confirmado pelo provedor | Devolver o mesmo conteúdo em JSON válido, sem refazer a resolução nem alterar o conteúdo. |
+| `contract`: há JSON legível, mas o contrato falhou | Corrigir o defeito indicado, conferir a própria saída e devolver a saída completa. Preservar conteúdo não afetado; não eliminar tarefas ou etapas necessárias apenas para satisfazer o parser. As decisões continuam sendo do modelo, coerentes com suas avaliações. |
+| `truncated`: não há JSON legível e `finish_reason == "length"` | Produzir uma nova saída completa e concisa que caiba no limite. Não continuar nem emendar a resposta anterior. A parte recebida permanece inteira como referência na janela, mas não é resultado aceito. |
+
+Em A.2 e C.2, **todas** as correções recebem também a orientação de que o plano completo
+corrigido deve continuar cobrindo a determinação solicitada, inclusive os passos finais
+necessários. Em C.2, isso significa cobrir as lacunas restantes usando os resultados aprovados
+fornecidos como entrada. Corrigir um título ausente não autoriza eliminar outras tarefas
+necessárias. O lote, seus IDs e o conteúdo podem mudar quando o defeito exigir isso, por
+exemplo, para respeitar o teto de tarefas ou corrigir IDs duplicados.
+
+Essa orientação não fixa três tarefas, não congela IDs ou descrições e não compara o significado
+dos dois planos por regex. Continuam em vigor apenas as validações determinísticas já existentes,
+incluindo campos, tipos, unicidade de IDs, IDs já usados e teto de tarefas.
+
+Comprimento da mensagem não classifica o defeito. A abreviação existente de
+`PhaseParsingError.raw_output`, destinada ao erro/log, também não confirma corte do provedor
+e não é usada para reconstruir a conversa: a fase usa o texto original de `LLMMessage`.
+JSON legível com contrato inválido continua sendo `contract`, mesmo com `finish_reason=length`.
+JSON válido para o contrato e terminado com `length` continua aceito, com corte confirmado no
+diagnóstico e sem garantia de completude semântica. Esses comportamentos do parser não mudaram.
+
+### Entradas, saídas e transições
+
+| Entrada | Uso |
+|---|---|
+| Janela nova, fase e tarefa atuais | Delimitam uma execução; a janela não é compartilhada com outras fases/tarefas. |
+| Template e variáveis explícitas da fase | Formam a primeira mensagem, sem repetição nas correções. |
+| Saída original de `LLMMessage` e término do provedor | São avaliados pelo parser e preservados sem corte programático na recuperação. |
+| `PhaseParsingError` com motivo, defeito e diagnóstico | Seleciona a correção específica e vincula a recusa à invocação que a produziu. |
+| `ValidationContext` | Mantém as verificações estruturais e os limites existentes. |
+| Configuração da sessão, saldo e limites operacionais | Autorizam ou interrompem cada chamada, inclusive as correções. |
+
+1. A fase exige uma janela nova e insere o template uma vez. A primeira chamada usa a temperatura
+   da sessão, salvo quando a execução já é uma retentativa de resolução.
+2. Cada chamada enviada gera uma invocação e registra seu consumo e término. A resposta entra
+   inteira na janela. O parser registra o diagnóstico na invocação que a produziu.
+3. Na recusa, `InvalidOutput` e a auditoria guardam o texto original completo. A recuperação
+   fica vinculada à invocação original da cadeia. Sem retentativa disponível, a falha é propagada;
+   nenhuma parte da resposta é promovida a resultado aceito.
+4. Havendo retentativa, a fase acrescenta só a correção específica. A janela permanece com
+   template, respostas recusadas e feedbacks completos. A próxima chamada usa temperatura `1`,
+   passa novamente pela validação local e pelo guardião de custo e aponta a primeira recusa
+   em `recovers_invocation_id`. Uma resposta vazia pode repetir essa mesma conversa, sem
+   acrescentar conteúdo fictício nem perder a contabilização da chamada vazia.
+5. A saída de cada nova chamada é parseada sozinha. O `PhaseOutcome.raw_output` e o conteúdo
+   parseado vêm exclusivamente da chamada aceita; nada é concatenado ou montado com fragmentos
+   das recusas. O `prompt_input` registra exatamente a conversa enviada nessa chamada.
+   As recuperações são encerradas como `recovered`, com `resolved_by_invocation_id`.
+6. Na fase ou tarefa seguinte, abre-se uma janela nova, sem a conversa rejeitada ou os feedbacks
+   da recuperação. Os dados previstos pelo método continuam chegando como entradas explícitas.
+   A temperatura volta à da sessão. Uma nova tentativa de resolução continua seguindo sua regra
+   própria de temperatura e contexto.
+
+### Exemplo: três tarefas e título ausente
+
+O exemplo abaixo ilustra o defeito do caso relatado; não é uma transcrição da execução nem uma
+nova validação física do problema. Chame de **R1** esta saída original completa:
+
+```json
+{
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Obter a razão de distâncias",
+      "description": "Obter a razão das distâncias indicada pelos dados do enunciado e explicar a relação utilizada.",
+      "acceptance_criteria": [{"id": "T1-AC1", "description": "Apresentar a razão de distâncias com a explicação que a sustenta."}]
+    },
+    {
+      "id": "T2",
+      "title": "Obter a razão dos raios orbitais",
+      "description": "Relacionar as distâncias do enunciado aos raios orbitais e obter a razão dos raios de Marte e da Terra.",
+      "acceptance_criteria": [{"id": "T2-AC1", "description": "Apresentar a razão dos raios orbitais com as hipóteses e a explicação."}]
+    },
+    {
+      "id": "T3",
+      "description": "Aplicar a terceira lei de Kepler à razão dos raios orbitais e determinar o período de Marte em meses, com explicação.",
+      "acceptance_criteria": [{"id": "T3-AC1", "description": "Determinar o período em meses, mostrando a relação física e a conversão de unidade."}]
+    }
+  ]
+}
+```
+
+O diagnóstico informa `syntax_status=valid`, `contract_status=invalid`,
+`problem.code=missing_field`, `problem.field=tasks[].title` e `affected_ids=["T3"]`.
+Com término `stop`, `length_interruption=not_detected`.
+
+| Destino | Conteúdo integral |
+|---|---|
+| Auditoria da recusa | Motivo, diagnóstico e **todo R1**, incluindo T2 e T3. O `prompt_input` dessa auditoria é o prompt que produziu R1, antes da recusa. |
+| Segunda chamada ao modelo | A mesma mensagem com o template original, uma mensagem `llm_agent` com **todo R1** e uma mensagem `user` de correção de contrato e cobertura. Nenhum trecho de R1 é substituído por `...`. |
+| Resultado da fase | Apenas a nova saída completa **R2**, se aceita; R1 continua registrado como recusa. |
+
+R1 e R2 são nomes explicativos neste documento: a aplicação envia o texto integral de R1,
+e não esses nomes ou um endereço de auditoria. Um trecho representativo da instrução em inglês é:
+
+```markdown
+## Phase contract correction
+
+Preserve all unaffected content. Do not remove necessary tasks or steps merely to satisfy the parser.
+Return the complete corrected output.
+
+### Planning coverage
+
+The complete corrected plan must still cover the requested determination, including the final steps needed to obtain it.
+A missing title does not authorize dropping other necessary tasks.
+```
+
+Uma R2 adequada a essa correção contém novamente **T1, T2 e T3 completos**, com seus campos e
+critérios, incluindo `"title": "Determinar o período de Marte em meses"` em T3. Esse título
+é produzido pelo modelo; o backend não o preenche. A quantidade três pertence apenas ao exemplo.
+Uma correção para excesso de tarefas pode alterar a decomposição, e uma correção para IDs
+duplicados pode renumerá-las, mantendo a orientação de cobertura. R2 nunca é uma emenda do fim
+de R1, nem um objeto produzido pela união local dos dois.
+
+### Custo, limites e falhas
+
+Reenviar respostas longas aumenta os tokens de entrada, a latência potencial e o espaço ocupado
+na janela do provedor. Com várias recusas, cada nova chamada carrega todas as respostas e
+correções anteriores dessa execução. A auditoria e os `prompt_input` persistidos também podem
+ocupar mais espaço. Essa é a contrapartida explícita de manter disponível o material a corrigir.
+
+Os limites existentes continuam aplicáveis: retentativas de saída inválida/vazia
+(`RALPH_JSON_PARSE_MAX_RETRIES`), chamadas por sessão, orçamento de tokens e reserva de C.3,
+tempo de sessão e limites do provedor. Cada chamada tem seu próprio consumo registrado,
+inclusive recusas e respostas vazias; os totais não são recalculados a partir do texto.
+O guardião mantém sua política atual, que contabiliza o consumo informado e não estima a
+próxima entrada. A estimativa de entrada do adapter do provedor, quando há `context_length`
+cadastrado, continua podendo reduzir o teto **de saída**; não reduz a conversa.
+
+Se os recursos forem insuficientes, segue-se a interrupção existente, sem nova chamada após
+a negação e sem restaurar o corte silencioso. Esgotamento, erro do provedor e cancelamento
+controlado encerram as recuperações pendentes como `failed`. O cancelamento é propagado sem
+virar resposta ou retentativa. Permanecem as limitações da seção 8 para falhas de persistência
+ou encerramento abrupto durante a limpeza.
+
+### Evidência programática e limite semântico
+
+O código garante a preservação literal do conteúdo recebido, a ordem dos feedbacks, o template
+único, o isolamento das execuções e a seleção de uma única resposta aceita. Os testes usam
+rede falsa, parser real, recorder e repositório, inspecionando as conversas capturadas e os
+`prompt_input`, além da auditoria. Também exercitam lotes alterados para corrigir teto ou IDs,
+as temperaturas, os diagnósticos, os vínculos, o consumo e os encerramentos sem sucesso.
+
+**Aceitação estrutural não prova completude semântica.** Um plano pode continuar omitindo a
+determinação final mesmo sendo JSON válido e respeitando todos os campos. A preservação da
+cobertura em R2 é uma obrigação dada ao modelo, sem comparação semântica programática nesta
+etapa. Um lote reduzido e estruturalmente válido ainda pode ser aceito. A qualidade do
+planejamento e o julgamento de C.1 precisam ser reforçados e avaliados em etapas posteriores.
+Os vereditos e respostas completos roteirizados demonstram o encadeamento do software, sem
+provar que um modelo real seguirá essas instruções.
+
+Não foram realizadas chamadas pagas, nova execução de Q005, bateria de benchmark ou avaliação
+semântica com modelo real. Não se afirma ganho de acurácia nem se quantifica o custo adicional.
+
+### Orientação para atualização do paper
+
+Acrescentar ao tratamento operacional de recuperação, fora da transcrição literal da Metodologia:
+
+> Quando uma saída é recusada, seu conteúdo integral e as mensagens de correção permanecem na
+> janela da mesma execução de fase, sem repetição do template. A correção distingue sintaxe,
+> contrato e interrupção por comprimento e solicita uma única saída completa. Nas fases de
+> planejamento, a correção deve preservar a cobertura da determinação solicitada, incluindo
+> seus passos finais, admitindo mudanças de decomposição exigidas pelo defeito. A preservação
+> do histórico é garantida pelo harness; a suficiência semântica do plano continua dependente
+> do modelo. Os limites de recursos podem interromper a execução, sem abreviar silenciosamente
+> o material necessário à correção.
+
+As etapas A/B/C, os envelopes e as expressões de entrada/saída do método permanecem os mesmos.
+A recuperação usa a janela da execução corrente; toda mudança de fase/tarefa segue abrindo
+um contexto novo. A transcrição literal da metodologia em `RALPH_LOOP_ADAPTADO.md` foi preservada.
+
+### Validação executada nesta etapa
+
+Desenvolvimento em worktree própria, branch `feature/thinking-01-recuperacao-integral`, com
+Python 3.12.10 do ambiente virtual já existente do projeto. Antes de modificar o código de
+produção, a seleção de regressões registrou **18 falhas e 1 teste passando**: as falhas expuseram
+o corte e a ausência das novas orientações; o teste já verde distinguiu a abreviação do erro/log
+de um corte confirmado pelo provedor. O teste antigo que exigia 1.000 caracteres foi atualizado
+para exigir a resposta integral, sem remover a verificação da auditoria.
+
+Após a implementação, os testes focados de fase base, diagnósticos, recuperação, parser e fluxo
+Ralph registraram inicialmente **290 testes passando**. A seleção final acrescentou os casos
+de recuperação de planejamento por sintaxe e comprimento e registrou **294 testes passando**
+(1,43 s). Foram executados, na pasta `apps/backend`, com os executáveis do ambiente Python
+do projeto:
+
+```bash
+python -m pytest -o addopts='' -q \
+  tests/application/phases/test_base_thinking_phase_recovery.py \
+  tests/application/phases/test_base_thinking_phase.py \
+  tests/application/phases/test_base_thinking_phase_diagnostics.py \
+  tests/application/usecases/test_ralph_integral_recovery.py \
+  tests/application/usecases/test_ralph_thinking_usecase.py \
+  tests/infra/adapters/test_structured_response_parser_diagnostics.py --tb=short
+flake8 src tests
+python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=100
+```
+
+| Verificação final | Resultado real |
+|---|---|
+| Seleção focada acima | 294 testes passaram. O override de `addopts` vale só para a seleção; a cobertura global é exigida na suíte completa. |
+| `flake8 src tests` | Saída vazia, código de saída 0. |
+| Suíte completa com o limiar original de 100% | **2.056 testes passaram**, em 79,40 s. Cobertura **100,00%**, incluindo branches: 5.158 statements e 856 branches, sem lacunas. |
+| `git diff --check` | Sem erros de whitespace. |
+| Comparação dos documentos com o HEAD de origem | Conteúdo anterior deste relatório preservado como prefixo integral e transcrição literal da metodologia preservada byte a byte. |
+
+A primeira execução completa já havia registrado 2.052 aprovações e 100% de cobertura antes
+dos quatro casos adicionais parametrizados. A primeira chamada do lint identificou uma linha
+longa desta implementação e cinco ocorrências preexistentes: linhas longas em
+`benchmark_question_selector.py`, `benchmark_run_input_dto.py` e seus testes, e uma linha vazia
+final em `test_benchmark_router.py`. Todas receberam apenas ajustes de formatação, sem mudar
+o comportamento do benchmark ou remover testes. A verificação final passou após esses ajustes.
+
+Os novos cenários exercitam A.2 e C.2 com T2/T3 e dados finais além dos 1.000 caracteres;
+B.1 com duas recusas longas e feedbacks em ordem; sintaxe com `stop`, término ausente e `length`;
+contrato com `stop` e `length`; correções de teto e duplicidade com mudanças de lote/IDs/conteúdo;
+esgotamento de retentativas; negação de orçamento pelo guardião real; cancelamento controlado;
+persistência dos diagnósticos e recuperações; e o fluxo completo com templates reais tanto para
+uma pergunta aberta quanto para uma pergunta com alternativas. A chamada posterior à recuperação
+usa uma janela nova e volta à temperatura da sessão.

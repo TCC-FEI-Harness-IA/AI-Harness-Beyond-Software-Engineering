@@ -16,6 +16,7 @@ from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.length_interruption_enum import LengthInterruptionEnum
 from src.domain.enums.output_contract_status_enum import OutputContractStatusEnum
+from src.domain.enums.output_defect_enum import OutputDefectEnum
 from src.domain.enums.output_problem_code_enum import OutputProblemCodeEnum
 from src.domain.enums.output_syntax_status_enum import OutputSyntaxStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
@@ -151,6 +152,18 @@ def test_q042_json_invalido_com_termino_stop_nao_e_truncamento() -> None:
     assert erro.diagnostic.syntax_status is OutputSyntaxStatusEnum.INVALID
     assert erro.diagnostic.contract_status is OutputContractStatusEnum.NOT_EVALUATED
     assert erro.diagnostic.problem.code is OutputProblemCodeEnum.JSON_SYNTAX
+    assert erro.diagnostic.finish_reason == "stop"
+    assert erro.diagnostic.length_interruption is LengthInterruptionEnum.NOT_DETECTED
+
+
+def test_abreviacao_local_do_erro_nao_confirma_interrupcao_do_provedor() -> None:
+    bruto = '{"result": "' + ("long explanation " * 100)
+
+    erro = _recusa(bruto, phase=_B1, finish_reason="stop")
+
+    # A abreviação do campo do erro serve ao log; não é o motivo de término do provedor.
+    assert len(erro.raw_output) < len(bruto)
+    assert erro.defect is OutputDefectEnum.SYNTAX
     assert erro.diagnostic.finish_reason == "stop"
     assert erro.diagnostic.length_interruption is LengthInterruptionEnum.NOT_DETECTED
 

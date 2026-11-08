@@ -60,7 +60,9 @@ def _validated_quotas(
         raise InvalidBenchmarkRequestError("subjects e subject_counts não podem ser usados juntos.")
     unknown = subject_counts.keys() - available.keys()
     if unknown:
-        raise InvalidBenchmarkRequestError(f"Disciplinas desconhecidas em subject_counts: {', '.join(sorted(unknown))}.")
+        raise InvalidBenchmarkRequestError(
+            f"Disciplinas desconhecidas em subject_counts: {', '.join(sorted(unknown))}."
+        )
     for subject, requested in subject_counts.items():
         if type(requested) is not int or not 0 <= requested <= available[subject]:
             raise InvalidBenchmarkRequestError(
