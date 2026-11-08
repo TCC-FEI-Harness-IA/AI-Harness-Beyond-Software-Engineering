@@ -21,6 +21,8 @@ class LearningsMemory(ILearningsMemory):
         Um aprendizado em branco, ou igual a um já registrado (inclusive no mesmo lote) a menos de
         espaços, não entra na memória: a área "Aprendizados Pontuais" não repete fatos.
         Reformulações com outras palavras não são detectadas aqui; evitá-las cabe ao template de B.4.
+        A normalização serve só à comparação: o primeiro conteúdo e sua origem permanecem intactos.
+        Referentes, unidades, caixa, condições e aproximações diferentes não são equivalentes.
 
         Args:
             learnings: Aprendizados a acumular.

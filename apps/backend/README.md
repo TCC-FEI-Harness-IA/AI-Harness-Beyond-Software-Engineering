@@ -717,6 +717,42 @@ de interrupção. Os limites (`RALPH_*` e o limite de tokens por sessão) e o en
 um tratamento operacional adicional, que nunca promove material reprovado nem sintetiza sem aprovação
 global. A reserva de tokens é uma margem de melhor esforço, não uma garantia de conclusão.
 
+### Memória de aprendizados: etapa 02
+
+`a3_planning_learnings.md` recebe somente `user_question`, preserva dados literais e suas associações
+e pede revisão de completude na própria chamada: nomes, siglas definidas, símbolos/referentes,
+tabelas/listas, alternativas integrais com identificadores, valores/unidades, condições e o que
+se solicita determinar. Não corrige dados, resolve ambiguidades, converte unidades ou infere definições.
+
+`b4_learnings_extraction.md` recebe `task_description`, `approved_result`, `task_history` e
+`learnings` em áreas separadas. Registra todo fato novo útil sustentado pela execução aprovada,
+com motivo breve e referência explícita, conservando hipóteses, unidades, sinais, referenciais e
+aproximações. Valor calculado e escolha por melhor ajuste não são igualados. Não copia raciocínio
+completo, critérios ou vereditos; uma conclusão refutada não vira memória vigente.
+
+Ambos mantêm `{"learnings": ["..."]}`; uma lista vazia é válida. O parser valida estrutura, não
+completude ou verdade semântica. `RalphThinkingUseCase` converte as strings sem interpretação para
+`Learning(content, source_task_id)`: origem `None` para A.3 e ID da tarefa para B.4.
+`LearningsMemory.append` descarta brancos e repetidos comparando apenas espaços; conserva o
+primeiro conteúdo e origem, sem unificar caixa, unidades ou condições. `render()` entrega todos
+os textos na ordem, sem resumo, para `## Key Learnings` de B.1/B.2/B.4/C.1/C.2/C.3, inclusive
+nas tarefas adicionais. B.4 vê a memória anterior à própria extração. Os eventos `learn` e as
+mensagens da sessão auditam o que entrou e as repetições descartadas.
+
+Os resultados aprovados continuam armazenados separadamente; notas não são critérios nem cobrem
+evidência ausente. Cada fase recebe sua janela e suas entradas explícitas. Não houve mudança de
+schema, helper compartilhado, recuperação ou política de planejamento/validação nesta etapa.
+Não há dependência de integração com 01/03; os arquivos novos de testes são exclusivos de 02.
+Os prompts recebem texto genérico, sem acesso a `question.options` ou a gabaritos.
+
+Os testes novos estão em `test_learnings_annotation_contract.py`,
+`test_ralph_learnings_self_contained_integration.py` e `test_learnings_memory_associations.py`.
+Eles verificam instruções nos templates reais, transporte, referências, condições, aproximações,
+ordem, origem, deduplicação, auditoria e isolamento usando respostas roteirizadas. Não medem
+acurácia de extração ou correção semântica de um LLM. Exemplos e resultados da execução estão na
+seção **Melhorias do thinking — 02** de
+[`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
+
 ### Limite de tokens por sessão
 
 Todo limite de tokens vale para a **sessão**, nunca para uma rodada ou chamada isolada. Há dois:

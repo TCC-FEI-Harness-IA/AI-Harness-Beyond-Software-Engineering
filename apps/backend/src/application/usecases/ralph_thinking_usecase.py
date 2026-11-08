@@ -1125,6 +1125,9 @@ class RalphThinkingUseCase:
     def __to_learnings(self, parsed: dict[str, Any], task_id: str | None) -> list[Learning]:
         """Converte a saída de A.3 ou B.4 em aprendizados pontuais.
 
+        Preserva cada texto sem interpretar seu domínio ou modificar associações e qualificações.
+        A origem distingue dados do enunciado das conclusões das tarefas; não altera os resultados.
+
         Args:
             parsed: Saída já validada de A.3 ou B.4.
             task_id: Tarefa que originou os aprendizados, ou `None` quando vêm do enunciado.
