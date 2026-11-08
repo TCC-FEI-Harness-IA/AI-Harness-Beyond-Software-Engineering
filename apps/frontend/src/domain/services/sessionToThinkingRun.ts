@@ -23,40 +23,20 @@ import type { ReasoningEventDTO } from '../types/reasoningEvent'
 import type { RunDegradation, ThinkingRun } from '../types/thinkingRun'
 import { deriveStepKind } from './deriveSubtype'
 import { createEmptyRun, reasoningRunReducer } from './reasoningRunReducer'
-import { parseTasksFromMarkdown, type ParsedTask } from './taskParser'
+import { extractTaskBlock } from './taskParser'
 
 function taskLabelFor(phase: ThinkingPhase): string {
   return phase.startsWith('C') ? TASK_LABEL_SYNTHESIS : TASK_LABEL_SETUP
 }
 
-// Reconstrói um bloco de markdown de tarefa a partir do que `parseTasksFromMarkdown` extraiu de
-// A.2/C.2 — é o texto que o passo `execute` sintetizado (seção 3.2) usa como conteúdo, já que o
-// backend não persiste o evento `execute` em si.
-function renderTaskBlock(task: ParsedTask): string {
-  // `task` sempre vem de `parseTasksFromMarkdown`, cujo cabeçalho exige um título não vazio
-  // (`TASK_HEADER_RE`); o `?? ''` é defensivo contra o tipo `string | null` de `ParsedTask`,
-  // não um caso alcançável por este chamador.
-  /* v8 ignore next */
-  const lines = [`### ${task.id} — ${task.title ?? ''}`.trimEnd()]
-  if (task.description) lines.push('', task.description)
-  if (task.expectedInput) lines.push('', `**Entrada esperada:** ${task.expectedInput}`)
-  if (task.expectedOutput) lines.push(`**Saída esperada:** ${task.expectedOutput}`)
-  if (task.criteria.length > 0) {
-    lines.push('', '**Critérios de aceite:**')
-    for (const criterion of task.criteria) {
-      lines.push(`- \`${criterion.id}\`: ${criterion.text}`)
-    }
-  }
-  return lines.join('\n')
-}
-
 // Procura o bloco da tarefa `taskId` nas mensagens que confirmaram tarefas na fila — o plano inicial
-// (`tasks`: A.2 na versão 1, a confirmação depois de A.3 na versão 2) ou um replanejamento (`replan`).
-// Um plano candidato reprovado nunca é fonte do bloco executado.
+// (`tasks`: A.2 na versão 1, a confirmação depois de A.3 na versão 2) ou um replanejamento (`replan`) — e o
+// devolve exatamente como o backend o escreveu: é o mesmo texto do evento `execute` ao vivo, que o backend
+// não persiste. Um plano candidato reprovado nunca é fonte do bloco executado.
 function findTaskBlock(planningMessages: readonly SessionMessageDocument[], taskId: string): string {
   for (const planningMessage of planningMessages) {
-    const task = parseTasksFromMarkdown(planningMessage.content).find((candidate) => candidate.id === taskId)
-    if (task) return renderTaskBlock(task)
+    const block = extractTaskBlock(planningMessage.content, taskId)
+    if (block) return block
   }
   // Tarefa não encontrada no markdown de planejamento (formato inesperado): conteúdo mínimo,
   // nunca um passo em branco (README, FASE 07, seção 3.2).
@@ -138,10 +118,11 @@ function buildEvent(
   }
 }
 
-// Constrói a sequência de eventos que a execução ao vivo teria emitido, incluindo o passo
-// `execute` sintetizado logo após cada `reset` (README, seção 3.5; FASE 07, seção 3.2) — os dois
-// únicos eventos ao vivo que não são persistidos (`execute` e o `error` fora do fluxo normal, que
-// não se aplica aqui).
+// Constrói a sequência de eventos que a execução ao vivo teria emitido, reconstruindo os eventos ao vivo
+// que não são persistidos como mensagem: o `execute` logo após cada `reset` (README, seção 3.5; FASE 07,
+// seção 3.2) e o terminal `result/compile` depois da mensagem aceita de C.3. O `error` terminal não é
+// reconstruído: a falha fica em `failure`. Registros sem evento (auditorias de saídas recusadas) ficam
+// armazenados, mas não viram passo.
 function buildStepSources(document: SessionDocument): StepSource[] {
   const messages = [...document.messages].sort((a, b) => a.order - b.order)
   const flowVersion = flowVersionOf(document)
@@ -171,6 +152,20 @@ function buildStepSources(document: SessionDocument): StepSource[] {
           { type: EVENT_TYPE.THINKING, subtype: EVENT_SUBTYPE.EXECUTE },
           totals,
         ),
+        timestamp: null,
+      })
+    }
+
+    // A mensagem aceita de C.3 é o `thinking/compile`; ao vivo, o backend emite depois o evento terminal
+    // `result/compile` com o mesmo conteúdo, só quando a sessão foi encerrada com resposta final. Ele é
+    // reconstruído aqui, sem somar consumo (o reducer não conta o terminal como nova chamada).
+    if (
+      message.phase === THINKING_PHASE.C3 &&
+      kind.subtype === EVENT_SUBTYPE.COMPILE &&
+      document.final_answer !== null
+    ) {
+      sources.push({
+        event: buildEvent(document, message, { type: EVENT_TYPE.RESULT, subtype: EVENT_SUBTYPE.COMPILE }, totals),
         timestamp: null,
       })
     }

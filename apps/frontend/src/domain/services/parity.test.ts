@@ -1,7 +1,9 @@
-// "O teste que prova o requisito" (README, FASE 07, seção 7): monta, de forma independente da
-// implementação de `sessionToThinkingRun`, a sequência de eventos que a execução ao vivo teria
-// emitido para esta sessão real — incluindo os passos `execute` sintetizados — e roda os dois
-// caminhos (reducer direto vs. `sessionToThinkingRun`) até o mesmo `ThinkingRun`, estruturalmente.
+// Paridade para sessões ANTIGAS (fluxo versão 1), sem captura disponível: a sequência de eventos é uma
+// reconstrução SINTÉTICA, montada aqui a partir das mensagens persistidas e de metadados escritos à mão
+// (subtype/type/task), de forma independente da implementação de `sessionToThinkingRun` — inclusive os
+// passos `execute`. Ela não é um registro do que o WebSocket enviou e por isso não prova, sozinha, que o
+// histórico reproduz a execução real; para o fluxo atual, a paridade é verificada contra eventos
+// realmente capturados do backend em `validatedPlanning.test.ts`.
 
 import { describe, expect, it } from 'vitest'
 import fixture from '@/test/fixtures/session-a1-completed-15msgs.json'
@@ -15,23 +17,15 @@ import type { SessionDocument } from '../types/sessionDocument'
 import type { ThinkingRun, ThinkingStep } from '../types/thinkingRun'
 import { createEmptyRun, reasoningRunReducer } from './reasoningRunReducer'
 import { sessionToThinkingRun } from './sessionToThinkingRun'
-import { parseTasksFromMarkdown, type ParsedTask } from './taskParser'
 
-// Reconstrução independente do bloco de tarefa usado pelo passo `execute` sintetizado — mesma
-// forma que `sessionToThinkingRun.ts` produz (README, FASE 07, seção 3.2), mas escrita aqui de
-// novo, sem importar a função privada, para que a comparação não vire uma tautologia.
-function renderTaskBlock(task: ParsedTask): string {
-  const lines = [`### ${task.id} — ${task.title ?? ''}`.trimEnd()]
-  if (task.description) lines.push('', task.description)
-  if (task.expectedInput) lines.push('', `**Entrada esperada:** ${task.expectedInput}`)
-  if (task.expectedOutput) lines.push(`**Saída esperada:** ${task.expectedOutput}`)
-  if (task.criteria.length > 0) {
-    lines.push('', '**Critérios de aceite:**')
-    for (const criterion of task.criteria) {
-      lines.push(`- \`${criterion.id}\`: ${criterion.text}`)
-    }
-  }
-  return lines.join('\n')
+// O `execute` ao vivo traz a tarefa como o backend a renderizou, o mesmo texto que ele gravou no markdown de
+// planejamento. A fatia é feita aqui por busca de texto, sem importar `extractTaskBlock`, para que a
+// comparação não vire uma tautologia.
+function taskBlockOf(markdown: string, taskId: string): string | null {
+  const start = markdown.indexOf(`### ${taskId} `)
+  if (start === -1) return null
+  const next = markdown.indexOf('\n### T', start + 1)
+  return markdown.slice(start, next === -1 ? markdown.length : next).trimEnd()
 }
 
 const legacyDocument = fixture as unknown as SessionDocument
@@ -43,6 +37,8 @@ interface EventMeta {
   type: EventType
   task: string
   synthesizeExecute?: boolean
+  /** C.3 aceita: ao vivo, o backend emite em seguida o terminal `result/compile` com o mesmo conteúdo. */
+  terminalResult?: boolean
 }
 
 const LEGACY_EVENT_META: EventMeta[] = [
@@ -59,7 +55,7 @@ const LEGACY_EVENT_META: EventMeta[] = [
   { order: 11, subtype: 'store', type: 'thinking', task: 'T2' },
   { order: 12, subtype: 'learn', type: 'thinking', task: 'T2' },
   { order: 13, subtype: 'compile', type: 'thinking', task: TASK_LABEL_SYNTHESIS },
-  { order: 14, subtype: 'compile', type: 'result', task: TASK_LABEL_SYNTHESIS },
+  { order: 14, subtype: 'compile', type: 'thinking', task: TASK_LABEL_SYNTHESIS, terminalResult: true },
 ]
 
 // Mesma sessão com a etapa A.3: a mensagem de aprendizados do enunciado (order 3) entra entre A.2 e a
@@ -70,9 +66,9 @@ const A3_EVENT_META: EventMeta[] = [
   ...LEGACY_EVENT_META.slice(2).map((meta) => ({ ...meta, order: meta.order + 1 })),
 ]
 
-// Reproduz, de forma independente, a sequência de eventos ao vivo que este documento persistido
-// representa — inclusive o passo `execute` sintetizado logo após cada `reset` (o único, junto do
-// `error`, que não é persistido). `context_size` acumula por `context_id`, como o README manda.
+// Reconstrói sinteticamente, de forma independente, a sequência de eventos que este documento persistido
+// representa — inclusive o passo `execute` logo após cada `reset` (o único, junto do `error`, que não é
+// persistido). `context_size` acumula por `context_id`, como o README manda.
 function buildLiveLikeEvents(document: SessionDocument, eventMeta: EventMeta[]): ReasoningEventDTO[] {
   let cumulativeTokens = 0
   const contextTotals = new Map<string, number>()
@@ -106,12 +102,14 @@ function buildLiveLikeEvents(document: SessionDocument, eventMeta: EventMeta[]):
     }
     events.push(event)
 
+    if (meta.terminalResult) {
+      events.push({ ...event, type: 'result' })
+    }
+
     if (meta.synthesizeExecute && message.task_id) {
       const planningMessage = document.messages.find((candidate) => candidate.phase === 'A2')
-      const task = planningMessage
-        ? parseTasksFromMarkdown(planningMessage.content).find((candidate) => candidate.id === message.task_id)
-        : undefined
-      const executeContent = task ? renderTaskBlock(task) : `### ${message.task_id}`
+      const executeContent =
+        (planningMessage && taskBlockOf(planningMessage.content, message.task_id)) || `### ${message.task_id}`
 
       events.push({
         ...event,
@@ -154,8 +152,8 @@ function stripVolatile(run: ThinkingRun): unknown {
 describe.each([
   ['sessão sem A.3 (anterior à etapa)', legacyDocument, LEGACY_EVENT_META],
   ['sessão com A.3', withA3Document, A3_EVENT_META],
-] as const)('parity: histórico vs. execução ao vivo — %s', (_name, document, eventMeta) => {
-  it('sessionToThinkingRun produz o mesmo ThinkingRun, estruturalmente, que a execução ao vivo equivalente', () => {
+] as const)('parity (reconstrução sintética, fluxo versão 1): histórico vs. eventos equivalentes — %s', (_name, document, eventMeta) => {
+  it('sessionToThinkingRun produz o mesmo ThinkingRun, estruturalmente, que a sequência reconstruída', () => {
     const liveEvents = buildLiveLikeEvents(document, [...eventMeta])
     let liveRun = createEmptyRun(document.user_question, document.model_name)
     for (const event of liveEvents) {

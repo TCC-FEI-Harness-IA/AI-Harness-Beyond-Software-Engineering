@@ -306,7 +306,9 @@ function applyLearn(run: ThinkingRun, event: ReasoningEventDTO, step: ThinkingSt
 }
 
 function applyCompile(run: ThinkingRun, event: ReasoningEventDTO): ThinkingRun {
-  if (event.phase !== THINKING_PHASE.C3) return run
+  // O evento `error` do domínio também usa `compile` e a fase em que a execução parou: uma falha em C.3
+  // não é uma resposta final.
+  if (event.phase !== THINKING_PHASE.C3 || event.type === EVENT_TYPE.ERROR) return run
 
   const finalAnswer = event.content
   // Uma degradação anterior não pode ser apagada pela chegada do resultado final — o cartão
@@ -424,7 +426,11 @@ function applyEvent(current: ThinkingRun, event: ReasoningEventDTO): ThinkingRun
   const previousStep = run.steps[run.steps.length - 1]
   const marginalTokens = Math.max(0, event.total_tokens - run.totals.totalTokens)
   const contextChanged = previousStep === undefined || previousStep.contextId !== step.contextId
-  const llmCallDelta = event.inference_time_ms > 0 ? 1 : 0
+  // O evento terminal `result` repete o conteúdo e o tempo da chamada de C.3, já contada no `thinking/compile`:
+  // não é uma nova chamada nem um novo consumo.
+  const isTerminalEcho = event.type === EVENT_TYPE.RESULT
+  const inferenceTimeMs = isTerminalEcho ? 0 : event.inference_time_ms
+  const llmCallDelta = inferenceTimeMs > 0 ? 1 : 0
 
   let next: ThinkingRun = {
     ...run,
@@ -437,7 +443,7 @@ function applyEvent(current: ThinkingRun, event: ReasoningEventDTO): ThinkingRun
       // O backend manda o acumulado da sessão inteira — substitui, nunca soma (e nunca
       // decresce; o `Math.max` é só uma salvaguarda contra um frame fora de ordem).
       totalTokens: Math.max(run.totals.totalTokens, event.total_tokens),
-      inferenceTimeMs: run.totals.inferenceTimeMs + event.inference_time_ms,
+      inferenceTimeMs: run.totals.inferenceTimeMs + inferenceTimeMs,
       llmCalls: run.totals.llmCalls + llmCallDelta,
       contextCount: run.totals.contextCount + (contextChanged ? 1 : 0),
     },

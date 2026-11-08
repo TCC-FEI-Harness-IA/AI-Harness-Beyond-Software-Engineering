@@ -1,7 +1,9 @@
 # Relatório de implementação — 01: planejamento aprovado antes da execução
 
 Implementação da frente 1 de [`README.md`](README.md), conforme o prompt
-[`01_planejamento_com_validacao.md`](01_planejamento_com_validacao.md). A frente 2 (ampliação de B.2 e
+[`01_planejamento_com_validacao.md`](01_planejamento_com_validacao.md). A entrega está no commit local
+`6c37126` (*feat(planning): validate task decomposition before execution (A.3) and renumber extraction to
+A.4*); os ajustes posteriores da revisão estão na seção 10. A frente 2 (ampliação de B.2 e
 critério `<task_id>-TECH`) **não** foi implementada nesta etapa.
 
 ## 1. Resultado
@@ -109,9 +111,11 @@ inexistente e critério de outra tarefa.
 | 13 | Contratos e avaliação futura | `test_decomposition_validation_contracts.py` + `fixtures/decomposition_validation_v1.json` (condição omitida, resultado antecipado, tarefa redundante; dados numéricos, método com hipótese, dependências e estimativa válidos), `test_planning_instruction_contracts.py` (regras de geração preservadas em A.2) |
 | — | C.2 sem A.3 | `test_a3_nao_e_usada_nos_lotes_de_c2` |
 
-As fixtures v2 do frontend (`session-a1-v2-plan-revision.json`, `session-a1-v2-planning-exhausted.json`)
-foram geradas pelo backend real (cenário roteirizado + `SessionDocumentMapper`), inclusive com uma
-auditoria de saída recusada sem subtipo. As fixtures antigas (versão 1) não foram migradas.
+Na entrega `6c37126`, as fixtures v2 do frontend (`session-a1-v2-plan-revision.json`,
+`session-a1-v2-planning-exhausted.json`) traziam só a sessão gerada pelo backend, e a paridade comparava
+o histórico com eventos reconstruídos a partir dessas mesmas mensagens. Desde a seção 10, elas foram
+substituídas por capturas reais (`capture-*.json`: frames e sessão da mesma execução). As fixtures antigas
+(versão 1) não foram migradas.
 
 ## 5. Falhas observadas antes das correções (TDD)
 
@@ -166,7 +170,7 @@ npm run build
   `src/domain/services/benchmarkDefinition.ts` tinha 92,3% de branches (linha 76, o fallback
   `?? benchmark` de `benchmarkDatasetLabel`), abaixo do limiar de 100% de `src/domain/services/**`. Foi
   acrescentado um teste para um identificador fora da lista; nenhum código de produção mudou.
-- **Marcadores em português no frontend (não corrigido, fora do escopo).** `taskParser.ts` procura
+- **Marcadores em português no frontend (critérios corrigidos na seção 10).** `taskParser.ts` procura
   `**Decisão:**` e `**Critérios de aceite:**`, mas os templates do backend estão em inglês
   (`**Decision:**`, `**Acceptance criteria:**`). Em sessões versão 1, a derivação de `verify_pass`/`verify_fail`
   cai no critério posicional, e o passo `execute` sintetizado no histórico não lista os critérios, enquanto
@@ -192,5 +196,55 @@ O workspace está integrado e verde nos dois apps. A segunda etapa
 ([`02_validacao_tecnica_das_tarefas.md`](02_validacao_tecnica_das_tarefas.md)) parte deste estado: B.1/B.2
 inalterados, `RALPH_MAX_TASK_ATTEMPTS = 5`, `ValidationContext` e o parser prontos para receber mais um
 critério reservado (o padrão do sufixo `-REV` é a referência), e os roteiros de teste já incluem A.3/A.4
-(`plano_aprovado()` em `tests/doubles/ralph_scripts.py`). As alterações não foram commitadas; o
-`git mv` do template A.3 → A.4 deixou o renome no índice.
+(`plano_aprovado()` em `tests/doubles/ralph_scripts.py`). A entrega da frente 1 foi commitada localmente
+em `6c37126`, incluindo o renome do template A.3 → A.4.
+
+## 10. Complemento — ajustes da revisão da entrega
+
+A revisão do commit `6c37126` apontou três ajustes. Os dois primeiros tratam de problemas do histórico
+que **já existiam antes da fase 1** (a primeira versão do frontend, `29a2f80`, já gravava a resposta como
+único passo de C.3 e já procurava os critérios em português); não são regressões do novo planejamento,
+cuja lógica não mudou.
+
+1. **Auditoria de C.3 apresentada como resposta.** `deriveStepKind` classificava toda mensagem de C.3 como
+   `result/compile` antes de descartar os registros sem evento, então a auditoria de uma saída recusada
+   aparecia como resposta. Agora o subtipo persistido e o descarte dos registros sem evento vêm primeiro; uma
+   mensagem de C.3 do sistema (sempre auditoria, em qualquer versão) não vira passo, e a mensagem aceita é o
+   `thinking/compile`. O terminal `result/compile`, que o backend emite em seguida com o mesmo conteúdo, é
+   reconstruído por `sessionToThinkingRun` só quando a sessão tem resposta final. O reducer não conta esse
+   terminal como nova chamada nem soma de novo o tempo de C.3 (ao vivo, a chamada era contada duas vezes), e
+   um `error` emitido em C.3 deixou de ser tomado como resposta final. A auditoria continua armazenada na
+   sessão. Em sessões antigas, a resposta e o status exibidos são os mesmos; o histórico ganha o passo
+   `thinking/compile` de C.3 que a execução ao vivo já mostrava.
+2. **Critérios perdidos no `execute` e paridade circular.** `taskParser.ts` aceita `**Acceptance
+   criteria:**` e `**Critérios de aceite:**`, e o `execute` do histórico passou a usar o bloco da tarefa
+   confirmada exatamente como o backend o escreveu (`extractTaskBlock`), com critérios e dependências, em vez
+   de re-renderizá-lo em português. A paridade do fluxo atual deixou de reconstruir eventos a partir das
+   mensagens: `validatedPlanning.test.ts` usa capturas reais (`src/test/fixtures/capture-*.json`) com os
+   frames que o caso de uso emitiu — convertidos pela mesma função do composition root e serializados como
+   no router — e a sessão persistida da mesma execução, com modelo roteirizado. As capturas são geradas por
+   `apps/backend/tests/doubles/frontend_parity_capture.py` e conferidas por
+   `apps/backend/tests/infra/test_frontend_parity_fixtures.py`, que falha se a emissão ou a persistência
+   mudarem. Casos: plano revisado com auditoria de A.3 e auditoria de C.3 seguida da resposta aceita;
+   planejamento esgotado antes de A.4; C.3 esgotada sem resposta. Os comentários de `parity.test.ts`
+   (sessões antigas) passaram a dizer que lá a sequência é uma reconstrução sintética.
+3. **Relatório.** Este documento identifica a entrega `6c37126` e deixou de afirmar que ela não foi
+   commitada.
+
+**Testes executados** (depois dos ajustes):
+
+- Frontend: `npm run typecheck`, `npm run lint` (sem avisos), `npm run test:coverage` — **699 testes em 86
+  arquivos**, limiares atendidos, `src/domain/services/**` a 100% — e `npm run build`, todos com código 0.
+  Antes das correções, os testes novos reproduziram os problemas (12 falhas: auditoria de C.3 como
+  resultado, critérios em inglês ignorados, `execute` diferente do capturado e consumo de C.3 duplicado).
+  O `error` de C.3 tomado como resposta apareceu durante a correção, na comparação com a captura de C.3
+  esgotada, e ganhou a correção e o teste próprios.
+- Backend (só testes e dublês mudaram): `flake8 src tests` sem saída; `pytest --cov=src
+  --cov-fail-under=100` com **2.660 testes aprovados** e cobertura 100,00%.
+
+**Limitações.** A paridade compara o histórico com os frames capturados menos o `error` terminal, que só
+vai pelo WebSocket (a falha fica em `failure`); o campo `updated_at` de uma sessão falha usa o relógio real
+e é ignorado na conferência das capturas. Sessões antigas continuam sem captura: `parity.test.ts` usa uma
+sequência sintética. O marcador de decisão `**Decision:**` em inglês continua não reconhecido em sessões
+antigas sem subtipo (a derivação de `verify_pass`/`verify_fail` segue o critério posicional); o fluxo atual
+usa o subtipo persistido. Estes ajustes ainda não foram commitados quando este complemento foi escrito.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import fixture from '@/test/fixtures/session-a1-completed-15msgs.json'
 import {
+  extractTaskBlock,
   parseCriterionEvaluations,
   parseDecision,
   parseTaskTitle,
@@ -54,6 +55,41 @@ describe('parseTasksFromMarkdown', () => {
     const tasks = parseTasksFromMarkdown('### T1 — Título\n**Entrada esperada:** um número')
     expect(tasks[0]?.description).toBeNull()
     expect(tasks[0]?.expectedInput).toBe('um número')
+  })
+})
+
+describe('parseTasksFromMarkdown — critérios em inglês', () => {
+  it('lê os critérios escritos pelo backend atual (`**Acceptance criteria:**`), além do formato antigo', () => {
+    const markdown = [
+      '## Planned tasks',
+      '',
+      '### T1 — Testar as condições',
+      '',
+      'Descrição.',
+      '',
+      '**Depends on:** `T0`',
+      '',
+      '**Acceptance criteria:**',
+      '- `T1-AC1`: Determinar quais números atendem.',
+      '- `T1-AC2`: Explicar cada teste.',
+    ].join('\n')
+
+    expect(parseTasksFromMarkdown(markdown)[0]?.criteria).toEqual([
+      { id: 'T1-AC1', text: 'Determinar quais números atendem.' },
+      { id: 'T1-AC2', text: 'Explicar cada teste.' },
+    ])
+  })
+})
+
+describe('extractTaskBlock', () => {
+  it('devolve o bloco da tarefa exatamente como foi escrito, até a tarefa seguinte', () => {
+    const t1 = '### T1 — A\n\nDescrição.\n\n**Acceptance criteria:**\n- `T1-AC1`: x.'
+    const t2 = '### T2 — B\n\nOutra.\n\n**Depends on:** `T1`\n\n**Acceptance criteria:**\n- `T2-AC1`: y.'
+    const markdown = `## Planned tasks\n\n${t1}\n\n${t2}`
+
+    expect(extractTaskBlock(markdown, 'T1')).toBe(t1)
+    expect(extractTaskBlock(markdown, 'T2')).toBe(t2)
+    expect(extractTaskBlock(markdown, 'T3')).toBeNull()
   })
 })
 

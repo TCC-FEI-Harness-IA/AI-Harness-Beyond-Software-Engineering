@@ -85,16 +85,25 @@ export function deriveStepKind(
   if (message.phase === THINKING_PHASE.DIRECT) return null
   if (message.source === MESSAGE_SOURCE.USER) return null
 
-  if (message.phase === THINKING_PHASE.C3) {
-    return { type: EVENT_TYPE.RESULT, subtype: EVENT_SUBTYPE.COMPILE }
-  }
-
+  // O subtipo persistido e o descarte dos registros sem evento vêm antes da regra de C.3: a auditoria de uma
+  // saída recusada continua armazenada, mas não é passo nem resposta.
   if (message.subtype) {
     return { type: EVENT_TYPE.THINKING, subtype: message.subtype }
   }
 
-  if (context.flowVersion === FLOW_VERSION.VALIDATED_PLANNING) {
+  if (context.flowVersion === FLOW_VERSION.VALIDATED_PLANNING && message.source === MESSAGE_SOURCE.SYSTEM) {
+    return null
+  }
+
+  // C.3 só grava como etapa do sistema a auditoria de uma saída recusada, em qualquer versão. A mensagem
+  // aceita é o `thinking/compile`; o evento terminal `result/compile`, que ao vivo vem depois dela, é
+  // reconstruído por `sessionToThinkingRun` quando a sessão tem resposta final.
+  if (message.phase === THINKING_PHASE.C3) {
     if (message.source === MESSAGE_SOURCE.SYSTEM) return null
+    return { type: EVENT_TYPE.THINKING, subtype: EVENT_SUBTYPE.COMPILE }
+  }
+
+  if (context.flowVersion === FLOW_VERSION.VALIDATED_PLANNING) {
     const subtype = deriveValidatedPlanningSubtype(message)
     if (subtype) return { type: EVENT_TYPE.THINKING, subtype }
   }

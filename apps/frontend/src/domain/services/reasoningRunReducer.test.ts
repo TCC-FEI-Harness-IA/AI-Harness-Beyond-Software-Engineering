@@ -104,8 +104,11 @@ describe('reasoningRunReducer', () => {
 
     const lastEvent = events[events.length - 1]
     expect(run.totals.totalTokens).toBe(lastEvent?.total_tokens)
-    expect(run.totals.llmCalls).toBe(events.filter((event) => event.inference_time_ms > 0).length)
-    expect(run.totals.inferenceTimeMs).toBe(events.reduce((sum, event) => sum + event.inference_time_ms, 0))
+    // O evento terminal `result` não conta como nova chamada nem soma tempo: ao vivo ele repete a chamada de
+    // C.3 já emitida como `thinking/compile`. (Esta sequência é sintética, derivada das mensagens persistidas.)
+    const counted = events.filter((event) => event.type !== EVENT_TYPE.RESULT)
+    expect(run.totals.llmCalls).toBe(counted.filter((event) => event.inference_time_ms > 0).length)
+    expect(run.totals.inferenceTimeMs).toBe(counted.reduce((sum, event) => sum + event.inference_time_ms, 0))
 
     // contexto muda de janela toda vez que o `context_id` do evento difere do último visto,
     // contando a própria primeira janela como uma abertura.

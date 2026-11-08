@@ -4,10 +4,12 @@
 
 import { describe, expect, it } from 'vitest'
 import a1CompletedWithA3 from '@/test/fixtures/session-a1-completed-with-a3.json'
-import v2PlanRevision from '@/test/fixtures/session-a1-v2-plan-revision.json'
+import v2PlanRevisionCapture from '@/test/fixtures/capture-v2-plan-revision-c3-audit.json'
 import directCompleted from '@/test/fixtures/session-direct-completed.json'
 import { ContractError } from '../errors/ContractError'
 import { parseSessionDocument } from './sessionDocument'
+
+const v2PlanRevision = v2PlanRevisionCapture.session
 
 describe('parseSessionDocument — versão do fluxo', () => {
   it('sessão Ralph antiga sem o campo é lida como versão 1, sem subtipos', () => {

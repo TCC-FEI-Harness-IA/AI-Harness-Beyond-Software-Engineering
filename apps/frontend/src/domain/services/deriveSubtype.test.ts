@@ -56,9 +56,13 @@ describe('deriveStepKind', () => {
     expect(result).toEqual({ type: 'thinking', subtype: 'reasoning' })
   })
 
-  it('C3 → result/compile', () => {
+  it('C3 aceita → thinking/compile; o terminal result/compile é reconstruído por sessionToThinkingRun', () => {
     const result = deriveStepKind(message({ phase: 'C3', source: 'llm_agent' }), { laterMessages: [] })
-    expect(result).toEqual({ type: 'result', subtype: 'compile' })
+    expect(result).toEqual({ type: 'thinking', subtype: 'compile' })
+  })
+
+  it('C3 do sistema é auditoria de saída recusada, também em sessões antigas: não vira passo', () => {
+    expect(deriveStepKind(message({ phase: 'C3', source: 'system' }), { laterMessages: [] })).toBeNull()
   })
 
   describe('B2 — verify_pass vs verify_fail', () => {
@@ -123,10 +127,17 @@ describe('deriveStepKind', () => {
         type: 'thinking',
         subtype: 'tasks',
       })
+      // A mensagem aceita de C.3 corresponde ao `thinking/compile`; o terminal `result/compile` é
+      // reconstruído por `sessionToThinkingRun` só quando a sessão foi concluída.
       expect(deriveStepKind(message({ phase: 'C3', subtype: 'compile' }), context)).toEqual({
-        type: 'result',
+        type: 'thinking',
         subtype: 'compile',
       })
+    })
+
+    it('auditoria de C.3 sem evento não vira passo, e muito menos resposta final', () => {
+      const audit = message({ phase: 'C3', source: 'system', subtype: null, content: 'Saída inválida descartada' })
+      expect(deriveStepKind(audit, context)).toBeNull()
     })
 
     it('registro sem evento (auditoria de saída recusada) não vira passo', () => {

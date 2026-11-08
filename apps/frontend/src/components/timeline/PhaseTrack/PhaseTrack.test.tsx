@@ -6,14 +6,14 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import legacyFixture from '@/test/fixtures/session-a1-completed-with-a3.json'
-import revisionFixture from '@/test/fixtures/session-a1-v2-plan-revision.json'
+import revisionCapture from '@/test/fixtures/capture-v2-plan-revision-c3-audit.json'
 import { parseSessionDocument } from '@/api/parsers/sessionDocument'
 import { sessionToThinkingRun } from '@/domain/services/sessionToThinkingRun'
 import { PhaseTrack } from './PhaseTrack'
 
 describe('PhaseTrack', () => {
   it('na versão 2 mostra A.3 de validação, A.4 de aprendizados e o ciclo de revisão do plano acionado', async () => {
-    const run = sessionToThinkingRun(parseSessionDocument(revisionFixture))
+    const run = sessionToThinkingRun(parseSessionDocument(revisionCapture.session))
     const onStepSelect = vi.fn()
 
     render(<PhaseTrack run={run} isLive={false} onStepSelect={onStepSelect} />)

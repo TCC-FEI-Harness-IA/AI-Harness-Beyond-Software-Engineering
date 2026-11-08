@@ -216,10 +216,17 @@ aparece como "não foi necessária".
 **Subtipo no histórico.** Sessões novas gravam em cada mensagem o `subtype` do evento emitido;
 `domain/services/deriveSubtype.ts` usa esse valor diretamente, e registros sem evento (como a auditoria
 de uma saída recusada) não viram passo. Sessões antigas não têm o campo, e o `subtype` continua derivado
-de `(phase, source, content)`, numa tabela única reusada por toda reconstrução de histórico. O passo
-`execute` sintetizado no histórico usa o bloco da tarefa confirmada (`tasks`/`replan`), nunca o de um
-candidato reprovado. `validatedPlanning.test.ts` compara execução ao vivo e histórico para uma sessão com
-revisão do plano e para uma interrompida antes de A.4.
+de `(phase, source, content)`, numa tabela única reusada por toda reconstrução de histórico. Em qualquer
+versão, C.3 só grava como etapa do sistema a auditoria de uma saída recusada, que não vira passo nem
+resposta; a mensagem aceita é o `thinking/compile`, e o terminal `result/compile` que o backend emite em
+seguida é reconstruído quando a sessão tem resposta final (o reducer não conta esse terminal como nova
+chamada, nem um `error` em C.3 como resposta). O passo `execute` reconstruído traz o bloco da tarefa
+confirmada exatamente como o backend o escreveu (`tasks`/`replan`), com critérios em inglês ou português
+e dependências — nunca o de um candidato reprovado. `validatedPlanning.test.ts` compara o histórico com
+**frames realmente capturados** do backend na mesma execução (`src/test/fixtures/capture-*.json`, geradas
+por `apps/backend/tests/doubles/frontend_parity_capture.py` e conferidas por
+`apps/backend/tests/infra/test_frontend_parity_fixtures.py`); `parity.test.ts` cobre sessões antigas com
+uma sequência sintética.
 
 ---
 

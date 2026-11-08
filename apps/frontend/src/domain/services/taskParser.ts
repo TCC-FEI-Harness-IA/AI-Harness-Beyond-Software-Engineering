@@ -27,7 +27,8 @@ export interface ParsedEvaluation {
 const TASK_HEADER_RE = /^###\s+(T\d+)\s*(?:—|-)\s*(.+)$/gm
 const EXPECTED_INPUT_RE = /\*\*Entrada esperada:\*\*\s*(.+)/
 const EXPECTED_OUTPUT_RE = /\*\*Saída esperada:\*\*\s*(.+)/
-const CRITERIA_HEADER_RE = /\*\*Crit[ée]rios de aceite:\*\*/
+// O backend atual escreve `**Acceptance criteria:**`; sessões antigas trazem `**Critérios de aceite:**`.
+const CRITERIA_HEADER_RE = /\*\*(?:Crit[ée]rios de aceite|Acceptance criteria):\*\*/
 const CRITERION_LINE_RE = /^-\s*`([^`]+)`\s*:\s*(.+)$/gm
 const DECISION_RE = /\*\*Decisão:\*\*\s*`(approved|reproved)`/
 const EVALUATION_LINE_RE = /^-\s*`([^`]+)`\s*—\s*(atendido|não atendido)\s*:\s*(.+)$/gm
@@ -83,6 +84,22 @@ export function parseTasksFromMarkdown(markdown: string): ParsedTask[] {
       criteria: extractCriteria(body),
     }
   })
+}
+
+/**
+ * Bloco de uma tarefa exatamente como o backend o escreveu no markdown de planejamento: do cabeçalho
+ * `### <id> — …` até o cabeçalho seguinte. É o mesmo texto que o evento `execute` traz ao vivo (o backend
+ * renderiza a tarefa uma única vez), com descrição, dependências e critérios, em qualquer idioma.
+ */
+export function extractTaskBlock(markdown: string, taskId: string): string | null {
+  const headers = [...markdown.matchAll(TASK_HEADER_RE)]
+  const index = headers.findIndex((header) => header[1] === taskId)
+  if (index === -1) return null
+  // `header.index` sempre vem preenchido num match real de `matchAll`; o `?? 0` é só para o TypeScript.
+  /* v8 ignore next */
+  const start = headers[index]?.index ?? 0
+  const end = headers[index + 1]?.index ?? markdown.length
+  return markdown.slice(start, end).trimEnd()
 }
 
 /** Título da primeira tarefa encontrada — usado para rotular o passo sintético `execute`. */
