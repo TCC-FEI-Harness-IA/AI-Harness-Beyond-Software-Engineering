@@ -2096,3 +2096,251 @@ Na pasta `apps/backend`, executados com o ambiente `.venv` já instalado no chec
 - `git diff --check`: **passou**. A transcrição literal em `RALPH_LOOP_ADAPTADO.md` foi comparada
   byte a byte com `945f7fe` e permaneceu idêntica; o conteúdo anterior completo de
   `NOVAS_REGRAS_RALPH_LOOP.md` permanece como prefixo integral do arquivo atualizado.
+---
+
+## Melhorias do thinking — 03: planejamento sem respostas antecipadas e cobertura do pedido
+
+### Motivação e alcance
+
+O problema observado é anterior à validação local: o planejamento pode converter uma resposta ainda
+não obtida em premissa ou critério obrigatório. B.2 pode então aprovar concordância com um erro
+introduzido por A.2. Os relatos de colisões, fonte de energia no tacho, aumento de microscópio,
+interpretação geográfica e período orbital motivam a mudança; não são resultados de uma nova
+execução do benchmark nesta etapa.
+
+A implementação reescreve os templates A.1/A.2/C.2 e alinha o escopo de B.1. A única alteração de
+orquestração é transportar para C.2 o relatório de C.1 já existente, com os motivos da reprovação.
+Mantêm-se fases, schemas JSON, critérios identificados, limites de tarefas, orçamento, retentativas,
+temperaturas, isolamento e auditoria. Não há chamada adicional de revisão de plano, detector
+semântico, campos de vestibular, acesso a gabarito ou injeção de `question.options`.
+
+A branch `feature/thinking-03-planejamento` foi criada em worktree própria a partir de `945f7fe`,
+sem presumir as mudanças das etapas 01 e 02. As regras de recuperação integral são responsabilidade
+da 01; A.3/B.4 e memória, da 02. As orientações históricas das seções anteriores ficam preservadas
+como registro da evolução; onde exigiam independência lógica ou proibiam genericamente a tarefa
+final, esta seção descreve a regra atual dos arquivos sob o escopo da 03.
+
+### Obrigações reais em A.1
+
+A.1 identifica conteúdo a determinar, idioma, formato e restrições explícitas. Registra a grandeza
+pedida com sua unidade e referência quando presentes, sem declarar o valor ou a classificação.
+Não impõe demonstração não pedida, método de solução, tolerância numérica arbitrária ou linguagem
+de um distrator. Uma pergunta de interpretação admite significado equivalente e inferência
+contextual sustentada, sem obrigar que a resposta repita termos de uma opção.
+
+Conteúdo obrigatório e apresentação opcional são distintos. Em “Liste duas possíveis consequências
+do trabalho remoto para a rotina familiar. Seja objetivo; pode justificar”, são obrigatórios dois
+efeitos pertinentes e o idioma solicitado. Não surgem obrigações de demonstrar um efeito positivo
+e um negativo, escrever exatamente duas linhas ou imprimir um marcador. A justificativa final é
+opcional. A execução interna continua produzindo resultado explicado para permitir sua verificação.
+
+Se o usuário pede “justifique”, essa obrigação real permanece; se pede “apenas a letra”, a restrição
+vale para C.3, sem proibir explicação nos resultados de B.1. Marcadores só são exigidos se vierem do
+pedido. A forma de responder não determina antecipadamente qual resposta é correta.
+
+### Dado literal, método, hipótese e resultado
+
+| Categoria | Regra do planejamento | Exemplo |
+|---|---|---|
+| Dado literal | Preservar os dados e referências relevantes que o pedido fornece. | Massa `m`, rapidez `v`, duração `Δt`; objeto a 3 cm da objetiva; imagem pedida em relação à ocular. |
+| Método | Propor uma investigação pertinente é permitido. Sua aplicabilidade deve ser estabelecida na execução. | Balanço de energia, impulso, lei orbital, relação de lentes ou comparação contextual. |
+| Hipótese | Uma condição ainda não sustentada precisa ser verificada ou explicitada e justificada com seus limites. Não pode virar fato por conveniência. | Imagem final no infinito ou condição física necessária para simplificar uma relação. |
+| Resultado | Valor, ordenação, classificação ou interpretação que a tarefa ainda obterá permanece em aberto. | Qual colisão tem maior força, qual processo fornece energia, qual interpretação é mais sustentada. |
+
+A proibição de antecipar abrange títulos, descrições e critérios, tanto para valores quanto para
+conclusões qualitativas. “Determinar e justificar a relação entre as forças médias” é investigativo;
+“confirmar que a força é maior na argila” fixa a resposta. Uma fórmula pertinente pode ser proposta
+como método; uma relação que só vale sob hipótese não estabelecida não pode aparecer como premissa
+incondicional. Não se pede que o planejador resolva a questão para poder planejar.
+
+No tacho, o plano pode separar a investigação da origem da energia da investigação do efeito no
+produto. Os processos fornecidos — vapor na camisa que esfria e condensa, produto que aquece e
+parcialmente evapora — são dados literais. O critério não deve impor que a energia venha da
+vaporização do produto. A fonte e sua justificativa serão determinadas em B.1.
+
+Na óptica, o plano conserva a grandeza solicitada (linear ou angular), a separação entre lentes e o
+referencial das distâncias. Se o pedido é aumento linear e posição da imagem em relação à ocular,
+o planejamento não pode trocá-lo por aumento angular nem introduzir imagem no infinito como fato.
+A execução estabelece os conjugados e a aplicabilidade das relações usadas.
+
+### Dependência lógica, objetivo único e memória
+
+Objetivo único significa uma determinação analítica clara, não independência de todos os resultados
+anteriores. A fila é ordenada: uma tarefa pode consumir uma conclusão prévia pela área **Key
+Learnings**, preservando escopo próprio. Cada descrição mantém seus dados e referências relevantes
+e nomeia a conclusão de que precisa; não adivinha seu conteúdo. O contexto da tarefa não inclui a
+conversa, as descrições ou as resoluções completas das anteriores.
+
+O cenário sintético de colisões usa massas iguais `m`, rapidez inicial `v` e contato de mesma duração
+`Δt`; o bloco rebate com a mesma rapidez e a argila adere. O plano investiga força, energia e a
+relação conjunta, sem fixar os resultados. Na execução roteirizada, a análise de impulso obtém
+`|Δp_bloco| = 2mv` e `|Δp_argila| = mv`; a análise energética compara os estados iniciais e finais.
+A tarefa posterior recebe pela memória as conclusões efetivamente obtidas: maior força média no
+bloco e maior dissipação na argila. Não recebe as derivações completas nem esses resultados
+antecipados na própria descrição. C.1/C.3 recebem os resultados completos aprovados, separadamente.
+
+Esses valores são um exemplo de execução, não uma resposta embutida no template de produção. Uma
+integração final só se justifica se realiza análise ainda necessária. Transcrever dados, repetir
+conclusões, imprimir marcador e redigir a resposta não justificam tarefas adicionais.
+
+### Determinação final e revisão de cobertura na geração
+
+A tarefa responsável pela última determinação pode concluir a conta, integração ou comparação
+necessária. A.2/C.2 geram restrições sobre análises externas ao objetivo, sem proibir o próprio
+objetivo final. B.1 deixa de proibir genericamente resolver a questão final e permite essa conclusão
+quando ela pertence à tarefa. Critérios continuam complementares e verificáveis; uma conclusão
+negativa ou uma referência contextual não viola escopo por conter determinada palavra.
+
+A.2 e C.2 recebem uma seção **Final plan review**: antes de devolver o JSON, revisar o conjunto
+na mesma geração, rastreando obrigações de conteúdo até sua determinação, dados e referências,
+dependências e ausência de resultados antecipados. Em C.2 essa revisão considera os resultados
+existentes junto do novo plano. Não há campo de autoaprovação nem uma fase extra de LLM.
+
+Exemplo quantitativo: se o período terrestre é 12 meses e um planeta da mesma estrela tem semieixo
+4 vezes maior, registrar só a razão 4 não responde ao período em meses. O plano deve investigar a
+relação orbital aplicável e obter o período. No roteiro de execução, sob as hipóteses fornecidas,
+`T/12 = 4^(3/2)` leva a 96 meses; esse cálculo não aparece no planejamento. O mesmo limite vale no
+caso motivador de Marte: uma razão de distâncias não substitui a determinação do período solicitado.
+
+C.3 apresenta o resultado sustentado, aplica idioma/formato e faz pareamento literal já suportado
+com o rótulo de uma opção. Comparar interpretações, integrar condições, escolher por melhor ajuste
+ou concluir a última conta são análises das tarefas, quando necessárias. Não ficam para C.3.
+Uma opção pode parafrasear o texto; o critério não transforma palavras de um distrator ou uma
+conjunção inventada de aspectos em conteúdo obrigatório.
+
+A preferência textual por “2 a 4 tarefas” foi removida. Planeja-se com parcimônia, dentro do teto
+operacional existente, sem usar número de tarefas como sinal de correção. **Cobertura semântica é
+orientada no planejamento e posteriormente julgada em C.1; não é certificada por quantidade de
+tarefas, busca de palavras ou aceitação do JSON.**
+
+### C.2: resultados existentes e investigação corretiva
+
+C.2 pode usar resultados já obtidos como entradas. Continua proibido inventar o resultado da nova
+investigação. Evitar retrabalho não significa blindar toda conclusão aprovada: uma contradição ou
+erro concreto apontado por C.1 admite investigação direcionada, com as alegações relevantes,
+condições e dados literais. O planejador não determina qual conclusão está errada antes da execução.
+Não se reabre trabalho não relacionado à lacuna nem se reescrevem os critérios gerais recebidos.
+
+Antes desta etapa, o caso de uso enviava a C.2 os critérios pendentes, mas omitia as justificativas
+do relatório de C.1. Uma descrição geral como “identificar a origem da energia” não transportava o
+motivo concreto “T1 e T2 indicam fontes incompatíveis”. A nova variável
+`global_verification_feedback` recebe `__render_report(report=report)`, reutilizando a renderização
+existente com decisão, IDs, avaliações e justificativas. O relatório já passou pelo parser e pelo
+contrato de `VerificationReport`.
+
+| Área de C.2 | Conteúdo e função |
+|---|---|
+| Original Prompt | Pedido original e dados literais, sem alternativas externas injetadas. |
+| General criteria not yet met | Critérios pendentes, preservados sem revisão. |
+| Global verification feedback | Relatório de C.1 como diagnóstico; não é resultado aprovado nem aprendizado. |
+| Results already stored | Enunciado e conclusão de cada tarefa aprovada; sem resolução completa. |
+| Key Learnings | Memória explícita acumulada, separada das demais áreas. |
+
+O transporte não altera o relatório, não escolhe uma correção e não cria chamada. O contrato novo
+é apenas de variável do prompt e foi implementado e testado em ambos os lados (montagem e template),
+com atualização do inventário de placeholders. C.2 pode criar uma investigação da fonte de energia
+quando o diagnóstico traz fontes incompatíveis, ou calcular o período que falta quando só há uma
+razão de distâncias. Criar uma tarefa apenas para escrever a linha final continua inadequado.
+
+### Aproximação fundamentada e escolha
+
+A.1/A.2/C.2/B.1 preservam aproximações legítimas, arredondamento e escolha por melhor ajuste, quando
+sustentados pelos dados, modelo e precisão. Foram removidos nesses arquivos os comandos que
+validavam a aproximação apenas porque alguma opção foi selecionada ou proibiam relatar qualquer
+incompatibilidade. Não se inventa tolerância numérica. Diferença ainda sem sustentação precisa ser
+explicada, em vez de impor uma escolha conveniente.
+
+Isso não revisa toda a política de B.2/C.1: esse alinhamento cabe à próxima etapa. Nenhum teste
+semântico novo deve fingir que o parser decide se uma aproximação física ou interpretação está
+correta. Os templates desta etapa já não contêm o comando “escolheu, logo resolveu”.
+
+### Matriz versionada, TDD e limites da avaliação
+
+A matriz [`planning_semantics_v1.json`](apps/backend/tests/fixtures/planning_semantics_v1.json)
+contém oito casos sintéticos com pedido, critérios de referência, plano de referência, exemplo de
+critério inadequado e rubrica semântica para inspeção posterior. Os dois casos de C.2 incluem lacuna,
+resultados existentes e memória. O [guia da matriz](apps/backend/tests/fixtures/README.md) descreve
+como registrar saídas brutas, versão do template e evidências de uma avaliação futura.
+
+Foram escritos primeiro os testes e confirmada a falha pertinente: **17 falhas e 15 aprovações**
+antes de alterar produção. As falhas expunham a falta das instruções coerentes e do transporte dos
+motivos de C.1. Depois da implementação, os testes focados novos e as regressões de templates e
+suficiência passaram (**78 testes**). A verificação completa e seus resultados finais constam abaixo.
+
+- **Contratos de instrução:** examinam as seções dos templates reais, as distinções de evidência,
+  escopo e revisão, e a remoção dos comandos contraditórios. São testes do texto entregue, não prova
+  de que um modelo obedecerá por encontrar a frase “não antecipe”.
+- **Transporte:** entradas da matriz são renderizadas nas áreas reais sem injetar os planos ou
+  critérios inadequados de referência. A integração usa o caso de uso, fases, provider de arquivos,
+  parser, fila, memória e persistência reais; completions e vereditos são roteirizados.
+- **Colisões:** conclusões explicadas atravessam B.4 → memória → B.1; a tarefa dependente recebe os
+  achados de força e energia sem as resoluções completas. C.1/C.3 recebem o material aprovado.
+- **C.2:** os motivos concretos de C.1 chegam à área diagnóstica; enunciado, conclusões e aprendizados
+  permanecem separados. O cenário de razão intermediária termina com determinação do período; o
+  cenário de fontes conflitantes executa a investigação antes da síntese.
+- **Parser:** a matriz confirma intencionalmente que até um critério semanticamente inadequado pode
+  ter contrato estrutural válido. Isso evita atribuir ao parser uma capacidade semântica inexistente.
+
+Nenhuma chamada paga ou avaliação com modelo real foi executada. Não se mediu redução de erros ou
+melhora de acurácia; esses ganhos exigem avaliação semântica posterior. A rubrica humana também deve
+verificar a aplicabilidade do método e o sentido das dependências, sem contagem de tarefas,
+coincidência com gabarito ou busca de palavras como certificação de cobertura.
+
+### Conferência de integração antes da etapa 04
+
+1. **Etapa 01:** as instruções de recuperação de contrato/comprimento em A.2/C.2 devem pedir um
+   plano completo sobre todas as entradas, com revisão até a determinação final. Não basta JSON
+   válido, compactação de fragmento ou preservação de uma única relação intermediária. Conferir os
+   testes específicos da 01 depois de integrar; a 03 não edita `base_thinking_phase.py`.
+2. **Etapa 02:** os aprendizados devem conservar dados literais e resultados efetivamente obtidos,
+   com referências e condições suficientes para as dependências. A 03 usa os contratos existentes
+   e não altera A.3/B.4, memória ou seus helpers compartilhados. Conferir os cenários após a união.
+3. **Variável de C.2:** preservar `global_verification_feedback` na montagem, no template e no
+   inventário de placeholders. Não omitir o relatório numa resolução de conflito de merge; não
+   misturá-lo aos resultados ou à memória.
+4. **Próxima política de validação:** alinhar B.2/C.1 à aproximação sustentada e à permissão de análise
+   final, sem restaurar “alguma opção selecionada” como garantia de acerto. A 03 preserva esses
+   arquivos para a etapa responsável.
+5. **Documentação:** preservar as seções das outras frentes e a transcrição literal do paper. As
+   seções 01/02, ausentes ao criar esta worktree, foram lidas quando ficaram disponíveis. A 01 já
+   documenta orientação de cobertura em todas as correções de A.2/C.2; a 02 preserva associações,
+   condições e resultados pela memória existente. Esses contratos são compatíveis com a 03.
+   Esta leitura não constitui merge nem execução dos testes sobre as três implementações juntas.
+
+### Verificação executada
+
+A suíte foi executada em `apps/backend` com as dependências locais já instaladas no ambiente virtual
+da worktree original, sem downloads ou chamadas a modelos. O primeiro lint completo apontou cinco
+violações de formatação preexistentes na base `945f7fe`: linhas longas em
+`benchmark_question_selector.py`, `benchmark_run_input_dto.py` e dois trechos de
+`test_benchmark_question_selector.py`, além de uma linha vazia final em `test_benchmark_router.py`.
+Foram corrigidas apenas quebras de linha e espaço final, sem alterar o comportamento ou enfraquecer
+checks. Esses ajustes de formatação são separados das mudanças funcionais da etapa 03.
+
+Comandos executados na pasta `apps/backend` (executáveis de `.venv/bin` do checkout original):
+
+```bash
+pytest -o addopts='' -q \
+  tests/infra/providers/test_planning_instruction_contracts.py \
+  tests/infra/providers/test_prompt_templates_content.py \
+  tests/application/usecases/test_ralph_planning_evidence_integration.py \
+  tests/application/usecases/test_ralph_scope_sufficiency_integration.py --tb=short
+flake8 src tests
+pytest --cov=src --cov-report=term-missing --cov-fail-under=100
+```
+
+| Verificação final | Resultado |
+|---|---|
+| Seleção focada | **78 testes passaram**, em 0,15 s; inclui os 32 testes novos. O override de `addopts` só se aplica à seleção. |
+| `flake8 src tests` | Saída vazia, código de saída 0. |
+| Suíte completa com limiar original | **2.066 testes passaram**, em 84,52 s, cobertura **100,00%**: 5.158 statements e 856 branches, sem lacunas. |
+| `git diff --check` | Sem erros de whitespace. |
+| Preservação documental | Conteúdo anterior de `NOVAS_REGRAS_RALPH_LOOP.md` mantido como prefixo integral; seção de transcrição literal em `RALPH_LOOP_ADAPTADO.md` idêntica à base. |
+
+Duas rodadas completas no sandbox foram interrompidas durante a bateria de integração de 270
+questões, com 1.714 testes passando até então. O sandbox bloqueou a conexão ao MongoDB local com
+`PermissionError`; reduzir o timeout por variável de ambiente não resolveu a espera. Essas rodadas
+interrompidas não contam como aprovação global. O comando completo final foi reexecutado fora do
+sandbox, com autorização da ferramenta, sem esse override. As chamadas aos provedores de LLM
+continuaram simuladas pelos testes; nenhuma chamada paga foi feita. O acesso ao MongoDB foi uma
+necessidade operacional da suíte existente, não uma nova dependência da funcionalidade.

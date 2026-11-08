@@ -1,18 +1,26 @@
 # C.2 — Additional planning
 
-Create new independent tasks **only** to fill the content gaps pointed out below.
+Plan investigations only for the concrete content gaps identified by global verification. Do not
+perform the new investigations during planning.
 
 ## Original Prompt
 
-The user's original request, from which all tasks derive. It is the source of the literal data of
-the question (options, values with units of measurement, formulas, conditions) that the new tasks
-need.
+The user's original request is the source of literal question data: values with units of
+measurement, excerpts, options when supplied, formulas, conditions and distance references.
 
 {{user_question}}
 
 ## General criteria not yet met
 
 {{unmet_criteria}}
+
+## Global verification feedback
+
+The C.1 report identifies the missing content or concrete inconsistency. It is diagnostic feedback,
+not an approved result or a new source of question data. Use its justifications to target the gap;
+do not promote a proposed correction to a proven conclusion.
+
+{{global_verification_feedback}}
 
 ## Results already stored
 
@@ -24,86 +32,101 @@ led to each conclusion was omitted.
 ## Key Learnings
 
 Compact notes accumulated throughout the flow: the points of attention from the question and the
-facts recorded by the tasks already completed, in the order in which they appeared. Use them to
-write self-sufficient descriptions: copy into the description of each new task the question data it
-needs (options, values with units of measurement, formulas, conditions), checking them against the
-**Original Prompt**.
+facts recorded by completed tasks, in order. Use them to identify available inputs and preserve
+the data relevant to each new objective, checking literal question data against the Original Prompt.
 
 {{learnings}}
 
-## Instructions
+## Content gaps and corrective investigation
 
-The new tasks exist to cover **only** the criteria not met. Do not create tasks that redo what is
-already in the stored results and do not reopen what has already been verified.
+Use already obtained results as inputs, distinguishing them from new conclusions still to obtain.
+Avoid redoing an established investigation without a reason. When global verification identifies
+a concrete contradiction or error, plan a targeted investigation of that issue, including relevant
+prior claims and literal data. Do not decide which conclusion is wrong before executing the new
+task. Approval of an earlier result does not prohibit investigating a specific defect flagged by
+C.1. Do not reopen unrelated resolved work or rewrite the received general criteria.
 
-Each task must:
+Final language, format or conciseness alone are not content gaps: writing the final answer,
+printing a marker or removing internal explanations belongs to C.3. If the analysis already supports
+option C and only `FINAL_ANSWER: C` is missing, no writing-only task is needed. If a joint analysis
+or comparative identification is missing, plan that explained investigation rather than just a
+final line.
 
-1. Have **a single goal**, solvable independently of the others.
-2. Carry **its own individual acceptance criteria**, which allow judging in isolation whether the
-   task was solved well. The criteria of the same task must be **complementary, never mutually
-   exclusive**: it must be possible for a single answer to meet all of them at the same time. Before
-   closing the list, check the criteria in pairs and remove any contradiction — for example,
-   "answer only the option" and "the answer must contain explanations" exclude each other and
-   cannot coexist.
-3. Include, among the criteria, **scope constraints that prevent the early resolution of the main
-   question**, written in an **affirmative and delimiting** way — for example: "the scope of the
-   answer is restricted exclusively to [task scope], without anticipating later steps or choosing
-   the final option". Avoid phrasing the criterion with ambiguous negatives ("do not conclude
-   whether...", "do not state that it is not...") that the verifier may misread when the task's own
-   technical conclusion is an impossibility or a negation.
-4. Require the task's answer to bring the **result accompanied by the explanation of why it is
-   valid**, never the result alone. If the task involves a calculation, the answer must present the
-   formulas used, the substitution of the values with units of measurement, the conventions adopted
-   (signs, reference frames, approximations) and the justification of each step up to the final
-   value; if it involves a classification or choice, it must present the reasoning that supports
-   it. Write this requirement in the task description and include an acceptance criterion that
-   checks it. Even when a pending general criterion asks for the final answer to the user to contain
-   "only the letter of the option, without justification", **never** carry that format restriction
-   over to the task: the concise formatting belongs exclusively to the final synthesis (`C.3`),
-   while every task must make the justification of its result explicit to be verifiable.
-5. **Never pre-calculate results of the new task in the acceptance criteria.** Do not solve the new
-   task inside `description` or `acceptance_criteria` (`T*-AC*`), nor fix in advance the numeric
-   value that the new task still has to calculate: rely only on the literal data of the **Original
-   Prompt** and of **Key Learnings** and on the results already approved in **Results already
-   stored**. Make sure that the last task of the plan concludes the calculation or the exact
-   determination of the final quantity asked by the question, leaving only the presentation and the
-   choice of the option letter to `C.3`.
+## Evidence and investigation
 
-Do not turn final language, format or conciseness into presentation tasks. The absence of a
-formatted final line or the presence of internal explanations are not, by themselves, content gaps.
-Use the pending criteria to identify which information is still missing, without rewriting or
-revising them. Every new task still requires an explained result, even for a concise final answer.
+- **Literal data:** preserve the relevant values with units, excerpts, formulas, conditions and
+  references supplied in the Original Prompt. Keep them distinct from recorded analytical claims.
+- **Method:** a pertinent law or comparison procedure may be proposed, such as conservation of
+  energy. Establish its applicability during execution rather than prescribing a result.
+- **Hypothesis:** ask the task to verify any unestablished condition needed by a relation, or to
+  justify an explicit assumption and its limits. A convenient physical regime or optical viewing
+  condition is not automatically a supplied fact.
+- **Result:** approved findings may be cited as existing inputs. Never pre-calculate the new task's
+  values, qualitative conclusions, classifications, rankings or interpretations in a title,
+  description or criterion. This includes substitutions and formulas dependent on an unverified
+  hypothesis. When another new task needs a finding from an earlier new investigation, refer to
+  **Key Learnings** and do not guess its content.
 
-## Examples of valid and invalid planning
+For example, investigate the source of transferred energy using the given processes and stored
+claims without requiring that either claim be confirmed. Preserve the requested optical quantity
+and distance references; establish conditions needed by the imaging relation instead of assuming
+an image at infinity.
 
-- Real gap: a joint analysis is required, but there are only isolated checks. Valid: a
-  self-sufficient task with the data already obtained, to determine and explain the intersection of
-  the conditions. Invalid: asking only for a letter, forbidding the justification or forbidding the
-  missing joint analysis.
-- If option C is already supported and only a final line such as `FINAL_ANSWER: C` is missing,
-  creating a task to write the line would be improper: C.3 applies the format. If identifying the
-  option is what is missing, the task must produce the analysis and the explained identification,
-  not just the final line.
-- Valid for total mass: "do not calculate the mass per spoon". Invalid: "do not mention spoons".
-  The contextual reference is allowed; performing the additional calculation is a real scope
-  violation.
-- "Be objective" does not authorize imposing two lines or a word limit. An optional justification
-  in the final answer does not eliminate the mandatory explanation of the internal result.
+## Task scope and criteria
 
-In **multiple-choice questions** (especially when the previous results discarded all options due to
-literal strictness), create a single comparative task that evaluates the options by **best relative
-fit and elimination of the most serious distractors**, admitting paraphrases, syntheses or reasonable
-interpretive inferences, without repeating hyper-literal prohibitions that make every option
-unviable.
+1. **Single goal permits logical dependence.** A task may consume prior findings through Key
+   Learnings while retaining a clear objective. Order new tasks so their dependencies are obtained
+   before use. Preserve the literal data, references and existing findings relevant to each goal.
+2. **Fresh context preserves explicit memory.** The solver receives its own description, criteria
+   and accumulated Key Learnings, not the original conversation or complete prior resolutions.
+   Each description must be self-sufficient for its objective and name any finding to retrieve
+   from memory. Do not silently substitute planning guesses for missing findings.
+3. Give each task its own verifiable criteria with identifiers such as `T4-AC1`. Criteria must be
+   **complementary, never mutually exclusive**: one answer must be able to meet all of them at the
+   same time. Check them in pairs: "answer only the option" conflicts with explaining the internal
+   result. State which determination to establish and justify rather than fixing the new answer.
+4. Use **affirmative and delimiting** scope, for example: "the investigation is restricted
+   exclusively to the conflicting energy-source accounts and their justification." Restrict
+   analytical actions outside the objective; do not impose arbitrary word bans. "Do not calculate
+   the mass per spoon" limits analysis; "do not mention spoons" bans a contextual reference.
+5. A task owning the **final determination** may perform the last calculation, integration or
+   comparison needed by the request, including an explained comparative choice. Scope must permit
+   its own goal. C.3 handles presentation and literal pairing of a supported result with an option
+   label, without completing missing analysis.
+6. Require the result **accompanied by the explanation** of why it is valid, **never the result
+   alone**. In a calculation, require the formulas used, substitutions with units, conventions
+   adopted (signs, reference frames, approximations) and justification of the steps. In a
+   classification, interpretation or choice, require supporting evidence and reasoning. Write
+   this in the description and include an acceptance criterion that checks it. A short final
+   answer or an optional final justification does not remove the internal explanation requirement.
+7. Permit supported paraphrases and contextual inferences; do not require a distractor's literal
+   words or an unsupported conjunction of aspects. Compare options by best relative fit and
+   elimination, without hyper-literalism. Allow a supported approximation or closest-value choice
+   when justified by the data, model and precision, without inventing a numerical tolerance.
+   Selecting an option alone is not evidence of correctness. Investigate an unexplained discrepancy
+   rather than require a convenient selection.
 
-**Context will not be shared between tasks.** Each description must be self-sufficient.
+Plan only the investigations needed to fill the gaps; there is no preferred task count. Keep
+criteria concise, and avoid tasks merely to transcribe data or restate already supported results.
 
-**Batch limit:** the session holds at most {{max_tasks}} new tasks. Do not exceed this number and
-do not merge independent tasks into one just to fit: keep each one autonomous and single-goal. A
-batch above the limit is rejected and returned to you for correction.
+## Final plan review
 
-Continue the task numbering from `T{{next_task_number}}`, so that the identifiers do not collide with
-those of the existing tasks.
+Before returning the JSON, review the stored results together with the new plan within this
+generation. Trace the unmet content obligations through the last task needed for the final
+quantity or determination. If the request is a period in months and the stored result is only a
+distance ratio, the new work must determine the period. Check that every gap, including a flagged
+contradiction, has a targeted investigation, that data and references survive, dependencies use
+actual findings, and criteria leave new conclusions open. Revise scopes that would forbid the
+necessary final analysis. Leave only supported presentation and literal pairing to C.3.
+
+This is an instruction within planning, not a separate phase or output field. Neither task count
+nor JSON validity certifies semantic coverage; C.1 later judges the sufficiency of approved results.
+
+**Batch limit:** the session holds at most {{max_tasks}} new tasks, a safety ceiling rather than a
+target. Do not exceed this number and do not merge independent tasks into one just to fit. Keep
+each objective clear. A batch above the limit is rejected for correction.
+
+Continue numbering from `T{{next_task_number}}` to avoid collisions with existing task identifiers.
 
 ## Output format
 

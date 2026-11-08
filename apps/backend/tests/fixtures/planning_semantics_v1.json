@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "purpose": "Human semantic review cases and scripted contract inputs; no automatic semantic score or answer key.",
+  "cases": [
+    {
+      "name": "collisions",
+      "phase": "A2",
+      "question": "Um bloco rígido e uma porção de argila têm a mesma massa m e atingem uma parede com rapidez v. O bloco rebate com a mesma rapidez; a argila adere. Os contatos duram o mesmo intervalo Δt. Compare os módulos das forças médias e as energias dissipadas nas duas colisões. A colisão de maior força média também dissipa mais energia?",
+      "general_criteria": ["Compare average force magnitudes and dissipated energies, determining whether the greater force corresponds to greater dissipation.", "Answer in Portuguese."],
+      "tasks": [
+        {
+          "id": "T1", "title": "Average force comparison",
+          "description": "A rigid block and clay each have mass m and hit a wall at speed v. The block rebounds at speed v; clay adheres. Both contacts last Δt. Determine the relation between average force magnitudes, explaining momentum changes, signs and units.",
+          "acceptance_criteria": [
+            {"id": "T1-AC1", "description": "Determine and justify the force comparison using the stated motions and equal contact durations."},
+            {"id": "T1-AC2", "description": "Restrict the analysis to the average forces, explaining the formulas and conventions used."}
+          ]
+        },
+        {
+          "id": "T2", "title": "Dissipated energy comparison",
+          "description": "A rigid block and clay each have mass m and hit a wall at speed v. The block rebounds at speed v; clay adheres. Determine the relation between dissipated energies, explaining the energy accounting and its assumptions.",
+          "acceptance_criteria": [
+            {"id": "T2-AC1", "description": "Determine and justify the energy comparison from the initial and final states."},
+            {"id": "T2-AC2", "description": "Restrict the analysis to energy accounting with the formulas, units and conditions used."}
+          ]
+        },
+        {
+          "id": "T3", "title": "Joint physical interpretation",
+          "description": "For the equal-mass rigid block rebounding at speed v and clay adhering to the wall, with equal impact speeds v and contact durations Δt, use the force and energy conclusions recorded in Key Learnings to determine whether the greater average force corresponds to greater dissipated energy. Explain the joint comparison without assuming either previous conclusion.",
+          "acceptance_criteria": [
+            {"id": "T3-AC1", "description": "Explain the joint relation using the actual force and energy findings in Key Learnings."},
+            {"id": "T3-AC2", "description": "Confine the integration to the two specified collisions."}
+          ]
+        }
+      ],
+      "invalid_criterion": "The clay force must be greater and the dissipated energies must be equal.",
+      "review_checks": ["No force or energy ordering is fixed by planning.", "The final investigation retrieves both prior conclusions from memory.", "Literal rebound and adhesion conditions remain available for each relevant objective."]
+    },
+    {
+      "name": "energy_origin_and_effect",
+      "phase": "A2",
+      "question": "Vapor de água entra na camisa de um tacho, esfria e condensa. O produto no interior aquece e parte dele evapora. Investigue de onde vem a energia transferida ao produto e qual é seu efeito.",
+      "general_criteria": ["Identify the source of transferred energy and its effect on the product.", "Answer in Portuguese."],
+      "tasks": [
+        {
+          "id": "T1", "title": "Energy source",
+          "description": "Water vapor enters a vessel jacket, cools and condenses; the product inside heats and partly evaporates. Investigate the source and direction of energy transfer to the product. Explain the system boundary and energy balance.",
+          "acceptance_criteria": [{"id": "T1-AC1", "description": "Identify and explain the source from the given processes and a consistent energy balance, limiting the investigation to the source."}]
+        },
+        {
+          "id": "T2", "title": "Energy effect",
+          "description": "Water vapor enters a vessel jacket, cools and condenses; the product inside heats and partly evaporates. Investigate how the transferred energy affects the product, using the source conclusion from Key Learnings if needed. Explain the energy balance and phase changes involved.",
+          "acceptance_criteria": [{"id": "T2-AC1", "description": "Explain the effect on the product while distinguishing it from the source; support the conclusion with energy accounting."}]
+        }
+      ],
+      "invalid_criterion": "Establish that vaporization of the product supplies the energy transferred to it.",
+      "review_checks": ["Source and effect are separate investigations.", "A source conclusion is obtained during execution rather than prescribed in a criterion."]
+    },
+    {
+      "name": "linear_optics",
+      "phase": "A2",
+      "question": "Um microscópio usa duas lentes delgadas separadas por 12 cm, com focais de 2 cm (objetiva) e 4 cm (ocular). O objeto está a 3 cm da objetiva. Determine o aumento linear total e a posição da imagem final em relação à ocular.",
+      "general_criteria": ["Determine total linear magnification and final image position relative to the eyepiece.", "Answer in Portuguese."],
+      "tasks": [
+        {
+          "id": "T1", "title": "Objective image",
+          "description": "For the thin objective with focal length 2 cm and object distance 3 cm, determine its image position and linear magnification. Explain the thin-lens relation, applicability and sign convention, identifying the reference lens for each distance.",
+          "acceptance_criteria": [{"id": "T1-AC1", "description": "Explain the objective image determination with formulas, units, applicability and distance references."}]
+        },
+        {
+          "id": "T2", "title": "Complete linear imaging",
+          "description": "The thin objective (focal length 2 cm) and eyepiece (4 cm) are separated by 12 cm; the original object is 3 cm from the objective. Retrieve the objective image and magnification from Key Learnings, determine total linear magnification and final image position relative to the eyepiece, and explain the conjugates and signs. Establish the eyepiece object distance from the lens separation and previous image position.",
+          "acceptance_criteria": [{"id": "T2-AC1", "description": "Explain the total linear magnification and final image position with the applicable relations, units and explicit distance references."}]
+        }
+      ],
+      "invalid_criterion": "Use angular magnification with the final image at infinity.",
+      "review_checks": ["Preserve the requested linear quantity and reference to the eyepiece.", "Do not impose relaxed-eye viewing or an image at infinity.", "Method choice must establish applicability rather than invent a convenient condition."]
+    },
+    {
+      "name": "orbital_period",
+      "phase": "A2",
+      "question": "Um planeta P orbita a mesma estrela que a Terra e tem semieixo maior igual a 4 vezes o terrestre. Despreze as massas dos planetas. O período terrestre é 12 meses. Determine o período orbital de P em meses.",
+      "general_criteria": ["Determine the orbital period of P in months.", "Answer in Portuguese."],
+      "tasks": [
+        {
+          "id": "T1", "title": "Orbital period",
+          "description": "P and Earth orbit the same star, planetary masses are negligible, P has semimajor axis 4 times Earth's, and Earth's period is 12 months. Determine P's orbital period in months using an applicable orbital relation, explaining its hypotheses, substitution and units.",
+          "acceptance_criteria": [{"id": "T1-AC1", "description": "Determine and explain the period in months, establishing the applicability of the orbital relation and showing units."}]
+        }
+      ],
+      "invalid_criterion": "Only determine the semimajor-axis ratio; leave the period calculation to C.3.",
+      "review_checks": ["A distance ratio is an intermediate input, not coverage of the period request.", "No fixed task count certifies or prevents completeness.", "A relevant physical law is an allowed method, not an anticipated numeric result."]
+    },
+    {
+      "name": "contextual_interpretation",
+      "phase": "A2",
+      "question": "O texto relata que moradores passaram a ocupar áreas periféricas após o encarecimento do centro. Qual interpretação é mais sustentada? A) O custo da moradia deslocou a ocupação urbana. B) A industrialização e a mecanização rural foram necessariamente simultâneas. Admitem-se inferências contextuais.",
+      "general_criteria": ["Identify the interpretation best supported by the text, admitting contextual inference.", "Answer in Portuguese."],
+      "tasks": [
+        {
+          "id": "T1", "title": "Interpretation comparison",
+          "description": "The text reports residents moving to peripheral areas after the center became more expensive. Compare A) Housing costs displaced urban occupation and B) Industrialization and rural mechanization were necessarily simultaneous. Determine the best-supported interpretation and explain the evidence, contextual inferences and any unsupported extrapolations.",
+          "acceptance_criteria": [{"id": "T1-AC1", "description": "Explain the comparative choice from the text, allowing supported paraphrases and contextual inferences within the interpretation task."}]
+        }
+      ],
+      "invalid_criterion": "The answer must literally mention both industrialization and rural mechanization.",
+      "review_checks": ["Do not promote distractor terms to mandatory analytical content.", "Comparison is substantive analysis permitted within the final task.", "Accept a supported contextual inference without requiring identical wording."]
+    },
+    {
+      "name": "open_optional_justification",
+      "phase": "A2",
+      "question": "Liste duas possíveis consequências do trabalho remoto para a rotina familiar. Seja objetivo; pode justificar. Responda em português.",
+      "general_criteria": ["List two possible consequences of remote work for family routine.", "Answer objectively in Portuguese; final justification is optional."],
+      "tasks": [
+        {
+          "id": "T1", "title": "Family routine consequences",
+          "description": "Identify two possible consequences of remote work for family routine and explain internally why each is plausible. Limit the analysis to the requested consequences; the optional final justification does not remove this internal explanation.",
+          "acceptance_criteria": [{"id": "T1-AC1", "description": "Identify two relevant possible consequences and explain their contextual plausibility without assuming that either must be positive or negative."}]
+        }
+      ],
+      "invalid_criterion": "Prove one positive and one negative effect in exactly two lines and print FINAL_ANSWER.",
+      "review_checks": ["No invented positive/negative balance, proof, line limit or answer marker.", "Two consequences are mandatory content; final justification is optional presentation.", "Internal results still include explanations."]
+    },
+    {
+      "name": "additional_period_gap",
+      "phase": "C2",
+      "question": "P orbita a mesma estrela que a Terra, com semieixo 4 vezes o terrestre. Despreze as massas dos planetas. O período terrestre é 12 meses. Determine o período de P em meses.",
+      "general_criteria": ["Determine P's orbital period in months."],
+      "stored_results": "T1: the semimajor-axis ratio is 4, copied from the question.",
+      "learnings": "P and Earth orbit the same star; planetary masses are negligible; Earth's period is 12 months; the semimajor-axis ratio is 4.",
+      "gap": "AC1: A distance ratio alone does not determine the requested period in months; that calculation is missing.",
+      "tasks": [
+        {
+          "id": "T2", "title": "Missing orbital period",
+          "description": "Using the stored semimajor-axis ratio 4 for P and Earth orbiting the same star, negligible planetary masses and Earth's 12-month period, investigate the applicable period relation and determine P's period in months. Explain applicability, substitution and units.",
+          "acceptance_criteria": [{"id": "T2-AC1", "description": "Determine and explain the missing period in months using the given and stored inputs."}]
+        }
+      ],
+      "invalid_criterion": "Write the final answer marker using only the distance ratio.",
+      "review_checks": ["Existing results can be inputs; the new period is not precomputed.", "Close the substantive gap before presentation without a writing-only task."]
+    },
+    {
+      "name": "additional_energy_contradiction",
+      "phase": "C2",
+      "question": "Vapor de água entra na camisa de um tacho, esfria e condensa. O produto aquece e parte evapora. De onde vem a energia transferida ao produto?",
+      "general_criteria": ["Identify and support the source of energy transferred to the product."],
+      "stored_results": "T1 attributes the transfer to jacket steam cooling and condensing. T2 attributes it to product vaporization.",
+      "learnings": "Steam cools and condenses in the jacket; the product heats and partly evaporates. The recorded source conclusions conflict.",
+      "gap": "AC1: T1 and T2 name incompatible energy sources for the same transfer; investigate the system boundaries and transfer direction.",
+      "tasks": [
+        {
+          "id": "T3", "title": "Investigate the conflicting energy sources",
+          "description": "Steam in the jacket cools and condenses while the product heats and partly evaporates. Stored T1 attributes the transfer to jacket steam; T2 attributes it to product vaporization. Investigate the conflicting source claims using explicit system boundaries and an energy balance; determine and explain which account is supported.",
+          "acceptance_criteria": [{"id": "T3-AC1", "description": "Explain a supported source determination resolving the specific conflict through energy accounting, without treating either prior conclusion as established in advance."}]
+        }
+      ],
+      "invalid_criterion": "Confirm that T1 is wrong; never investigate any already approved conclusion.",
+      "review_checks": ["Targeted investigation of a concrete contradiction is permitted.", "The planner does not decide which conclusion is wrong.", "C.1 feedback arrives separately from approved results and learnings."]
+    }
+  ]
+}

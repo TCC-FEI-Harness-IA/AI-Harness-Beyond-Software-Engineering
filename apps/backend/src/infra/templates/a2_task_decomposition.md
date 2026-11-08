@@ -1,110 +1,102 @@
 # A.2 — Breakdown into single-goal tasks
 
-Break the question below into autonomous tasks, each with a **single responsibility**.
+Plan an ordered sequence of investigations that together determine what the question asks. Each
+task has a **single responsibility**. Plan the investigations; do not perform them here.
 
 ## Question
 
 {{user_question}}
 
-## Instructions
+## Evidence and investigation
 
-Each task must:
+Keep these categories distinct in every title, description and acceptance criterion:
 
-1. Have **a single goal**, solvable independently of the others.
-2. Carry **its own individual acceptance criteria**, which allow judging in isolation whether the
-   task was solved well. The criteria identifiers follow the form `T1-AC1`. The criteria of the same
-   task must be **complementary, never mutually exclusive**: it must be possible for a single answer
-   to meet all of them at the same time. Before closing the list, check the criteria in pairs and
-   remove any contradiction — for example, "answer only the option" and "the answer must contain
-   explanations" exclude each other and cannot coexist.
-3. Include, among the criteria, **scope constraints that prevent the early resolution of the main
-   question**, written in an **affirmative and delimiting** way — for example: "the scope of the
-   answer is restricted exclusively to [task scope], without anticipating later steps or choosing
-   the final option". Avoid phrasing the criterion with ambiguous negatives ("do not conclude
-   whether...", "do not state that it is not...") that the verifier may misread when the task's own
-   technical conclusion is an impossibility or a negation.
-4. Require the task's answer to bring the **result accompanied by the explanation of why it is
-   valid**, never the result alone. If the task involves a calculation, the answer must present the
-   formulas used, the substitution of the values with units of measurement, the conventions adopted
-   (signs, reference frames, approximations) and the justification of each step up to the final
-   value; if it involves a classification or choice, it must present the reasoning that supports
-   it. Write this requirement in the task description and include an acceptance criterion that
-   checks it.
-5. **Never pre-calculate results or anticipate calculations in the planning.** This stage is
-   planning only: **do not solve the problem here**. It is forbidden to include numeric values
-   calculated by you, intermediate results, ready-made algebraic substitutions or answer keys in the
-   `description` or `acceptance_criteria` (`T*-AC*`) fields. The acceptance criteria must describe
-   **which** quantity, relation or property must be determined and justified (for example,
-   "Determines the numeric value of the resultant force with its SI unit"), and **never** fix in
-   advance what it should be worth (for example, never write "Obtains a force equal to 15 N" or
-   "Substitutes x = 4"). Likewise, in the following tasks (`T2`, `T3`...), **never try to guess or
-   fill in the result that the previous task will find**: copy only the relevant raw data from the
-   original question and instruct the task to use the value or conclusion recorded by the previous
-   tasks in the **Key Learnings**.
+- **Literal data:** preserve the relevant values with units, excerpts, formulas, conditions and
+  references supplied by the question. These may be copied as given; they are not your findings.
+- **Method:** a pertinent law, model or comparison procedure may be planned, such as conservation
+  of energy. Choosing a method is not pre-calculating a result. Establish its applicability during
+  execution; a formula supplied by the question is still subject to its stated conditions.
+- **Hypothesis:** when a method requires an unestablished condition, ask the task to verify that
+  condition or justify an explicit assumption and its limits. Never introduce a convenient viewing
+  condition, distance reference or physical regime as a supplied fact.
+- **Result:** values, qualitative conclusions, classifications, rankings and interpretations still
+  to be obtained must remain open. Do not pre-calculate them or embed them in a criterion as the
+  required answer. This includes algebraic substitutions and formulas whose applicability depends
+  on an unverified hypothesis. For later tasks, name the finding needed from **Key Learnings**;
+  do not guess what the preceding task will conclude.
 
-**Context will not be shared between tasks.** Each task will be executed in isolation, with no
-access to the original question, to the other tasks or to their results. Therefore the description
-of each task must be self-sufficient: everything needed to solve it must be written in it, but
-concisely — include only the data, excerpts or conditions relevant to that task, without needlessly
-copying the whole question over and over.
+For example, ask to determine which collision has the greater average force and explain the
+momentum analysis, rather than require that one named collision have the greater force. Investigate
+the source of transferred energy separately from its effect without prescribing the source. For
+optical imaging, preserve the requested linear or angular quantity and the reference for each
+distance; establish any viewing condition needed by the chosen relation during execution.
+
+## Task scope and criteria
+
+1. **Single goal permits logical dependence.** A task can consume a previous result from Key
+   Learnings while having one clear analytical objective. Order the tasks so required findings are
+   obtained before use. Each description must preserve the literal data and references relevant to
+   its own objective and identify any previous finding it needs.
+2. **Fresh context is not absence of memory.** The solver receives its own task, criteria and
+   accumulated Key Learnings, not the original question, other task descriptions or their complete
+   resolutions. Make each description self-sufficient for its objective, with dependencies supplied
+   through memory rather than invented in planning. Copy relevant question content concisely.
+3. Give every task its own verifiable criteria, identified as `T1-AC1`, `T1-AC2`, etc. They must be
+   **complementary, never mutually exclusive**: one answer must be able to meet all of them at the
+   same time. Check criteria in pairs. For example, "answer only the option" conflicts with a
+   requirement to explain the internal result. Criteria specify what to determine and how to
+   substantiate it, not which as-yet unknown conclusion must be reached.
+4. Express scope in an **affirmative and delimiting** way, for example: "the analysis is restricted
+   exclusively to the average force comparison and its justification." Restrict actions outside
+   this objective, not contextual words. "Do not calculate the mass per spoon" delimits an action;
+   "do not mention spoons" unnecessarily forbids a contextual reference. A negative technical
+   finding can be a valid result within scope.
+5. The task responsible for the **final determination** may perform the last calculation,
+   integration or comparison necessary to answer the question. Scope restrictions must allow that
+   task's own conclusion, including an explained choice when comparison is substantive analysis.
+   C.3 handles presentation and literal pairing of an already supported result with an option
+   label; it does not supply missing analysis.
+6. Require the result **accompanied by the explanation** of why it is valid, **never the result
+   alone**. For calculations, require the formulas used, substitution with units, conventions
+   adopted (signs, reference frames, approximations) and justification of the steps. For an
+   interpretation, classification or choice, require the supporting evidence and reasoning. Write
+   this requirement in the task description and include an acceptance criterion that checks it.
+   Internal explanation remains mandatory even if the user requests a short final answer, only a
+   letter, or an optional final justification.
+7. Interpretive criteria allow supported paraphrases and contextual inference. Do not demand
+   literal words from a distractor or impose an unsupported conjunction of aspects. In comparative
+   questions, assess best relative fit by elimination, distinguishing serious contradictions from
+   reasonable inference rather than requiring a 100% literal match. A supported approximation or
+   closest-value choice remains valid when justified by the data, model and precision; do not
+   invent a numerical tolerance. Selecting an option alone does not establish correctness.
 
 ## Parsimony and efficiency guidelines
 
-Plan **the smallest possible number of tasks** able to produce the necessary inputs (typically
-**2 to 4 tasks**). Decompose parsimoniously:
+Plan the **smallest possible number of tasks** that covers the request, without a preferred count.
 
-- **Decompose by conditions or logical steps, never by option.** In multiple-choice questions,
-  **do not** create a separate task for each option (`A`, `B`, `C`, `D`, `E`), nor disguise each
-  option as an individual task to validate the sentence or topic of that option in isolation.
-  Evaluating and comparing the options against the question or a condition is a single goal and
-  must stay in a single task.
-- **Evaluate options by best relative fit (elimination), without hyper-literalism.** In
-  interpretive or multiple-choice questions, the correct option often synthesizes, paraphrases or
-  makes a reasonable inference from the text. Do not write descriptions or acceptance criteria that
-  require a 100% literal word-for-word presence or that prejudge concepts in the options as absent;
-  instruct the task to compare the statements and identify the most coherent one by eliminating the
-  most serious distractors. When the comparison involves a calculated value, do not require the
-  option to "match exactly" the value: the criterion must require the explicit selection of a single
-  option, the one with the closest value or the best fit, recording the difference when there is
-  one. Rounding, significant-figure or order-of-magnitude approximations are acceptable; only the
-  absence of a selection is unacceptable.
-- **Avoid bureaucratic or redundant tasks.** Do not create tasks merely to transcribe literal data
-  from the text without analyzing it, nor final tasks to "synthesize previous tasks", "choose the
-  final option" or "write the final answer" — consolidating the results and writing the final
-  answer belong to a later phase of the flow.
-- **Close the gap up to the final quantity or determination asked by the question.** Although each
-  task must have an atomic and limited scope, the sequence of tasks must advance until the **last
-  task of the plan concludes exactly the final calculation, relation or determination required by
-  the question**, consuming the key learnings produced by the previous tasks. For example: if a task
-  determines the month in which product I overtakes product II (e.g. August) and the question asks
-  what happens in the *following month*, there must be a next task that receives the overtaking
-  month from the **Key Learnings** and explicitly determines which month is the following one; if a
-  task calculates the quantity already present and the question asks *how much is still missing*,
-  the last task must calculate that final difference. Leave to the final synthesis (`C.3`) only the
-  presentation of the already determined result and its pairing with the option letter.
-- **Keep the criteria concise.** Define only the criteria essential to validate the task
-  (typically 2 to 4 criteria per task), without splitting the same requirement into several items.
+- **Decompose by conditions or logical steps, never by option.** Keep comparison of the offered
+  statements against a common question or condition in a single investigation.
+- **Avoid bureaucratic or redundant tasks.** Do not create tasks merely to transcribe data, print
+  a marker or write the final answer. A final integration is warranted when it performs a missing
+  inference or comparison; repeating established conclusions for presentation is not an analysis.
+- Keep criteria concise and limited to verifiable requirements essential to the objective.
 
-Together, the tasks must produce enough inputs to support the final answer to the question.
+## Final plan review
 
-## Examples of scope and explanation
+Before returning the JSON, review the whole plan within this generation. Trace each requested
+content obligation to the investigation that will determine it, through the last task needed for
+the final quantity or determination. A request for a period in months is not covered by a distance
+ratio alone; a request for an amount still missing is not covered by a total already present.
+Check that descriptions retain relevant literal data and references, dependencies use actual
+future learnings, criteria do not fix uncomputed results, and scopes permit the necessary final
+analysis. Revise the plan now if any determination would otherwise be left to C.3.
 
-- Valid, in a total-mass task: "Calculate the total mass and explain the calculation; do not
-  calculate the mass per spoon". The sentence "the question mentions spoons" is a permitted
-  contextual reference. Invalid as a generated criterion: "do not mention spoons" — it forbids words
-  without restricting an action.
-- Real violation of the previous scope: dividing the total mass by the number of spoons and
-  concluding the mass per spoon. Mentioning the next use of the result, without performing that
-  calculation, is not a violation.
-- Valid: a result accompanied by a verifiable explanation, even if the user wants only the letter
-  in the final answer. Invalid: requiring "only the letter, without explanations" from the task, or
-  imposing two lines because of "be objective", preventing the justification needed for
-  verification.
+This review is a planning instruction, not a separate phase or output field. Neither task count
+nor JSON validity certifies semantic coverage. C.1 later judges the sufficiency of approved results.
 
-**Batch limit:** the session holds at most {{max_tasks}} tasks (a safety ceiling, and **not** a
-target to reach). Do not exceed this number and do not merge genuinely independent tasks into one
-just to fit: keep each one autonomous and single-goal. A batch above the limit is rejected and
-returned to you for correction.
+**Batch limit:** the session holds at most {{max_tasks}} tasks, a safety ceiling rather than a
+target. Do not exceed this number and do not merge genuinely independent tasks into one just to
+fit. Keep each objective clear. A batch above the limit is rejected for correction.
 
 Number the tasks starting from `T1`.
 
