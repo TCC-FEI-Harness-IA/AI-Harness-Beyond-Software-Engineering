@@ -39,7 +39,8 @@ returned to you for correction:
 
 The evaluation is **local**: judge only the criteria of this task. Do not judge whether the result
 answers the user's final question, do not judge the quality of the final answer and do not consider
-anything beyond the criteria listed above.
+anything beyond the criteria listed above. An intermediate task is not required to answer the whole
+question: a partial result that its criteria ask for is complete for this task.
 
 **Do not ignore, rewrite or waive any criterion received**, even if it seems poorly worded. The
 interpretation of scope must follow the action the criterion restricts: citing a term as a
@@ -58,26 +59,78 @@ Examples for a criterion "do not calculate the mass per spoon":
 
 A well-founded conclusion about the task's own goal is not an undue anticipation. Solving
 conditions outside the goal or announcing the global solution when the criterion forbids it is a
-violation. Internal explanations must not be judged by the format of the final answer, unless such
-a restriction appears in the local criteria received; all of them remain mandatory.
+violation. Internal explanations must not be judged by the format of the final answer: a marker
+line, an answer limited to a letter or the final language is not an internal obligation unless
+such a restriction appears in the local criteria received; all of those remain mandatory.
+
+## Evidence and consistency policy
+
+Apply the same four distinctions to every result, whatever its domain:
+
+1. **Exact result:** accept it when the data and the analysis actually performed support it.
+2. **Approximation or best fit:** accept a choice grounded by comparison, elimination, available
+   precision, an explicit hypothesis, order of magnitude or a pertinent contextual inference. An
+   exact match and a direct calculation reaching the chosen option's value are not universal
+   conditions: a numerical difference alone is not a defect and does not call for extra proof. The
+   approximation is stated as such and never becomes an equality.
+3. **Real contradiction:** revision is needed when statements about the same object, quantity and
+   conditions are incompatible; when a calculation contradicts its own conclusion; when a unit or
+   reference is swapped; when a false equality is asserted between an obtained value and a different
+   selected value; or when an assumed condition conflicts with the available data. Results about
+   different objects, reference frames or hypotheses are not contradictory
+   merely because they differ.
+4. **Missing essential content:** completion is needed when the requested determination or an
+   indispensable analysis is absent and the choice is not supported even by an approximation or by
+   eliminations already performed. A dimensionless distance ratio is not the calculation of a
+   period, and a missing calculation cannot be delegated to the final presentation (C.3).
+
+There is no universal percentage tolerance, no ban on approximation in integer problems, no rule
+that any divergence fails and no rule that selecting an option passes. Decide from the relations
+between data, method, conditions and conclusion.
+
+## Technical verification of the local criteria
+
+Check the content, not only the presence of an explanation. The presence of an explanation is not
+its correctness. For each criterion, verify that the formula or method applies under the stated
+conditions, that the data and units used match the task and **Key Learnings**, that each step
+follows from the previous one and that the conclusion follows from the calculation or analysis
+shown. A criterion that asks for a correct, justified result is not met by a wrong derivation that
+is fully written out: for example, a conditional probability that multiplies again by the
+probability of an event already given by the condition is a conditioning error. Name the concrete
+defect in the justification — the step, the relation or the datum affected — so that the next
+attempt can correct it; do not perform the corrected resolution here.
+
+If an acceptance criterion carries a number or expression improperly pre-calculated during planning
+that diverges from the correct deduction from the question data and the **Key Learnings**, consider
+the criterion **met (`met: true`)** when the result demonstrates and justifies the correct
+calculation of that quantity. A planning anticipation is not the standard of correctness.
 
 Avoid **hyper-literalism**: when a criterion requires an analysis, conclusion or option to be
 supported by the text or question, consider the criterion **met** if the result demonstrates the
 **best relative fit (by elimination of the most serious distractors)** or a coherent paraphrase and
-interpretive inference, without requiring a 100% literal word-for-word match. Likewise, if an
-acceptance criterion carries a number or expression improperly pre-calculated during planning that
-diverges from the correct mathematical/physical deduction from the question data and the **Key
-Learnings**, consider the criterion **met (`met: true`)** when the result demonstrates and justifies
-the correct calculation of that quantity.
+interpretive inference, without requiring a 100% literal word-for-word match. Apply the same
+standard of implicit content to every option compared: for example, a text describing residents
+deliberating together may support an interpretation of collective decision-making without using
+that exact term. Do not reject the supported interpretation for lacking a literal word while
+accepting implicit content for another option.
+Literal wording is required only when the criterion explicitly demands that wording. When a
+justification is only less explicit than it could be, say what link is missing; do not treat that
+as evidence that another option is better.
 
-**Approximations in the selection of options are allowed.** When a criterion requires selecting the
-option that corresponds to the value or conclusion obtained — even if worded as "matches exactly"
-or "the only one that coincides" —, consider it **met (`met: true`)** if the result **explicitly
-selects a single option** as the one with the closest value or the best fit, even if it records the
-difference between the value obtained and the option's value. The lack of an exact match is not a
-reason for rejection. The criterion is **not met** only when no option is selected, when the result
-concludes "none" or creates a non-existent option, or when another available option is evidently
-closer to the value obtained.
+## Selection criteria
+
+When a criterion requires selecting the option that corresponds to the value or conclusion obtained
+— even if worded as "matches exactly" or "the only one that coincides" —, it is met when the result
+selects an option and grounds the choice under the policy above: an exact match, or a best fit
+supported by comparison, elimination, precision, hypothesis, order of magnitude or contextual
+inference, without asserting a false equality. The lack of an exact match is not, by itself, a
+reason for rejection, and the choice does not need a direct calculation reaching the option's value.
+
+Selecting the closest option to a value obtained through an identifiable error does not meet it:
+the defect is the error, not the distance between the numbers. The criterion is also not met when
+the result selects no option although one is required and states no concrete limitation, when it
+creates a non-existent option, or when another available option is evidently better supported by
+the result itself.
 
 ## Output format
 

@@ -44,7 +44,10 @@ In **multiple-choice questions**, require the relatively most coherent and best-
 (best fit by elimination). Admit paraphrases, syntheses and reasonable contextual inferences rather
 than requiring a 100% literal word-for-word match. When a choice depends on a calculated value,
 allow a supported approximation: rounding or a closest value may justify a choice when consistent
-with the data, applicable model and precision. Do not invent a numerical tolerance or treat the
+with the data, applicable model and precision. Do not require exact coincidence or a direct
+calculation reaching the option's value as a universal condition: elimination and contextual
+inference may also support a choice. For an open question that admits an estimate, do not require
+an exact value unless the request asks for one. Do not invent a numerical tolerance or treat the
 mere selection of an option as evidence of correctness. An unexplained discrepancy is not justified
 by selecting something.
 

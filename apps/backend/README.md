@@ -670,7 +670,7 @@ persistida antes do evento `result`.
 | Qualquer prompt de B.1, B.2, B.4, C.1, C.2 ou C.3 é montado | O template tem a área **Aprendizados Pontuais** (`## Key Learnings`), preenchida com todos os aprendizados acumulados até aquele momento (anotações de A.3 seguidas dos aprendizados de B.4), ou com o aviso de que ainda não há nenhum. Os aprendizados nunca entram nos resultados armazenados. |
 | Qualquer fase é executada | A execução abre uma janela nova, da própria fase: tarefa diferente e mudança de fase (inclusive B.1 → B.2, B.2 → B.1, B.1 → B.4 e C.1 → C.2/C.3) nunca herdam a conversa anterior. Só as correções de saída da própria execução reaproveitam a janela. Só os aprendizados atravessam fases como memória; as demais entradas chegam explicitamente pelo template. |
 | B.2 aprova | B.3 armazena só essa resposta; B.4 roda numa janela nova e recebe o histórico completo da tarefa (tarefa, tentativas, saídas descartadas e vereditos) como material delimitado `<task_history>`. |
-| B.2 reprova e há tentativas | B.1 repete numa janela nova, com temperatura `1`; as tentativas reprovadas e os vereditos chegam pela variável `previous_attempts` do Template B.1, delimitados por `<previous_attempts>`. A verificação dessa tentativa e as fases seguintes voltam à temperatura do usuário. |
+| B.2 reprova e há tentativas | B.1 repete numa janela nova, com temperatura `1`; as tentativas reprovadas e os vereditos chegam pela variável `previous_attempts` do Template B.1, delimitados por `<previous_attempts>`, seguidos da instrução de tratar o problema concreto apontado e manter as conclusões não refutadas. A verificação dessa tentativa e as fases seguintes voltam à temperatura do usuário. |
 | B.2 reprova e as tentativas acabam | Nada é armazenado, B.4 não roda, a execução é interrompida. |
 | B.2/C.1 devolve um relatório vazio, incompleto, duplicado, com ID desconhecido ou contraditório | O verificador é chamado de novo, na mesma janela e com temperatura `1`, para conferir e corrigir o próprio relatório (chamada contada); não consome tentativa de B.1. O veredito nunca é ajustado automaticamente. Sem correção, a fase falha. |
 | Qualquer saída estruturada é recusada e há retentativa | A resposta bruta completa e os feedbacks permanecem na janela da execução, sem corte aos 1.000 caracteres nem repetição do template. A correção de contrato pede saída completa e preservação do conteúdo não afetado e das etapas necessárias. |
@@ -778,8 +778,8 @@ retentativas e chamadas do fluxo permanecem iguais.
 
 Critérios admitem paráfrases, inferência contextual e aproximação fundamentada. Escolher uma opção
 não basta para provar acerto. Explicação interna continua obrigatória mesmo para resposta final
-curta ou com justificativa opcional. A política completa dos validadores B.2/C.1 será alinhada na
-etapa seguinte; esta etapa não altera esses templates.
+curta ou com justificativa opcional. A política completa dos validadores B.2/C.1 foi alinhada na
+etapa 04 (seção seguinte); a etapa 03 não alterou esses templates.
 
 Os testes novos estão em
 [`test_planning_instruction_contracts.py`](tests/infra/providers/test_planning_instruction_contracts.py)
@@ -795,6 +795,43 @@ uma regeneração completa precisa preservar dados e cobrir a última determina�
 compactação ou reparo de um fragmento. Conferir também a passagem dos resultados efetivamente
 obtidos pela memória da etapa 02. A etapa 03 não edita a fase base, A.3/B.4 ou os contratos de memória.
 Os detalhes e resultados de testes estão na seção **Melhorias do thinking — 03** de
+[`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
+
+### Validação, consistência e aproximações — etapa 04
+
+`b1_task_resolution.md`, `b2_task_verification.md` e `c1_global_verification.md` compartilham a
+seção `## Evidence and consistency policy`, com texto idêntico (verificado por teste): resultado
+exato e aproximação/melhor ajuste fundamentados são aceitos; contradição real e conteúdo essencial
+ausente pedem revisão ou complementação. A diferença numérica isolada não decide; não há tolerância
+percentual, regra “qualquer divergência reprova” nem “escolheu uma opção, aprova”.
+
+| Template | Seções novas ou reescritas |
+|---|---|
+| B.1 | `Calculated result and chosen option` (valor obtido ≠ opção escolhida; estimativa rotulada; erro identificável corrigido antes da comparação); `Previous attempts` mantém conclusões não refutadas; `Conclusion field`. |
+| B.2 | `Technical verification of the local criteria` (explicação presente não é explicação correta; conteúdo implícito com a mesma régua para as opções) e `Selection criteria` (seleção fundamentada, nunca a mais próxima de um valor com erro). Removida a aprovação por “selecionar explicitamente uma opção”. |
+| C.1 | `Consistency of the union`, `Justification of each verdict` e exemplos de aceitação sem coincidência exata e de reprovações reais. Removida a aprovação de aproximação “desde que uma opção seja escolhida”. |
+| C.2/C.3/A.1/A.2 | Investigação do defeito com resultado explicado; apresentação de aproximação como aproximação; critérios sem exigência universal de coincidência exata. |
+
+Em `RalphThinkingUseCase`, `_RETRY_INSTRUCTION_CONTENT` passou a pedir que a nova tentativa trate o
+problema concreto apontado por cada veredito e mantenha as conclusões que ele não refutou, em vez de
+“corrigir exatamente esses pontos”. Nenhum schema, variável de template, fase, limite ou regra do
+parser mudou: o parser segue validando IDs, cobertura, pendências e coerência da decisão, sem juízo
+semântico, sem converter reprovação e sem relaxar tipos.
+
+B.1 preserva os dados literais fornecidos pelo usuário e distingue deles os valores derivados,
+conclusões e hipóteses introduzidos pelo planejamento que precisam de verificação. Os exemplos de
+produção usam também volume, inventário e decisão coletiva; os casos de regressão do benchmark
+permanecem nos testes, sem injeção no núcleo. As guardas dessa separação estão em
+[`test_validation_generalist_boundaries.py`](tests/infra/providers/test_validation_generalist_boundaries.py).
+
+Os testes novos estão em
+[`test_validation_policy_contracts.py`](tests/infra/providers/test_validation_policy_contracts.py),
+[`test_validation_semantics_matrix.py`](tests/infra/providers/test_validation_semantics_matrix.py) e
+[`test_ralph_validation_consistency_integration.py`](tests/application/usecases/test_ralph_validation_consistency_integration.py),
+sobre a matriz [`validation_semantics_v1.json`](tests/fixtures/validation_semantics_v1.json). Os
+vereditos de LLM são roteirizados: os testes comprovam transporte, transições
+(C.1 → C.2 → B → C.1 → C.3), recuperação e contabilização, não a capacidade do modelo de reconhecer
+erros. Detalhes e resultados na seção **Melhorias do thinking — 04** de
 [`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
 
 ### Limite de tokens por sessão

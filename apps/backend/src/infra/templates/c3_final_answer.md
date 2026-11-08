@@ -36,9 +36,11 @@ This stage is about **presentation, not reasoning**. It is strictly forbidden to
 
 Use exclusively the material from the stored results. In multiple-choice questions, carefully check
 the table of options in **Key Learnings** to ensure that the chosen letter corresponds to the option
-selected in the stored results — including when they chose it as the one whose value is closest to
-the calculated one, which is a valid selection. The final answer goes in the `final_answer` field,
-in markdown.
+selected in the stored results — including when they chose it by best fit, approximation or
+elimination with the grounding that C.1 approved. Present an approximate result as approximate and
+an estimate as an estimate, keeping its stated hypotheses when the answer includes a justification;
+never turn a best fit into an exact equality. Do not repair, recalculate or reconcile results here.
+The final answer goes in the `final_answer` field, in markdown.
 
 Apply the final language, format and constraints without new analytical reasoning. The internal
 results may contain explanations even when the final request only admits the letter. Omit or

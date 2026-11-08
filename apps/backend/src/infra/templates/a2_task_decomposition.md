@@ -68,7 +68,10 @@ distance; establish any viewing condition needed by the chosen relation during e
    questions, assess best relative fit by elimination, distinguishing serious contradictions from
    reasonable inference rather than requiring a 100% literal match. A supported approximation or
    closest-value choice remains valid when justified by the data, model and precision; do not
-   invent a numerical tolerance. Selecting an option alone does not establish correctness.
+   invent a numerical tolerance. Criteria must not demand exact coincidence or a direct calculation
+   reaching the option's value as a universal condition; a choice may rest on elimination or
+   contextual inference, and an open question may be answered by an explained estimate. Selecting
+   an option alone does not establish correctness.
 
 ## Parsimony and efficiency guidelines
 

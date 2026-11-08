@@ -2346,3 +2346,298 @@ interrompidas não contam como aprovação global. O comando completo final foi 
 sandbox, com autorização da ferramenta, sem esse override. As chamadas aos provedores de LLM
 continuaram simuladas pelos testes; nenhuma chamada paga foi feita. O acesso ao MongoDB foi uma
 necessidade operacional da suíte existente, não uma nova dependência da funcionalidade.
+
+## Melhorias do thinking — 04: validação, consistência e aproximações fundamentadas
+
+### Problema e alcance
+
+Os prompts de validação tinham duas tendências opostas e prejudiciais. Em alguns casos exigiam
+literalidade ou formato fora de hora e rejeitavam uma boa solução; em outros aprovavam um resultado
+apenas porque alguma alternativa fora escolhida. B.2 autorizava expressamente marcar como atendido
+qualquer critério de seleção quando o resultado “seleciona explicitamente uma única opção” como a
+mais próxima, e só reprovava se nenhuma opção fosse escolhida. C.1 dizia que “aproximações são
+permitidas desde que uma opção seja escolhida”. A flexibilização foi criada porque respostas
+aproximadas do baseline acertavam, e essa capacidade precisa continuar. O objetivo desta etapa é
+distinguir uma escolha fundamentada de uma contradição ou de uma análise essencial ausente.
+
+Casos que motivaram a mudança (relatos do benchmark, não uma nova execução):
+
+| Caso | O que aconteceu | Regra que trata o caso |
+|---|---|---|
+| Geografia ENEM Q046 | B.2 reprovou D, correta, por não explicitar “religiosidade”, e depois aceitou conteúdo implícito na alternativa A. | B.2 aplica o mesmo padrão de conteúdo implícito a todas as opções comparadas; a nova tentativa explicita o vínculo em vez de trocar de opção. |
+| Matemática ENEM Q137 | Com a primeira vitória já condicionada, a execução multiplicou de novo por 1/2 (`21/64`, metade de `42/64`). B.2 aprovou a conta; outra tarefa escolheu `35/64` por proximidade e C.1 aprovou. | B.2 confere a relação entre condição e conta; C.1 não aprova uma seleção apoiada em erro identificável. O defeito é o condicionamento, não a distância entre números. |
+| Colisões ENEM Q105 | T1/T2: força maior nos pneus e dissipação maior nos blocos; T3 afirma o oposto. C.1 aprovou. | C.1 compara os resultados entre si e encaminha a contradição sobre os mesmos objetos e condições. |
+| Marte ITA Q005 | Pedido: período em meses; só havia uma razão de distâncias. C.1 aprovou. | Razão adimensional não é o cálculo de um período; a lacuna vai a C.2, não a C.3. |
+| FUVEST Q034 | C.1 afirmou que o resultado 47 “corresponde exatamente” à alternativa 44. | Igualdade falsa é contradição real; uma escolha explícita por melhor ajuste pode ser válida se fundamentada e apoiada em análise consistente. Isso não legitima os erros da contagem original. C.1 também não pode escrever a igualdade falsa na própria justificativa. |
+
+Mantêm-se fases, schemas JSON, `VerificationReport`, `GlobalApproval`, `ValidationContext`, parser,
+limites, retentativas, temperaturas, *fresh context*, memória separada dos resultados e auditoria.
+Não há fase nova de LLM, pós-validação de C.3, consulta a gabarito, campo de benchmark,
+`question.options` no núcleo nem tolerância numérica universal.
+
+### Política única de evidência
+
+B.1, B.2 e C.1 recebem a mesma seção `## Evidence and consistency policy`, com texto idêntico. Um
+teste de contrato compara as três versões normalizadas: a política não pode divergir entre quem
+resolve, quem verifica localmente e quem verifica o conjunto.
+
+| Categoria | Regra | Consequência |
+|---|---|---|
+| **Resultado exato** | Aceito quando sustentado pelos dados e pela análise efetivamente realizada. | Não se exige prova extra. |
+| **Aproximação ou melhor ajuste** | Aceito quando a escolha é fundamentada por comparação, eliminação, precisão disponível, hipótese explicitada, ordem de grandeza ou inferência contextual pertinente. Coincidência exata e cálculo direto até o valor da opção não são condições universais. | A diferença numérica isolada não é defeito. A aproximação é declarada como tal e nunca vira igualdade. |
+| **Contradição real** | Afirmações incompatíveis sobre o mesmo objeto, grandeza e condições; conta que contradiz a própria conclusão; troca de unidade ou referência; igualdade falsa; hipótese que conflita com os dados. | Pede-se revisão. Resultados sobre objetos, referenciais ou hipóteses diferentes não são contraditórios só por diferirem. |
+| **Conteúdo essencial ausente** | Falta a determinação pedida ou uma análise indispensável, e a escolha não está sustentada nem por aproximação nem por eliminações já feitas. | Pede-se complementação. Razão adimensional não é período; cálculo ausente não é delegado a C.3. |
+
+A seção termina com a negação explícita das regras universais nos dois sentidos: não há tolerância
+percentual universal, proibição de aproximação em problemas inteiros, regra “qualquer divergência
+reprova” nem regra “escolheu uma opção, aprova”. A decisão vem da relação entre dados, método,
+condições e conclusão. Um teste percorre os nove templates e falha se algum fixar uma porcentagem
+(a única exceção é a expressão já existente “100% literal”, que nega a literalidade).
+
+### Contrato, verificação técnica, suficiência, contradição e aproximação
+
+| Conceito | Quem decide | O que é | O que não é |
+|---|---|---|---|
+| **Contrato do relatório** | Parser (`StructuredResponseParserAdapter`) e `VerificationReport` | IDs exatos, uma avaliação por critério, `unmet_criteria_ids` igual aos `met=false`, decisão coerente. | Um juízo sobre a verdade da avaliação. |
+| **Verificação técnica local** | B.2 (modelo) | Se fórmula/método se aplicam às condições, se dados e unidades conferem, se cada passo decorre do anterior e se a conclusão decorre da conta mostrada, para os critérios da tarefa. | Exigir que tarefa intermediária responda a pergunta inteira ou que cumpra o formato final. |
+| **Suficiência global** | C.1 (modelo) | Se a união dos resultados aprovados determina o que cada critério geral pede. | Executar a análise ausente ou exigir a linha final formatada. |
+| **Contradição** | B.2 (dentro do resultado) e C.1 (entre resultados) | Incompatibilidade sobre o mesmo objeto, grandeza e condições, ou igualdade falsa. | Diferença entre hipóteses explícitas diferentes ou entre objetos distintos. |
+| **Aproximação** | B.1 declara; B.2/C.1 avaliam o fundamento | Escolha por melhor ajuste com fundamento explícito, mantendo valor obtido e opção distintos. | Aprovação automática por ter escolhido algo, nem reprovação automática por falta de igualdade. |
+
+O parser **não** faz diagnóstico automático de verdade: não procura palavras, não compara números,
+não converte reprovação em aprovação e não relaxa tipos. Uma reprovação coerente é uma saída aceita
+semanticamente; um relatório com `met=false` e `decision: approved` continua sendo erro de contrato
+recuperável (`decision_consistency`), corrigido na mesma janela com temperatura `1`, com diagnóstico,
+vínculo de recuperação e contabilização preservados.
+
+### Responsabilidades por fase e passagens reescritas
+
+**B.1** (`b1_task_resolution.md`)
+
+- Nova seção `## Calculated result and chosen option`: o **resultado calculado ou inferido** fica
+  separado da **opção selecionada**; quando diferem, a opção é chamada de melhor ajuste, nunca de
+  igual. Uma escolha pode se apoiar em interpretação ou eliminação sem cálculo que chegue ao valor da
+  opção. Uma pergunta aberta pode ser respondida por estimativa com unidades, hipóteses e precisão,
+  rotulada como estimativa.
+- “Comparar opções não mascara um erro de cálculo”: antes de escolher a opção mais próxima, a
+  resolução confere condições aplicadas uma vez, eventos contados uma vez, unidades e referências.
+  Um erro identificável (como multiplicar de novo pela probabilidade de um evento já condicionado) é
+  corrigido, em vez de escolher a opção vizinha do valor errado.
+- Dados literais copiados do pedido (valores, unidades, referências e condições) são preservados.
+  Valores derivados, conclusões e hipóteses não fornecidas introduzidos pelo planejamento precisam
+  ser verificados. A presença de um dado literal na descrição não o transforma em hipótese.
+- A obrigação de selecionar continua quando pedida, mas “não torna a análise correta por si”.
+- `## Previous attempts at this task`: a nova tentativa trata o problema concreto apontado por cada
+  veredito, mantém a conclusão sustentada que o veredito não refutou e, se o veredito só observa que
+  um termo está implícito, explicita o vínculo em vez de trocar de conclusão; se demonstra erro em
+  dados, condições ou conta, corrige.
+- O campo `conclusion` conserva o valor obtido e a opção escolhida por melhor ajuste, sem igualá-los.
+
+**B.2** (`b2_task_verification.md`)
+
+- Removida a passagem “**Approximations in the selection of options are allowed** … consider it met
+  if the result explicitly selects a single option … The criterion is not met only when …”.
+- Nova seção `## Technical verification of the local criteria`: “a presença de uma explicação não é
+  sua correção”. O verificador confere aplicabilidade, dados e unidades, encadeamento e conclusão, e
+  nomeia o defeito concreto (passo, relação ou dado) sem refazer a resolução.
+- Paráfrase e conteúdo implícito com o **mesmo padrão para todas as opções comparadas**, com o
+  exemplo de deliberação entre moradores sustentando decisão coletiva; literalidade só quando o critério a
+  exige expressamente. Uma justificativa apenas menos explícita indica o vínculo faltante, sem ser
+  tomada como prova de que outra opção é melhor.
+- Nova seção `## Selection criteria`: o critério de seleção é atendido quando a escolha é
+  fundamentada segundo a política (exata ou melhor ajuste), sem igualdade falsa; a falta de
+  coincidência exata não reprova por si e não se exige cálculo direto até a opção. Não é atendido
+  quando a opção mais próxima vem de um valor obtido por erro identificável, quando nenhuma opção
+  exigida é escolhida sem limitação concreta, quando se cria opção inexistente ou quando outra opção
+  é evidentemente mais sustentada pelo próprio resultado.
+- Tarefa intermediária não precisa responder a pergunta inteira; linha marcadora, resposta só com a
+  letra e idioma final não são obrigação interna sem critério local. As regras de escopo e de não
+  reescrever critérios da etapa 7 permanecem.
+
+**C.1** (`c1_global_verification.md`)
+
+- Removida a frase “approximations are allowed as long as an option is chosen”. A aproximação “não é
+  aprovada independentemente do resto da análise”: uma escolha apoiada em erro identificável,
+  igualdade falsa ou resultados contraditórios não cobre o critério.
+- Nova seção `## Consistency of the union`: comparar os resultados entre si; nomear quais resultados
+  e quais afirmações são incompatíveis e o que investigar, sem decidir qual está errado. Resultados
+  sob hipóteses explícitas diferentes não são contradição. A aprovação local anterior não cobre um
+  erro que a união torna visível. Um resultado posterior que investiga explicitamente a pendência e
+  explica o que confirma ou corrige pode resolvê-la; uma afirmação posterior sem explicação, não. Nas
+  próprias justificativas, C.1 chama a opção de melhor ajuste e nunca escreve que valores diferentes
+  correspondem exatamente.
+- Nova seção `## Justification of each verdict`: ao aprovar, citar a evidência produzida e, quando
+  pertinente, o fundamento da aproximação ou seleção; ao reprovar, identificar a lacuna ou
+  contradição e o que investigar, sem executar a análise ausente nem decidir qual tarefa está errada.
+  Essas justificativas chegam a C.2 pela variável `global_verification_feedback` da etapa 03.
+- Os exemplos passam a cobrir: volume estimado de 12,6 L → 13 L aprovado sem C.2; 23 → 20 sem igualdade;
+  eliminação/inferência sem cálculo direto; estimativa explícita em pergunta aberta; erro de
+  condicionamento sob uma seleção; contradição real e hipótese diferente sem contradição; razão de
+  distâncias sem período; igualdade falsa entre 8,4 cm e 8 cm, em oposição à escolha explícita de 8 cm
+  por melhor ajuste, desde que a análise permaneça consistente. Os exemplos de formato
+  (`FINAL_ANSWER: C`), concisão, ausência de seleção, análise conjunta
+  e justificativa opcional/obrigatória foram preservados.
+
+**C.2** (`c2_additional_planning.md`): um resultado já aprovado pode ser investigado quando o
+feedback traz motivo concreto (erro de condicionamento, igualdade falsa, afirmação incompatível). A
+nova tarefa explica seu resultado e declara qual afirmação anterior confirma ou corrige. Uma tarefa
+que apenas “escolha a opção mais próxima” de um valor já apontado como errado encobriria o defeito
+e não é investigação válida; uma tarefa que só imprima a linha final também não. Determinação
+ausente gera a tarefa da própria determinação.
+
+**C.3** (`c3_final_answer.md`): a frase que tratava como válida qualquer opção “cujo valor é o mais
+próximo” foi substituída. C.3 confere a letra da opção escolhida por melhor ajuste, aproximação ou
+eliminação com o fundamento aprovado por C.1, apresenta aproximação como aproximação e estimativa
+como estimativa e nunca transforma melhor ajuste em igualdade. Não repara, recalcula nem concilia
+resultados: a separação entre análise, suficiência e apresentação da etapa 03 permanece.
+
+**A.1/A.2/C.2 (harmonização):** os critérios não exigem coincidência exata nem cálculo direto até o
+valor da opção como condição universal; eliminação e inferência contextual podem sustentar uma
+escolha; pergunta aberta admite estimativa explicada quando o pedido não exige valor exato. As
+proibições de antecipar respostas e de tratar a seleção como prova de acerto continuam.
+
+### Mudança de lógica no orquestrador
+
+A única alteração em código de produção fora dos templates é a instrução que
+`RalphThinkingUseCase` acrescenta às tentativas reprovadas (`_RETRY_INSTRUCTION_CONTENT`). Antes:
+“Redo the resolution of the task fixing exactly these points.” Agora:
+
+> The previous attempt was rejected. Criteria not met: `T1-AC1`.
+>
+> Redo the resolution of the task. Address the concrete problem that each verdict identifies in
+> these criteria. Keep the conclusions that the verdict did not refute; correct those it shows to
+> rest on an error in data, conditions or calculation.
+
+A instrução continua entregue pela variável `previous_attempts`, numa janela nova, com temperatura
+`1`. O motivo é o caso Q046: “corrigir exatamente esses pontos”, diante de um veredito que só
+reclamava de um termo implícito, empurrava a nova tentativa para outra alternativa. O feedback
+continua obrigatório, mas não força trocar uma conclusão sustentada por ausência de palavra.
+
+### Exemplos de aceitação e reprovação
+
+Casos sem coincidência exata que **continuam válidos**:
+
+| Situação | Resultado armazenado | Veredito de referência |
+|---|---|---|
+| Período por Kepler | `T/12 = 1,2987^(3/2) = 1,480`, logo `T ≈ 17,76 meses`; C) 18 meses é o melhor ajuste (diferença de 0,24 mês, compatível com a precisão da razão). | C.1 aprova; não há C.2. |
+| Valor sem opção igual | Contagem resulta 23; opções 5, 10, 20, 40, 80; C) 20 é a mais próxima, as demais diferem por fatores de cerca de 2. | Aprovado: a falta de igualdade sozinha não reprova. |
+| Eliminação | A, D e E não aparecem no texto, B o contraria; C é a única compatível, por inferência, sem cálculo. | B.2 aprova. |
+| Estimativa aberta | Hipóteses: 1 banho/dia, 8 min, 9 L/min, 30 dias → `≈ 8.640 L ≈ 9 × 10³ L` por mês. | Aprovado; C.3 apresenta como estimativa. |
+| Melhor ajuste explícito | `≈ 47 mm`; A) 44 mm é o melhor ajuste (3 mm, contra mais de 13 mm das demais); não há igualdade. | Aprovado. |
+| Conteúdo implícito | O rito para pedir chuva expressa a interpretação de chuva e seca; D é sustentada sem a palavra “religiosidade”. | B.2 aprova; mesma régua para A. |
+| Só apresentação | Resultado identifica C sem `RESPOSTA_FINAL: C`, ou está em inglês para resposta em português. | C.1 aprova; C.3 aplica marcador ou tradução. |
+| Hipóteses diferentes | T1: força maior nos pneus com o Δt dado; T2: sob hipótese explícita de contato três vezes mais longo, a força nos pneus seria menor. | Sem contradição; aprovado. |
+
+Casos que **devem ser reprovados**:
+
+| Situação | Resultado | Pendência esperada |
+|---|---|---|
+| Condicionamento local | “Pelo menos 3 caras nos 6 restantes: 42/64; como o primeiro precisa ser cara, multiplico por 1/2: 21/64.” | B.2 reprova nomeando a dupla contagem da condição; a nova tentativa obtém 42/64. |
+| Condicionamento na união | T1 aprovado com 21/64; T2 escolhe B) 35/64 por proximidade. | C.1 reprova AC1/AC2 e pede investigação do condicionamento; não usa distância entre opções. |
+| Contradição real | T3 inverte as conclusões de T1/T2 para os mesmos objetos e condições. | C.1 nomeia as afirmações e pede investigação sem escolher a errada. |
+| Determinação ausente | Só a razão 1,52 entre distâncias, para pergunta sobre período em meses. | C.1 reprova; C.2 planeja o período; C.1 → C.2 → B → C.1 → C.3. |
+| Igualdade falsa | “47 mm, o que corresponde exatamente à alternativa A) 44 mm.” | C.1 reprova AC2 e pede investigar a escolha. |
+
+### Cobertura depois da recuperação
+
+Um cenário novo combina a recuperação integral da etapa 01 com a validação: a primeira A.2 é
+recusada por faltar `title`; a correção, já com todo o material na janela, devolve um plano válido
+mas com uma única tarefa intermediária (a razão de distâncias). O parser aceita esse lote, como deve:
+cobertura não é contada por número de tarefas. C.1 declara o conteúdo insuficiente, C.2 recebe o
+motivo concreto e cria a tarefa do período, a nova tarefa executa B.1/B.2/B.4 e uma nova C.1 aprova
+antes de C.3. A sequência completa é A.1 → A.2 (recusada) → A.2 (recuperada) → A.3 → B → C.1 → C.2 →
+B → C.1 → C.3, em 14 chamadas contabilizadas. Não há fase extra de validação do plano.
+
+### Matriz semântica, TDD e limites da evidência
+
+A matriz versionada [`validation_semantics_v1.json`](apps/backend/tests/fixtures/validation_semantics_v1.json)
+tem 15 casos sintéticos e generalistas para B.2 e C.1, com critérios, aprendizados, resultados,
+veredito de referência, justificativa e rubrica de inspeção (`review_checks`). Os casos reprovados de
+C.1 também trazem uma investigação de referência para C.2 e o resultado corrigido. O
+[guia da matriz](apps/backend/tests/fixtures/README.md) explica como usá-la com modelo real. Os
+vereditos de referência são rubrica, não gabarito automático.
+
+Testes escritos antes da implementação e falha confirmada:
+
+| Arquivo | Escopo | Antes da implementação |
+|---|---|---|
+| [`test_validation_policy_contracts.py`](apps/backend/tests/infra/providers/test_validation_policy_contracts.py) | Política idêntica em B.1/B.2/C.1, quatro categorias, negação das regras universais, ausência de tolerância percentual, remoção das autorizações irrestritas, responsabilidades de cada fase. 56 testes. | 47 falhas e 11 aprovações. Das falhas, 2 eram parametrizações inválidas do próprio teste (fases sem template), corrigidas depois; as 11 aprovações eram as guardas de regressão (porcentagens ausentes, C.2 já sem o comando antigo). |
+| [`test_validation_semantics_matrix.py`](apps/backend/tests/infra/providers/test_validation_semantics_matrix.py) | Cobertura das categorias da matriz, renderização nas áreas reais sem vazar o veredito de referência, parser aceitando relatório coerente nos dois sentidos e recusando `met=false` com `approved`. 46 testes. | 15 falhas (falta da política nos prompts) e 31 aprovações (neutralidade do parser, comportamento a preservar). |
+| [`test_ralph_validation_consistency_integration.py`](apps/backend/tests/application/usecases/test_ralph_validation_consistency_integration.py) | Fluxo completo com templates e parser reais e LLM roteirizado: aprovações sem C.2, reprovações C.1 → C.2 → B → C.1 → C.3, B.2 técnico com retentativa, feedback por termo implícito, A.2 recuperada com tarefa intermediária, relatório incoerente recuperado. 18 testes. | 17 falhas e 1 aprovação (a recuperação do relatório incoerente já funcionava e ficou como guarda). |
+
+Os testes existentes de aproximação, escopo, suficiência e planejamento (etapas 01 a 03) não foram
+enfraquecidos; o texto exigido por eles (“supported approximation”, “numerical tolerance”,
+“selecting an option alone”, “elimination”, “100% literal”, exemplos de formato) continua nos
+templates. **Os vereditos roteirizados demonstram a fiação**: o que cada fase recebe, para onde cada
+decisão leva o fluxo, como feedback, memória e resultados ficam separados. **Não demonstram que um
+modelo real reconhece** erro de condicionamento, contradição, igualdade falsa ou aproximação
+fundamentada. Nenhuma chamada paga foi feita e nenhuma melhora de acurácia foi medida.
+
+### Verificação executada
+
+Comandos executados em `apps/backend`, com o ambiente virtual local (`.venv/bin`):
+
+```bash
+pytest -o addopts='' -q tests/infra/providers/test_validation_policy_contracts.py \
+  tests/infra/providers/test_validation_semantics_matrix.py \
+  tests/application/usecases/test_ralph_validation_consistency_integration.py
+pytest -o addopts='' -q tests/infra/providers tests/application tests/infra/adapters tests/domain
+flake8 src tests
+pytest --cov=src --cov-report=term-missing --cov-fail-under=100
+```
+
+| Verificação | Resultado |
+|---|---|
+| Testes novos | **120 passaram**. |
+| Suítes de templates, aplicação, adapters e domínio | **1.538 passaram**. |
+| `flake8 src tests` | Sem saída, código 0. |
+| Suíte completa com limiar original | **2.227 testes passaram** em 78,93 s; cobertura **100,00%** (5.158 statements, 856 branches). |
+
+### Pendências que dependem de avaliação semântica com modelo real
+
+1. Se B.2 reconhece, num modelo real, a dupla contagem de uma condição (Q137) em vez de aprovar a
+   conta só por estar explicada.
+2. Se C.1 detecta a contradição entre T3 e T1/T2 (Q105) sem acusar falsa contradição quando as
+   hipóteses diferem.
+3. Se C.1 reprova a razão de distâncias sem período (Q005) e aprova 17,76 → 18 sem pedir C.2.
+4. Se B.2 aplica o mesmo padrão de conteúdo implícito às opções (Q046) e se a nova tentativa mantém
+   D ao receber um veredito literalista.
+5. Se C.1 deixa de escrever igualdades falsas (Q034) e distingue a escolha explícita por melhor
+   ajuste.
+6. Se o texto maior de B.2/C.1 altera custo, latência ou taxa de saídas inválidas.
+
+A avaliação deve preservar versão da matriz, commit dos templates, modelo, temperatura e saída
+bruta, e registrar a evidência textual de cada `review_check`. A etapa 05 implementará a gestão
+explícita de resultados corrigidos e aprendizados obsoletos; nesta etapa, um resultado corretivo é
+acrescentado aos resultados armazenados e declara o que confirma ou corrige, e os aprendizados
+antigos permanecem na memória como estavam.
+
+### Ajustes na revisão de generalidade da etapa 04
+
+A revisão posterior encontrou dois pontos de redação que foram corrigidos sem alterar fases,
+schemas, parser, orçamento ou a política de aproximação:
+
+1. B.1 inicialmente dizia que qualquer número ou conclusão na descrição era uma hipótese. Isso
+   incluía indevidamente dados literais copiados do pedido. A instrução agora preserva valores,
+   unidades, referências e condições fornecidos, distinguindo deles os valores derivados,
+   conclusões e hipóteses introduzidos pelo planejamento que precisam de verificação.
+2. Exemplos fixos muito próximos dos casos de regressão foram substituídos por exemplos de volume,
+   inventário, decisão coletiva e medida de comprimento. A política comum não usa mais o par
+   47/44, e o exemplo de aprovação em C.1 usa 12,6 L e 13 L em vez do período do caso orbital.
+   Os casos anteriores continuam nas fixtures e nos testes como material de regressão; não são
+   carregados pelo código de produção. Não há mudança da regra de permitir melhor ajuste
+   fundamentado ou interpretação contextual.
+
+As novas guardas estão em
+[`test_validation_generalist_boundaries.py`](apps/backend/tests/infra/providers/test_validation_generalist_boundaries.py).
+Foram confirmadas **quatro falhas antes da correção**, seguidas de **124 testes focados passando**
+(os 120 da etapa e as quatro guardas novas). Os testes existentes foram ajustados para conferir
+a mesma obrigação com os exemplos novos; os vereditos e casos da matriz não foram removidos ou
+afrouxados. A política normalizada de B.1/B.2/C.1 continua idêntica.
+
+Na revisão, a suíte completa original passou em **2.227 testes**, com **100,00% de cobertura**;
+depois dos ajustes, passou em **2.231 testes**, em **79,12 s**, mantendo **100,00%** (5.158 statements,
+856 branches). O `flake8 src tests` passou. A transcrição literal do paper e as seções documentais
+anteriores foram preservadas. A verificação de código não encontrou novos IDs, gabaritos,
+`question.options` ou imports de fixtures no núcleo. A evidência continua sendo programática e de
+contrato de prompts, sem inferências pagas ou medição de acurácia real.

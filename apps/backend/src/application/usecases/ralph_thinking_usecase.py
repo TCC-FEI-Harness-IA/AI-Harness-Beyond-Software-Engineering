@@ -71,7 +71,9 @@ _PREVIOUS_ATTEMPT_CONTENT = (
 )
 _RETRY_INSTRUCTION_CONTENT = (
     "The previous attempt was rejected. Criteria not met: {unmet}.\n\n"
-    "Redo the resolution of the task fixing exactly these points."
+    "Redo the resolution of the task. Address the concrete problem that each verdict identifies in "
+    "these criteria. Keep the conclusions that the verdict did not refute; correct those it shows to "
+    "rest on an error in data, conditions or calculation."
 )
 _DISCARDED_RESOLUTION_CONTENT = (
     "#### Discarded resolution output ({defect})\n\n"

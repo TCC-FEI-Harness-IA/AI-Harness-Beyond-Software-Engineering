@@ -44,7 +44,16 @@ Avoid redoing an established investigation without a reason. When global verific
 a concrete contradiction or error, plan a targeted investigation of that issue, including relevant
 prior claims and literal data. Do not decide which conclusion is wrong before executing the new
 task. Approval of an earlier result does not prohibit investigating a specific defect flagged by
-C.1. Do not reopen unrelated resolved work or rewrite the received general criteria.
+C.1: a previously approved result may be investigated when the feedback gives a concrete reason,
+such as a conditioning error, a false equality or a statement incompatible with another result.
+Ask the new task to explain its result and to state which prior claim it confirms or corrects, so
+that the next global verification can see the explained outcome. Do not reopen unrelated resolved
+work or rewrite the received general criteria.
+
+The investigation must address the defect itself. A task that would only "choose the closest option"
+to a value already flagged as wrong would cover the known defect and is not a valid investigation;
+nor is a task that only prints the final line. When the gap is a missing determination, such as a
+period in months when only a distance ratio exists, plan the explained determination itself.
 
 Final language, format or conciseness alone are not content gaps: writing the final answer,
 printing a marker or removing internal explanations belongs to C.3. If the analysis already supports
@@ -103,6 +112,8 @@ an image at infinity.
    words or an unsupported conjunction of aspects. Compare options by best relative fit and
    elimination, without hyper-literalism. Allow a supported approximation or closest-value choice
    when justified by the data, model and precision, without inventing a numerical tolerance.
+   Criteria must not demand exact coincidence or a direct calculation reaching the option's value
+   as a universal condition, and an open question may be answered by an explained estimate.
    Selecting an option alone is not evidence of correctness. Investigate an unexplained discrepancy
    rather than require a convenient selection.
 
