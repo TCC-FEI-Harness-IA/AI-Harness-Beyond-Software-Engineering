@@ -191,6 +191,7 @@ def test_documento_carrega_o_historico_completo_de_mensagens() -> None:
         "model_name": None,
         "prompt_input": [],
         "invocation_id": None,
+        "subtype": None,
     }
     assert documento["messages"][1]["total_tokens"] == 4786
 

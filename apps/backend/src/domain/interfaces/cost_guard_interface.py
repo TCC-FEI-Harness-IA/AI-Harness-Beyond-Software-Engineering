@@ -84,6 +84,27 @@ class ICostGuard(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def register_planning_attempt(self) -> int:
+        """Registra mais um plano candidato do planejamento inicial (A.2 avaliado por A.3).
+
+        Conta candidatos semânticos: uma correção de saída inválida dentro da mesma execução de A.2
+        ou A.3 não é um candidato novo. Independe das tentativas por tarefa e das rodadas de C.2.
+
+        Returns:
+            int: Número do candidato recém-registrado, a partir de um.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def can_retry_planning(self) -> bool:
+        """Informa se um plano reprovado ainda pode ser revisado por mais um candidato.
+
+        Returns:
+            bool: `True` enquanto o limite de candidatos do planejamento não foi atingido.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def authorize_additional_planning(self, reserved_output_tokens: int = 0) -> BudgetVerdict:
         """Consulta se ainda é possível executar mais uma rodada de C.2, e por que não.
 

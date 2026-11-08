@@ -7,6 +7,7 @@ from src.domain.entities.resilience.cost_budget import CostBudget
 
 _LIMITES_PEQUENOS: dict[str, int] = {
     "max_task_attempts": 2,
+    "max_planning_attempts": 2,
     "max_additional_planning_rounds": 1,
     "max_tasks_per_session": 5,
     "max_llm_calls_per_session": 3,

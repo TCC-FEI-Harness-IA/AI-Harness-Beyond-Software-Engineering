@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,8 @@ class ValidationContext:
             além das tarefas anteriores do próprio lote.
         review_target_ids: Resultados sob investigação da tarefa em resolução; `None` numa tarefa
             normal, que não pode propor revisão.
+        candidate_plan: Na validação da decomposição (A.3), a referência estrutural do plano candidato
+            julgado: os critérios de cada tarefa, por identificador. `None` nas demais fases.
     """
 
     expected_criteria_ids: tuple[str, ...] | None = None
@@ -31,3 +33,4 @@ class ValidationContext:
     reviewable_task_ids: frozenset[str] = frozenset()
     dependable_task_ids: frozenset[str] = frozenset()
     review_target_ids: tuple[str, ...] | None = None
+    candidate_plan: dict[str, tuple[str, ...]] | None = field(default=None, hash=False)

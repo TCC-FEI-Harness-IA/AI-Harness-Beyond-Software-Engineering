@@ -20,7 +20,8 @@ from src.infra.providers.file_prompt_template_provider import FilePromptTemplate
 from tests.doubles.fake_settings import FakeSettings
 
 _FASES_COM_TEMPLATE = [
-    Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_PLANNING_LEARNINGS,
+    Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_DECOMPOSITION_VALIDATION,
+    Phase.A4_PLANNING_LEARNINGS,
     Phase.B1_TASK_RESOLUTION, Phase.B2_TASK_VERIFICATION, Phase.B4_LEARNINGS_EXTRACTION,
     Phase.C1_GLOBAL_VERIFICATION, Phase.C2_ADDITIONAL_PLANNING, Phase.C3_FINAL_ANSWER,
 ]

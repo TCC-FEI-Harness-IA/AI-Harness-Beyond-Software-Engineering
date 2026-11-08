@@ -708,3 +708,48 @@ async def test_etapa_programatica_pode_apontar_a_invocacao_auditada() -> None:
 
     assert mensagem.invocation_id == "inv_9"
     assert sem_vinculo.invocation_id is None
+
+
+async def test_start_grava_a_versao_do_fluxo_quando_informada() -> None:
+    from src.domain.enums.ralph_flow_version_enum import RalphFlowVersionEnum
+
+    recorder = _build_recorder()
+    sessao = await recorder.start(
+        user_question="q", flow=ThinkingPhaseEnum.A1_GENERAL_CRITERIA, model_name="m", max_tokens=10,
+        temperature=0.3, flow_version=RalphFlowVersionEnum.current(),
+    )
+
+    assert sessao.flow_version is RalphFlowVersionEnum.VALIDATED_PLANNING
+
+
+async def test_inferencia_direta_comeca_sem_versao_de_fluxo_ralph() -> None:
+    recorder = _build_recorder()
+    await _start(recorder)
+
+    assert recorder.session.flow_version is None
+
+
+async def test_mensagens_guardam_o_subtipo_do_evento_quando_informado() -> None:
+    from src.domain.entities.llm.genai_model import GenaiModel
+    from src.domain.entities.llm.tokens_usage import TokensUsage
+    from src.domain.enums.model_provider_enum import ModelProviderEnum
+    from src.domain.enums.thinking_event_subtype_enum import ThinkingEventSubtypeEnum as Sub
+
+    recorder = _build_recorder()
+    await _start(recorder)
+    modelo = GenaiModel(model_name="m", model_provider=ModelProviderEnum.OPEN_ROUTER)
+
+    candidato = await recorder.record_llm_message(
+        phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION, content="plano", task_id=None, context_id="c1",
+        tokens=TokensUsage(tokens_input=1, tokens_output=1, llm_model=modelo), inference_time_ms=1,
+        prompt_input=(), subtype=Sub.PLAN_CANDIDATE,
+    )
+    confirmacao = await recorder.record_programmatic_step(
+        phase=ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION, content="fila", task_id=None, context_id="c2",
+        subtype=Sub.TASKS,
+    )
+    auditoria = await recorder.record_programmatic_step(
+        phase=ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION, content="saida recusada", task_id=None, context_id="c2",
+    )
+
+    assert (candidato.subtype, confirmacao.subtype, auditoria.subtype) == (Sub.PLAN_CANDIDATE, Sub.TASKS, None)

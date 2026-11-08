@@ -1,4 +1,4 @@
-# A.3 — Key learnings from the question
+# A.4 — Key learnings from the question
 
 Record the internal notes about the question below: the points that **must not be lost** when each
 task is solved in isolation, without access to this question.

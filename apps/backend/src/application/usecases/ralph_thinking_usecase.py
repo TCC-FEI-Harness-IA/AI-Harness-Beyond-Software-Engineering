@@ -8,6 +8,8 @@ from src.domain.entities.thinking.acceptance_criterion import AcceptanceCriterio
 from src.domain.entities.thinking.criterion_evaluation import CriterionEvaluation
 from src.domain.entities.thinking.global_approval import GlobalApproval
 from src.domain.entities.thinking.phase_outcome import PhaseOutcome
+from src.domain.entities.thinking.plan_validation_issue import PlanValidationIssue
+from src.domain.entities.thinking.plan_validation_report import PlanValidationReport
 from src.domain.entities.thinking.learning import Learning
 from src.domain.entities.thinking.ledger_change import LedgerChange
 from src.domain.entities.thinking.result_revision import ResultRevision
@@ -19,6 +21,7 @@ from src.domain.entities.thinking.thinking_event import ThinkingEvent
 from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.entities.thinking.verification_report import VerificationReport
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
+from src.domain.enums.ralph_flow_version_enum import RalphFlowVersionEnum
 from src.domain.enums.result_status_enum import ResultStatusEnum
 from src.domain.enums.revision_verdict_enum import RevisionVerdictEnum
 from src.domain.enums.session_failure_reason_enum import SessionFailureReasonEnum
@@ -50,6 +53,31 @@ _FIRST_ATTEMPT = 1
 
 _CRITERIA_HEADING = "## General acceptance criteria"
 _TASKS_HEADING = "## Planned tasks"
+# Planejamento validado (fluxo versão 2). O candidato de A.2 só vira tarefa da fila depois da aprovação de
+# A.3; a revisão de A.2 recebe, como material delimitado, só o último candidato e o relatório dele.
+_CANDIDATE_HEADING = "## Candidate plan — attempt {attempt}"
+_PLAN_DECISION_CONTENT = "**Plan decision:** `{decision}`"
+_PLAN_APPROVED_LABEL = "approved"
+_PLAN_REJECTED_LABEL = "rejected"
+_PLAN_APPROVED_CONTENT = "No blocking issue: the candidate plan is confirmed in the task queue."
+_PLAN_ISSUE_ITEM = "- {scope}: {problem}\n  - **Adjustment:** {adjustment}"
+_PLAN_WIDE_SCOPE = "Whole plan"
+_TASK_SCOPE = "`{task_id}`"
+_CRITERION_SCOPE = "`{task_id}` / `{criterion_id}`"
+_FIRST_CANDIDATE_CONTENT = "None: this is the first candidate plan."
+_PLAN_REVISION_CONTENT = (
+    "<previous_candidate>\n{plan}\n</previous_candidate>\n\n"
+    "<validation_report>\n{report}\n</validation_report>\n\n"
+    "{instruction}"
+)
+_PLAN_REVISION_INSTRUCTION = (
+    "The validation stage rejected the previous candidate plan above. Produce a complete revised plan that "
+    "resolves every issue in the report. Change the number, content, order, identifiers or dependencies of "
+    "the tasks when an issue requires it; preserve the parts the report did not question and keep the plan "
+    "covering the whole request. Each adjustment describes what to investigate or verify: keep the unknown "
+    "results open instead of replacing one anticipated conclusion with another. Your complete output "
+    "replaces the previous candidate."
+)
 _LEARNINGS_HEADING = "## Extracted learnings"
 _DISCARDED_LEARNINGS_HEADING = "## Repeated learnings already recorded (not stored again)"
 _NO_LEARNINGS_CONTENT = "No learnings were extracted from this task."
@@ -151,6 +179,10 @@ _ATTEMPTS_DETAIL = (
     "armazenado e a execução foi encerrada sem resposta final."
 )
 _PLANNING_DETAIL = "{reason} Critérios gerais ainda não atendidos: {criteria}."
+_PLANNING_ATTEMPTS_DETAIL = (
+    "A validação da decomposição (A.3) reprovou os {attempts} planos candidatos permitidos; nenhum plano foi "
+    "confirmado na fila, A.4 e as tarefas não foram executadas e a execução foi encerrada sem resposta final."
+)
 _ITEM_SEPARATOR = "\n"
 _BLOCK_SEPARATOR = "\n\n"
 _SENTENCE_SEPARATOR = " "
@@ -175,6 +207,7 @@ class RalphThinkingUseCase:
         self,
         general_criteria_phase: IThinkingPhase,
         task_decomposition_phase: IThinkingPhase,
+        decomposition_validation_phase: IThinkingPhase,
         planning_learnings_phase: IThinkingPhase,
         task_resolution_phase: IThinkingPhase,
         task_verification_phase: IThinkingPhase,
@@ -197,7 +230,8 @@ class RalphThinkingUseCase:
         Args:
             general_criteria_phase: Fase A.1.
             task_decomposition_phase: Fase A.2.
-            planning_learnings_phase: Fase A.3.
+            decomposition_validation_phase: Fase A.3, validação da decomposição.
+            planning_learnings_phase: Fase A.4, aprendizados do enunciado.
             task_resolution_phase: Fase B.1.
             task_verification_phase: Fase B.2.
             learnings_extraction_phase: Fase B.4.
@@ -216,6 +250,7 @@ class RalphThinkingUseCase:
         """
         self.general_criteria_phase: IThinkingPhase = general_criteria_phase
         self.task_decomposition_phase: IThinkingPhase = task_decomposition_phase
+        self.decomposition_validation_phase: IThinkingPhase = decomposition_validation_phase
         self.planning_learnings_phase: IThinkingPhase = planning_learnings_phase
         self.task_resolution_phase: IThinkingPhase = task_resolution_phase
         self.task_verification_phase: IThinkingPhase = task_verification_phase
@@ -264,6 +299,7 @@ class RalphThinkingUseCase:
             max_tokens=input_dto.max_tokens,
             temperature=input_dto.temperature,
             provider=input_dto.provider,
+            flow_version=RalphFlowVersionEnum.current(),
         )
 
         try:
@@ -279,13 +315,20 @@ class RalphThinkingUseCase:
             raise
 
     async def __run_planning(self) -> AsyncGenerator[ThinkingEvent, None]:
-        """Executa A.1, A.2 e A.3, produzindo os critérios gerais, a fila inicial e as anotações do enunciado.
+        """Executa A.1, o ciclo A.2 ⇄ A.3 até um plano aprovado e A.4.
 
-        O plano inicial é validado contra o espaço de tarefas da sessão antes de tocar a
-        fila: um lote acima do teto é devolvido ao planejador para correção, e nunca truncado.
+        A.2 gera um plano candidato e A.3 o julga; reprovado, A.2 gera o próximo a partir do último
+        candidato e do relatório dele. Só o plano aprovado entra na fila, uma única vez; os candidatos
+        recusados não consomem os espaços de tarefa nem reservam identificadores. Cada candidato é
+        validado contra o espaço de tarefas da sessão antes de ser julgado: um lote acima do teto é
+        devolvido ao planejador para correção, e nunca truncado. A.4 roda depois da confirmação.
 
         Yields:
-            ThinkingEvent: Eventos `setup` (A.1), `tasks` (A.2) e `learn` (A.3).
+            ThinkingEvent: Eventos `setup` (A.1), `plan_candidate` (A.2), `plan_rejected`/`plan_approved`
+            (A.3), `tasks` (confirmação na fila, depois da aprovação) e `learn` (A.4).
+
+        Raises:
+            ExecutionInterruptedError: Quando os planos candidatos permitidos se esgotam sem aprovação.
         """
         context = self.__new_context(phase=ThinkingPhaseEnum.A1_GENERAL_CRITERIA)
         outcome = await self.__execute_phase(
@@ -303,43 +346,162 @@ class RalphThinkingUseCase:
             task_id=None,
         )
 
-        context = self.__new_context(phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION)
-        outcome = await self.__execute_phase(
-            runner=self.task_decomposition_phase,
-            context=context,
-            variables={"user_question": self.__user_question, **self.__planning_limits()},
-            validation=self.__planning_validation(),
-        )
-        tasks = self.__to_tasks(parsed=outcome.parsed, origin_phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION)
-        self.task_queue.push_back(tasks=tasks)
-        self.cost_guard.register_task_created(quantity=len(tasks))
-        yield await self.__record_and_build(
-            subtype=ThinkingEventSubtypeEnum.TASKS,
-            phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION,
-            task=_SETUP_TASK_LABEL,
-            content=f"{_TASKS_HEADING}\n\n{self.__render_tasks(tasks=tasks)}",
-            context=context,
-            outcome=outcome,
-            task_id=None,
-        )
+        plan_revision = _FIRST_CANDIDATE_CONTENT
+        while True:
+            attempt = self.cost_guard.register_planning_attempt()
+            candidate, event = await self.__generate_candidate(attempt=attempt, plan_revision=plan_revision)
+            yield event
+            report, event = await self.__validate_candidate(candidate=candidate)
+            yield event
+            if report.approved:
+                break
+            if not self.cost_guard.can_retry_planning():
+                raise ExecutionInterruptedError(
+                    limit=BudgetLimitEnum.PLANNING_ATTEMPTS,
+                    phase=ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION,
+                    detail=_PLANNING_ATTEMPTS_DETAIL.format(attempts=attempt),
+                )
+            plan_revision = _PLAN_REVISION_CONTENT.format(
+                plan=self.__render_tasks(tasks=candidate),
+                report=self.__render_plan_report(report=report),
+                instruction=_PLAN_REVISION_INSTRUCTION,
+            )
+
+        yield await self.__confirm_plan(tasks=candidate)
 
         async for event in self.__extract_planning_learnings():
             yield event
 
+    async def __generate_candidate(self, attempt: int, plan_revision: str) -> tuple[list[Task], ThinkingEvent]:
+        """Executa A.2 numa janela nova e registra o plano candidato, sem tocar a fila.
+
+        A primeira geração usa a temperatura da sessão; uma geração depois de uma reprovação repete o
+        pedido e usa a temperatura de retentativa. O teto e os identificadores conhecidos vêm só das
+        tarefas confirmadas: candidatos anteriores não contam.
+
+        Args:
+            attempt: Número do candidato, a partir de um.
+            plan_revision: Último candidato reprovado e o relatório dele, ou o aviso de primeiro candidato.
+
+        Returns:
+            tuple[list[Task], ThinkingEvent]: Tarefas do candidato, ainda fora da fila, e o evento
+            `plan_candidate`.
+        """
+        context = self.__new_context(phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION)
+        outcome = await self.__execute_phase(
+            runner=self.task_decomposition_phase,
+            context=context,
+            variables={
+                "user_question": self.__user_question,
+                "plan_revision": plan_revision,
+                **self.__planning_limits(),
+            },
+            validation=self.__planning_validation(),
+            is_retry=attempt > _FIRST_ATTEMPT,
+        )
+        candidate = self.__to_tasks(parsed=outcome.parsed, origin_phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION)
+        event = await self.__record_and_build(
+            subtype=ThinkingEventSubtypeEnum.PLAN_CANDIDATE,
+            phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION,
+            task=_SETUP_TASK_LABEL,
+            content=f"{_CANDIDATE_HEADING.format(attempt=attempt)}\n\n{self.__render_tasks(tasks=candidate)}",
+            context=context,
+            outcome=outcome,
+            task_id=None,
+        )
+        return candidate, event
+
+    async def __validate_candidate(self, candidate: Sequence[Task]) -> tuple[PlanValidationReport, ThinkingEvent]:
+        """Executa A.3 numa janela nova sobre um único plano candidato.
+
+        A fase recebe o pedido original, os critérios gerais e só este candidato, renderizado com
+        descrições, critérios e dependências; o parser confere as referências contra ele. A avaliação
+        volta sempre à temperatura da sessão. O relatório julga a cópia do candidato que o orquestrador
+        guardou: A.3 não devolve um plano substituto.
+
+        Args:
+            candidate: Plano candidato julgado.
+
+        Returns:
+            tuple[PlanValidationReport, ThinkingEvent]: Relatório da validação e o evento `plan_approved`
+            ou `plan_rejected`.
+        """
+        context = self.__new_context(phase=ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION)
+        outcome = await self.__execute_phase(
+            runner=self.decomposition_validation_phase,
+            context=context,
+            variables={
+                "user_question": self.__user_question,
+                "general_acceptance_criteria": self.__render_criteria(criteria=self.__general_criteria),
+                "candidate_plan": self.__render_tasks(tasks=candidate),
+            },
+            validation=ValidationContext(
+                candidate_plan={
+                    task.id: tuple(criterion.id for criterion in task.acceptance_criteria) for task in candidate
+                }
+            ),
+        )
+        report = self.__to_plan_report(parsed=outcome.parsed)
+        event = await self.__record_and_build(
+            subtype=(
+                ThinkingEventSubtypeEnum.PLAN_APPROVED if report.approved else ThinkingEventSubtypeEnum.PLAN_REJECTED
+            ),
+            phase=ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION,
+            task=_SETUP_TASK_LABEL,
+            content=self.__render_plan_report(report=report),
+            context=context,
+            outcome=outcome,
+            task_id=None,
+        )
+        return report, event
+
+    async def __confirm_plan(self, tasks: Sequence[Task]) -> ThinkingEvent:
+        """Confirma o plano aprovado na fila, uma única vez, sem chamar o modelo.
+
+        É a única entrada do planejamento inicial na fila e na contagem de tarefas da sessão. A etapa é
+        registrada com a janela da avaliação que aprovou o plano.
+
+        Args:
+            tasks: Plano aprovado por A.3.
+
+        Returns:
+            ThinkingEvent: Evento `tasks`, com tempo de inferência zero.
+        """
+        context = self.__context
+        self.task_queue.push_back(tasks=list(tasks))
+        self.cost_guard.register_task_created(quantity=len(tasks))
+        content = f"{_TASKS_HEADING}\n\n{self.__render_tasks(tasks=tasks)}"
+        await self.session_recorder.record_programmatic_step(
+            phase=ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION,
+            content=content,
+            task_id=None,
+            context_id=context.context_id,
+            subtype=ThinkingEventSubtypeEnum.TASKS,
+        )
+        return self.__build_event(
+            event_type=ThinkingEventTypeEnum.THINKING,
+            subtype=ThinkingEventSubtypeEnum.TASKS,
+            phase=ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION,
+            task=_SETUP_TASK_LABEL,
+            content=content,
+            context=context,
+            inference_time_ms=_NO_INFERENCE_TIME_MS,
+        )
+
     async def __extract_planning_learnings(self) -> AsyncGenerator[ThinkingEvent, None]:
-        """Extrai os aprendizados pontuais do enunciado (A.3).
+        """Extrai os aprendizados pontuais do enunciado (A.4; A.3 no fluxo versão 1).
 
         São as anotações dos pontos que chamam a atenção na pergunta — valores com unidades,
-        alternativas, fórmulas, condições. A fase enxerga só o enunciado, numa janela própria, e o
-        que ela extrai entra na memória antes de qualquer tarefa: assim as alternativas e os dados
-        fornecidos chegam ao contexto novo de todas as tarefas, mesmo àquelas cuja descrição não os
-        repetiu. Como os demais aprendizados, chegam à área "Aprendizados Pontuais" de todo prompt das
-        fases B e C.
+        alternativas, fórmulas, condições. A fase enxerga só o enunciado, numa janela própria, e roda
+        uma única vez, depois da aprovação do plano; o que ela extrai entra na memória antes de qualquer
+        tarefa. Assim as alternativas e os dados fornecidos chegam ao contexto novo de todas as tarefas,
+        mesmo àquelas cuja descrição não os repetiu. Como os demais aprendizados, chegam à área
+        "Aprendizados Pontuais" de todo prompt das fases B e C.
 
         Yields:
             ThinkingEvent: Evento `learn`.
         """
-        context = self.__new_context(phase=ThinkingPhaseEnum.A3_PLANNING_LEARNINGS)
+        context = self.__new_context(phase=ThinkingPhaseEnum.A4_PLANNING_LEARNINGS)
         outcome = await self.__execute_phase(
             runner=self.planning_learnings_phase, context=context, variables={"user_question": self.__user_question}
         )
@@ -347,7 +509,7 @@ class RalphThinkingUseCase:
         learnings = self.learnings_memory.append(learnings=extracted)
         yield await self.__record_and_build(
             subtype=ThinkingEventSubtypeEnum.LEARN,
-            phase=ThinkingPhaseEnum.A3_PLANNING_LEARNINGS,
+            phase=ThinkingPhaseEnum.A4_PLANNING_LEARNINGS,
             task=_SETUP_TASK_LABEL,
             content=self.__render_learnings(
                 extracted=extracted, stored=learnings, empty_content=_NO_PLANNING_LEARNINGS_CONTENT
@@ -392,6 +554,7 @@ class RalphThinkingUseCase:
             content=reset_content,
             task_id=task.id,
             context_id=context.context_id,
+            subtype=ThinkingEventSubtypeEnum.RESET,
         )
         yield self.__build_event(
             event_type=ThinkingEventTypeEnum.THINKING,
@@ -557,6 +720,7 @@ class RalphThinkingUseCase:
             content=content,
             task_id=task.id,
             context_id=context.context_id,
+            subtype=ThinkingEventSubtypeEnum.STORE,
         )
         yield self.__build_event(
             event_type=ThinkingEventTypeEnum.THINKING,
@@ -911,6 +1075,7 @@ class RalphThinkingUseCase:
         for phase in (
             self.general_criteria_phase,
             self.task_decomposition_phase,
+            self.decomposition_validation_phase,
             self.planning_learnings_phase,
             self.task_resolution_phase,
             self.task_verification_phase,
@@ -1009,6 +1174,7 @@ class RalphThinkingUseCase:
             task_id=task_id,
             context_id=context.context_id,
             prompt_input=outcome.prompt_input,
+            subtype=subtype,
         )
         return self.__build_event(
             event_type=ThinkingEventTypeEnum.THINKING,
@@ -1059,6 +1225,7 @@ class RalphThinkingUseCase:
             context_id=context.context_id,
             context_size=context.context_size,
             inference_time_ms=inference_time_ms,
+            flow_version=session.flow_version or RalphFlowVersionEnum.current(),
         )
 
     def __resolution_variables(self, task: Task) -> dict[str, str]:
@@ -1143,7 +1310,7 @@ class RalphThinkingUseCase:
         """Monta a área "Aprendizados Pontuais" comum a todos os templates das fases B e C.
 
         A área traz todos os aprendizados acumulados até o momento da chamada — as anotações do
-        enunciado (A.3) e os aprendizados de cada tarefa concluída (B.4) — e existe mesmo vazia.
+        enunciado (A.4) e os aprendizados de cada tarefa concluída (B.4) — e existe mesmo vazia.
 
         Returns:
             dict[str, str]: Aprendizados pontuais acumulados, já renderizados.
@@ -1294,14 +1461,72 @@ class RalphThinkingUseCase:
             unmet_criteria_ids=tuple(parsed["unmet_criteria_ids"]),
         )
 
+    def __to_plan_report(self, parsed: dict[str, Any]) -> PlanValidationReport:
+        """Converte a saída de A.3 no relatório da validação da decomposição.
+
+        Args:
+            parsed: Saída já validada de A.3, com referências conferidas contra o candidato julgado.
+
+        Returns:
+            PlanValidationReport: Decisão booleana e problemas, exatamente como o modelo os relatou.
+        """
+        return PlanValidationReport(
+            approved=parsed["approved"],
+            issues=tuple(
+                PlanValidationIssue(
+                    task_id=issue["task_id"],
+                    criterion_id=issue["criterion_id"],
+                    problem=issue["problem"],
+                    adjustment=issue["adjustment"],
+                )
+                for issue in parsed["issues"]
+            ),
+        )
+
+    def __render_plan_report(self, report: PlanValidationReport) -> str:
+        """Renderiza o relatório de A.3 como markdown, para o evento, a auditoria e a revisão de A.2.
+
+        Args:
+            report: Relatório da validação da decomposição.
+
+        Returns:
+            str: Decisão seguida de um item por problema, com o escopo, o defeito e o ajuste.
+        """
+        decision = _PLAN_DECISION_CONTENT.format(
+            decision=_PLAN_APPROVED_LABEL if report.approved else _PLAN_REJECTED_LABEL
+        )
+        if report.approved:
+            return f"{decision}{_BLOCK_SEPARATOR}{_PLAN_APPROVED_CONTENT}"
+        issues = _ITEM_SEPARATOR.join(
+            _PLAN_ISSUE_ITEM.format(scope=self.__render_issue_scope(issue=issue), problem=issue.problem,
+                                    adjustment=issue.adjustment)
+            for issue in report.issues
+        )
+        return f"{decision}{_BLOCK_SEPARATOR}{issues}"
+
+    def __render_issue_scope(self, issue: PlanValidationIssue) -> str:
+        """Renderiza o escopo de um problema: o plano inteiro, a tarefa ou o critério da tarefa.
+
+        Args:
+            issue: Problema apontado por A.3.
+
+        Returns:
+            str: Rótulo do escopo do problema.
+        """
+        if issue.task_id is None:
+            return _PLAN_WIDE_SCOPE
+        if issue.criterion_id is None:
+            return _TASK_SCOPE.format(task_id=issue.task_id)
+        return _CRITERION_SCOPE.format(task_id=issue.task_id, criterion_id=issue.criterion_id)
+
     def __to_learnings(self, parsed: dict[str, Any], task_id: str | None) -> list[Learning]:
-        """Converte a saída de A.3 ou B.4 em aprendizados pontuais.
+        """Converte a saída de A.4 ou B.4 em aprendizados pontuais.
 
         Preserva cada texto sem interpretar seu domínio ou modificar associações e qualificações.
         A origem distingue dados do enunciado das conclusões das tarefas; não altera os resultados.
 
         Args:
-            parsed: Saída já validada de A.3 ou B.4.
+            parsed: Saída já validada de A.4 ou B.4.
             task_id: Tarefa que originou os aprendizados, ou `None` quando vêm do enunciado.
 
         Returns:

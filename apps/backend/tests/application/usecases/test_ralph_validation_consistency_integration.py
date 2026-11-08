@@ -20,13 +20,15 @@ from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum as Phase
 from src.infra.providers.file_prompt_template_provider import FilePromptTemplateProvider
 from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.ralph_scenario import RalphScenario
+from tests.doubles.ralph_scripts import plano_aprovado
 from tests.doubles.ralph_scripts import aprendizados, relatorio, resposta_final
 
 _MATRIX = json.loads((Path(__file__).parents[2] / "fixtures/validation_semantics_v1.json").read_text())
 _C1_APPROVED = [c for c in _MATRIX["cases"] if c["phase"] == "C1" and c["reference_decision"] == "approved"]
 _C1_REPROVED = [c for c in _MATRIX["cases"] if c["phase"] == "C1" and c["reference_decision"] == "reproved"]
 _B2_CASES = [c for c in _MATRIX["cases"] if c["phase"] == "B2"]
-_PLANNING = [Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_PLANNING_LEARNINGS]
+_PLANNING = [Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_DECOMPOSITION_VALIDATION,
+             Phase.A4_PLANNING_LEARNINGS]
 _TASK_CYCLE = [Phase.B1_TASK_RESOLUTION, Phase.B2_TASK_VERIFICATION, Phase.B4_LEARNINGS_EXTRACTION]
 
 
@@ -95,7 +97,7 @@ def _stored_tasks(case: dict) -> list[str]:
     """Plano e execução aprovada de cada resultado armazenado do caso."""
     tasks = [_task(item["task_id"], item["title"], f"Investigue: {item['title']}, explicando o resultado.")
              for item in case["stored_results"]]
-    responses = [_criteria(case), _plan(*tasks), aprendizados(*case["learnings"])]
+    responses = [_criteria(case), _plan(*tasks), plano_aprovado(), aprendizados(*case["learnings"])]
     for item in case["stored_results"]:
         responses.extend([_result(item["task_id"], item["content"]),
                           relatorio((f"{item['task_id']}-AC1", True)), aprendizados()])
@@ -184,7 +186,7 @@ async def test_b2_verifica_a_relacao_tecnica_e_so_reprova_com_defeito_nomeado(ca
                             {"id": "AC2", "description": "Responder em português."}]}
     responses = [
         _criteria(general), _plan(_task("T1", "Tarefa", "Resolva o pedido, explicando.", criterion["description"])),
-        aprendizados(*case["learnings"]), _result("T1", case["result"]),
+        plano_aprovado(), aprendizados(*case["learnings"]), _result("T1", case["result"]),
         _report([("T1-AC1", case["reference_decision"] == "approved")], case["reference_justification"]),
     ]
     reproved = case["reference_decision"] == "reproved"
@@ -229,7 +231,7 @@ async def test_feedback_por_termo_implicito_nao_obriga_trocar_a_resposta_sustent
         _criteria(general),
         _plan(_task("T1", "Interpretação", "Compare A e D com o texto, explicando.",
                     case["criteria"][0]["description"])),
-        aprendizados(*case["learnings"]),
+        plano_aprovado(), aprendizados(*case["learnings"]),
         _result("T1", case["result"]), _report([("T1-AC1", False)], literal_gap),
         _result("T1", explicit), _report([("T1-AC1", True)], "D está sustentada pela interpretação do rito."),
         aprendizados(), relatorio(("AC1", True), ("AC2", True)), resposta_final("D"),
@@ -259,7 +261,7 @@ async def test_a2_recuperada_so_com_tarefa_intermediaria_passa_por_c1_c2_b_c1_c3
     rejected = _plan({key: value for key, value in intermediate.items() if key != "title"})
     corrective = _task("T2", "Período de Marte", case["corrective_task"], "Período em meses explicado.")
     scenario = _scenario([
-        _criteria(case), rejected, _plan(intermediate), aprendizados(*case["learnings"]),
+        _criteria(case), rejected, _plan(intermediate), plano_aprovado(), aprendizados(*case["learnings"]),
         _result("T1", ratio["content"]), relatorio(("T1-AC1", True)), aprendizados(ratio["content"]),
         _global(case, case["reference_unmet"], case["reference_justification"]),
         _plan(corrective), _result("T2", case["corrective_result"]), relatorio(("T2-AC1", True)),
@@ -271,7 +273,8 @@ async def test_a2_recuperada_so_com_tarefa_intermediaria_passa_por_c1_c2_b_c1_c3
 
     assert _phases(scenario) == [
         Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A2_TASK_DECOMPOSITION,
-        Phase.A3_PLANNING_LEARNINGS, *_TASK_CYCLE, Phase.C1_GLOBAL_VERIFICATION, Phase.C2_ADDITIONAL_PLANNING,
+        Phase.A3_DECOMPOSITION_VALIDATION, Phase.A4_PLANNING_LEARNINGS, *_TASK_CYCLE, Phase.C1_GLOBAL_VERIFICATION,
+        Phase.C2_ADDITIONAL_PLANNING,
         *_TASK_CYCLE, Phase.C1_GLOBAL_VERIFICATION, Phase.C3_FINAL_ANSWER,
     ]
     invocations = scenario.session.invocations
@@ -287,7 +290,7 @@ async def test_a2_recuperada_so_com_tarefa_intermediaria_passa_por_c1_c2_b_c1_c3
     assert case["corrective_result"] in _area(second, "Stored results")
     assert case["corrective_result"] not in _area(first, "Stored results")
     assert scenario.session.final_answer == "RESPOSTA_FINAL: C"
-    assert scenario.session.totals.total_llm_calls == scenario.llm.call_count == 14
+    assert scenario.session.totals.total_llm_calls == scenario.llm.call_count == 15
 
 
 # ── Contrato do relatório: incoerência recuperável x reprovação aceita ──────

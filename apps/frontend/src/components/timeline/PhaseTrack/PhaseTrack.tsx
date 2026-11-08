@@ -1,3 +1,4 @@
+import { FLOW_VERSION } from '@/domain/enums/flowVersion'
 import { buildLoopArcs, buildMacroTrack } from '@/domain/services/graphLayout'
 import type { PhaseNodeId, ThinkingRun, ThinkingStep } from '@/domain/types/thinkingRun'
 import { PhaseNode } from '@/components/timeline/PhaseNode'
@@ -19,6 +20,8 @@ function nodeIdForPhase(phase: ThinkingStep['phase']): PhaseNodeId | null {
       return 'A2'
     case 'A3':
       return 'A3'
+    case 'A4':
+      return 'A4'
     case 'B1':
     case 'B2':
     case 'B3':
@@ -53,6 +56,7 @@ function representativeStep(run: ThinkingRun, nodeId: PhaseNodeId): ThinkingStep
 export function PhaseTrack({ run, isLive, onStepSelect }: PhaseTrackProps): JSX.Element {
   const track = buildMacroTrack(run)
   const arcs = buildLoopArcs(run)
+  const planArc = arcs.find((arc) => arc.id === 'plan-revision')
   const retryArc = arcs.find((arc) => arc.id === 'verify-retry')
   const replanArc = arcs.find((arc) => arc.id === 'replan-return')
 
@@ -77,6 +81,11 @@ export function PhaseTrack({ run, isLive, onStepSelect }: PhaseTrackProps): JSX.
                 {node.id === 'B' && retryArc ? (
                   <div className={styles.retrySlot}>
                     <LoopArc arc={retryArc} />
+                  </div>
+                ) : null}
+                {node.id === 'A3' && run.flowVersion === FLOW_VERSION.VALIDATED_PLANNING && planArc ? (
+                  <div className={styles.retrySlot}>
+                    <LoopArc arc={planArc} />
                   </div>
                 ) : null}
               </div>

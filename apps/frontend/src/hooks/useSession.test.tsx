@@ -16,6 +16,7 @@ function buildDocument(id: string): SessionDocument {
     id,
     user_question: 'Pergunta',
     flow: 'DIRECT',
+    flow_version: null,
     model_name: 'openai/gpt-4o-mini',
     max_tokens: 1000,
     temperature: 0.3,

@@ -12,6 +12,9 @@ _ESPERADOS = {
     "reset",
     "compile",
     "replan",
+    "plan_candidate",
+    "plan_approved",
+    "plan_rejected",
 }
 
 
@@ -31,6 +34,9 @@ def test_valores_de_cada_membro() -> None:
     assert ThinkingEventSubtypeEnum.RESET == "reset"
     assert ThinkingEventSubtypeEnum.COMPILE == "compile"
     assert ThinkingEventSubtypeEnum.REPLAN == "replan"
+    assert ThinkingEventSubtypeEnum.PLAN_CANDIDATE == "plan_candidate"
+    assert ThinkingEventSubtypeEnum.PLAN_APPROVED == "plan_approved"
+    assert ThinkingEventSubtypeEnum.PLAN_REJECTED == "plan_rejected"
 
 
 def test_e_uma_str_enum() -> None:

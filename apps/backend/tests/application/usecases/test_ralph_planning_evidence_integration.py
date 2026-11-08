@@ -12,6 +12,7 @@ from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum as Phase
 from src.infra.providers.file_prompt_template_provider import FilePromptTemplateProvider
 from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.ralph_scenario import RalphScenario
+from tests.doubles.ralph_scripts import plano_aprovado
 from tests.doubles.ralph_scripts import aprendizados, relatorio, resposta_final
 
 _MATRIX = json.loads((Path(__file__).parents[2] / "fixtures/planning_semantics_v1.json").read_text())
@@ -65,7 +66,7 @@ async def test_colisoes_consumem_conclusoes_obtidas_pela_memoria_sem_embuti_las_
         "ENERGY_DERIVATION_ONLY: K=mv²/2; compare initial and final kinetic energies, in J.",
         "The force and energy orderings in memory are opposite, since momentum transfer and energy loss differ.",
     ]
-    responses = [_criteria(case), _json(tasks=case["tasks"]), aprendizados(case["question"])]
+    responses = [_criteria(case), _json(tasks=case["tasks"]), plano_aprovado(), aprendizados(case["question"])]
     for task, result, conclusion in zip(case["tasks"], details, [forces, energy, joint]):
         responses.extend([
             _result(task["id"], result + " " + conclusion, conclusion),
@@ -88,7 +89,7 @@ async def test_colisoes_consumem_conclusoes_obtidas_pela_memoria_sem_embuti_las_
     c3 = _prompts(scenario, Phase.C3_FINAL_ANSWER)[0]
     assert details[0] in c3 and details[1] in c3 and joint in c3
     assert scenario.session.final_answer == events[-1].content == joint
-    assert scenario.llm.call_count == 14
+    assert scenario.llm.call_count == 15
     assert not scenario.llm.responses
     assert len({i.context_id for i in scenario.session.invocations}) == scenario.llm.call_count
     assert all(len(conversation) == 1 for conversation in scenario.llm.conversations)
@@ -103,7 +104,7 @@ async def test_c2_recebe_motivo_concreto_de_c1_e_preserva_resultados_e_memoria_s
         "description": "Investigate one relation in the request and explain the finding.",
         "acceptance_criteria": [{"id": f"{task_id}-AC1", "description": "Explained finding in scope."}],
     } for task_id in initial_ids]
-    responses = [_criteria(case), _json(tasks=initial_tasks), aprendizados(case["question"])]
+    responses = [_criteria(case), _json(tasks=initial_tasks), plano_aprovado(), aprendizados(case["question"])]
     for task_id in initial_ids:
         responses.extend([
             _result(task_id, "FULL_PRIOR_REASONING: " + case["stored_results"], case["stored_results"]),

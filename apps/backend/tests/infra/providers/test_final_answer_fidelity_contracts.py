@@ -17,7 +17,8 @@ from tests.doubles.fake_settings import FakeSettings
 _FIDELITY_HEADING = "Fidelity check before answering"
 _IDENTIFIER_HEADING = "Identifiers and faithful presentation"
 _ALL_PHASES = (
-    Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_PLANNING_LEARNINGS,
+    Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_DECOMPOSITION_VALIDATION,
+    Phase.A4_PLANNING_LEARNINGS,
     Phase.B1_TASK_RESOLUTION, Phase.B2_TASK_VERIFICATION, Phase.B4_LEARNINGS_EXTRACTION,
     Phase.C1_GLOBAL_VERIFICATION, Phase.C2_ADDITIONAL_PLANNING, Phase.C3_FINAL_ANSWER,
 )
@@ -199,4 +200,5 @@ def test_nao_ha_fase_de_thinking_depois_da_sintese() -> None:
     phases = [phase for phase in Phase if phase is not Phase.DIRECT_INFERENCE]
 
     assert phases[-1] is Phase.C3_FINAL_ANSWER
-    assert len(phases) == 10
+    # A.1, A.2, A.3 (validação da decomposição), A.4, B.1–B.4, C.1–C.3: nenhuma fase depois de C.3.
+    assert len(phases) == 11

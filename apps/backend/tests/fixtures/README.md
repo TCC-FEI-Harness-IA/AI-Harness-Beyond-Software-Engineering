@@ -70,3 +70,18 @@ Para avaliar um modelo real, envie apenas a pergunta pelo fluxo completo, preser
 commit dos templates, modelo, temperatura, saída bruta e sessão exportada, compare com o oráculo e
 registre evidência textual para cada `review_check`. Uma resposta roteirizada correta nos testes não é
 evidência de acurácia; mudanças substanciais nos casos ou no oráculo devem gerar uma nova versão.
+
+# Matriz da validação da decomposição — versão 1
+
+`decomposition_validation_v1.json` contém sete casos sintéticos e abertos para a nova A.3 (Task
+Decomposition Validator), sem relação com questões de benchmark: três planos com defeito (condição
+omitida, resultado antecipado, tarefa só de apresentação) e quatro válidos (dados numéricos copiados,
+método com hipótese verificada na execução, dependência declarada e estimativa explicada). Cada caso traz
+o pedido, critérios gerais, o plano candidato, um parecer esperado para leitura humana
+(`expected_review`) e um relatório de referência no contrato de A.3 (`reference_report`).
+
+Os testes renderizam o template real de A.3 com essas entradas, conferem que o parecer esperado não é
+injetado no prompt e que o relatório de referência passa no parser. Isso verifica transporte e contrato,
+não acurácia: o relatório de referência não é saída de um modelo. Uma avaliação posterior deve registrar a
+saída bruta do modelo e julgá-la pelos sete critérios da rubrica, observando também se planos válidos são
+aprovados — um validador que reprova tudo não representa melhora.

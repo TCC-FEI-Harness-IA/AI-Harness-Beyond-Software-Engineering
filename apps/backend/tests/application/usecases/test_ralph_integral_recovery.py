@@ -10,6 +10,7 @@ from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.infra.config.settings import Settings
 from src.infra.providers.file_prompt_template_provider import FilePromptTemplateProvider
 from tests.doubles.ralph_scenario import RalphScenario
+from tests.doubles.ralph_scripts import plano_aprovado
 from tests.doubles.ralph_scripts import (
     anotacoes_do_enunciado, global_aprovado, resposta_final, tarefa, tarefa_aprovada,
 )
@@ -31,7 +32,7 @@ async def test_so_o_plano_corrigido_e_encaminhado_e_a_recuperacao_nao_atravessa_
     provider = FilePromptTemplateProvider(settings=Settings(), logger=logging.getLogger("teste.templates"))
     cenario = RalphScenario(
         responses=[
-            criterios, recusada, corrigida, anotacoes_do_enunciado(),
+            criterios, recusada, corrigida, plano_aprovado(), anotacoes_do_enunciado(),
             *tarefa_aprovada("T1", "observation"),
             *tarefa_aprovada("T2", "relation"),
             *tarefa_aprovada("T3", "quantity"),
@@ -67,5 +68,5 @@ async def test_so_o_plano_corrigido_e_encaminhado_e_a_recuperacao_nao_atravessa_
                   and m.source is MessageSourceEnum.LLM_AGENT]
     assert [m.task_id for m in resolucoes] == ["T1", "T2", "T3"]
     assert plano["tasks"][2]["description"] in resolucoes[-1].prompt_input[0].text
-    assert sessao.totals.total_llm_calls == cenario.llm.call_count == 15
-    assert sessao.totals.total_tokens == 15 * (10 + 5)
+    assert sessao.totals.total_llm_calls == cenario.llm.call_count == 16
+    assert sessao.totals.total_tokens == 16 * (10 + 5)

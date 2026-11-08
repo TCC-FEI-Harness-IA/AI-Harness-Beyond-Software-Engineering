@@ -12,7 +12,7 @@ from src.infra.adapters.structured_response_parser_adapter import StructuredResp
 
 _FASE_A1 = ThinkingPhaseEnum.A1_GENERAL_CRITERIA
 _FASE_B4 = ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION
-_FASE_A3 = ThinkingPhaseEnum.A3_PLANNING_LEARNINGS
+_FASE_A4 = ThinkingPhaseEnum.A4_PLANNING_LEARNINGS
 
 _CRITERIOS_VALIDOS: dict[str, Any] = {
     "general_acceptance_criteria": [{"id": "AC1", "description": "responder em portugues"}]
@@ -463,24 +463,24 @@ def test_b4_invalido_e_recusado(payload: dict[str, Any]) -> None:
 # ── Schema A.3 ───────────────────────────────────────────────────────────────
 
 
-def test_a3_valido() -> None:
+def test_a4_valido() -> None:
     payload = {"learnings": ["Alternativas: A) 2; B) 4", "Velocidade: 20 m/s"]}
 
-    assert _parser().parse(raw_output=json.dumps(payload), phase=_FASE_A3) == payload
+    assert _parser().parse(raw_output=json.dumps(payload), phase=_FASE_A4) == payload
 
 
-def test_a3_aceita_lista_de_aprendizados_vazia() -> None:
+def test_a4_aceita_lista_de_aprendizados_vazia() -> None:
     payload: dict[str, Any] = {"learnings": []}
 
-    assert _parser().parse(raw_output=json.dumps(payload), phase=_FASE_A3) == payload
+    assert _parser().parse(raw_output=json.dumps(payload), phase=_FASE_A4) == payload
 
 
 @pytest.mark.parametrize("payload", [{}, {"learnings": "fato"}, {"learnings": [{"content": "fato"}]}])
-def test_a3_invalido_e_recusado(payload: dict[str, Any]) -> None:
+def test_a4_invalido_e_recusado(payload: dict[str, Any]) -> None:
     with pytest.raises(PhaseParsingError) as erro:
-        _parser().parse(raw_output=json.dumps(payload), phase=_FASE_A3)
+        _parser().parse(raw_output=json.dumps(payload), phase=_FASE_A4)
 
-    assert erro.value.phase is _FASE_A3
+    assert erro.value.phase is _FASE_A4
 
 
 # ── Schema C.3 ───────────────────────────────────────────────────────────────
@@ -513,7 +513,8 @@ def test_c3_invalido_e_recusado(payload: dict[str, Any]) -> None:
 _PAYLOAD_VALIDO_POR_FASE: dict[ThinkingPhaseEnum, dict[str, Any]] = {
     ThinkingPhaseEnum.A1_GENERAL_CRITERIA: _CRITERIOS_VALIDOS,
     ThinkingPhaseEnum.A2_TASK_DECOMPOSITION: {"tasks": [_TAREFA_VALIDA]},
-    ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: {"learnings": ["Velocidade: 20 m/s"]},
+    ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION: {"approved": True, "issues": []},
+    ThinkingPhaseEnum.A4_PLANNING_LEARNINGS: {"learnings": ["Velocidade: 20 m/s"]},
     ThinkingPhaseEnum.B1_TASK_RESOLUTION: {
         "task_id": "T1", "result": "markdown da resolucao", "conclusion": "conclusao final"
     },
@@ -528,6 +529,7 @@ _FASES_COM_SAIDA_ESTRUTURADA = [fase for fase in ThinkingPhaseEnum if fase not i
 _VALIDACAO_POR_FASE: dict[ThinkingPhaseEnum, ValidationContext] = {
     ThinkingPhaseEnum.B2_TASK_VERIFICATION: _esperando("T1-AC1"),
     ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: _esperando("T1-AC1"),
+    ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION: ValidationContext(candidate_plan={"T1": ("T1-AC1",)}),
 }
 
 

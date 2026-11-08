@@ -23,9 +23,11 @@ from src.infra.providers.file_prompt_template_provider import FilePromptTemplate
 from tests.doubles.fake_cost_guard import FakeCostGuard
 from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.ralph_scenario import RalphScenario
+from tests.doubles.ralph_scripts import plano_aprovado
 from tests.doubles.ralph_scripts import aprendizados, relatorio, resposta_final
 
-_PLANNING = [Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_PLANNING_LEARNINGS]
+_PLANNING = [Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_DECOMPOSITION_VALIDATION,
+             Phase.A4_PLANNING_LEARNINGS]
 _CYCLE = [Phase.B1_TASK_RESOLUTION, Phase.B2_TASK_VERIFICATION, Phase.B4_LEARNINGS_EXTRACTION]
 _FIDELITY_HEADING = "Fidelity check before answering"
 
@@ -128,7 +130,7 @@ async def test_pareamento_completo_nas_notas_chega_a_c3_e_a_resposta_fiel_entreg
     scenario = _scenario([
         _criteria("Identificar a alternativa do teste que identifica o cálcio.", marker),
         _plan(_task("T1", "Determine qual dos cinco testes identifica o cálcio, explicando.")),
-        aprendizados(_PAREAMENTO, _SEM_PAREAMENTO),
+        plano_aprovado(), aprendizados(_PAREAMENTO, _SEM_PAREAMENTO),
         *_executed("T1", _CALCIO, "O cálcio é identificado pelo teste 1."),
         _global(("AC1", True, "T1 determina o teste 1; as notas rotulam o teste 1 como A."),
                 ("AC2", True, "C.3 aplica a linha final.")),
@@ -154,7 +156,7 @@ async def test_vinculo_ausente_entre_item_e_identificador_percorre_c2_antes_da_s
     scenario = _scenario([
         _criteria("Responder com a letra da alternativa do teste que identifica o cálcio."),
         _plan(_task("T1", "Determine qual dos cinco testes identifica o cálcio, explicando.")),
-        aprendizados(_SEM_PAREAMENTO),
+        plano_aprovado(), aprendizados(_SEM_PAREAMENTO),
         *_executed("T1", _CALCIO),
         _global(("AC1", False, gap)),
         _plan(_task("T2", "Copie literalmente as alternativas do enunciado e identifique a letra que rotula o "
@@ -191,6 +193,7 @@ async def test_pergunta_aberta_preserva_entidade_numero_unidade_e_condicao_ate_a
         _criteria("Informar o consumo de energia da planta de Lisboa em março, com unidade.",
                   "Responder em português."),
         _plan(_task("T1", "Determine the March energy consumption of the Lisbon plant, explaining.")),
+        plano_aprovado(),
         aprendizados("Lisbon plant: 400 kW average load; shifts of 8 hours; 22 working days in March."),
         *_executed("T1", approved),
         _global(("AC1", True, "T1 determina 3.2 MWh sob a hipótese de turnos de 8 horas."),
@@ -220,7 +223,7 @@ async def test_escolha_por_melhor_ajuste_aprovada_chega_a_c3_com_sua_natureza_se
     scenario = _scenario([
         _criteria("Selecionar a alternativa mais sustentada para o comprimento.", "Pode justificar brevemente."),
         _plan(_task("T1", "Estime o comprimento e compare com A) 44 mm B) 60 mm C) 75 mm, explicando.")),
-        aprendizados("Opções: A) 44 mm, B) 60 mm, C) 75 mm."),
+        plano_aprovado(), aprendizados("Opções: A) 44 mm, B) 60 mm, C) 75 mm."),
         *_executed("T1", approved),
         _global(("AC1", True, "T1 seleciona A como melhor ajuste para ≈ 47 mm, com comparação."),
                 ("AC2", True, "Justificativa opcional.")),
@@ -251,7 +254,7 @@ async def test_comparacao_direcional_aprovada_chega_com_orientacao_contra_texto_
         _criteria("Comparar força média e energia dissipada, selecionando a alternativa.", "Justificar."),
         _plan(_task("T1", "Compare a força média nos dois casos, explicando."),
               _task("T2", "Compare a energia dissipada nos dois casos, explicando.")),
-        aprendizados("O carro parte de 20 m/s e para nos dois casos."),
+        plano_aprovado(), aprendizados("O carro parte de 20 m/s e para nos dois casos."),
         *_executed("T1", force), *_executed("T2", energy),
         _global(("AC1", True, "T1 e T2 sustentam C."), ("AC2", True, "T1 e T2 fundamentam.")),
         resposta_final(final),
@@ -279,7 +282,7 @@ async def test_apos_revisao_a_sintese_recebe_so_a_versao_vigente_e_a_memoria_vig
         _criteria("Comparar a força média de frenagem com justificativa consistente."),
         _plan(_task("T1", "Determine o tempo de parada em cada caso, explicando."),
               _task("T2", "Compare a força média nos dois casos, explicando.")),
-        aprendizados("O carro parte de 20 m/s."),
+        plano_aprovado(), aprendizados("O carro parte de 20 m/s."),
         *_executed("T1", "Δt é menor com pneus travados.", "Δt é menor com pneus travados."),
         *_executed("T2", old, old_fact),
         _global(("AC1", False, "T1 e T2 são incompatíveis quanto ao tempo de parada; investigar.")),
@@ -317,7 +320,7 @@ async def test_mesmo_conteudo_interno_admite_apresentacoes_distintas(presentatio
     scenario = _scenario([
         _criteria("Identificar a alternativa do teste que identifica o cálcio.", presentation),
         _plan(_task("T1", "Determine qual dos cinco testes identifica o cálcio, explicando.")),
-        aprendizados(_PAREAMENTO),
+        plano_aprovado(), aprendizados(_PAREAMENTO),
         *_executed("T1", _CALCIO),
         _global(("AC1", True, "T1 determina o teste 1, rotulado A."), ("AC2", True, "C.3 apresenta.")),
         resposta_final(final),
@@ -341,7 +344,7 @@ async def test_saida_invalida_de_c3_e_recuperada_sem_fase_nova_nem_verificador_p
     scenario = _scenario([
         _criteria("Identificar a alternativa do teste que identifica o cálcio."),
         _plan(_task("T1", "Determine qual dos cinco testes identifica o cálcio, explicando.")),
-        aprendizados(_PAREAMENTO),
+        plano_aprovado(), aprendizados(_PAREAMENTO),
         *_executed("T1", _CALCIO),
         _global(("AC1", True, "T1 determina o teste 1, rotulado A.")),
         _json(answer="A"),
@@ -354,7 +357,7 @@ async def test_saida_invalida_de_c3_e_recuperada_sem_fase_nova_nem_verificador_p
     assert _phases(scenario)[-2:] == [Phase.C3_FINAL_ANSWER, Phase.C3_FINAL_ANSWER]
     assert invocations[-1].recovers_invocation_id == invocations[-2].id
     assert invocations[-2].output_diagnostic is not None and invocations[-2].recovery is not None
-    assert scenario.session.totals.total_llm_calls == scenario.llm.call_count == 9
+    assert scenario.session.totals.total_llm_calls == scenario.llm.call_count == 10
     assert scenario.session.status is SessionStatusEnum.COMPLETED and scenario.session.final_answer == "A"
     assert events[-1].type is ThinkingEventTypeEnum.RESULT
     assert [e.type for e in events].count(ThinkingEventTypeEnum.RESULT) == 1
@@ -364,7 +367,7 @@ async def test_sintese_nao_roda_sobre_aprovacao_desatualizada() -> None:
     scenario = _scenario([
         _criteria("Identificar a alternativa do teste que identifica o cálcio."),
         _plan(_task("T1", "Determine qual dos cinco testes identifica o cálcio, explicando.")),
-        aprendizados(_PAREAMENTO),
+        plano_aprovado(), aprendizados(_PAREAMENTO),
         *_executed("T1", _CALCIO),
         _global(("AC1", True, "T1 determina o teste 1, rotulado A.")),
         resposta_final("A"),

@@ -9,6 +9,9 @@ class CostBudget:
 
     Attributes:
         max_task_attempts: Tentativas máximas de B.1/B.2 para a mesma tarefa.
+        max_planning_attempts: Planos candidatos máximos do planejamento inicial (A.2 avaliado por A.3),
+            incluindo o primeiro. Independe das tentativas por tarefa, das rodadas de C.2 e das
+            correções de saída inválida.
         max_additional_planning_rounds: Execuções máximas de C.2 por sessão.
         max_tasks_per_session: Total máximo de tarefas por sessão.
         max_llm_calls_per_session: Teto absoluto de chamadas ao modelo.
@@ -19,6 +22,7 @@ class CostBudget:
     """
 
     max_task_attempts: int
+    max_planning_attempts: int
     max_additional_planning_rounds: int
     max_tasks_per_session: int
     max_llm_calls_per_session: int

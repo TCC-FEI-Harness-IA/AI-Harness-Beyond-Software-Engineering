@@ -9,23 +9,23 @@ from tests.doubles.fake_settings import FakeSettings
 
 
 @pytest.mark.parametrize(("phase", "obligations"), [
-    (Phase.A3_PLANNING_LEARNINGS, (
+    (Phase.A4_PLANNING_LEARNINGS, (
         "names of objects", "acronyms and their definitions", "symbols and their referents",
         "do not guess an acronym's expansion",
     )),
-    (Phase.A3_PLANNING_LEARNINGS, (
+    (Phase.A4_PLANNING_LEARNINGS, (
         "every row and column", "identifiers and full option texts", "lists",
         "code and meaning", "test and parameter",
     )),
-    (Phase.A3_PLANNING_LEARNINGS, (
+    (Phase.A4_PLANNING_LEARNINGS, (
         "value and object", "distance and spatial reference", "deadline and event",
         "unit and quantity", "what exactly must be determined",
     )),
-    (Phase.A3_PLANNING_LEARNINGS, (
+    (Phase.A4_PLANNING_LEARNINGS, (
         "do not correct", "do not convert", "do not round", "do not classify",
         "do not supplement", "preserve the relevant ambiguity",
     )),
-    (Phase.A3_PLANNING_LEARNINGS, (
+    (Phase.A4_PLANNING_LEARNINGS, (
         "completeness review", "within this same call", "each group of data",
         "associations", "simultaneous conditions", "next fresh context",
     )),

@@ -8,6 +8,7 @@ class BudgetLimitEnum(StrEnum):
     """
 
     TASK_ATTEMPTS = "task_attempts"
+    PLANNING_ATTEMPTS = "planning_attempts"
     ADDITIONAL_PLANNING_ROUNDS = "additional_planning_rounds"
     TASKS_PER_SESSION = "tasks_per_session"
     LLM_CALLS_PER_SESSION = "llm_calls_per_session"

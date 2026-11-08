@@ -23,6 +23,7 @@ from src.infra.providers.file_prompt_template_provider import FilePromptTemplate
 from tests.doubles.fake_cost_guard import FakeCostGuard
 from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.ralph_scenario import RalphScenario
+from tests.doubles.ralph_scripts import plano_aprovado
 from tests.doubles.ralph_scripts import aprendizados, relatorio, resposta_final
 
 _PERGUNTA = (
@@ -101,7 +102,7 @@ def _ate_a_contradicao() -> list[str]:
         _plano(_tarefa("T1", "Determine onde a força média é maior, explicando."),
                _tarefa("T2", "Determine onde a energia dissipada é maior, explicando."),
                _tarefa("T3", "Compare força e energia dissipada nos dois casos, explicando.")),
-        aprendizados(_A3),
+        plano_aprovado(), aprendizados(_A3),
         *_tarefa_executada("T1", _T1, _L_T1),
         *_tarefa_executada("T2", _T2, _L_COMPARTILHADO),
         *_tarefa_executada("T3", _T3, _L_T3, _L_COMPARTILHADO),
@@ -140,7 +141,8 @@ def _blocos(area: str) -> list[str]:
 
 
 _CICLO = [Phase.B1_TASK_RESOLUTION, Phase.B2_TASK_VERIFICATION, Phase.B4_LEARNINGS_EXTRACTION]
-_PLANEJAMENTO = [Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_PLANNING_LEARNINGS]
+_PLANEJAMENTO = [Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_DECOMPOSITION_VALIDATION,
+                 Phase.A4_PLANNING_LEARNINGS]
 
 
 # ── Contradição → investigação → substituição aprovada ─────────────────────
@@ -162,7 +164,7 @@ async def test_contradicao_vira_revisao_aprovada_e_c1_c3_recebem_so_os_resultado
     assert _fases(cenario) == [*_PLANEJAMENTO, *_CICLO * 3, Phase.C1_GLOBAL_VERIFICATION,
                                Phase.C2_ADDITIONAL_PLANNING, *_CICLO, Phase.C1_GLOBAL_VERIFICATION,
                                Phase.C3_FINAL_ANSWER]
-    assert cenario.session.totals.total_llm_calls == cenario.llm.call_count == 19
+    assert cenario.session.totals.total_llm_calls == cenario.llm.call_count == 20
 
     # C.2 recebe a contradição como diagnóstico e planeja a revisão por referência estruturada.
     c2 = _prompts(cenario, Phase.C2_ADDITIONAL_PLANNING)[0]
@@ -345,7 +347,7 @@ async def test_dependente_explicito_do_revisado_aguarda_revalidacao_e_independen
         _plano(_tarefa("T1", "Determine onde a força média é maior, explicando."),
                _tarefa("T2", "Use a força de T1 para comparar a força do cinto, explicando.", depends_on=["T1"]),
                _tarefa("T3", "Determine a energia dissipada, explicando.")),
-        aprendizados(_A3),
+        plano_aprovado(), aprendizados(_A3),
         *_tarefa_executada("T1", _T1, _L_T1),
         *_tarefa_executada("T2", t2, l_t2),
         *_tarefa_executada("T3", t3, _L_COMPARTILHADO),
@@ -389,7 +391,7 @@ async def test_revalidacao_que_confirma_o_dependente_o_restaura_com_seus_aprendi
         _criterios(),
         _plano(_tarefa("T1", "Determine onde a força média é maior, explicando."),
                _tarefa("T2", "Use T1 para analisar a energia dissipada pelo cinto, explicando.", depends_on=["T1"])),
-        aprendizados(_A3),
+        plano_aprovado(), aprendizados(_A3),
         *_tarefa_executada("T1", _T1, _L_T1),
         *_tarefa_executada("T2", t2, l_t2),
         _global(False, "O tempo de parada de T1 contradiz os dados."),

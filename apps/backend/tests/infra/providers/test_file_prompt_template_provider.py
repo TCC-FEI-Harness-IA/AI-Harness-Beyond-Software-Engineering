@@ -11,7 +11,8 @@ from tests.doubles.fake_settings import FakeSettings
 _ARQUIVOS_POR_FASE = {
     ThinkingPhaseEnum.A1_GENERAL_CRITERIA: "a1_general_criteria.md",
     ThinkingPhaseEnum.A2_TASK_DECOMPOSITION: "a2_task_decomposition.md",
-    ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: "a3_planning_learnings.md",
+    ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION: "a3_decomposition_validation.md",
+    ThinkingPhaseEnum.A4_PLANNING_LEARNINGS: "a4_planning_learnings.md",
     ThinkingPhaseEnum.B1_TASK_RESOLUTION: "b1_task_resolution.md",
     ThinkingPhaseEnum.B2_TASK_VERIFICATION: "b2_task_verification.md",
     ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: "b4_learnings_extraction.md",

@@ -4,6 +4,7 @@ import logging
 import pytest
 
 from src.application.phases.additional_planning_phase import AdditionalPlanningPhase
+from src.application.phases.decomposition_validation_phase import DecompositionValidationPhase
 from src.application.phases.base_thinking_phase import BaseThinkingPhase
 from src.application.phases.final_answer_phase import FinalAnswerPhase
 from src.application.phases.general_criteria_phase import GeneralCriteriaPhase
@@ -52,8 +53,16 @@ _CASOS = [
         {"user_question": "pergunta"},
     ),
     (
+        DecompositionValidationPhase,
+        ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION,
+        json.dumps({"approved": False, "issues": [
+            {"task_id": "T1", "criterion_id": "T1-AC1", "problem": "antecipa", "adjustment": "investigar"}
+        ]}),
+        {"user_question": "pergunta", "general_acceptance_criteria": "- AC1", "candidate_plan": "### T1"},
+    ),
+    (
         PlanningLearningsPhase,
-        ThinkingPhaseEnum.A3_PLANNING_LEARNINGS,
+        ThinkingPhaseEnum.A4_PLANNING_LEARNINGS,
         json.dumps({"learnings": ["Alternativas: A) 2; B) 4"]}),
         {"user_question": "pergunta"},
     ),
@@ -139,6 +148,8 @@ async def test_cada_fase_renderiza_o_proprio_template_com_as_variaveis_recebidas
     provider = FakePromptTemplateProvider()
     montada = _monta(fase_classe, ScriptedLLMCompletions(responses=[saida]), provider, recorder)
     validacao = ValidationContext(expected_criteria_ids=("T1-AC1",)) if fase in _FASES_DE_VERIFICACAO else None
+    if fase is ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION:
+        validacao = ValidationContext(candidate_plan={"T1": ("T1-AC1",)})
 
     resultado = await montada.execute(
         context=ContextWindow(context_id="ctx-1", phase=fase),

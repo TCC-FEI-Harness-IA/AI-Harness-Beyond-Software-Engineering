@@ -25,6 +25,7 @@ _CONTRATO_CAMPOS = {
     "total_tokens",
     "context_window",
     "inference_time_ms",
+    "flow_version",
 }
 
 
@@ -39,6 +40,7 @@ def _event(session_id: str = "sess_ws1", **overrides: Any) -> ReasoningEventDTO:
         "total_tokens": 10,
         "context_window": ContextWindowDTO(context_id="ctx-1", context_size=5),
         "inference_time_ms": 100,
+        "flow_version": 2,
     }
     base.update(overrides)
     return ReasoningEventDTO(**base)
@@ -134,7 +136,7 @@ def test_fluxo_completo_recebe_a_sequencia_de_eventos_e_termina_em_result(client
     assert close_code == 1000
 
 
-def test_todo_evento_tem_exatamente_os_nove_campos_do_contrato(client: TestClient) -> None:
+def test_todo_evento_tem_exatamente_os_dez_campos_do_contrato(client: TestClient) -> None:
     _FakeStartup.events = [_event()]
 
     with client.websocket_connect("/v1/message/reasoning") as ws:

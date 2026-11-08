@@ -31,7 +31,7 @@ def _section(phase: Phase, heading: str) -> str:
 @pytest.mark.parametrize("case", _CASES, ids=lambda case: case["name"])
 def test_matriz_renderiza_dados_literais_nas_areas_reais_sem_injetar_o_exemplo(case: dict) -> None:
     phase = Phase.A2_TASK_DECOMPOSITION if case["phase"] == "A2" else Phase.C2_ADDITIONAL_PLANNING
-    variables = {"user_question": case["question"], "max_tasks": "9"}
+    variables = {"user_question": case["question"], "max_tasks": "9", "plan_revision": "None."}
     if case["phase"] == "C2":
         variables.update(
             unmet_criteria="AC1: " + case["general_criteria"][0],
@@ -91,8 +91,9 @@ def test_planejamento_separa_metodo_hipotese_dado_e_resultado(phase: Phase) -> N
     assert "do not guess" in rules
 
 
-@pytest.mark.parametrize("phase", [Phase.A2_TASK_DECOMPOSITION, Phase.C2_ADDITIONAL_PLANNING])
+@pytest.mark.parametrize("phase", [Phase.C2_ADDITIONAL_PLANNING])
 def test_revisao_dentro_da_geracao_cobre_determinacao_final_sem_certificado_estrutural(phase: Phase) -> None:
+    # Em C.2 não há validador de decomposição: a revisão de cobertura continua dentro da geração.
     review = _section(phase, "Final plan review")
     assert "Before returning the JSON" in review
     assert "period in months" in review and "distance ratio" in review
@@ -143,3 +144,29 @@ def test_escolha_nao_e_equivalente_a_acerto_nem_ha_tolerancia_inventada(phase: P
     for old_command in ("as long as one of the options is selected", "only the absence of a selection",
                         "leaving the selection open is not"):
         assert old_command not in template
+
+
+def test_a2_simplificada_transfere_a_auditoria_para_a3_sem_perder_as_regras_de_geracao() -> None:
+    a2 = _provider().get(phase=Phase.A2_TASK_DECOMPOSITION)
+    normalized = " ".join(a2.split())
+
+    # A autoavaliação extensa saiu da geração: a auditoria detalhada é da nova A.3.
+    assert "## Final plan review" not in a2
+    assert "Before returning the JSON" not in normalized
+    assert "a separate validation stage audits it" in normalized
+    # Regras essenciais de geração preservadas.
+    for rule in ("units", "referent", "establish its applicability",
+                 "must remain open, including in titles and criteria",
+                 "logical dependence", "complementary, never mutually exclusive", "never the result alone",
+                 "never by option", "transcribe data, print a marker, write the final answer or repeat a determination",
+                 "final quantity", "depends_on", "{{max_tasks}}"):
+        assert rule in normalized, rule
+    assert "Do not turn the user's final format" in normalized
+    assert "preferred count" in normalized
+
+
+def test_a2_recebe_o_ultimo_candidato_e_o_relatorio_numa_area_propria() -> None:
+    a2 = _provider().get(phase=Phase.A2_TASK_DECOMPOSITION)
+
+    assert "## Previous candidate and validation report\n\n{{plan_revision}}" in a2
+    assert a2.index("{{user_question}}") < a2.index("{{plan_revision}}") < a2.index("## Output format")

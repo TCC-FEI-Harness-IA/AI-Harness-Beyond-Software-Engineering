@@ -102,6 +102,7 @@ function buildLiveLikeEvents(document: SessionDocument, eventMeta: EventMeta[]):
       total_tokens: cumulativeTokens,
       context_window: { context_id: contextId, context_size: contextSize },
       inference_time_ms: message.inference_time_ms,
+      flow_version: 1,
     }
     events.push(event)
 

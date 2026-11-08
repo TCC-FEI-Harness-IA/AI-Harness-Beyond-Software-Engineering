@@ -2,6 +2,7 @@ from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 
 _ESPERADOS = {
     "task_attempts",
+    "planning_attempts",
     "additional_planning_rounds",
     "tasks_per_session",
     "llm_calls_per_session",
@@ -16,6 +17,7 @@ def test_declara_exatamente_os_limites_suportados() -> None:
 
 def test_valores_de_cada_membro() -> None:
     assert BudgetLimitEnum.TASK_ATTEMPTS == "task_attempts"
+    assert BudgetLimitEnum.PLANNING_ATTEMPTS == "planning_attempts"
     assert BudgetLimitEnum.ADDITIONAL_PLANNING_ROUNDS == "additional_planning_rounds"
     assert BudgetLimitEnum.TASKS_PER_SESSION == "tasks_per_session"
     assert BudgetLimitEnum.LLM_CALLS_PER_SESSION == "llm_calls_per_session"

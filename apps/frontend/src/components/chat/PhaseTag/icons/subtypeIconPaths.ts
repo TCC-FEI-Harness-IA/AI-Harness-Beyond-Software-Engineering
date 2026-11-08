@@ -16,4 +16,7 @@ export const SUBTYPE_ICON_PATH: Record<EventSubtype, string> = {
   reset: 'M8 1 3 8h3.5L6 14l6-8H8.5L8 1Z',
   compile: 'M7 2 1.5 5 7 8l5.5-3L7 2ZM1.5 8 7 11l5.5-3M1.5 11 7 14l5.5-3',
   replan: 'M4 2v6a3 3 0 0 0 3 3h3M4 2 1.5 4.5M4 2l2.5 2.5M10 8v3',
+  plan_candidate: 'M3 2h7l3 3v9H3V2Zm2 5h6M5 10h4',
+  plan_approved: 'M3 2h10v12H3V2Zm2 6 2 2 4-4',
+  plan_rejected: 'M3 2h10v12H3V2Zm3 4 4 4m0-4-4 4',
 }

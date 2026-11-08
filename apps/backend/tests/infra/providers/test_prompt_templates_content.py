@@ -6,8 +6,9 @@ from src.infra.providers.file_prompt_template_provider import FilePromptTemplate
 
 _PLACEHOLDERS_POR_FASE = {
     ThinkingPhaseEnum.A1_GENERAL_CRITERIA: {"user_question"},
-    ThinkingPhaseEnum.A2_TASK_DECOMPOSITION: {"user_question", "max_tasks"},
-    ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: {"user_question"},
+    ThinkingPhaseEnum.A2_TASK_DECOMPOSITION: {"user_question", "max_tasks", "plan_revision"},
+    ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION: {"user_question", "general_acceptance_criteria", "candidate_plan"},
+    ThinkingPhaseEnum.A4_PLANNING_LEARNINGS: {"user_question"},
     ThinkingPhaseEnum.B1_TASK_RESOLUTION: {
         "task_description", "task_acceptance_criteria", "learnings", "previous_attempts", "results_under_review"
     },
@@ -107,6 +108,7 @@ def test_templates_de_planejamento_informam_o_teto_de_tarefas_do_lote() -> None:
                 "max_tasks": "7",
                 "learnings": "l",
                 "result_revisions": "r",
+                "plan_revision": "p",
             },
         )
         assert "at most 7" in renderizado
@@ -114,7 +116,7 @@ def test_templates_de_planejamento_informam_o_teto_de_tarefas_do_lote() -> None:
 
 
 def test_template_de_aprendizados_do_planejamento_manda_preservar_o_que_chama_a_atencao() -> None:
-    template = _provider().get(phase=ThinkingPhaseEnum.A3_PLANNING_LEARNINGS).lower()
+    template = _provider().get(phase=ThinkingPhaseEnum.A4_PLANNING_LEARNINGS).lower()
 
     assert "values" in template and "units of measurement" in template
     assert "options" in template
@@ -124,14 +126,14 @@ def test_template_de_aprendizados_do_planejamento_manda_preservar_o_que_chama_a_
 
 
 def test_template_de_aprendizados_do_planejamento_proibe_resolver_a_pergunta() -> None:
-    template = _provider().get(phase=ThinkingPhaseEnum.A3_PLANNING_LEARNINGS).lower()
+    template = _provider().get(phase=ThinkingPhaseEnum.A4_PLANNING_LEARNINGS).lower()
 
     assert "do not solve" in template
     assert "no conclusion" in template
 
 
 def test_template_de_aprendizados_do_planejamento_devolve_lista_vazia_quando_nada_se_aplica() -> None:
-    template = _provider().get(phase=ThinkingPhaseEnum.A3_PLANNING_LEARNINGS)
+    template = _provider().get(phase=ThinkingPhaseEnum.A4_PLANNING_LEARNINGS)
 
     assert "empty list" in template
     assert '{"learnings": [' in template
@@ -161,11 +163,13 @@ def test_a_area_de_aprendizados_pontuais_vem_antes_do_formato_de_saida() -> None
 def test_os_templates_de_planejamento_inicial_nao_tem_a_area_de_aprendizados() -> None:
     provider = _provider()
 
-    # A.1, A.2 e A.3 rodam antes de existir qualquer aprendizado: a área não teria conteúdo.
+    # A.1, A.2, A.3 e A.4 rodam antes de existir qualquer aprendizado: a área não teria conteúdo. A.3 julga o
+    # plano antes da extração de A.4, sem depender de aprendizados ainda não extraídos.
     for fase in (
         ThinkingPhaseEnum.A1_GENERAL_CRITERIA,
         ThinkingPhaseEnum.A2_TASK_DECOMPOSITION,
-        ThinkingPhaseEnum.A3_PLANNING_LEARNINGS,
+        ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION,
+        ThinkingPhaseEnum.A4_PLANNING_LEARNINGS,
     ):
         assert "{{learnings}}" not in provider.get(phase=fase)
 

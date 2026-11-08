@@ -16,6 +16,7 @@ from src.infra.providers.file_prompt_template_provider import FilePromptTemplate
 from tests.doubles.ralph_scenario import RalphScenario
 from tests.doubles.ralph_scripts import (
     anotacoes_do_enunciado as _anotacoes_do_enunciado,
+    plano_aprovado as _plano_aprovado,
     aprendizados as _aprendizados,
     aprovado as _aprovado,
     criterios as _criterios,
@@ -78,7 +79,7 @@ def _cenario_q037(aprendizados_da_t2: tuple[str, ...] = (_APRENDIZADO_T2,)) -> R
         responses=[
             _criterios(),
             _tarefas(_T1_Q037, _T2_Q037),
-            _anotacoes_do_enunciado(*_ANOTACOES_Q037),
+            _plano_aprovado(), _anotacoes_do_enunciado(*_ANOTACOES_Q037),
             _resolucao(_TENTATIVA_REFUTADA_T1),
             _reprovado("T1"),
             _resolucao(_RESULTADO_APROVADO_T1),
@@ -162,7 +163,7 @@ async def test_o_historico_de_b4_traz_a_saida_invalida_do_validador_antes_do_ver
         responses=[
             _criterios(),
             _tarefas(_T1_Q037),
-            _anotacoes_do_enunciado(),
+            _plano_aprovado(), _anotacoes_do_enunciado(),
             _resolucao(_RESULTADO_APROVADO_T1),
             saida_invalida_do_validador,
             _aprovado("T1"),
@@ -251,7 +252,7 @@ async def test_a_conclusao_numerica_chega_a_proxima_tarefa_com_grandeza_valor_un
                 _tarefa("T1", "Calcular a velocidade média", "Um carro percorre 150 km em 2 h; calcule vₘ em m/s."),
                 _tarefa("T2", "Comparar com as alternativas", "Compare a velocidade média com as alternativas."),
             ),
-            _anotacoes_do_enunciado("Distância percorrida: 150 km.", "Tempo de percurso: 2 h."),
+            _plano_aprovado(), _anotacoes_do_enunciado("Distância percorrida: 150 km.", "Tempo de percurso: 2 h."),
             _resolucao(_RESULTADO_NUMERICO),
             _aprovado("T1"),
             _aprendizados(_APRENDIZADO_NUMERICO),

@@ -40,6 +40,7 @@ class CostGuardAdapter(ICostGuard):
         self.__tasks_created: int = _INITIAL_COUNTER
         self.__additional_rounds: int = _INITIAL_COUNTER
         self.__attempts_by_task: dict[str, int] = {}
+        self.__planning_attempts: int = _INITIAL_COUNTER
         self.__started_at_ms: int = clock.monotonic_ms()
 
     def authorize(self, phase: ThinkingPhaseEnum, reserved_output_tokens: int = _NO_RESERVED_OUTPUT) -> BudgetVerdict:
@@ -147,6 +148,23 @@ class CostGuardAdapter(ICostGuard):
             bool: `True` quando o limite de tentativas ainda não foi atingido.
         """
         return self.__attempts_by_task.get(task_id, _NO_ATTEMPTS) < self.budget.max_task_attempts
+
+    def register_planning_attempt(self) -> int:
+        """Registra mais um plano candidato do planejamento inicial.
+
+        Returns:
+            int: Número do candidato recém-registrado, contado a partir de um.
+        """
+        self.__planning_attempts += 1
+        return self.__planning_attempts
+
+    def can_retry_planning(self) -> bool:
+        """Informa se um plano reprovado ainda pode ser revisado por mais um candidato.
+
+        Returns:
+            bool: `True` enquanto os candidatos registrados não atingiram o limite do planejamento.
+        """
+        return self.__planning_attempts < self.budget.max_planning_attempts
 
     def authorize_additional_planning(self, reserved_output_tokens: int = _NO_RESERVED_OUTPUT) -> BudgetVerdict:
         """Consulta se ainda é possível executar mais uma rodada de C.2, e por que não.

@@ -3,6 +3,8 @@ import type { BenchmarkDetails } from './benchmarkDetails'
 // `subtype` — a derivação vive em `domain/services/deriveSubtype.ts` (FASE 07).
 
 import type { BudgetLimit } from '../enums/budgetLimit'
+import type { EventSubtype } from '../enums/eventSubtype'
+import type { FlowVersion } from '../enums/flowVersion'
 import type { MessageSource } from '../enums/messageSource'
 import type { SessionStatus } from '../enums/sessionStatus'
 import type { ThinkingPhase } from '../enums/thinkingPhase'
@@ -21,6 +23,8 @@ export interface SessionMessageDocument {
   total_tokens: number
   inference_time_ms: number
   model_name: string | null
+  /** Subtipo do evento emitido com a mensagem; `null` em registros sem evento e em sessões antigas. */
+  subtype?: EventSubtype | null
 }
 
 export interface SessionTotalsDocument {
@@ -46,6 +50,8 @@ export interface SessionDocument {
   id: string
   user_question: string
   flow: ThinkingPhase
+  /** Versão do fluxo Ralph; sessões Ralph antigas sem o campo são versão 1, a inferência direta é `null`. */
+  flow_version: FlowVersion | null
   model_name: string
   max_tokens: number
   temperature: number

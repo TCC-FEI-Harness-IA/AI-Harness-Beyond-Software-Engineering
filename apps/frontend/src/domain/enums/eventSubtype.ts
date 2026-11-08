@@ -16,6 +16,11 @@ export const EVENT_SUBTYPE = {
   RESET: 'reset',
   COMPILE: 'compile',
   REPLAN: 'replan',
+  // Planejamento validado (fluxo versão 2): o plano de A.2 é candidato até A.3 aprová-lo. A confirmação
+  // na fila continua sendo `tasks`, emitida uma única vez depois da aprovação.
+  PLAN_CANDIDATE: 'plan_candidate',
+  PLAN_APPROVED: 'plan_approved',
+  PLAN_REJECTED: 'plan_rejected',
 } as const
 
 export type EventSubtype = (typeof EVENT_SUBTYPE)[keyof typeof EVENT_SUBTYPE]
@@ -36,12 +41,17 @@ export const SUBTYPE_LABEL: Record<EventSubtype, string> = {
   reset: 'Contexto reinicializado',
   compile: 'Compilação e verificação',
   replan: 'Planejamento adicional',
+  plan_candidate: 'Plano candidato',
+  plan_approved: 'Plano aprovado',
+  plan_rejected: 'Plano reprovado',
 }
 
-// O mesmo subtype `learn` é emitido por duas etapas: A.3 (aprendizados do enunciado, antes de
-// qualquer tarefa) e B.4 (aprendizados de uma tarefa). O rótulo precisa dizer de qual se trata.
+// O mesmo subtype `learn` é emitido pelos aprendizados do enunciado — A.4 no fluxo atual, A.3 nas
+// sessões antigas — e por B.4 (aprendizados de uma tarefa); `tasks` em A.3 é a confirmação do plano
+// aprovado na fila, não uma quebra nova. O rótulo precisa dizer de qual se trata.
 const PHASE_SUBTYPE_LABEL: Partial<Record<ThinkingPhase, Partial<Record<EventSubtype, string>>>> = {
-  [THINKING_PHASE.A3]: { learn: 'Aprendizados do enunciado' },
+  [THINKING_PHASE.A3]: { learn: 'Aprendizados do enunciado', tasks: 'Plano confirmado na fila' },
+  [THINKING_PHASE.A4]: { learn: 'Aprendizados do enunciado' },
 }
 
 /** Rótulo de um passo: o do `subtype`, ou o específico da etapa quando o subtype é compartilhado. */
@@ -60,6 +70,9 @@ export const SUBTYPE_TONE: Record<EventSubtype, Tone> = {
   store: TONE.SUCCESS,
   verify_fail: TONE.WARNING,
   replan: TONE.WARNING,
+  plan_candidate: TONE.NEUTRAL,
+  plan_approved: TONE.SUCCESS,
+  plan_rejected: TONE.WARNING,
   learn: TONE.NEUTRAL,
   reset: TONE.CONTEXT,
 }

@@ -18,6 +18,7 @@ A explicação geral do fluxo está em [`RALPH_LOOP_ADAPTADO.md`](RALPH_LOOP_ADA
 | 6 | **Registro dos resultados parciais em B.4** | B. Execução em Loop | Todo resultado parcial novo da tarefa aprovada vira um aprendizado autossuficiente (fato compacto + breve explicação); B.4 roda em janela própria, com o histórico da tarefa como entrada explícita, e a memória descarta repetições. |
 | 7 | **Separação entre escopo, suficiência e apresentação** | A.1, A.2, B.2, C.1, C.2 e C.3 | Reforço dos prompts: restrições reais, limites sobre ações, suficiência de conteúdo antes da apresentação e tratamento de lacunas reais. |
 | 8 | **Diagnóstico estruturado das saídas do modelo** *(tratamento operacional)* | Todas as fases com saída estruturada | Cada saída avaliada pelo parser registra, na invocação que a produziu, sintaxe, contrato, código do problema, término original, corte por comprimento e recuperação. Não muda o raciocínio, as retentativas nem o orçamento. |
+| 9 | **Nova fase de validação — 01: planejamento aprovado antes da execução** (nova A.3 e renumeração da extração para A.4) | A. Planejamento | O plano de A.2 vira candidato; A.3 o julga por rubrica fixa e o devolve a A.2 quando reprovado (até 5 candidatos); só o plano aprovado entra na fila; a extração do enunciado passa a ser A.4. |
 
 As alterações 2 e 3 vieram de uma segunda rodada de testes. A alteração 2 **substitui** a regra de escopo da alteração 1 (e do paper), segundo a qual os aprendizados ficavam restritos a B.1; os pontos afetados da seção 1 estão marcados com *(atualizado pela alteração 2)*. A alteração 4 muda apenas o que os templates A.2 e C.2 pedem de cada tarefa; não muda a ordem das etapas nem as expressões de entrada e saída. A alteração 5 **substitui** a regra do paper segundo a qual as tentativas de uma mesma tarefa compartilham o contexto e B.4 opera sobre o "contexto completo da tarefa": as tentativas passam a rodar em janelas novas, e B.4 recebe o histórico da tarefa como material delimitado. Os pontos afetados das seções 2 e 3 estão marcados com *(atualizado pela alteração 5)*. A alteração 6 reforça os resultados parciais extraídos em B.4, a alteração 7 separa escopo, suficiência e apresentação, e a alteração 8 acrescenta diagnósticos operacionais associados às invocações.
 
@@ -3492,3 +3493,181 @@ copie o fato literalmente, distinga fonte independente de uso como entrada ou de
 dependência. Uma paráfrase do fato reestabelecido continua entrando como fato novo (sem retirar o
 original), e dependências não declaradas continuam não detectadas; C.1 segue responsável por
 contradições residuais. O item 2 é garantia programática.
+
+---
+
+## Nova fase de validação — 01: planejamento aprovado antes da execução
+
+> **Procedência:** extensão posterior ao paper, implementada na frente 1 da proposta em
+> [`feature/nova-fase-validacao/README.md`](feature/nova-fase-validacao/README.md). **Substitui** a posição
+> da etapa de aprendizados do enunciado (alteração 1): ela deixa de ser a A.3 e passa a ser a **A.4**,
+> executada depois da aprovação do plano. Também **substitui**, em A.2, a revisão final extensa do plano
+> dentro da geração (melhoria do thinking 03, seção “Final plan review”), cuja auditoria passou para a nova
+> A.3. Nada muda em C.2, que continua sem validador. O critério técnico `TECH` de B.2 pertence à etapa
+> seguinte (frente 2) e **não** está implementado aqui.
+
+### Problema
+
+Até aqui, o lote de A.2 era validado estruturalmente (JSON, campos, referências, limites), convertido em
+tarefas e colocado na fila. Não havia avaliação semântica do plano antes de executá-lo. A.2 concentrava a
+geração e a autoavaliação, e execuções reais produziram critérios que exigiam confirmar uma
+interpretação ou aplicar um método cuja validade ainda deveria ser investigada. As tarefas seguintes
+cumpriam essa especificação errada e recebiam aprovação; o parser não tem como perceber uma conclusão
+antecipada.
+
+### Regra nova
+
+```text
+A.1 — Critérios gerais
+  → A.2 — Plano candidato
+  → A.3 — Task Decomposition Validator
+       ├─ reprovado → nova A.2 com o último candidato e o relatório → nova A.3
+       └─ aprovado → confirma o plano na fila → A.4 — Key Learnings from the Question
+  → B e C existentes
+```
+
+> *Pergunta do usuário* + *Template A.2* → *Plano candidato* (primeira geração)
+>
+> *Pergunta do usuário* + *Template A.2* + *Último candidato reprovado* + *Relatório de A.3* → *Plano candidato* (revisão, temperatura 1)
+>
+> *Pergunta do usuário* + *Critérios gerais (A.1)* + *Plano candidato atual* + *Template A.3* → *Relatório da validação*
+>
+> *Pergunta do usuário* + *Template A.4* → *Aprendizados Pontuais do Enunciado*
+
+| Etapa | Responsabilidade | Entradas | Janela e temperatura |
+|---|---|---|---|
+| A.2 | Gerar o plano candidato com as regras de geração. | Pedido, template, teto de tarefas; nas revisões, só o último candidato e o relatório dele. | Nova a cada geração; sessão na primeira, `1` nas revisões. |
+| A.3 | Aprovar ou reprovar o candidato por rubrica fixa. | Pedido (referência principal), critérios gerais de A.1, só o candidato atual (descrições, critérios e dependências). | Nova a cada avaliação; sempre a temperatura da sessão. |
+| A.4 | Extrair do enunciado os dados que não podem se perder. | Só o pedido. | Nova; uma única vez, depois da confirmação. |
+
+**A.2 simplificada.** O template mantém as regras de geração: dados fornecidos copiados com unidades,
+referentes e condições; métodos pertinentes sem presumir aplicabilidade que depende de condição não
+estabelecida; valores, classificações, comparações e conclusões em aberto, inclusive em títulos e
+critérios; objetivo único com dependência lógica e integração final quando necessária; critérios
+complementares que exigem resultado fundamentado, sem transformar o formato final em obrigação interna;
+sem tarefas de transcrição, impressão de marcador, redação ou repetição; cobertura, dependências e
+contratos. Saiu a revisão extensa “Final plan review”, cuja auditoria é da A.3. Não há número fixo de
+tarefas.
+
+**Rubrica fixa de A.3.** Fidelidade (dados, referentes, condições e restrições do pedido); neutralidade
+(sem resultados quantitativos ou qualitativos antecipados como obrigação); aplicabilidade (hipóteses dos
+métodos dadas ou verificadas na execução); critérios (verificáveis, complementares, pertinentes, sem
+impor solução não investigada); coerência (objetivos delimitados, ordem compatível com as dependências);
+cobertura (determinação completa, deixando a C.3 só apresentação e associações literais sustentadas);
+necessidade (sem trabalho burocrático, redundante ou mais amplo que o pedido). A.3 não avalia o plano
+pelos critérios que ele próprio escreveu, não resolve a pergunta, não escolhe resposta, não exige
+conclusão alternativa calculada por ela e não rejeita automaticamente números, fórmulas, hipóteses
+explícitas justificáveis, dependências ou aproximações legítimas. Se A.1 inventou uma exigência, o
+enunciado prevalece: A.3 aponta o conflito sem reescrever A.1, e não há ciclo de revisão de A.1.
+
+**Contrato do relatório.**
+
+```json
+{
+  "approved": false,
+  "issues": [
+    {
+      "task_id": "T2",
+      "criterion_id": "T2-AC1",
+      "problem": "The criterion requires an unestablished conclusion.",
+      "adjustment": "Ask for an investigation that keeps the conclusion open."
+    }
+  ]
+}
+```
+
+A aprovação válida é `{"approved": true, "issues": []}`. A reprovação tem ao menos um problema, com
+`problem` e `adjustment` preenchidos. `task_id` e `criterion_id` são obrigatórios no objeto e admitem
+`null`: ambos nulos, problema do plano inteiro; tarefa preenchida e critério nulo, problema da tarefa;
+ambos preenchidos, o critério precisa pertencer àquela tarefa no candidato julgado.
+
+**Fila, limite e auditoria.** Só o plano aprovado entra na fila e consome espaços de tarefa; IDs de
+candidatos descartados podem ser usados pelo candidato seguinte. São no máximo
+`RALPH_MAX_PLANNING_ATTEMPTS` (padrão 5) candidatos, incluindo o primeiro; o contador é independente de
+`RALPH_MAX_TASK_ATTEMPTS` (5), `RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS` (2) e `RALPH_JSON_PARSE_MAX_RETRIES`
+(2), e os demais tetos continuam podendo encerrar a sessão antes. Cada candidato e cada relatório ficam
+na sessão com fase, janela, `prompt_input`, invocação, consumo e subtipo (`plan_candidate`,
+`plan_rejected`, `plan_approved`); a confirmação na fila é uma etapa programática com subtipo `tasks`.
+A sessão grava `flow_version = 2`.
+
+### Recusa estrutural × reprovação semântica
+
+| | Recusa estrutural (contrato inválido) | Reprovação semântica (`approved: false` coerente) |
+|---|---|---|
+| Exemplo | `"approved": "false"`, critério sem tarefa, `T9` inexistente, aprovação com problemas. | O critério `T1-AC1` exige um resultado ainda não estabelecido. |
+| Quem decide | O parser, por tipos, referências e coerência. | O modelo, pela rubrica de A.3. |
+| O que acontece | Correção na **mesma janela**, temperatura `1`, saída recusada integral, sem repetir o template. | Saída **aceita**; nova A.2 em janela nova com o candidato e o relatório. |
+| Conta como candidato? | Não. Esgotadas as correções, a fase falha como erro técnico. | Sim: o próximo A.2 é um novo candidato. |
+
+### Exemplo — primeiro plano aprovado
+
+Pergunta: “Um carro percorre 120 km em 1,5 h. Qual é sua velocidade média em km/h?” A.2 gera T1, que
+copia os dados e pede a velocidade média com a definição e a substituição com unidades. A.3 devolve
+`{"approved": true, "issues": []}`; o plano é confirmado na fila (`tasks`, uma vez), A.4 anota “Distância:
+120 km; tempo: 1,5 h” e B/C seguem. Há uma chamada a mais que no fluxo anterior (A.3).
+
+### Exemplo — conclusão antecipada reprovada e corrigida
+
+Pergunta: “Dois resistores, de 4 Ω e de 12 Ω, são ligados em paralelo a uma fonte ideal de 6 V. Qual deles
+dissipa maior potência?” O primeiro candidato tem a tarefa “Mostrar que o resistor de 12 Ω dissipa mais”,
+com o critério `T1-AC1` “Provar que o resistor de 12 Ω dissipa a maior potência”. A.3 reprova:
+
+```json
+{"approved": false, "issues": [{"task_id": "T1", "criterion_id": "T1-AC1",
+  "problem": "The criterion requires a specific comparison outcome that execution has not established.",
+  "adjustment": "Ask the task to determine which resistor dissipates more power and justify it, keeping the comparison open."}]}
+```
+
+A nova A.2 recebe, delimitados, `<previous_candidate>` (o plano reprovado) e `<validation_report>` (o
+relatório), e gera “Comparar as potências dissipadas”, com critério “Determinar e justificar qual resistor
+dissipa mais”. A nova A.3 vê só esse candidato — sem o plano antigo nem o relatório — e aprova. O
+relatório não disse qual resistor dissipa mais: um ajuste que trocasse uma conclusão por outra só
+transferiria a antecipação para A.3.
+
+### Exemplo — cinco reprovações
+
+Se os cinco candidatos são reprovados, a sessão termina depois da quinta A.3: sem sexta A.2/A.3, sem
+confirmação na fila, sem A.4, tarefas ou síntese. A falha é estruturada como `resource_limit`, limite
+`planning_attempts`, fase `A3`, com a quantidade de candidatos na descrição. Todos os candidatos e
+relatórios continuam na auditoria; o último plano reprovado não é promovido.
+
+### Exemplo — método e hipótese legítimos aceitos
+
+Pergunta: “Um pêndulo simples de 1,0 m oscila com amplitude de 5°. Estime seu período (g = 9,8 m/s²).” A
+tarefa pede verificar se a condição de pequena amplitude é adequada para 5° e, se for, estimar o período
+com a relação correspondente, declarando a hipótese e seus limites. O método é pertinente, sua
+aplicabilidade será verificada na execução e a estimativa é legítima: A.3 aprova. O mesmo vale para dados
+numéricos copiados do enunciado, dependências declaradas (`depends_on`) e estimativas explicadas
+(matriz sintética `tests/fixtures/decomposition_validation_v1.json`).
+
+### Exemplo — sessão histórica cujo A.3 continua sendo extração
+
+Uma sessão gravada antes desta etapa não tem `flow_version` e tem uma mensagem `phase: "A3"` com
+“## Extracted learnings …”. Na leitura, ela é interpretada como versão 1: no backend, a consulta devolve
+`flow_version: 1` sem reescrever o arquivo; no frontend, a trilha é A.1 → A.2 → A.3 → B → C, com A.3
+rotulada “Aprendizados do enunciado” e evento `learn`. O parser da nova A.3 nunca é executado sobre esse
+texto, e a exportação/importação preservam fases, conteúdo e versão. Uma sessão nova tem
+`flow_version: 2`, `A3` de validação e `A4` de extração.
+
+### O que muda no texto do paper
+
+O Planejamento passa a ter quatro etapas: A.1 (critérios gerais), A.2 (plano candidato), A.3 (validação
+da decomposição, com retorno a A.2 enquanto houver tentativas) e A.4 (aprendizados do enunciado). A frase
+“A terceira etapa do Planejamento, executada logo depois de A.2, salva os aprendizados pontuais do
+enunciado” passa a se referir à quarta etapa, executada depois da aprovação do plano.
+
+### Garantias e limites
+
+- **Garantia programática (testada):** entradas de A.2/A.3/A.4 e isolamento das janelas; contrato do
+  relatório; confirmação na fila só depois da aprovação e uma única vez; candidatos sem efeito sobre slots,
+  IDs, dependências e progresso; limite de cinco candidatos independente dos demais; temperaturas;
+  recuperação estrutural; contabilização e auditoria de toda chamada; versão persistida e compatibilidade
+  de backend, exportação e frontend.
+- **Contrato do prompt (verificado como texto):** rubrica fixa, exemplos gerais, limites do julgamento e
+  regras de geração de A.2. A presença das instruções não prova obediência.
+- **Avaliação semântica (não medida):** que um modelo real reprove planos com conclusão antecipada,
+  condição omitida ou tarefa redundante sem rejeitar planos válidos. Um validador que rejeita tudo só gera
+  mais ciclos. A comparação com o fluxo anterior precisa considerar ao menos uma chamada extra por sessão.
+
+Relatório de implementação, matriz de testes e resultados:
+[`feature/nova-fase-validacao/RELATORIO_IMPLEMENTACAO_01.md`](feature/nova-fase-validacao/RELATORIO_IMPLEMENTACAO_01.md).

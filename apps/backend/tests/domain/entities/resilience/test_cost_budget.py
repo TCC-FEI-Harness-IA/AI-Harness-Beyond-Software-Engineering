@@ -8,6 +8,7 @@ from src.domain.entities.resilience.cost_budget import CostBudget
 def _novo_budget() -> CostBudget:
     return CostBudget(
         max_task_attempts=3,
+        max_planning_attempts=5,
         max_additional_planning_rounds=2,
         max_tasks_per_session=12,
         max_llm_calls_per_session=60,
@@ -21,6 +22,7 @@ def test_carrega_todos_os_limites() -> None:
     budget = _novo_budget()
 
     assert budget.max_task_attempts == 3
+    assert budget.max_planning_attempts == 5
     assert budget.max_additional_planning_rounds == 2
     assert budget.max_tasks_per_session == 12
     assert budget.max_llm_calls_per_session == 60
@@ -38,6 +40,7 @@ def test_e_imutavel() -> None:
 
 _CAMPOS_POSITIVOS = (
     "max_task_attempts",
+    "max_planning_attempts",
     "max_additional_planning_rounds",
     "max_tasks_per_session",
     "max_llm_calls_per_session",

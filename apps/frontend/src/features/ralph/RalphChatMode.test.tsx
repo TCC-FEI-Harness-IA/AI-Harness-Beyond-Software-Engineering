@@ -28,6 +28,7 @@ function buildStep(overrides: Partial<ThinkingStep>): ThinkingStep {
 function buildRun(steps: ThinkingStep[], overrides: Partial<ThinkingRun> = {}): ThinkingRun {
   return {
     sessionId: 'sess_test',
+    flowVersion: 1,
     question: 'Quais são todos os números primos entre 0 e 20?',
     modelName: 'openai/gpt-4o-mini',
     status: RUN_STATUS.COMPLETED,

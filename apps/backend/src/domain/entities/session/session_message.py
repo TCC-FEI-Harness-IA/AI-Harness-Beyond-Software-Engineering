@@ -3,6 +3,7 @@ from datetime import datetime
 
 from src.domain.entities.llm.message import Message
 from src.domain.enums.message_source_enum import MessageSourceEnum
+from src.domain.enums.thinking_event_subtype_enum import ThinkingEventSubtypeEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 
 
@@ -27,6 +28,10 @@ class SessionMessage:
             vazia quando a mensagem não resulta de uma chamada ao modelo.
         invocation_id: Invocação a que a mensagem se refere, como a que produziu uma saída recusada e
             auditada; `None` quando não há vínculo ou em mensagens anteriores a este campo.
+        subtype: Subtipo do evento emitido junto com a mensagem, para que o histórico reproduza o fluxo ao
+            vivo sem adivinhar pelo conteúdo (por exemplo, distinguir um plano candidato da confirmação na
+            fila); `None` em registros sem evento, como a auditoria de saídas recusadas, e nas sessões
+            gravadas antes deste campo.
     """
 
     id: str
@@ -43,6 +48,7 @@ class SessionMessage:
     model_name: str | None
     prompt_input: tuple[Message, ...] = ()
     invocation_id: str | None = None
+    subtype: ThinkingEventSubtypeEnum | None = None
 
     @property
     def total_tokens(self) -> int:

@@ -4,6 +4,7 @@ _ESPERADOS = {
     "A1": "A1",
     "A2": "A2",
     "A3": "A3",
+    "A4": "A4",
     "B1": "B1",
     "B2": "B2",
     "B3": "B3",
@@ -22,7 +23,8 @@ def test_declara_exatamente_as_fases_do_paper() -> None:
 def test_valores_de_cada_membro() -> None:
     assert ThinkingPhaseEnum.A1_GENERAL_CRITERIA == "A1"
     assert ThinkingPhaseEnum.A2_TASK_DECOMPOSITION == "A2"
-    assert ThinkingPhaseEnum.A3_PLANNING_LEARNINGS == "A3"
+    assert ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION == "A3"
+    assert ThinkingPhaseEnum.A4_PLANNING_LEARNINGS == "A4"
     assert ThinkingPhaseEnum.B1_TASK_RESOLUTION == "B1"
     assert ThinkingPhaseEnum.B2_TASK_VERIFICATION == "B2"
     assert ThinkingPhaseEnum.B3_RESULT_STORAGE == "B3"
@@ -35,3 +37,11 @@ def test_valores_de_cada_membro() -> None:
 
 def test_e_uma_str_enum() -> None:
     assert isinstance(ThinkingPhaseEnum.A1_GENERAL_CRITERIA, str)
+
+
+def test_cada_valor_persistido_aponta_um_unico_membro() -> None:
+    # Sem aliases: no fluxo novo, "A3" é só a validação da decomposição; a extração é "A4". O significado
+    # histórico de "A3" (extração, fluxo versão 1) é dado pela versão da sessão, não por um segundo membro.
+    assert len(ThinkingPhaseEnum.__members__) == len(ThinkingPhaseEnum)
+    assert ThinkingPhaseEnum("A3") is ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION
+    assert ThinkingPhaseEnum("A4") is ThinkingPhaseEnum.A4_PLANNING_LEARNINGS

@@ -118,6 +118,7 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
 - [Garantias do harness e encerramento sem conclusão](#garantias-do-harness-e-encerramento-sem-conclusão)
   - [Planejamento e cobertura do pedido — etapa 03](#planejamento-e-cobertura-do-pedido--etapa-03)
   - [Integração das cinco frentes — etapa 07](#integração-das-cinco-frentes--etapa-07)
+  - [Planejamento aprovado antes da execução — nova fase de validação 01](#planejamento-aprovado-antes-da-execução--nova-fase-de-validação-01)
 - [Contratos (DTOs)](#contratos-dtos)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Arquitetura em uma imagem](#arquitetura-em-uma-imagem)
@@ -327,9 +328,17 @@ resposta final.
     }
   ],
   "degradations": [],
-  "result_revisions": []
+  "result_revisions": [],
+  "flow_version": 2
 }
 ```
+
+**Versão do fluxo e subtipo das mensagens.** `flow_version` diz como ler as fases do histórico: `2` nas
+sessões Ralph novas (A3 = validação da decomposição, A4 = aprendizados do enunciado); sessões Ralph
+gravadas antes do campo são devolvidas com `1` (A3 = aprendizados do enunciado), sem que o arquivo
+persistido seja reescrito; a inferência direta tem `null`. Cada mensagem traz `subtype`, o subtipo do
+evento emitido com ela (`plan_candidate`, `plan_rejected`, `plan_approved`, `tasks`, `reset`, ...), ou
+`null` em registros sem evento (a pergunta, a auditoria de uma saída recusada) e em sessões antigas.
 
 **Revisões de resultados.** `result_revisions` lista, em ordem, as revisões aprovadas em B.2 e
 aplicadas em B.3: `revising_task_id`, `reason` (motivo planejado em C.2), `verdicts`
@@ -646,22 +655,23 @@ outro nome de classe. `reasoning_config` não faz parte do contrato: se enviado,
 
 ### `ReasoningEventDTO`
 
-Cada frame emitido por `WS /v1/message/reasoning`. **Exatamente estes 9 campos, sem extras.**
+Cada frame emitido por `WS /v1/message/reasoning`. **Exatamente estes 10 campos, sem extras.**
 
 | Campo | Tipo | Descrição |
 |---|---|---|
 | `type` | `string` | `thinking` \| `result` \| `degraded` \| `error`. `degraded` é legado: o fluxo atual não o emite. |
-| `subtype` | `string` | `setup`, `tasks`, `execute`, `reasoning`, `verify_pass`, `verify_fail`, `store`, `learn`, `reset`, `compile`, `replan`. `learn` é emitido em A.3 (aprendizados do enunciado, `task = setup`) e em B.4 (aprendizados de cada tarefa). |
-| `phase` | `string` | `A1`, `A2`, `A3`, `B1`, `B2`, `B3`, `B4`, `C1`, `C2`, `C3`. |
+| `subtype` | `string` | `setup`, `plan_candidate`, `plan_rejected`, `plan_approved`, `tasks`, `execute`, `reasoning`, `verify_pass`, `verify_fail`, `store`, `learn`, `reset`, `compile`, `replan`. `plan_candidate` (A.2) é um plano **ainda não executável**; `plan_rejected`/`plan_approved` (A.3) são os relatórios da validação da decomposição; `tasks` é emitido **uma única vez**, em A.3, quando o plano aprovado é confirmado na fila. `learn` é emitido em A.4 (aprendizados do enunciado, `task = setup`) e em B.4 (aprendizados de cada tarefa). |
+| `phase` | `string` | `A1`, `A2`, `A3`, `A4`, `B1`, `B2`, `B3`, `B4`, `C1`, `C2`, `C3`. No fluxo versão 2, `A3` é a validação da decomposição e `A4` a extração do enunciado. |
 | `task` | `string` | Id da tarefa (`T1`, `T2`, ...), ou `setup` / `synthesis` para etapas globais. |
 | `session_id` | `string` | Sessão em execução. |
 | `content` | `string` | Markdown pronto para renderização. |
 | `total_tokens` | `int` | Acumulado da sessão; **nunca decresce**. |
 | `context_window` | [`ContextWindowDTO`](#contextwindowdto) | Janela de contexto no momento do evento. |
 | `inference_time_ms` | `int` | Tempo da chamada ao modelo; `0` em eventos sem inferência. |
+| `flow_version` | `int` | Versão do fluxo Ralph da sessão (`2` nas sessões novas). Acompanha todo frame para que o cliente saiba o que `A3` significa antes de interpretar o evento. |
 
 Frames de erro fora do fluxo normal (payload inválido, ou o frame genérico que precede o
-fechamento `1011`) usam um formato reduzido, **fora** deste contrato de 9 campos:
+fechamento `1011`) usam um formato reduzido, **fora** deste contrato de 10 campos:
 
 ```json
 { "type": "error", "content": "<detalhe do erro>" }
@@ -679,8 +689,11 @@ persistida antes do evento `result`.
 
 | Situação | Comportamento |
 |---|---|
-| A.2 conclui o plano inicial | A.3 anota os pontos de atenção do enunciado (valores com unidades, alternativas, fórmulas, condições) numa janela própria; as anotações entram na memória de aprendizados antes de qualquer tarefa. Lista vazia é válida. |
-| Qualquer prompt de B.1, B.2, B.4, C.1, C.2 ou C.3 é montado | O template tem a área **Aprendizados Pontuais** (`## Key Learnings`), preenchida com todos os aprendizados acumulados até aquele momento (anotações de A.3 seguidas dos aprendizados de B.4), ou com o aviso de que ainda não há nenhum. Os aprendizados nunca entram nos resultados armazenados. |
+| A.2 gera um plano candidato | O candidato não entra na fila nem consome espaços de tarefa: A.3 o julga numa janela nova, com o pedido original, os critérios gerais de A.1 e só esse candidato, pela rubrica fixa do template. |
+| A.3 reprova e ainda há candidatos (`RALPH_MAX_PLANNING_ATTEMPTS`) | A.2 roda numa janela nova, com temperatura `1`, recebendo só o último candidato e o relatório dele (`<previous_candidate>` e `<validation_report>`); a A.3 seguinte volta à temperatura da sessão e não vê candidatos nem relatórios anteriores. |
+| A.3 reprova o último candidato permitido | A execução é interrompida (`failure.limit = planning_attempts`, fase `A3`), sem confirmar plano, sem A.4, tarefas ou síntese. |
+| A.3 aprova | O plano aprovado é confirmado na fila uma única vez (evento `tasks` em A.3) e só então A.4 anota os pontos de atenção do enunciado (valores com unidades, alternativas, fórmulas, condições) numa janela própria; as anotações entram na memória de aprendizados antes de qualquer tarefa. Lista vazia é válida. |
+| Qualquer prompt de B.1, B.2, B.4, C.1, C.2 ou C.3 é montado | O template tem a área **Aprendizados Pontuais** (`## Key Learnings`), preenchida com todos os aprendizados acumulados até aquele momento (anotações de A.4 seguidas dos aprendizados de B.4), ou com o aviso de que ainda não há nenhum. Os aprendizados nunca entram nos resultados armazenados. |
 | Qualquer fase é executada | A execução abre uma janela nova, da própria fase: tarefa diferente e mudança de fase (inclusive B.1 → B.2, B.2 → B.1, B.1 → B.4 e C.1 → C.2/C.3) nunca herdam a conversa anterior. Só as correções de saída da própria execução reaproveitam a janela. Só os aprendizados atravessam fases como memória; as demais entradas chegam explicitamente pelo template. |
 | B.2 aprova | B.3 armazena só essa resposta; B.4 roda numa janela nova e recebe o histórico completo da tarefa (tarefa, tentativas, saídas descartadas e vereditos) como material delimitado `<task_history>`. |
 | B.2 reprova e há tentativas | B.1 repete numa janela nova, com temperatura `1`; as tentativas reprovadas e os vereditos chegam pela variável `previous_attempts` do Template B.1, delimitados por `<previous_attempts>`, seguidos da instrução de tratar o problema concreto apontado e manter as conclusões não refutadas. A verificação dessa tentativa e as fases seguintes voltam à temperatura do usuário. |
@@ -915,6 +928,38 @@ do avaliador. Os cenários são roteirizados: provam fiação, estado e contrato
 seção **Melhorias do thinking — 07** de [`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md)
 e em [`RELATORIO_VALIDACAO_MELHORIAS_THINKING.md`](../../RELATORIO_VALIDACAO_MELHORIAS_THINKING.md).
 
+### Planejamento aprovado antes da execução — nova fase de validação 01
+
+Fluxo versão 2 (`flow_version = 2`):
+
+```text
+A.1 → A.2 (plano candidato) → A.3 (Task Decomposition Validator)
+        ↑ reprovado: último candidato + relatório ┘   └ aprovado → confirma na fila → A.4 → B/C
+```
+
+| Peça | Implementação |
+|---|---|
+| Fases | `TaskDecompositionPhase` (A.2), `DecompositionValidationPhase` (A.3, `a3_decomposition_validation.md`), `PlanningLearningsPhase` (A.4, `a4_planning_learnings.md`, mesma extração da antiga A.3). `ThinkingPhaseEnum` tem `A3_DECOMPOSITION_VALIDATION = "A3"` e `A4_PLANNING_LEARNINGS = "A4"`, sem aliases. |
+| A.2 | Template simplificado: regras de geração (dados literais, métodos sem aplicabilidade presumida, resultados em aberto, objetivo único, critérios complementares com explicação, dependências, parcimônia, cobertura e teto). A autoavaliação extensa saiu para A.3. Recebe `plan_revision`: `None: this is the first candidate plan.` ou o último candidato e o relatório. |
+| A.3 | Recebe `user_question`, `general_acceptance_criteria` e `candidate_plan` (só o candidato atual, com descrições, critérios e dependências). Rubrica fixa: fidelidade, neutralidade, aplicabilidade, critérios, coerência, cobertura e necessidade. Não resolve, não escolhe resposta, não devolve plano substituto. |
+| Contrato de A.3 | `{"approved": bool, "issues": [{"task_id", "criterion_id", "problem", "adjustment"}]}`, com `PlanValidationReport`/`PlanValidationIssue`. Booleano real; aprovação com `issues: []`; reprovação com ao menos um problema; `task_id`/`criterion_id` obrigatórios no objeto e anuláveis; critério precisa pertencer à tarefa no candidato julgado (`ValidationContext.candidate_plan`). Reprovação coerente é saída aceita; contrato inválido segue a recuperação estrutural existente. |
+| Fila | Só o plano aprovado entra em `TaskQueue` e em `register_task_created`; candidatos recusados não consomem espaços nem reservam IDs. O teto de tarefas continua valendo para cada candidato. |
+| Limite | `RALPH_MAX_PLANNING_ATTEMPTS` (padrão `5`), `CostBudget.max_planning_attempts`, `ICostGuard.register_planning_attempt`/`can_retry_planning`, `BudgetLimitEnum.PLANNING_ATTEMPTS`. Correções de JSON/contrato não contam como candidato; independe de `RALPH_MAX_TASK_ATTEMPTS` (5), `RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS` (2) e `RALPH_JSON_PARSE_MAX_RETRIES` (2). Os outros tetos continuam podendo interromper antes. |
+| Auditoria | Cada candidato (A2, `plan_candidate`) e cada relatório (A3, `plan_rejected`/`plan_approved`) é uma mensagem própria, com janela, `prompt_input`, invocação e consumo; a confirmação é uma etapa programática (A3, `tasks`). O campo `subtype` das mensagens guarda o subtipo do evento; a auditoria de saídas recusadas fica sem subtipo. |
+| Versão | `Session.flow_version` (`RalphFlowVersionEnum`): `2` nas sessões Ralph novas; sessões Ralph gravadas sem o campo são lidas como `1` (A3 = extração); inferência direta fica `null`. A leitura não reescreve arquivos; `GET /v1/sessions/{id}`, exportações e importação preservam versão, fases, subtipos e conteúdo. |
+| C.2 | Não usa A.3: os lotes de planejamento adicional seguem o fluxo anterior. |
+
+Testes: [`test_ralph_planning_validation_integration.py`](tests/application/usecases/test_ralph_planning_validation_integration.py)
+(protocolo completo, revisões, fila isolada, cinco tentativas, temperaturas, recuperação, A.4, orçamento,
+provedor), [`test_structured_response_parser_plan_validation.py`](tests/infra/adapters/test_structured_response_parser_plan_validation.py)
+(contrato), [`test_decomposition_validation_contracts.py`](tests/infra/providers/test_decomposition_validation_contracts.py)
+(template e matriz sintética [`decomposition_validation_v1.json`](tests/fixtures/decomposition_validation_v1.json)),
+[`test_session_document_mapper_flow_version.py`](tests/infra/mappers/test_session_document_mapper_flow_version.py) e
+[`test_flow_version_persistence_round_trip.py`](tests/infra/services/test_flow_version_persistence_round_trip.py)
+(persistência, consulta e pacotes). As saídas são roteirizadas: provam o protocolo, não que um modelo real
+identificará todo plano ruim. Detalhes em **Nova fase de validação — 01** de
+[`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
+
 ### Limite de tokens por sessão
 
 Todo limite de tokens vale para a **sessão**, nunca para uma rodada ou chamada isolada. Há dois:
@@ -974,7 +1019,8 @@ Ver `.env.example` para o arquivo completo.
 | `MONGODB_MODELS_COLLECTION` | `models` | Coleção do catálogo de modelos (`/v1/models`). |
 | `RALPH_SESSION_FLUSH_EVERY_MESSAGE` | `true` | Persiste a sessão após cada mensagem registrada. |
 | `RALPH_SESSION_ID_PREFIX` | `sess` | Prefixo do identificador de sessão. |
-| `RALPH_MAX_TASK_ATTEMPTS` | `3` | Máximo de tentativas por tarefa. Esgotado sem aprovação, a execução é interrompida: nenhum resultado reprovado é armazenado ou sintetizado. |
+| `RALPH_MAX_TASK_ATTEMPTS` | `5` | Máximo de tentativas por tarefa, incluindo a inicial (até cinco pares B.1/B.2). Esgotado sem aprovação, a execução é interrompida: nenhum resultado reprovado é armazenado ou sintetizado. |
+| `RALPH_MAX_PLANNING_ATTEMPTS` | `5` | Planos candidatos do planejamento inicial (A.2 avaliado por A.3), incluindo o primeiro: até quatro revisões. Correções de saída inválida não contam. Esgotado sem aprovação, a sessão termina (`planning_attempts`) sem confirmar plano, sem A.4, tarefas ou síntese. Independe das tentativas por tarefa e das rodadas de C.2. |
 | `RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS` | `2` | Máximo de rodadas de planejamento adicional por sessão. Esgotado com a verificação global ainda reprovada, a execução é interrompida (sem síntese). |
 | `RALPH_MAX_TASKS_PER_SESSION` | `12` | Total máximo de tarefas por sessão. Vale para o plano inicial e para cada planejamento adicional: um lote acima do espaço restante é devolvido ao planejador para correção, nunca truncado. |
 | `RALPH_MAX_LLM_CALLS_PER_SESSION` | `60` | Teto absoluto de chamadas ao modelo. Toda chamada enviada conta, inclusive correções de JSON e completions vazias repetidas. |

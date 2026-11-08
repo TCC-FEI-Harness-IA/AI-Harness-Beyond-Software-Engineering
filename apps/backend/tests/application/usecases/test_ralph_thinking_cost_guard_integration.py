@@ -26,6 +26,7 @@ from src.infra.services.openrouter_service import OpenRouterService
 from tests.doubles.fake_model_catalog import FakeModelCatalog
 from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.ralph_scenario import RalphScenario
+from tests.doubles.ralph_scripts import plano_aprovado
 from tests.doubles.ralph_scripts import (
     anotacoes_do_enunciado,
     criterios,
@@ -47,6 +48,7 @@ _TOKENS_POR_CHAMADA = 15
 def _orcamento(**overrides: int) -> CostBudget:
     limites = {
         "max_task_attempts": 3,
+        "max_planning_attempts": 5,
         "max_additional_planning_rounds": 2,
         "max_tasks_per_session": 12,
         "max_llm_calls_per_session": 60,
@@ -58,11 +60,11 @@ def _orcamento(**overrides: int) -> CostBudget:
 
 
 def _roteiro_minimo() -> list[str]:
-    """Oito respostas válidas: A.1, A.2, A.3, B.1, B.2, B.4, C.1 e C.3 com uma única tarefa."""
+    """Nove respostas válidas: A.1, A.2, A.3 (validação), A.4, B.1, B.2, B.4, C.1 e C.3 com uma única tarefa."""
     return [
         criterios(),
         tarefas("T1"),
-        anotacoes_do_enunciado(),
+        plano_aprovado(), anotacoes_do_enunciado(),
         *tarefa_aprovada("T1", "2 e primo", "fato"),
         global_aprovado(),
         resposta_final(),
@@ -81,22 +83,22 @@ async def _executar(cenario: RalphScenario, excecao: type[Exception]) -> list:
 
 
 async def test_orcamento_de_trabalho_esgotado_antes_da_proxima_tarefa_encerra_sem_nova_inferencia() -> None:
-    """Orçamento 115, reserva 25 e 90 tokens consumidos: a tarefa seguinte não começa."""
+    """Orçamento 130, reserva 25 e 105 tokens consumidos (sete chamadas, com A.3): a tarefa seguinte não começa."""
     cenario = RalphScenario(
         responses=[
             criterios(),
             tarefas("T1", "T2"),
-            anotacoes_do_enunciado(),
+            plano_aprovado(), anotacoes_do_enunciado(),
             *tarefa_aprovada("T1", "2 e primo", "fato"),
         ],
-        budget=_orcamento(session_token_budget=115, final_answer_token_reserve=25),
+        budget=_orcamento(session_token_budget=130, final_answer_token_reserve=25),
         max_tokens=5,
     )
 
     eventos = await _executar(cenario, ExecutionInterruptedError)
 
-    assert cenario.llm.call_count == 6
-    assert cenario.session.totals.total_tokens == 6 * _TOKENS_POR_CHAMADA == 90
+    assert cenario.llm.call_count == 7
+    assert cenario.session.totals.total_tokens == 7 * _TOKENS_POR_CHAMADA == 105
     assert eventos[-1].type is _TIPO.ERROR
     assert [e.task for e in eventos if e.subtype is _SUB.RESET] == ["T1"]
     falha = cenario.session.failure
@@ -114,10 +116,10 @@ async def test_a_reserva_continua_intacta_mas_nao_forca_a_sintese() -> None:
         responses=[
             criterios(),
             tarefas("T1", "T2"),
-            anotacoes_do_enunciado(),
+            plano_aprovado(), anotacoes_do_enunciado(),
             *tarefa_aprovada("T1", "2 e primo", "fato"),
         ],
-        budget=_orcamento(session_token_budget=115, final_answer_token_reserve=25),
+        budget=_orcamento(session_token_budget=130, final_answer_token_reserve=25),
         max_tokens=5,
     )
 
@@ -128,17 +130,17 @@ async def test_a_reserva_continua_intacta_mas_nao_forca_a_sintese() -> None:
 
 
 async def test_cada_chamada_pede_so_o_saldo_da_sessao_ate_esgota_lo() -> None:
-    """Orçamento 100, reserva 25 e 15 tokens por chamada: cinco chamadas cabem; a sexta é negada."""
+    """Orçamento 115, reserva 25 e 15 tokens por chamada: seis chamadas cabem; a sétima é negada."""
     cenario = RalphScenario(
         responses=_roteiro_minimo(),
-        budget=_orcamento(session_token_budget=100, final_answer_token_reserve=25),
-        max_tokens=100,
+        budget=_orcamento(session_token_budget=115, final_answer_token_reserve=25),
+        max_tokens=115,
     )
 
     await _executar(cenario, BudgetExceededError)
 
-    assert [chamada["max_tokens"] for chamada in cenario.llm.calls] == [75, 60, 45, 30, 15]
-    assert cenario.session.totals.total_llm_calls == 5
+    assert [chamada["max_tokens"] for chamada in cenario.llm.calls] == [90, 75, 60, 45, 30, 15]
+    assert cenario.session.totals.total_llm_calls == 6
     assert cenario.session.failure.phase is _FASE.B4_LEARNINGS_EXTRACTION
     assert cenario.session.failure.limit is BudgetLimitEnum.SESSION_TOKEN_BUDGET
 
@@ -158,12 +160,13 @@ async def test_o_limite_pedido_menor_que_o_saldo_e_o_teto_de_cada_chamada() -> N
     ("teto", "fase", "tarefa"),
     [
         (1, _FASE.A2_TASK_DECOMPOSITION, None),
-        (2, _FASE.A3_PLANNING_LEARNINGS, None),
-        (3, _FASE.B1_TASK_RESOLUTION, None),
-        (4, _FASE.B2_TASK_VERIFICATION, "T1"),
-        (5, _FASE.B4_LEARNINGS_EXTRACTION, "T1"),
-        (6, _FASE.C1_GLOBAL_VERIFICATION, None),
-        (7, _FASE.C3_FINAL_ANSWER, None),
+        (2, _FASE.A3_DECOMPOSITION_VALIDATION, None),
+        (3, _FASE.A4_PLANNING_LEARNINGS, None),
+        (4, _FASE.B1_TASK_RESOLUTION, None),
+        (5, _FASE.B2_TASK_VERIFICATION, "T1"),
+        (6, _FASE.B4_LEARNINGS_EXTRACTION, "T1"),
+        (7, _FASE.C1_GLOBAL_VERIFICATION, None),
+        (8, _FASE.C3_FINAL_ANSWER, None),
     ],
 )
 async def test_teto_de_chamadas_interrompe_na_fase_que_pediria_a_chamada_excedente(
@@ -190,7 +193,7 @@ async def test_teto_de_chamadas_interrompe_na_fase_que_pediria_a_chamada_exceden
 
 async def test_interrupcao_em_c3_depois_da_aprovacao_global_nao_gera_sucesso() -> None:
     cenario = RalphScenario(
-        responses=roteiro_feliz(), budget=_orcamento(max_llm_calls_per_session=13), max_tokens=5
+        responses=roteiro_feliz(), budget=_orcamento(max_llm_calls_per_session=14), max_tokens=5
     )
 
     eventos = await _executar(cenario, BudgetExceededError)
@@ -227,7 +230,7 @@ async def test_rodadas_de_planejamento_esgotadas_encerram_sem_sintese_e_registra
         responses=[
             criterios(),
             tarefas("T1"),
-            anotacoes_do_enunciado(),
+            plano_aprovado(), anotacoes_do_enunciado(),
             *tarefa_aprovada("T1", "2 e primo", "fato"),
             global_reprovado("AC2"),
             tarefas("T4"),
@@ -255,7 +258,7 @@ async def test_sem_slots_depois_do_plano_inicial_c2_nem_e_chamada_e_a_causa_e_o_
             criterios(),
             tarefas("T1", "T2"),
             tarefas("T1"),
-            anotacoes_do_enunciado(),
+            plano_aprovado(), anotacoes_do_enunciado(),
             *tarefa_aprovada("T1", "2 e primo", "fato"),
             global_reprovado("AC2"),
         ],
@@ -267,7 +270,7 @@ async def test_sem_slots_depois_do_plano_inicial_c2_nem_e_chamada_e_a_causa_e_o_
 
     assert not cenario.template_provider.variables_of(_FASE.C2_ADDITIONAL_PLANNING)
     assert cenario.session.failure.limit is BudgetLimitEnum.TASKS_PER_SESSION
-    assert cenario.llm.call_count == 8  # A.1, A.2 recusada, A.2 corrigida, A.3, B.1, B.2, B.4, C.1
+    assert cenario.llm.call_count == 9  # A.1, A.2 recusada, A.2 corrigida, A.3, A.4, B.1, B.2, B.4, C.1
     assert cenario.task_queue.total_created() == 1
 
 
@@ -277,7 +280,7 @@ async def test_plano_inicial_acima_do_teto_conta_a_chamada_de_correcao_do_planej
             criterios(),
             tarefas("T1", "T2"),
             tarefas("T1"),
-            anotacoes_do_enunciado(),
+            plano_aprovado(), anotacoes_do_enunciado(),
             *tarefa_aprovada("T1", "x", "f"),
             global_aprovado(),
             resposta_final(),
@@ -288,7 +291,7 @@ async def test_plano_inicial_acima_do_teto_conta_a_chamada_de_correcao_do_planej
 
     await cenario.run()
 
-    assert cenario.session.totals.total_llm_calls == 9
+    assert cenario.session.totals.total_llm_calls == 10
     assert cenario.cost_guard.remaining_task_slots() == 0
     assert cenario.session.status is SessionStatusEnum.COMPLETED
 
@@ -323,7 +326,7 @@ async def test_tentativas_esgotadas_com_o_guardiao_real_nao_armazenam_nem_sintet
         responses=[
             criterios(),
             tarefas("T1"),
-            anotacoes_do_enunciado(),
+            plano_aprovado(), anotacoes_do_enunciado(),
             resolucao("ruim"),
             reprovado,
             resolucao("RESULTADO_REPROVADO"),
@@ -337,7 +340,7 @@ async def test_tentativas_esgotadas_com_o_guardiao_real_nao_armazenam_nem_sintet
 
     assert cenario.session.failure.limit is BudgetLimitEnum.TASK_ATTEMPTS
     assert not [e for e in eventos if e.subtype is _SUB.STORE]
-    assert cenario.llm.call_count == 7
+    assert cenario.llm.call_count == 8
     assert not cenario.template_provider.variables_of(_FASE.C1_GLOBAL_VERIFICATION)
 
 
@@ -359,8 +362,8 @@ async def test_sessao_e_guardiao_concordam_sobre_chamadas_e_tokens_consumidos() 
         - cenario.cost_guard.budget.final_answer_token_reserve
         - cenario.cost_guard.remaining_tokens()
     )
-    assert cenario.session.totals.total_tokens == consumidos_pelo_guardiao == 15 * _TOKENS_POR_CHAMADA
-    assert cenario.session.totals.total_llm_calls == 15
+    assert cenario.session.totals.total_tokens == consumidos_pelo_guardiao == 16 * _TOKENS_POR_CHAMADA
+    assert cenario.session.totals.total_llm_calls == 16
 
 
 # ── HTTP simulado: completions vazias ────────────────────────────────────────
@@ -401,18 +404,18 @@ def _respostas_http_validas() -> list[dict]:
     return [_corpo(texto) for texto in _roteiro_minimo()]
 
 
-async def test_completion_vazia_via_http_registra_nove_chamadas_e_o_consumo_que_o_provedor_informou() -> None:
+async def test_completion_vazia_via_http_registra_dez_chamadas_e_o_consumo_que_o_provedor_informou() -> None:
     vazia = _corpo(None, prompt_tokens=100, completion_tokens=40, finish_reason="length")
     enviadas: list[httpx.Request] = []
     cenario = _cenario_http([vazia, *_respostas_http_validas()], enviadas, _orcamento())
 
     eventos = await cenario.run()
 
-    assert len(enviadas) == 9
+    assert len(enviadas) == 10
     assert eventos[-1].type is _TIPO.RESULT
     assert cenario.session.status is SessionStatusEnum.COMPLETED
-    assert cenario.session.totals.total_llm_calls == 9
-    assert cenario.session.totals.total_tokens == 140 + 8 * _TOKENS_POR_CHAMADA == 260
+    assert cenario.session.totals.total_llm_calls == 10
+    assert cenario.session.totals.total_tokens == 140 + 9 * _TOKENS_POR_CHAMADA == 275
     assert cenario.session.invocations[0].outcome is InvocationOutcomeEnum.EMPTY_COMPLETION
     assert cenario.session.invocations[0].finish_reason == "length"
     consumidos_pelo_guardiao = (
@@ -420,23 +423,23 @@ async def test_completion_vazia_via_http_registra_nove_chamadas_e_o_consumo_que_
         - cenario.cost_guard.budget.final_answer_token_reserve
         - cenario.cost_guard.remaining_tokens()
     )
-    assert consumidos_pelo_guardiao == 260
+    assert consumidos_pelo_guardiao == 275
 
 
-async def test_completion_vazia_via_http_conta_para_o_teto_e_a_nona_chamada_nao_e_enviada() -> None:
+async def test_completion_vazia_via_http_conta_para_o_teto_e_a_decima_chamada_nao_e_enviada() -> None:
     vazia = _corpo(None, prompt_tokens=100, completion_tokens=40, finish_reason="length")
     enviadas: list[httpx.Request] = []
-    cenario = _cenario_http([vazia, *_respostas_http_validas()], enviadas, _orcamento(max_llm_calls_per_session=8))
+    cenario = _cenario_http([vazia, *_respostas_http_validas()], enviadas, _orcamento(max_llm_calls_per_session=9))
 
     eventos = await _executar(cenario, BudgetExceededError)
 
-    assert len(enviadas) == 8
+    assert len(enviadas) == 9
     assert eventos[-1].type is _TIPO.ERROR
     assert eventos[-1].phase is _FASE.C3_FINAL_ANSWER
     assert cenario.session.status is SessionStatusEnum.FAILED
     assert cenario.session.final_answer is None
-    assert cenario.session.totals.total_llm_calls == 8
-    assert cenario.session.totals.total_tokens == 140 + 7 * _TOKENS_POR_CHAMADA == 245
+    assert cenario.session.totals.total_llm_calls == 9
+    assert cenario.session.totals.total_tokens == 140 + 8 * _TOKENS_POR_CHAMADA == 260
 
 
 async def test_credencial_ausente_nao_envia_requisicao_nem_conta_chamada() -> None:
@@ -464,5 +467,5 @@ async def test_uso_parcial_via_http_preserva_a_saida_como_desconhecida() -> None
     assert all(
         (invocacao.tokens_input, invocacao.tokens_output) == (10, None) for invocacao in cenario.session.invocations
     )
-    assert cenario.session.totals.tokens_input == 80
+    assert cenario.session.totals.tokens_input == 90
     assert cenario.session.totals.tokens_output == 0

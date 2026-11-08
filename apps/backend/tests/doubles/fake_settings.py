@@ -38,6 +38,7 @@ _DEFAULTS: dict[str, Any] = {
     "ralph_session_flush_every_message": True,
     "ralph_session_id_prefix": "sess",
     "ralph_max_task_attempts": 3,
+    "ralph_max_planning_attempts": 5,
     "ralph_max_additional_planning_rounds": 2,
     "ralph_max_tasks_per_session": 12,
     "ralph_max_llm_calls_per_session": 60,
@@ -194,6 +195,10 @@ class FakeSettings(ISettings):
     @property
     def ralph_max_task_attempts(self) -> int:
         return self.values["ralph_max_task_attempts"]
+
+    @property
+    def ralph_max_planning_attempts(self) -> int:
+        return self.values["ralph_max_planning_attempts"]
 
     @property
     def ralph_max_additional_planning_rounds(self) -> int:

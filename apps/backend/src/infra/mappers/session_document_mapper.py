@@ -27,9 +27,11 @@ from src.domain.enums.output_problem_code_enum import OutputProblemCodeEnum
 from src.domain.enums.output_syntax_status_enum import OutputSyntaxStatusEnum
 from src.domain.enums.recovery_result_enum import RecoveryResultEnum
 from src.domain.enums.recovery_strategy_enum import RecoveryStrategyEnum
+from src.domain.enums.ralph_flow_version_enum import RalphFlowVersionEnum
 from src.domain.enums.revision_verdict_enum import RevisionVerdictEnum
 from src.domain.enums.session_failure_reason_enum import SessionFailureReasonEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
+from src.domain.enums.thinking_event_subtype_enum import ThinkingEventSubtypeEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.interfaces.session_document_mapper_interface import ISessionDocumentMapper
 
@@ -65,6 +67,9 @@ class SessionDocumentMapper(ISessionDocumentMapper):
     `content_accepted` é gravado só para leitura humana: na leitura, ele é derivado do diagnóstico.
     Sessões gravadas antes da auditoria de revisões voltam sem revisões — nenhuma revisão é presumida.
     `superseded_task_ids` e `confirmed_task_ids` são gravados só para leitura: derivam dos vereditos.
+    Sessões Ralph gravadas antes de `flow_version` voltam como versão 1 (em que `A3` é a extração dos
+    aprendizados do enunciado), sem que o documento lido seja alterado; a inferência direta não tem versão.
+    Mensagens sem `subtype` voltam sem subtipo — ele nunca é adivinhado na leitura.
     """
 
     def to_document(self, session: Session) -> dict[str, Any]:
@@ -82,6 +87,7 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             "benchmark_details": asdict(session.benchmark_details),
             "user_question": session.user_question,
             "flow": session.flow.value,
+            "flow_version": int(session.flow_version) if session.flow_version is not None else None,
             "model_name": session.model_name,
             "max_tokens": session.max_tokens,
             "temperature": session.temperature,
@@ -157,6 +163,7 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             provider=self.__optional_provider(document=document),
             failure=self.__failure_from_optional_document(document=document.get("failure")),
         )
+        session.flow_version = self.__flow_version_from_document(document=document, flow=session.flow)
         session.totals = self.__totals_from_document(
             document=self.__required(document=document, key="totals", container=_SESSION_CONTAINER)
         )
@@ -209,6 +216,7 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             "model_name": message.model_name,
             "prompt_input": [self.__prompt_message_to_document(message=item) for item in message.prompt_input],
             "invocation_id": message.invocation_id,
+            "subtype": message.subtype.value if message.subtype is not None else None,
         }
 
     def __prompt_message_to_document(self, message: Message) -> dict[str, Any]:
@@ -350,6 +358,29 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             ),
             justification=self.__required(document=document, key="justification", container=_VERDICT_CONTAINER),
         )
+
+    def __flow_version_from_document(
+        self, document: dict[str, Any], flow: ThinkingPhaseEnum
+    ) -> RalphFlowVersionEnum | None:
+        """Reconstrói a versão do fluxo, sem reinterpretar documentos antigos como versão nova.
+
+        Uma sessão Ralph gravada antes do campo pertence à versão 1, em que `A3` é a extração dos
+        aprendizados do enunciado. A inferência direta não tem versão de fluxo Ralph. Um valor presente
+        é lido exatamente como foi gravado.
+
+        Raises:
+            ValueError: Quando o valor presente não é um inteiro de uma versão conhecida.
+        """
+        if "flow_version" not in document:
+            return None if flow is ThinkingPhaseEnum.DIRECT_INFERENCE else RalphFlowVersionEnum.legacy()
+        raw_value = document["flow_version"]
+        if raw_value is None:
+            return None
+        if type(raw_value) is not int or raw_value not in {version.value for version in RalphFlowVersionEnum}:
+            raise ValueError(
+                f"Campo 'flow_version' do documento de {_SESSION_CONTAINER} tem valor inválido: '{raw_value}'."
+            )
+        return RalphFlowVersionEnum(raw_value)
 
     def __optional_provider(self, document: dict[str, Any]) -> ModelProviderEnum | None:
         """Reconstrói o provedor da sessão, ausente em documentos anteriores ao registro."""
@@ -530,6 +561,13 @@ class SessionDocumentMapper(ISessionDocumentMapper):
                 self.__prompt_message_from_document(document=item) for item in document.get("prompt_input", [])
             ),
             invocation_id=document.get("invocation_id"),
+            subtype=(
+                self.__enum_from_document(
+                    document=document, key="subtype", container=_MESSAGE_CONTAINER, enum_type=ThinkingEventSubtypeEnum
+                )
+                if document.get("subtype") is not None
+                else None
+            ),
         )
 
     def __prompt_message_from_document(self, document: dict[str, Any]) -> Message:

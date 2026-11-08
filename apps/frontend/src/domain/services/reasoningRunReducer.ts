@@ -6,10 +6,11 @@
 import { BUDGET_LIMIT } from '../enums/budgetLimit'
 import { EVENT_SUBTYPE } from '../enums/eventSubtype'
 import { EVENT_TYPE } from '../enums/eventType'
+import { FLOW_VERSION, type FlowVersion } from '../enums/flowVersion'
 import { RUN_STATUS } from '../enums/runStatus'
 import { TASK_LABEL_SETUP, TASK_LABEL_SYNTHESIS } from '../enums/taskLabels'
 import { TASK_STATUS } from '../enums/taskStatus'
-import { THINKING_PHASE, type ThinkingPhase } from '../enums/thinkingPhase'
+import { getPhaseLabel, THINKING_PHASE, type ThinkingPhase } from '../enums/thinkingPhase'
 import type { ReasoningErrorFrame, ReasoningEventDTO } from '../types/reasoningEvent'
 import type { RunError } from '../types/runError'
 import type {
@@ -31,16 +32,26 @@ export type RunAction =
   /** Frame isolado que não pôde ser lido — não fatal (FASE 08, seção 4): o stream continua. */
   | { kind: 'warning'; message: string }
 
-const PHASE_NODE_ORDER: PhaseNodeId[] = ['A1', 'A2', 'A3', 'B', 'C1', 'C2', 'C3']
+// A trilha depende da versão do fluxo: na versão 1, A.3 era a extração dos aprendizados do enunciado e não
+// havia A.4; na versão 2, A.3 valida a decomposição e A.4 extrai os aprendizados (nova fase de validação).
+const PHASE_NODE_ORDER: Record<FlowVersion, PhaseNodeId[]> = {
+  [FLOW_VERSION.LEGACY]: ['A1', 'A2', 'A3', 'B', 'C1', 'C2', 'C3'],
+  [FLOW_VERSION.VALIDATED_PLANNING]: ['A1', 'A2', 'A3', 'A4', 'B', 'C1', 'C2', 'C3'],
+}
 
-const PHASE_NODE_LABEL: Record<PhaseNodeId, string> = {
-  A1: 'Critérios de aceite gerais',
-  A2: 'Quebra em tarefas',
-  A3: 'Aprendizados do enunciado',
-  B: 'Execução em loop',
-  C1: 'Verificação global',
-  C2: 'Planejamento adicional',
-  C3: 'Resposta final',
+const B_NODE_LABEL = 'Execução em loop'
+
+function nodeLabel(id: PhaseNodeId, flowVersion: FlowVersion): string {
+  return id === 'B' ? B_NODE_LABEL : getPhaseLabel(id, flowVersion)
+}
+
+function emptyPhases(flowVersion: FlowVersion): PhaseProgress[] {
+  return PHASE_NODE_ORDER[flowVersion].map((id) => ({
+    id,
+    label: nodeLabel(id, flowVersion),
+    status: 'pending',
+    stepCount: 0,
+  }))
 }
 
 function nodeForPhase(phase: ThinkingPhase): PhaseNodeId | null {
@@ -51,6 +62,8 @@ function nodeForPhase(phase: ThinkingPhase): PhaseNodeId | null {
       return 'A2'
     case THINKING_PHASE.A3:
       return 'A3'
+    case THINKING_PHASE.A4:
+      return 'A4'
     case THINKING_PHASE.B1:
     case THINKING_PHASE.B2:
     case THINKING_PHASE.B3:
@@ -62,7 +75,7 @@ function nodeForPhase(phase: ThinkingPhase): PhaseNodeId | null {
       return 'C2'
     case THINKING_PHASE.C3:
       return 'C3'
-    // Defensivo: `ThinkingPhase` já cobre os 10 valores acima na fronteira (parsers), então este
+    // Defensivo: `ThinkingPhase` já cobre os 11 valores acima na fronteira (parsers), então este
     // ramo nunca é alcançado com dados validados — existe só para a função ser total.
     /* v8 ignore next 2 */
     default:
@@ -70,21 +83,24 @@ function nodeForPhase(phase: ThinkingPhase): PhaseNodeId | null {
   }
 }
 
-/** `ThinkingRun` vazio — estado inicial do hook e o que `reset()` devolve (FASE 05, seção 3). */
-export function createEmptyRun(question: string, modelName: string): ThinkingRun {
+/**
+ * `ThinkingRun` vazio — estado inicial do hook e o que `reset()` devolve (FASE 05, seção 3). Uma
+ * execução ao vivo começa na versão atual; o primeiro evento confirma a versão que o backend informou.
+ */
+export function createEmptyRun(
+  question: string,
+  modelName: string,
+  flowVersion: FlowVersion = FLOW_VERSION.VALIDATED_PLANNING,
+): ThinkingRun {
   return {
     sessionId: null,
+    flowVersion,
     question,
     modelName,
     status: RUN_STATUS.IDLE,
     steps: [],
     tasks: [],
-    phases: PHASE_NODE_ORDER.map((id) => ({
-      id,
-      label: PHASE_NODE_LABEL[id],
-      status: 'pending',
-      stepCount: 0,
-    })),
+    phases: emptyPhases(flowVersion),
     finalAnswer: null,
     totals: {
       totalTokens: 0,
@@ -344,7 +360,7 @@ function recalcAggregates(run: ThinkingRun): ThinkingRun {
 }
 
 function computeStepCounts(steps: ThinkingStep[]): Record<PhaseNodeId, number> {
-  const counts: Record<PhaseNodeId, number> = { A1: 0, A2: 0, A3: 0, B: 0, C1: 0, C2: 0, C3: 0 }
+  const counts: Record<PhaseNodeId, number> = { A1: 0, A2: 0, A3: 0, A4: 0, B: 0, C1: 0, C2: 0, C3: 0 }
   for (const step of steps) {
     const node = nodeForPhase(step.phase)
     if (node) counts[node] += 1
@@ -366,7 +382,8 @@ function recalcPhases(run: ThinkingRun): ThinkingRun {
   const hasC2 = counts.C2 > 0
   const hasLoopStarted = counts.B + counts.C1 + counts.C2 + counts.C3 > 0
 
-  const phases: PhaseProgress[] = PHASE_NODE_ORDER.map((id) => {
+  const legacy = run.flowVersion === FLOW_VERSION.LEGACY
+  const phases: PhaseProgress[] = PHASE_NODE_ORDER[run.flowVersion].map((id) => {
     const stepCount = counts[id]
     let status: PhaseProgress['status']
 
@@ -374,9 +391,10 @@ function recalcPhases(run: ThinkingRun): ThinkingRun {
       // Caminho feliz do paper: C2 existia no fluxo e não foi necessário — mostrado como
       // "pulado", nunca escondido (FASE 05, seção 4.3).
       status = 'skipped'
-    } else if (id === 'A3' && stepCount === 0 && hasLoopStarted) {
-      // Sessão anterior à etapa A.3: o loop já rodou sem ela. Aparece como "não necessária" em
-      // vez de ficar eternamente pendente. Em execuções atuais A.3 sempre precede o loop.
+    } else if (legacy && id === 'A3' && stepCount === 0 && hasLoopStarted) {
+      // Sessão versão 1 anterior à etapa de aprendizados do enunciado: o loop já rodou sem ela. Aparece
+      // como "não necessária" em vez de ficar eternamente pendente. Na versão 2, A.3 e A.4 sempre
+      // precedem o loop.
       status = 'skipped'
     } else if (stepCount === 0) {
       status = 'pending'
@@ -386,13 +404,21 @@ function recalcPhases(run: ThinkingRun): ThinkingRun {
       status = 'done'
     }
 
-    return { id, label: PHASE_NODE_LABEL[id], status, stepCount }
+    return { id, label: nodeLabel(id, run.flowVersion), status, stepCount }
   })
 
   return { ...run, phases }
 }
 
-function applyEvent(run: ThinkingRun, event: ReasoningEventDTO): ThinkingRun {
+// A versão do fluxo vem do frame e precede a interpretação das fases: o mesmo `A3` é validação na versão 2
+// e extração na versão 1. Ao mudar de versão, a trilha é refeita com os nós da versão informada.
+function withFlowVersion(run: ThinkingRun, flowVersion: FlowVersion): ThinkingRun {
+  if (run.flowVersion === flowVersion) return run
+  return { ...run, flowVersion, phases: emptyPhases(flowVersion) }
+}
+
+function applyEvent(current: ThinkingRun, event: ReasoningEventDTO): ThinkingRun {
+  const run = withFlowVersion(current, event.flow_version)
   const order = run.steps.length
   const step = toStep(event, order)
   const previousStep = run.steps[run.steps.length - 1]
@@ -419,6 +445,7 @@ function applyEvent(run: ThinkingRun, event: ReasoningEventDTO): ThinkingRun {
 
   switch (event.subtype) {
     case EVENT_SUBTYPE.TASKS:
+      // Única entrada do plano inicial nas tarefas: na versão 2, a confirmação depois da aprovação de A.3.
       next = { ...next, tasks: [...next.tasks, ...tasksFromMarkdown(event.content, 'A2')] }
       break
     case EVENT_SUBTYPE.REPLAN:
@@ -451,8 +478,9 @@ function applyEvent(run: ThinkingRun, event: ReasoningEventDTO): ThinkingRun {
       break
     case EVENT_SUBTYPE.SETUP:
     default:
-      // `setup` e qualquer subtype não mapeado (a FASE 02 já normaliza para `reasoning`
-      // na fronteira): nada além do passo, que já foi anexado acima.
+      // `setup`, os passos do planejamento validado (`plan_candidate`, `plan_approved`, `plan_rejected`
+      // — um candidato nunca vira tarefa nem conta no progresso) e qualquer subtype não mapeado (a
+      // FASE 02 já normaliza para `reasoning` na fronteira): nada além do passo, já anexado acima.
       break
   }
 

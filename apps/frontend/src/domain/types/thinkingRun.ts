@@ -4,6 +4,7 @@
 
 import type { EventSubtype } from '../enums/eventSubtype'
 import type { EventType } from '../enums/eventType'
+import type { FlowVersion } from '../enums/flowVersion'
 import type { RunStatus } from '../enums/runStatus'
 import type { TaskStatus } from '../enums/taskStatus'
 import type { ThinkingPhase } from '../enums/thinkingPhase'
@@ -54,8 +55,9 @@ export interface TaskTimeline {
   inferenceTimeMs: number
 }
 
-// Nó da trilha macro A → B → C. 'B' agrega B1–B4 (README, seção 6.3).
-export type PhaseNodeId = 'A1' | 'A2' | 'A3' | 'B' | 'C1' | 'C2' | 'C3'
+// Nó da trilha macro A → B → C. 'B' agrega B1–B4 (README, seção 6.3). 'A4' só existe no fluxo versão 2;
+// nele 'A3' é a validação da decomposição, e na versão 1 é a extração dos aprendizados do enunciado.
+export type PhaseNodeId = 'A1' | 'A2' | 'A3' | 'A4' | 'B' | 'C1' | 'C2' | 'C3'
 
 export interface PhaseProgress {
   id: PhaseNodeId
@@ -90,6 +92,8 @@ export interface RunDegradation {
 
 export interface ThinkingRun {
   sessionId: string | null
+  /** Versão do fluxo Ralph: define os nós da trilha e o significado de A.3 (FLOW_VERSION). */
+  flowVersion: FlowVersion
   question: string
   modelName: string | null
   status: RunStatus
@@ -97,7 +101,7 @@ export interface ThinkingRun {
   steps: ThinkingStep[]
   /** Agregação por tarefa — o Modo Gráfico renderiza isto. */
   tasks: TaskTimeline[]
-  /** A1, A2, A3, B, C1, C2, C3 com estado — a trilha macro. */
+  /** A1, A2, A3, (A4), B, C1, C2, C3 com estado — a trilha macro, segundo a versão do fluxo. */
   phases: PhaseProgress[]
   finalAnswer: string | null
   totals: ThinkingRunTotals

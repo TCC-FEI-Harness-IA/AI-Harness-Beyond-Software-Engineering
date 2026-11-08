@@ -285,6 +285,7 @@ async def test_run_converte_cada_thinking_event_em_reasoning_event_dto() -> None
             total_tokens=642,
             context_window={"context_id": "3a7f2b1", "context_size": 182},
             inference_time_ms=812,
+            flow_version=2,
         )
     ]
 

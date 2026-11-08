@@ -14,6 +14,7 @@ from starlette.websockets import WebSocketDisconnect
 from src.infra.startups import default_message_startup as default_startup_module
 from src.infra.startups import ralph_thinking_startup as ralph_startup_module
 from src.main import create_app
+from tests.doubles.ralph_scripts import plano_aprovado
 from tests.doubles.fake_llm_service import FakeLLMService
 from tests.doubles.scripted_llm_completions import ScriptedLLMCompletions
 
@@ -92,6 +93,7 @@ def _roteiro_feliz() -> list[str]:
     return [
         _criterios(),
         _tarefas("T1"),
+        plano_aprovado(),
         _aprendizados("Alternativas: A) 2; B) 4; C) 6; D) Nenhuma das anteriores."),
         _resolucao("2 é primo, par e maior que 2 não existe; a resposta correta é D"),
         _aprovado(),
@@ -202,7 +204,7 @@ def test_harness_completo_grava_uma_invocacao_por_chamada_sem_falha_e_com_o_prov
     frames, _ = _run_harness(client)
 
     documento = json.loads((storage_path / f"{frames[-1]['session_id']}.json").read_text(encoding="utf-8"))
-    assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 8
+    assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 9
     assert {invocacao["outcome"] for invocacao in documento["invocations"]} == {"success"}
     assert sum(i["tokens_input"] + i["tokens_output"] for i in documento["invocations"]) == (
         documento["totals"]["total_tokens"]
@@ -220,7 +222,9 @@ def test_harness_interrompido_por_limite_encerra_com_um_unico_frame_de_erro_e_pe
     monkeypatch.setenv("RALPH_MAX_TASK_ATTEMPTS", "1")
     client = _build_client(
         monkeypatch=monkeypatch,
-        responses=[_criterios(), _tarefas("T1"), _aprendizados(), _resolucao("resolucao ruim"), _reprovado()],
+        responses=[
+            _criterios(), _tarefas("T1"), plano_aprovado(), _aprendizados(), _resolucao("resolucao ruim"), _reprovado()
+        ],
     )
 
     frames, close_code = _run_harness(client)
@@ -238,7 +242,7 @@ def test_harness_interrompido_por_limite_encerra_com_um_unico_frame_de_erro_e_pe
     assert documento["failure"]["reason"] == "resource_limit"
     assert documento["failure"]["limit"] == "task_attempts"
     assert documento["failure"]["task_id"] == "T1"
-    assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 5
+    assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 6
     assert client.get(f"/v1/sessions/{frames[-1]['session_id']}").json() == documento
 
 

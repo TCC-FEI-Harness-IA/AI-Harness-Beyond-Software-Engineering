@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import fixture from '@/test/fixtures/session-a1-completed-15msgs.json'
 import { EVENT_SUBTYPE, type EventSubtype } from '../enums/eventSubtype'
+import { FLOW_VERSION } from '../enums/flowVersion'
 import { EVENT_TYPE, type EventType } from '../enums/eventType'
 import { TASK_LABEL_SETUP, TASK_LABEL_SYNTHESIS } from '../enums/taskLabels'
 import { THINKING_PHASE, type ThinkingPhase } from '../enums/thinkingPhase'
@@ -47,6 +48,7 @@ function buildFixtureEvents(): ReasoningEventDTO[] {
       total_tokens: cumulative,
       context_window: { context_id: message.context_id ?? '', context_size: message.total_tokens },
       inference_time_ms: message.inference_time_ms,
+      flow_version: FLOW_VERSION.LEGACY,
     }
   })
 }
@@ -62,6 +64,7 @@ function buildEvent(overrides: Partial<ReasoningEventDTO> = {}): ReasoningEventD
     total_tokens: 100,
     context_window: { context_id: 'ctx_1', context_size: 100 },
     inference_time_ms: 500,
+    flow_version: FLOW_VERSION.LEGACY,
     ...overrides,
   }
 }

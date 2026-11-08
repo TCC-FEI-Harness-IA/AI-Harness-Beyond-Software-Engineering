@@ -4,6 +4,7 @@ from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.interfaces.cost_guard_interface import ICostGuard
 
 _DEFAULT_MAX_TASK_ATTEMPTS = 3
+_DEFAULT_MAX_PLANNING_ATTEMPTS = 5
 _DEFAULT_TASK_SLOTS = 12
 _DEFAULT_TOKENS_LEFT = 100_000
 _NO_ATTEMPTS = 0
@@ -23,6 +24,7 @@ class FakeCostGuard(ICostGuard):
         authorized: bool = True,
         denied_limit: BudgetLimitEnum = BudgetLimitEnum.SESSION_TOKEN_BUDGET,
         max_task_attempts: int = _DEFAULT_MAX_TASK_ATTEMPTS,
+        max_planning_attempts: int = _DEFAULT_MAX_PLANNING_ATTEMPTS,
         task_slots: int = _DEFAULT_TASK_SLOTS,
         tokens_left: int = _DEFAULT_TOKENS_LEFT,
         additional_planning_allowed: bool = True,
@@ -34,6 +36,7 @@ class FakeCostGuard(ICostGuard):
             authorized: Resposta padrão de `authorize` e `begin_call`.
             denied_limit: Limite apontado quando a autorização nega.
             max_task_attempts: Tentativas máximas por tarefa.
+            max_planning_attempts: Planos candidatos máximos do planejamento inicial.
             task_slots: Slots de tarefa ainda disponíveis.
             tokens_left: Tokens ainda disponíveis para o loop.
             additional_planning_allowed: Se `authorize_additional_planning` autoriza.
@@ -42,6 +45,8 @@ class FakeCostGuard(ICostGuard):
         self.authorized = authorized
         self.denied_limit = denied_limit
         self.max_task_attempts = max_task_attempts
+        self.max_planning_attempts = max_planning_attempts
+        self.planning_attempts = 0
         self.task_slots = task_slots
         self.tokens_left = tokens_left
         self.additional_planning_allowed = additional_planning_allowed
@@ -82,6 +87,15 @@ class FakeCostGuard(ICostGuard):
     def can_retry_task(self, task_id: str) -> bool:
         """Informa se a tarefa ainda pode ser retentada."""
         return self.attempts_by_task.get(task_id, _NO_ATTEMPTS) < self.max_task_attempts
+
+    def register_planning_attempt(self) -> int:
+        """Registra mais um plano candidato e devolve o número dele."""
+        self.planning_attempts += 1
+        return self.planning_attempts
+
+    def can_retry_planning(self) -> bool:
+        """Informa se o plano ainda pode ser revisado."""
+        return self.planning_attempts < self.max_planning_attempts
 
     def authorize_additional_planning(self, reserved_output_tokens: int = 0) -> BudgetVerdict:
         """Devolve o veredito programado para o planejamento adicional."""

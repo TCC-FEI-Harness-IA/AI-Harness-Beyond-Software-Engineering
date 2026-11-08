@@ -106,7 +106,8 @@ def test_aplica_os_defaults_documentados_quando_a_variavel_esta_ausente() -> Non
     assert settings.mongodb_sessions_collection == "sessions"
     assert settings.ralph_session_flush_every_message is True
     assert settings.ralph_session_id_prefix == "sess"
-    assert settings.ralph_max_task_attempts == 3
+    assert settings.ralph_max_task_attempts == 5
+    assert settings.ralph_max_planning_attempts == 5
     assert settings.ralph_max_additional_planning_rounds == 2
     assert settings.ralph_max_tasks_per_session == 12
     assert settings.ralph_max_llm_calls_per_session == 60
@@ -301,6 +302,7 @@ def test_log_level_e_normalizado_para_maiusculas(monkeypatch: pytest.MonkeyPatch
     [
         ("LLM_MAX_TOKENS", "llm_max_tokens"),
         ("RALPH_MAX_TASK_ATTEMPTS", "ralph_max_task_attempts"),
+        ("RALPH_MAX_PLANNING_ATTEMPTS", "ralph_max_planning_attempts"),
         ("RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS", "ralph_max_additional_planning_rounds"),
         ("RALPH_MAX_TASKS_PER_SESSION", "ralph_max_tasks_per_session"),
         ("RALPH_MAX_LLM_CALLS_PER_SESSION", "ralph_max_llm_calls_per_session"),
@@ -447,3 +449,14 @@ def test_logger_de_modulo_fora_de_src_usa_apenas_o_nome_do_arquivo(monkeypatch: 
     logger = Settings().logger(module_file="/fora/do/pacote/script.py")
 
     assert logger.name == "script.py"
+
+
+def test_limite_de_planejamento_e_independente_das_tentativas_por_tarefa(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RALPH_MAX_PLANNING_ATTEMPTS", "3")
+
+    settings = Settings()
+
+    assert settings.ralph_max_planning_attempts == 3
+    assert settings.ralph_max_task_attempts == 5
+    assert settings.ralph_max_additional_planning_rounds == 2
+    assert settings.ralph_json_parse_max_retries == 2

@@ -222,6 +222,12 @@ class ISettings(ABC):
 
     @property
     @abstractmethod
+    def ralph_max_planning_attempts(self) -> int:
+        """Planos candidatos máximos do planejamento inicial (A.2 avaliado por A.3), incluindo o primeiro."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def ralph_max_additional_planning_rounds(self) -> int:
         """Execuções máximas de C.2 por sessão."""
         raise NotImplementedError

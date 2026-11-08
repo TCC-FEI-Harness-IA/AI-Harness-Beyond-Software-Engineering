@@ -69,12 +69,32 @@ def global_reprovado(*pendentes: str) -> str:
     return relatorio(*[(criterion_id, criterion_id not in pendentes) for criterion_id in ("AC1", "AC2")])
 
 
+def plano_aprovado() -> str:
+    """Saída de A.3 (fluxo versão 2): o plano candidato foi aprovado, sem problemas pendentes."""
+    return json.dumps({"approved": True, "issues": []})
+
+
+def problema_do_plano(
+    task_id: str | None = "T1",
+    criterion_id: str | None = None,
+    problem: str = "O critério antecipa uma conclusão ainda não estabelecida.",
+    adjustment: str = "Pedir a investigação mantendo a conclusão em aberto.",
+) -> dict[str, object]:
+    """Um problema do relatório de A.3; referências nulas indicam o plano inteiro ou a tarefa inteira."""
+    return {"task_id": task_id, "criterion_id": criterion_id, "problem": problem, "adjustment": adjustment}
+
+
+def plano_reprovado(*problemas: dict[str, object]) -> str:
+    """Saída de A.3 reprovando o candidato; sem problemas informados, aponta a tarefa T1 inteira."""
+    return json.dumps({"approved": False, "issues": list(problemas) or [problema_do_plano()]})
+
+
 def aprendizados(*fatos: str) -> str:
     return json.dumps({"learnings": list(fatos)})
 
 
 def anotacoes_do_enunciado(*fatos: str) -> str:
-    """Saída de A.3: os pontos de atenção do enunciado. Sem fatos, o enunciado não tinha nada a anotar."""
+    """Saída de A.4 (A.3 no fluxo versão 1): os pontos de atenção do enunciado. Sem fatos, nada a anotar."""
     return aprendizados(*fatos)
 
 
@@ -90,6 +110,7 @@ def roteiro_feliz(*anotacoes: str) -> list[str]:
     return [
         criterios(),
         tarefas("T1", "T2", "T3"),
+        plano_aprovado(),
         anotacoes_do_enunciado(*anotacoes),
         *tarefa_aprovada("T1", "2 e primo", "Um numero primo so e divisivel por 1 e por ele mesmo."),
         *tarefa_aprovada("T2", "2, 4 e 6 sao pares", "Todo numero par e divisivel por 2."),

@@ -29,6 +29,10 @@ describe('identificação do benchmark', () => {
     expect(isBenchmarkDatasetId(null)).toBe(false)
     expect(benchmarkDatasetLabel('vestibular')).toBe('Vestibulares')
   })
+
+  it('um identificador fora da lista, vindo de dados antigos, é exibido como veio', () => {
+    expect(benchmarkDatasetLabel('desconhecido' as Parameters<typeof benchmarkDatasetLabel>[0])).toBe('desconhecido')
+  })
 })
 
 it.each([

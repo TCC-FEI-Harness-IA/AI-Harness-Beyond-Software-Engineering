@@ -57,6 +57,7 @@ function buildRun(overrides: Partial<ThinkingRun> = {}): ThinkingRun {
   const task = buildTask()
   return {
     sessionId: 'sess_test',
+    flowVersion: 1,
     question: 'Quais são todos os números primos entre 0 e 20?',
     modelName: 'openai/gpt-4o-mini',
     status: RUN_STATUS.RUNNING,

@@ -13,7 +13,9 @@ from src.domain.entities.thinking.result_revision import ResultRevision
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.ralph_flow_version_enum import RalphFlowVersionEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
+from src.domain.enums.thinking_event_subtype_enum import ThinkingEventSubtypeEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.interfaces.clock_interface import IClock
 from src.domain.interfaces.id_generator_interface import IIdGenerator
@@ -65,6 +67,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         max_tokens: int,
         temperature: float,
         provider: ModelProviderEnum | None = None,
+        flow_version: RalphFlowVersionEnum | None = None,
     ) -> Session:
         """Inicia e persiste uma nova sessão.
 
@@ -75,6 +78,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             max_tokens: Limite de tokens configurado para a sessão.
             temperature: Temperatura de geração configurada para a sessão.
             provider: Provedor efetivo das chamadas da sessão, quando conhecido.
+            flow_version: Versão do fluxo Ralph; `None` na inferência direta.
 
         Returns:
             Session: Sessão recém-criada.
@@ -98,6 +102,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             updated_at=created_at,
             provider=provider,
             benchmark_details=self.benchmark_details,
+            flow_version=flow_version,
         )
         self.__wall_time_start_ms = self.clock.monotonic_ms()
 
@@ -140,6 +145,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         task_id: str | None,
         context_id: str | None,
         prompt_input: tuple[Message, ...],
+        subtype: ThinkingEventSubtypeEnum | None = None,
     ) -> SessionMessage:
         """Registra o resultado de uma chamada ao modelo no histórico da sessão.
 
@@ -151,6 +157,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             task_id: Tarefa associada, quando houver.
             context_id: Janela de contexto associada, quando houver.
             prompt_input: Conversa enviada ao modelo na chamada que produziu `content`.
+            subtype: Subtipo do evento emitido com a mensagem, quando há.
 
         Returns:
             SessionMessage: Mensagem registrada.
@@ -170,6 +177,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             model_name=tokens.llm_model.model_name,
             prompt_input=prompt_input,
             invocation_id=None,
+            subtype=subtype,
         )
 
     async def record_result_revision(self, revision: ResultRevision) -> None:
@@ -193,6 +201,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         context_id: str | None,
         prompt_input: tuple[Message, ...] = (),
         invocation_id: str | None = None,
+        subtype: ThinkingEventSubtypeEnum | None = None,
     ) -> SessionMessage:
         """Registra uma etapa programática (sem chamada ao modelo) no histórico.
 
@@ -204,6 +213,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             prompt_input: Conversa enviada ao modelo, quando a etapa registra a saída de uma chamada
                 (como uma saída descartada pelo parser); vazia nas demais etapas.
             invocation_id: Invocação a que a etapa se refere, como a que produziu a saída auditada.
+            subtype: Subtipo do evento emitido com a etapa, quando há.
 
         Returns:
             SessionMessage: Mensagem registrada.
@@ -223,6 +233,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             model_name=None,
             prompt_input=prompt_input,
             invocation_id=invocation_id,
+            subtype=subtype,
         )
 
     async def start_invocation(
@@ -408,6 +419,7 @@ class SessionRecorderAdapter(ISessionRecorder):
         model_name: str | None,
         prompt_input: tuple[Message, ...],
         invocation_id: str | None,
+        subtype: ThinkingEventSubtypeEnum | None = None,
     ) -> SessionMessage:
         """Monta, anexa e persiste uma mensagem no histórico da sessão corrente.
 
@@ -437,6 +449,7 @@ class SessionRecorderAdapter(ISessionRecorder):
             model_name=model_name,
             prompt_input=tuple(prompt_input),
             invocation_id=invocation_id,
+            subtype=subtype,
         )
         session.add_message(message=message)
         await self.__flush(session=session)

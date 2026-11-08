@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 
 from src.application.dtos.ralph_thinking_input_dto import RalphThinkingInputDTO
 from src.application.phases.additional_planning_phase import AdditionalPlanningPhase
+from src.application.phases.decomposition_validation_phase import DecompositionValidationPhase
 from src.application.phases.final_answer_phase import FinalAnswerPhase
 from src.application.phases.general_criteria_phase import GeneralCriteriaPhase
 from src.application.phases.global_verification_phase import GlobalVerificationPhase
@@ -75,6 +76,7 @@ class RalphThinkingStartup:
 
         self.cost_budget = CostBudget(
             max_task_attempts=self.settings.ralph_max_task_attempts,
+            max_planning_attempts=self.settings.ralph_max_planning_attempts,
             max_additional_planning_rounds=self.settings.ralph_max_additional_planning_rounds,
             max_tasks_per_session=self.settings.ralph_max_tasks_per_session,
             max_llm_calls_per_session=self.settings.ralph_max_llm_calls_per_session,
@@ -118,6 +120,9 @@ class RalphThinkingStartup:
 
         self.general_criteria_phase = GeneralCriteriaPhase(**self.__phase_dependencies(GeneralCriteriaPhase))
         self.task_decomposition_phase = TaskDecompositionPhase(**self.__phase_dependencies(TaskDecompositionPhase))
+        self.decomposition_validation_phase = DecompositionValidationPhase(
+            **self.__phase_dependencies(DecompositionValidationPhase)
+        )
         self.planning_learnings_phase = PlanningLearningsPhase(
             **self.__phase_dependencies(PlanningLearningsPhase)
         )
@@ -141,6 +146,7 @@ class RalphThinkingStartup:
         self.ralph_thinking_use_case = RalphThinkingUseCase(
             general_criteria_phase=self.general_criteria_phase,
             task_decomposition_phase=self.task_decomposition_phase,
+            decomposition_validation_phase=self.decomposition_validation_phase,
             planning_learnings_phase=self.planning_learnings_phase,
             task_resolution_phase=self.task_resolution_phase,
             task_verification_phase=self.task_verification_phase,
@@ -209,6 +215,7 @@ class RalphThinkingStartup:
             total_tokens=event.total_tokens,
             context_window=ContextWindowDTO(context_id=event.context_id, context_size=event.context_size),
             inference_time_ms=event.inference_time_ms,
+            flow_version=int(event.flow_version),
         )
 
     def __phase_dependencies(self, phase_class: type) -> dict[str, object]:

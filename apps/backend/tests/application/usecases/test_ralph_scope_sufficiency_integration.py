@@ -13,6 +13,7 @@ from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum as Phase
 from src.infra.providers.file_prompt_template_provider import FilePromptTemplateProvider
 from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.ralph_scenario import RalphScenario
+from tests.doubles.ralph_scripts import plano_aprovado
 from tests.doubles.ralph_scripts import aprendizados, relatorio, resposta_final
 
 
@@ -57,7 +58,8 @@ def _area(prompt: str, heading: str) -> str:
 
 
 def _isolated_inputs(scenario: RalphScenario) -> None:
-    isolated = {Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_PLANNING_LEARNINGS,
+    isolated = {Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_DECOMPOSITION_VALIDATION,
+                Phase.A4_PLANNING_LEARNINGS,
                 Phase.B2_TASK_VERIFICATION, Phase.C1_GLOBAL_VERIFICATION, Phase.C2_ADDITIONAL_PLANNING,
                 Phase.C3_FINAL_ANSWER}
     ids = []
@@ -79,7 +81,7 @@ async def test_conteudo_explicado_sem_linha_final_segue_de_c1_a_c3(format_criter
     scenario = _scenario([
         _criteria("Identificar a alternativa sustentada pelo cálculo.", format_criterion),
         _task("T1", "Calcule 6 g / 2 e compare A) 1 g B) 2 g C) 3 g, explicando.", "Resultado explicado."),
-        aprendizados(memory), _result("T1", content), relatorio(("T1-AC1", True)), aprendizados(),
+        plano_aprovado(), aprendizados(memory), _result("T1", content), relatorio(("T1-AC1", True)), aprendizados(),
         relatorio(("AC1", True), ("AC2", True)), resposta_final(final),
     ])
 
@@ -115,7 +117,7 @@ async def test_analise_conjunta_ausente_exige_c2_e_resultado_explicado_antes_de_
         _criteria("Responder apenas com a letra.", gap),
         _task("T1", "Verifique separadamente primalidade, paridade e >2 em [2,4,6], explicando.",
               "Listas com explicação."),
-        aprendizados(memory), _result("T1", content), relatorio(("T1-AC1", True)), aprendizados(),
+        plano_aprovado(), aprendizados(memory), _result("T1", content), relatorio(("T1-AC1", True)), aprendizados(),
         relatorio(("AC1", True), ("AC2", False)),
         _task("T2", "Determine e explique a interseção de primos [2], pares [2,4,6] e >2 [4,6].",
               "Interseção correta e explicada.", "Não redigir a resposta final ao usuário."),
@@ -125,7 +127,7 @@ async def test_analise_conjunta_ausente_exige_c2_e_resultado_explicado_antes_de_
 
     await scenario.run(question="Primo, par e >2 entre 2,4,6? D) NDA. Apenas a letra; análise conjunta explícita.")
 
-    assert [i.phase for i in scenario.session.invocations][6:] == [
+    assert [i.phase for i in scenario.session.invocations][7:] == [
         Phase.C1_GLOBAL_VERIFICATION, Phase.C2_ADDITIONAL_PLANNING,
         Phase.B1_TASK_RESOLUTION, Phase.B2_TASK_VERIFICATION, Phase.B4_LEARNINGS_EXTRACTION,
         Phase.C1_GLOBAL_VERIFICATION, Phase.C3_FINAL_ANSWER,
@@ -184,7 +186,7 @@ async def test_resultado_sem_alternativa_sustentada_encaminha_ac2_a_investigacao
     scenario = _scenario([
         _criteria("Terminar com RESPOSTA_FINAL: LETRA.", selection),
         _task("T1", "Determine a quantidade pedida com explicação.", "Cálculo explicado."),
-        aprendizados(question),
+        plano_aprovado(), aprendizados(question),
         _result("T1", inconsistent), relatorio(("T1-AC1", True)), aprendizados(inconsistent),
         relatorio(("AC1", True), ("AC2", False)),
         _task("T2", investigation, "Investiga a incompatibilidade e explica a correção de T1."),
@@ -194,7 +196,7 @@ async def test_resultado_sem_alternativa_sustentada_encaminha_ac2_a_investigacao
 
     events = await scenario.run(question=question)
 
-    assert [i.phase for i in scenario.session.invocations][6:] == [
+    assert [i.phase for i in scenario.session.invocations][7:] == [
         Phase.C1_GLOBAL_VERIFICATION, Phase.C2_ADDITIONAL_PLANNING,
         Phase.B1_TASK_RESOLUTION, Phase.B2_TASK_VERIFICATION, Phase.B4_LEARNINGS_EXTRACTION,
         Phase.C1_GLOBAL_VERIFICATION, Phase.C3_FINAL_ANSWER,
@@ -229,7 +231,7 @@ async def test_b2_distingue_mencao_contextual_de_calculo_fora_do_escopo(
         _criteria("Obter a massa total.", "Resposta objetiva."),
         _task("T1", "Calcule a massa total de 2 g + 4 g com explicação; o enunciado menciona colheres.",
               "Massa total correta e explicada.", scope_criterion),
-        aprendizados("Dado de contexto: duas colheres."),
+        plano_aprovado(), aprendizados("Dado de contexto: duas colheres."),
         _result("T1", rejected if outside_scope else approved),
         relatorio(("T1-AC1", True), ("T1-AC2", not outside_scope)),
     ]
@@ -256,7 +258,7 @@ async def test_b2_distingue_mencao_contextual_de_calculo_fora_do_escopo(
     b1_invocations = [i for i in scenario.session.invocations if i.phase is Phase.B1_TASK_RESOLUTION]
     assert len({i.context_id for i in b1_invocations}) == len(b1_invocations)
     if outside_scope:
-        retry = scenario.llm.texts_of(5)
+        retry = scenario.llm.texts_of(6)
         assert len(retry) == 1
         assert retry[0].count("# B.1") == 1
         assert rejected in _area(retry[0], "Previous attempts at this task")

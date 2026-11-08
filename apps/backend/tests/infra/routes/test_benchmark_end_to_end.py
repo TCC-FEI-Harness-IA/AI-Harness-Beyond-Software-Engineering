@@ -43,6 +43,7 @@ def _roteiro_ralph(resposta: str) -> list[str]:
     return [
         json.dumps({"general_acceptance_criteria": [{"id": "AC1", "description": "Responder"}]}),
         json.dumps({"tasks": [_TAREFA]}),
+        json.dumps({"approved": True, "issues": []}),
         json.dumps({"learnings": []}),
         json.dumps({"task_id": "T1", "result": "resolvido", "conclusion": "resolvido"}),
         json.dumps(_APROVADO),
@@ -308,7 +309,7 @@ def test_bateria_executa_as_primeiras_questoes_e_grava_a_benchmark_session(
     assert bateria["summary"]["simple"]["wrong"] == 1
     assert bateria["summary"]["ralph"]["correct"] == 2
     assert bateria["summary"]["ralph"]["accuracy"] == 1.0
-    assert bateria["total_tokens"] == 18 * 15
+    assert bateria["total_tokens"] == 20 * 15  # 2 inferências simples + 2 Ralph de 9 chamadas (com A.3)
     assert len(bateria["session_ids"]) == 4
 
     sessoes = _sessoes_gravadas(ambiente / "sessions")
@@ -416,7 +417,7 @@ def test_bateria_completa_usa_as_270_questoes_nos_dois_fluxos(
     assert bateria["summary"]["simple"]["correct"] == 270
     assert bateria["summary"]["ralph"]["correct"] == 270
     assert len(bateria["session_ids"]) == 540
-    assert len(provedor.enviados) == 270 * 9
+    assert len(provedor.enviados) == 270 * 10
 
 
 @pytest.mark.parametrize("max_tokens", [120_001, 10_000_000, 1_000_000_000])
@@ -454,7 +455,7 @@ def test_max_tokens_no_limite_do_backend_roda_os_dois_fluxos_com_o_guardiao_de_c
     assert bateria["summary"]["simple"]["correct"] == 1
     assert bateria["summary"]["ralph"]["correct"] == 1
     assert bateria["summary"]["ralph"]["failures"] == 0
-    assert len(provedor.enviados) == 9
+    assert len(provedor.enviados) == 10
     simples, *ralph = [corpo["max_tokens"] for corpo in provedor.enviados]
     assert simples == 120000
     # A.1 enxerga o orçamento de trabalho inteiro; cada chamada seguinte, só o que sobrou dele.
@@ -507,7 +508,7 @@ def test_bateria_por_materia_executa_as_cotas_nos_dois_fluxos_e_persiste_a_distr
     assert [q["subject"] for q in final["questions"]] == ["BIOLOGIA", "MATEMATICA", "MATEMATICA"]
     assert final["summary"]["simple"]["correct"] == final["summary"]["ralph"]["correct"] == 3
     assert len(final["session_ids"]) == 6
-    assert len(provider.enviados) == 27
+    assert len(provider.enviados) == 30
     assert client.get(f"/v1/benchmark/sessions/{final['id']}").json() == final
 
 

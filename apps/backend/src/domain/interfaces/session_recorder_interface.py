@@ -10,7 +10,9 @@ from src.domain.entities.thinking.output_recovery import OutputRecovery
 from src.domain.entities.thinking.result_revision import ResultRevision
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.ralph_flow_version_enum import RalphFlowVersionEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
+from src.domain.enums.thinking_event_subtype_enum import ThinkingEventSubtypeEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 
 
@@ -26,6 +28,7 @@ class ISessionRecorder(ABC):
         max_tokens: int,
         temperature: float,
         provider: ModelProviderEnum | None = None,
+        flow_version: RalphFlowVersionEnum | None = None,
     ) -> Session:
         """Inicia e persiste uma nova sessão.
 
@@ -36,6 +39,7 @@ class ISessionRecorder(ABC):
             max_tokens: Limite de tokens de saída configurado para a sessão.
             temperature: Temperatura de geração configurada para a sessão.
             provider: Provedor efetivo das chamadas da sessão, quando conhecido.
+            flow_version: Versão do fluxo Ralph; `None` na inferência direta.
 
         Returns:
             Session: Sessão recém-criada.
@@ -64,6 +68,7 @@ class ISessionRecorder(ABC):
         task_id: str | None,
         context_id: str | None,
         prompt_input: tuple[Message, ...],
+        subtype: ThinkingEventSubtypeEnum | None = None,
     ) -> SessionMessage:
         """Registra o resultado de uma chamada ao modelo no histórico da sessão.
 
@@ -75,6 +80,7 @@ class ISessionRecorder(ABC):
             task_id: Tarefa associada, quando houver.
             context_id: Janela de contexto associada, quando houver.
             prompt_input: Conversa enviada ao modelo na chamada que produziu `content`.
+            subtype: Subtipo do evento emitido com a mensagem, quando há.
 
         Returns:
             SessionMessage: Mensagem registrada.
@@ -99,6 +105,7 @@ class ISessionRecorder(ABC):
         context_id: str | None,
         prompt_input: tuple[Message, ...] = (),
         invocation_id: str | None = None,
+        subtype: ThinkingEventSubtypeEnum | None = None,
     ) -> SessionMessage:
         """Registra uma etapa programática (sem chamada ao modelo) no histórico.
 
@@ -110,6 +117,8 @@ class ISessionRecorder(ABC):
             prompt_input: Conversa enviada ao modelo, quando a etapa registra a saída de uma chamada
                 (como uma saída descartada pelo parser); vazia nas demais etapas.
             invocation_id: Invocação a que a etapa se refere, como a que produziu a saída auditada.
+            subtype: Subtipo do evento emitido com a etapa, quando há; a auditoria de uma saída recusada
+                não emite evento e fica sem subtipo.
 
         Returns:
             SessionMessage: Mensagem registrada.

@@ -4,9 +4,11 @@ import { parseBenchmarkDetails } from './benchmarkDetails'
 // inválida invalida o documento inteiro.
 
 import { isBudgetLimit } from '@/domain/enums/budgetLimit'
+import { isEventSubtype, type EventSubtype } from '@/domain/enums/eventSubtype'
+import { FLOW_VERSION, isFlowVersion, type FlowVersion } from '@/domain/enums/flowVersion'
 import { isMessageSource } from '@/domain/enums/messageSource'
 import { isSessionStatus } from '@/domain/enums/sessionStatus'
-import { isThinkingPhase } from '@/domain/enums/thinkingPhase'
+import { isThinkingPhase, THINKING_PHASE, type ThinkingPhase } from '@/domain/enums/thinkingPhase'
 import type {
   SessionDegradationDocument,
   SessionDocument,
@@ -27,6 +29,28 @@ function parseTotals(source: Record<string, unknown>): SessionTotalsDocument {
     inference_time_ms: requireNumber(raw, 'inference_time_ms', 'totals.inference_time_ms'),
     wall_time_ms: requireNumber(raw, 'wall_time_ms', 'totals.wall_time_ms'),
   }
+}
+
+// Subtipo persistido do evento (sessões novas). Ausente ou nulo: registro sem evento ou sessão antiga.
+function parseMessageSubtype(obj: Record<string, unknown>, path: string): EventSubtype | null {
+  const value = obj.subtype
+  if (value === undefined || value === null) return null
+  if (!isEventSubtype(value)) {
+    throw new ContractError(`campo "${path}.subtype" tem valor fora do enum EventSubtype: "${String(value)}"`)
+  }
+  return value
+}
+
+// Sessão Ralph antiga, sem o campo, é versão 1 (A.3 = aprendizados do enunciado); a inferência direta não
+// tem versão de fluxo Ralph. Um valor presente é lido como foi gravado, sem ser reinterpretado.
+function parseFlowVersion(obj: Record<string, unknown>, flow: ThinkingPhase): FlowVersion | null {
+  if (!('flow_version' in obj)) return flow === THINKING_PHASE.DIRECT ? null : FLOW_VERSION.LEGACY
+  const value = obj.flow_version
+  if (value === null) return null
+  if (!isFlowVersion(value)) {
+    throw new ContractError(`campo "flow_version" tem valor fora do enum FlowVersion: "${String(value)}"`)
+  }
+  return value
 }
 
 function parseMessage(raw: unknown, index: number): SessionMessageDocument {
@@ -57,6 +81,7 @@ function parseMessage(raw: unknown, index: number): SessionMessageDocument {
     total_tokens: requireNumber(obj, 'total_tokens', `${path}.total_tokens`),
     inference_time_ms: requireNumber(obj, 'inference_time_ms', `${path}.inference_time_ms`),
     model_name: optionalString(obj, 'model_name', `${path}.model_name`),
+    subtype: parseMessageSubtype(obj, path),
   }
 }
 
@@ -103,6 +128,7 @@ export function parseSessionDocument(raw: unknown): SessionDocument {
     benchmark_details: parseBenchmarkDetails(obj.benchmark_details),
     user_question: requireString(obj, 'user_question', 'user_question'),
     flow,
+    flow_version: parseFlowVersion(obj, flow),
     model_name: requireString(obj, 'model_name', 'model_name'),
     max_tokens: requireNumber(obj, 'max_tokens', 'max_tokens'),
     temperature: requireNumber(obj, 'temperature', 'temperature'),

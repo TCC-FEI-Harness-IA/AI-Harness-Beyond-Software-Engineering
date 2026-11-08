@@ -9,6 +9,7 @@
 
 import { EVENT_SUBTYPE } from '../enums/eventSubtype'
 import { EVENT_TYPE } from '../enums/eventType'
+import { FLOW_VERSION, type FlowVersion } from '../enums/flowVersion'
 import { RUN_STATUS, type RunStatus } from '../enums/runStatus'
 import { SESSION_STATUS } from '../enums/sessionStatus'
 import { TASK_LABEL_SETUP, TASK_LABEL_SYNTHESIS } from '../enums/taskLabels'
@@ -49,8 +50,9 @@ function renderTaskBlock(task: ParsedTask): string {
   return lines.join('\n')
 }
 
-// Procura o bloco da tarefa `taskId` em qualquer mensagem A2/C2 já vista — a tarefa pode ter
-// sido criada tanto no planejamento inicial quanto num replanejamento (C.2).
+// Procura o bloco da tarefa `taskId` nas mensagens que confirmaram tarefas na fila — o plano inicial
+// (`tasks`: A.2 na versão 1, a confirmação depois de A.3 na versão 2) ou um replanejamento (`replan`).
+// Um plano candidato reprovado nunca é fonte do bloco executado.
 function findTaskBlock(planningMessages: readonly SessionMessageDocument[], taskId: string): string {
   for (const planningMessage of planningMessages) {
     const task = parseTasksFromMarkdown(planningMessage.content).find((candidate) => candidate.id === taskId)
@@ -112,6 +114,10 @@ class Accumulators {
   }
 }
 
+function flowVersionOf(document: SessionDocument): FlowVersion {
+  return document.flow_version ?? FLOW_VERSION.LEGACY
+}
+
 function buildEvent(
   document: SessionDocument,
   message: SessionMessageDocument,
@@ -128,6 +134,7 @@ function buildEvent(
     total_tokens: totals.totalTokens,
     context_window: { context_id: message.context_id ?? '', context_size: totals.contextSize },
     inference_time_ms: message.inference_time_ms,
+    flow_version: flowVersionOf(document),
   }
 }
 
@@ -137,16 +144,19 @@ function buildEvent(
 // não se aplica aqui).
 function buildStepSources(document: SessionDocument): StepSource[] {
   const messages = [...document.messages].sort((a, b) => a.order - b.order)
+  const flowVersion = flowVersionOf(document)
+  const kinds = messages.map((message, index) =>
+    deriveStepKind(message, { laterMessages: messages.slice(index + 1), flowVersion }),
+  )
   const planningMessages = messages.filter(
-    (message) =>
-      (message.phase === THINKING_PHASE.A2 || message.phase === THINKING_PHASE.C2) &&
-      message.source !== 'user',
+    (_message, index) =>
+      kinds[index]?.subtype === EVENT_SUBTYPE.TASKS || kinds[index]?.subtype === EVENT_SUBTYPE.REPLAN,
   )
   const accumulators = new Accumulators()
   const sources: StepSource[] = []
 
   messages.forEach((message, index) => {
-    const kind = deriveStepKind(message, { laterMessages: messages.slice(index + 1) })
+    const kind = kinds[index]
     if (!kind) return
 
     const totals = accumulators.addMessage(message)
@@ -173,7 +183,7 @@ function buildStepSources(document: SessionDocument): StepSource[] {
 export function sessionToThinkingRun(document: SessionDocument): ThinkingRun {
   const sources = buildStepSources(document)
 
-  let run = createEmptyRun(document.user_question, document.model_name)
+  let run = createEmptyRun(document.user_question, document.model_name, flowVersionOf(document))
   run = { ...run, status: RUN_STATUS.RUNNING }
   for (const source of sources) {
     run = reasoningRunReducer(run, { kind: 'event', event: source.event })

@@ -223,7 +223,8 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             ThinkingPhaseEnum.B1_TASK_RESOLUTION: self.__validate_task_result,
             ThinkingPhaseEnum.B2_TASK_VERIFICATION: self.__validate_verification,
             ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: self.__validate_verification,
-            ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: self.__validate_learnings,
+            ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION: self.__validate_plan_validation,
+            ThinkingPhaseEnum.A4_PLANNING_LEARNINGS: self.__validate_learnings,
             ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: self.__validate_learnings,
             ThinkingPhaseEnum.C3_FINAL_ANSWER: self.__validate_final_answer,
         }
@@ -809,6 +810,132 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
                 affected_ids=tuple(sorted(set(unmet) ^ set(failed_ids))),
             )
 
+    def __validate_plan_validation(
+        self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None
+    ) -> None:
+        """Valida o relatório de A.3 contra o plano candidato julgado.
+
+        A decisão é um booleano real; cada problema traz `task_id` e `criterion_id` (obrigatórios no
+        objeto, nulos conforme o escopo), `problem` e `adjustment`. Uma reprovação coerente é aceita
+        como qualquer aprovação. Nada aqui julga se o plano é bom: só tipos, referências e coerência.
+
+        Raises:
+            _ContractViolation: Quando o schema não confere, a decisão contradiz os problemas ou uma
+                referência não existe no candidato julgado.
+            ValueError: Quando o contexto de validação não traz a referência estrutural do candidato.
+        """
+        if validation is None or validation.candidate_plan is None:
+            raise ValueError(f"A fase '{phase.value}' exige a referência estrutural do plano candidato.")
+
+        approved = parsed.get("approved")
+        if not isinstance(approved, bool):
+            raise _ContractViolation(
+                code=self.__absence_or_type(source=parsed, key="approved"),
+                reason="The 'approved' field must be a JSON boolean (true or false), not a string or number.",
+                field="approved",
+            )
+        issues = self.__require_list(source=parsed, key="issues", label="issues", allow_empty=True)
+        for issue in issues:
+            self.__validate_plan_issue(issue=issue, plan=validation.candidate_plan)
+
+        if approved and issues:
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.DECISION_CONSISTENCY,
+                reason="An approved plan cannot have pending issues: approving requires 'issues': [].",
+                field="approved",
+            )
+        if not approved and not issues:
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.DECISION_CONSISTENCY,
+                reason="A rejected plan requires at least one concrete issue in 'issues'.",
+                field="approved",
+            )
+
+    def __validate_plan_issue(self, issue: Any, plan: dict[str, tuple[str, ...]]) -> None:
+        """Valida um problema do relatório de A.3 e as suas referências ao candidato julgado.
+
+        Raises:
+            _ContractViolation: Quando o problema não é um objeto completo, um texto está em branco, uma
+                referência não é texto nem nula, ou aponta tarefa ou critério que o candidato não tem.
+        """
+        container = "issues"
+        if not isinstance(issue, dict):
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.SCHEMA_TYPE,
+                reason="Each item of 'issues' must be an object.",
+                field=f"{container}{_ITEM_SUFFIX}",
+            )
+        for key in ("task_id", "criterion_id"):
+            self.__require_nullable_reference(source=issue, key=key, field=self.__item_field(container, key))
+        for key in ("problem", "adjustment"):
+            self.__require_text(
+                source=issue, key=key, label=f"issues.{key}", field=self.__item_field(container, key),
+                owner_id=issue.get("task_id"),
+            )
+
+        task_id = issue["task_id"]
+        criterion_id = issue["criterion_id"]
+        if task_id is None:
+            if criterion_id is not None:
+                raise _ContractViolation(
+                    code=OutputProblemCodeEnum.TASK_REFERENCES,
+                    reason=(
+                        f"The criterion '{criterion_id}' is referenced without its task: fill 'task_id' with the "
+                        "task that owns the criterion, or set both references to null for a plan-wide issue."
+                    ),
+                    field=self.__item_field(container, "task_id"),
+                    affected_ids=(criterion_id,),
+                )
+            return
+        if task_id not in plan:
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.TASK_REFERENCES,
+                reason=(
+                    f"The task '{task_id}' does not exist in the candidate plan. "
+                    f"Reference only: {_ID_LIST_SEPARATOR.join(plan)}; or null for a plan-wide issue."
+                ),
+                field=self.__item_field(container, "task_id"),
+                affected_ids=(task_id,),
+            )
+        if criterion_id is not None and criterion_id not in plan[task_id]:
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.CRITERIA_IDS,
+                reason=(
+                    f"The criterion '{criterion_id}' does not belong to task '{task_id}' in the candidate plan. "
+                    f"Criteria of '{task_id}': {_ID_LIST_SEPARATOR.join(plan[task_id])}; or null for a task-wide issue."
+                ),
+                field=self.__item_field(container, "criterion_id"),
+                affected_ids=(criterion_id,),
+            )
+
+    def __require_nullable_reference(self, source: dict[str, Any], key: str, field: str) -> None:
+        """Exige uma referência presente no objeto: `null` ou um identificador preenchido.
+
+        Raises:
+            _ContractViolation: Quando a chave falta, o valor não é texto nem nulo, ou é texto em branco.
+        """
+        if key not in source:
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.MISSING_FIELD,
+                reason=f"The '{key}' field is required in every issue; use null when it does not apply.",
+                field=field,
+            )
+        value = source[key]
+        if value is None:
+            return
+        if not isinstance(value, str):
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.SCHEMA_TYPE,
+                reason=f"The '{key}' field must be an identifier string or null.",
+                field=field,
+            )
+        if not value.strip():
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.EMPTY_VALUE,
+                reason=f"The '{key}' field must be a non-empty identifier or null.",
+                field=field,
+            )
+
     def __require_decision(self, parsed: dict[str, Any]) -> str:
         """Exige um veredito conhecido no campo 'decision', sem converter valores por suposição.
 
@@ -967,7 +1094,7 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
     def __validate_learnings(
         self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None
     ) -> None:
-        """Valida o schema de A.3 e B.4, onde a lista vazia é legítima.
+        """Valida o schema de A.4 e B.4, onde a lista vazia é legítima.
 
         Raises:
             _ContractViolation: Quando 'learnings' não é uma lista de strings.

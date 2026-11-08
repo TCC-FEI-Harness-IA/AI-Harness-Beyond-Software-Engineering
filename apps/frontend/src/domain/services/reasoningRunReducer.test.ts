@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import fixture from '@/test/fixtures/session-a1-completed-15msgs.json'
 import { EVENT_SUBTYPE, type EventSubtype } from '../enums/eventSubtype'
+import { FLOW_VERSION } from '../enums/flowVersion'
 import { EVENT_TYPE, type EventType } from '../enums/eventType'
 import { RUN_STATUS } from '../enums/runStatus'
 import { TASK_LABEL_SETUP, TASK_LABEL_SYNTHESIS } from '../enums/taskLabels'
@@ -55,6 +56,7 @@ function buildFixtureEvents(): ReasoningEventDTO[] {
       total_tokens: cumulative,
       context_window: { context_id: message.context_id ?? '', context_size: message.total_tokens },
       inference_time_ms: message.inference_time_ms,
+      flow_version: FLOW_VERSION.LEGACY,
     }
   })
 }
@@ -70,6 +72,7 @@ function buildEvent(overrides: Partial<ReasoningEventDTO> = {}): ReasoningEventD
     total_tokens: 100,
     context_window: { context_id: 'ctx_1', context_size: 100 },
     inference_time_ms: 500,
+    flow_version: FLOW_VERSION.LEGACY,
     ...overrides,
   }
 }
@@ -378,11 +381,20 @@ describe('reasoningRunReducer — A.3, aprendizados pontuais do enunciado', () =
     return run.phases.find((phase) => phase.id === id)?.status
   }
 
-  it('a trilha macro nasce com A.3 entre A.2 e a execução em loop', () => {
-    const run = createEmptyRun('pergunta', MODEL_NAME)
+  it('na sessão antiga (versão 1), a trilha nasce com A.3 de aprendizados entre A.2 e a execução em loop', () => {
+    const run = createEmptyRun('pergunta', MODEL_NAME, FLOW_VERSION.LEGACY)
 
     expect(run.phases.map((phase) => phase.id)).toEqual(['A1', 'A2', 'A3', 'B', 'C1', 'C2', 'C3'])
     expect(run.phases.find((phase) => phase.id === 'A3')?.label).toBe('Aprendizados do enunciado')
+  })
+
+  it('uma execução nova (versão 2) nasce com A.3 de validação e A.4 de aprendizados', () => {
+    const run = createEmptyRun('pergunta', MODEL_NAME)
+
+    expect(run.flowVersion).toBe(FLOW_VERSION.VALIDATED_PLANNING)
+    expect(run.phases.map((phase) => phase.id)).toEqual(['A1', 'A2', 'A3', 'A4', 'B', 'C1', 'C2', 'C3'])
+    expect(run.phases.find((phase) => phase.id === 'A3')?.label).toBe('Validação da decomposição')
+    expect(run.phases.find((phase) => phase.id === 'A4')?.label).toBe('Aprendizados do enunciado')
   })
 
   it('o evento learn de A.3 entra como passo, mas não cria uma tarefa chamada "setup"', () => {

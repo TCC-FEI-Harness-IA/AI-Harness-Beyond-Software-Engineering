@@ -106,4 +106,52 @@ describe('deriveStepKind', () => {
     expect(warnSpy).toHaveBeenCalled()
     warnSpy.mockRestore()
   })
+
+  describe('fluxo versão 2', () => {
+    const context = { laterMessages: [], flowVersion: 2 as const }
+
+    it('usa o subtipo persistido, sem adivinhar pelo conteúdo', () => {
+      expect(deriveStepKind(message({ phase: 'A2', subtype: 'plan_candidate' }), context)).toEqual({
+        type: 'thinking',
+        subtype: 'plan_candidate',
+      })
+      expect(deriveStepKind(message({ phase: 'A3', subtype: 'plan_rejected' }), context)).toEqual({
+        type: 'thinking',
+        subtype: 'plan_rejected',
+      })
+      expect(deriveStepKind(message({ phase: 'A3', source: 'system', subtype: 'tasks' }), context)).toEqual({
+        type: 'thinking',
+        subtype: 'tasks',
+      })
+      expect(deriveStepKind(message({ phase: 'C3', subtype: 'compile' }), context)).toEqual({
+        type: 'result',
+        subtype: 'compile',
+      })
+    })
+
+    it('registro sem evento (auditoria de saída recusada) não vira passo', () => {
+      expect(deriveStepKind(message({ phase: 'A3', source: 'system', subtype: null }), context)).toBeNull()
+      expect(deriveStepKind(message({ phase: 'A2', source: 'system' }), context)).toBeNull()
+    })
+
+    it('nunca transforma um candidato em tarefas confirmadas, mesmo sem subtipo', () => {
+      expect(deriveStepKind(message({ phase: 'A2', source: 'llm_agent' }), context)?.subtype).toBe('plan_candidate')
+    })
+
+    it('sem subtipo persistido, A.3 lê o marcador da decisão e A.4 é a extração do enunciado', () => {
+      const a3 = (content: string) => deriveStepKind(message({ phase: 'A3', content }), context)?.subtype
+      expect(a3('**Plan decision:** `approved`\n\nNo blocking issue.')).toBe('plan_approved')
+      expect(a3('**Plan decision:** `rejected`\n\n- Whole plan: x')).toBe('plan_rejected')
+      expect(a3('## Extracted learnings')).toBe('reasoning')
+      expect(deriveStepKind(message({ phase: 'A4' }), context)?.subtype).toBe('learn')
+      expect(deriveStepKind(message({ phase: 'B4' }), context)?.subtype).toBe('learn')
+    })
+  })
+
+  it('numa sessão antiga, A3 sem subtipo continua sendo aprendizados do enunciado', () => {
+    expect(deriveStepKind(message({ phase: 'A3' }), { laterMessages: [], flowVersion: 1 })).toEqual({
+      type: 'thinking',
+      subtype: 'learn',
+    })
+  })
 })

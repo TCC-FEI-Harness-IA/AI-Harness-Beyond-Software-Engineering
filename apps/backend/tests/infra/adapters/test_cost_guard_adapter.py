@@ -423,7 +423,7 @@ def test_negacao_do_orcamento_total_diz_que_o_total_acabou(budget_factory: Calla
 def test_cenario_de_orcamento_100_com_reserva_25_e_consumo_75() -> None:
     """Cinco chamadas de 15 tokens esgotam o trabalho, mas deixam a reserva para C.3."""
     guard = _guard(CostBudget(
-        max_task_attempts=2, max_additional_planning_rounds=1, max_tasks_per_session=5,
+        max_task_attempts=2, max_planning_attempts=2, max_additional_planning_rounds=1, max_tasks_per_session=5,
         max_llm_calls_per_session=60, session_token_budget=100, final_answer_token_reserve=25,
         session_timeout_seconds=10,
     ))
@@ -546,3 +546,47 @@ def test_limite_da_sessao_que_nao_comporta_a_reserva_e_recusado(budget_factory: 
 
     with pytest.raises(ValueError, match="RALPH_FINAL_ANSWER_TOKEN_RESERVE = 200"):
         guard.limit_session_tokens(session_token_budget=200)
+
+
+# ── Tentativas do planejamento inicial (A.2 avaliado por A.3) ────────────────
+
+def test_planos_candidatos_sao_numerados_a_partir_de_um(budget_factory: Callable[..., CostBudget]) -> None:
+    guard = _guard(budget_factory(max_planning_attempts=5))
+
+    assert [guard.register_planning_attempt() for _ in range(3)] == [1, 2, 3]
+
+
+def test_pode_revisar_o_plano_ate_o_limite_de_candidatos(budget_factory: Callable[..., CostBudget]) -> None:
+    guard = _guard(budget_factory(max_planning_attempts=5))
+
+    permitidos = []
+    for _ in range(5):
+        guard.register_planning_attempt()
+        permitidos.append(guard.can_retry_planning())
+
+    assert permitidos == [True, True, True, True, False]
+
+
+def test_planejamento_independe_das_tentativas_de_tarefa_e_das_rodadas_adicionais(
+    budget_factory: Callable[..., CostBudget],
+) -> None:
+    guard = _guard(budget_factory(max_planning_attempts=2, max_task_attempts=2, max_additional_planning_rounds=1))
+
+    guard.register_planning_attempt()
+    guard.register_planning_attempt()
+
+    assert guard.can_retry_planning() is False
+    assert guard.can_retry_task(task_id="T1") is True
+    assert guard.register_task_attempt(task_id="T1") == 1
+    assert guard.authorize_additional_planning().authorized is True
+
+
+def test_tentativas_de_tarefa_nao_consomem_o_planejamento(budget_factory: Callable[..., CostBudget]) -> None:
+    guard = _guard(budget_factory(max_planning_attempts=2, max_task_attempts=2))
+
+    guard.register_task_attempt(task_id="T1")
+    guard.register_task_attempt(task_id="T1")
+    guard.register_additional_planning_round()
+
+    assert guard.register_planning_attempt() == 1
+    assert guard.can_retry_planning() is True

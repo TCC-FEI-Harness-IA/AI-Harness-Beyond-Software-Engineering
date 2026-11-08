@@ -10,7 +10,10 @@ from src.domain.interfaces.settings_interface import ISettings
 _FILE_NAME_BY_PHASE: dict[ThinkingPhaseEnum, str] = {
     ThinkingPhaseEnum.A1_GENERAL_CRITERIA: "a1_general_criteria.md",
     ThinkingPhaseEnum.A2_TASK_DECOMPOSITION: "a2_task_decomposition.md",
-    ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: "a3_planning_learnings.md",
+    # Fluxo versão 2: `A3` é a validação da decomposição e `A4` a extração. O valor `A3` das sessões antigas
+    # (extração) só é lido do histórico; nunca é renderizado de novo, então não precisa de um template.
+    ThinkingPhaseEnum.A3_DECOMPOSITION_VALIDATION: "a3_decomposition_validation.md",
+    ThinkingPhaseEnum.A4_PLANNING_LEARNINGS: "a4_planning_learnings.md",
     ThinkingPhaseEnum.B1_TASK_RESOLUTION: "b1_task_resolution.md",
     ThinkingPhaseEnum.B2_TASK_VERIFICATION: "b2_task_verification.md",
     ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: "b4_learnings_extraction.md",

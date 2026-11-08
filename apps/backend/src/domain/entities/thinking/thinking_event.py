@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from src.domain.enums.ralph_flow_version_enum import RalphFlowVersionEnum
 from src.domain.enums.thinking_event_subtype_enum import ThinkingEventSubtypeEnum
 from src.domain.enums.thinking_event_type_enum import ThinkingEventTypeEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
@@ -20,6 +21,8 @@ class ThinkingEvent:
         context_id: Identidade da janela de contexto no momento do evento.
         context_size: Tokens acumulados na janela de contexto atual.
         inference_time_ms: Tempo da chamada ao modelo, em milissegundos.
+        flow_version: Versão do fluxo Ralph da sessão; diz ao consumidor como ler as fases ambíguas
+            (`A3` é a validação da decomposição na versão 2) antes de interpretar o evento.
     """
 
     type: ThinkingEventTypeEnum
@@ -32,3 +35,4 @@ class ThinkingEvent:
     context_id: str
     context_size: int
     inference_time_ms: int
+    flow_version: RalphFlowVersionEnum = RalphFlowVersionEnum.VALIDATED_PLANNING

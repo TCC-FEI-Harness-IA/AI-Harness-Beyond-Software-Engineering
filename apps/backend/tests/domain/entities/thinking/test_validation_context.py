@@ -30,3 +30,10 @@ def test_e_imutavel() -> None:
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         contexto.max_tasks = 2
+
+
+def test_carrega_a_referencia_estrutural_do_plano_candidato() -> None:
+    contexto = ValidationContext(candidate_plan={"T1": ("T1-AC1",), "T2": ("T2-AC1", "T2-AC2")})
+
+    assert contexto.candidate_plan == {"T1": ("T1-AC1",), "T2": ("T2-AC1", "T2-AC2")}
+    assert ValidationContext().candidate_plan is None

@@ -13,6 +13,7 @@ def test_carrega_todos_os_campos_do_contrato() -> None:
         total_tokens=642,
         context_window=ContextWindowDTO(context_id="3a7f2b1", context_size=182),
         inference_time_ms=812,
+        flow_version=2,
     )
 
     assert dto.type == "thinking"
@@ -25,3 +26,15 @@ def test_carrega_todos_os_campos_do_contrato() -> None:
     assert dto.context_window.context_id == "3a7f2b1"
     assert dto.context_window.context_size == 182
     assert dto.inference_time_ms == 812
+    assert dto.flow_version == 2
+
+
+def test_versao_do_fluxo_e_obrigatoria_no_frame() -> None:
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        ReasoningEventDTO(
+            type="thinking", subtype="tasks", phase="A3", task="setup", session_id="s", content="c",
+            total_tokens=1, context_window=ContextWindowDTO(context_id="c", context_size=0), inference_time_ms=0,
+        )

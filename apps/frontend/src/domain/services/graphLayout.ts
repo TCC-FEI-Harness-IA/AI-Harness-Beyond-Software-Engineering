@@ -3,12 +3,13 @@
 // `viewBox` normalizado (0..100). O componente só posiciona o que já veio calculado.
 
 import { EVENT_SUBTYPE } from '../enums/eventSubtype'
-import { PHASE_LABEL, PHASE_SHORT_LABEL } from '../enums/thinkingPhase'
+import { PHASE_SHORT_LABEL } from '../enums/thinkingPhase'
 import type { PhaseNodeId, PhaseProgress, TaskTimeline, ThinkingRun, ThinkingStep } from '../types/thinkingRun'
 
 // 'B' agrega B1–B4 (README, seção 6.3) e por isso não tem correspondente direto em
-// `PHASE_LABEL`/`PHASE_SHORT_LABEL` (FASE 02, indexados por `ThinkingPhase`) — é o único texto
-// novo desta função; os outros cinco nós reusam os mapas da FASE 02 (FASE 06, seção 4).
+// `PHASE_SHORT_LABEL` (FASE 02, indexado por `ThinkingPhase`). O título de cada nó vem do próprio
+// `PhaseProgress`, montado pelo reducer segundo a versão do fluxo — A.3 é validação na versão 2 e
+// aprendizados do enunciado na versão 1.
 const B_NODE_SUBTITLE = 'Execução em Loop'
 const B_NODE_SHORT_LABEL = 'B'
 
@@ -28,13 +29,13 @@ export function describeTaskProgress(run: ThinkingRun): { done: number; total: n
   return { done, total }
 }
 
-/** A trilha macro A→B→C — os sete nós do "caminho" pedido no requisito (FASE 06, seção 4). */
+/** A trilha macro A→B→C — os nós do "caminho" pedido no requisito (FASE 06, seção 4), por versão do fluxo. */
 export function buildMacroTrack(run: ThinkingRun): MacroNodeView[] {
   const progress = describeTaskProgress(run)
   return run.phases.map((phase) => ({
     id: phase.id,
     shortLabel: phase.id === 'B' ? B_NODE_SHORT_LABEL : PHASE_SHORT_LABEL[phase.id],
-    subtitle: phase.id === 'B' ? B_NODE_SUBTITLE : PHASE_LABEL[phase.id],
+    subtitle: phase.id === 'B' ? B_NODE_SUBTITLE : phase.label,
     status: phase.status,
     progress: phase.id === 'B' ? progress : null,
   }))
@@ -147,18 +148,23 @@ export function buildContextSeries(steps: ThinkingStep[]): ContextSeries {
   return { points, resetIndices, maxContextSize, maxTotalTokens }
 }
 
-export type LoopArcId = 'verify-retry' | 'replan-return'
+export type LoopArcId = 'plan-revision' | 'verify-retry' | 'replan-return'
 
 export interface LoopArcView {
   id: LoopArcId
   active: boolean
 }
 
-/** Os dois arcos de retorno do paper: B.2 → B.1 (retentativa) e C.2 → B (replanejamento). */
+/**
+ * Os arcos de retorno: A.3 → A.2 (revisão do plano reprovado, fluxo versão 2), B.2 → B.1 (retentativa)
+ * e C.2 → B (replanejamento).
+ */
 export function buildLoopArcs(run: ThinkingRun): LoopArcView[] {
+  const hasPlanRevision = run.steps.some((step) => step.subtype === EVENT_SUBTYPE.PLAN_REJECTED)
   const hasRetry = run.tasks.some((task) => task.attempts.length > 1)
   const hasReplan = run.tasks.some((task) => task.origin === 'C2')
   return [
+    { id: 'plan-revision', active: hasPlanRevision },
     { id: 'verify-retry', active: hasRetry },
     { id: 'replan-return', active: hasReplan },
   ]

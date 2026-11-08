@@ -21,6 +21,7 @@ function buildDocument(overrides: Partial<SessionDocument> & { id: string }): Se
   return {
     user_question: 'Pergunta padrão',
     flow: 'A1',
+    flow_version: 1,
     model_name: 'openai/gpt-4o-mini',
     max_tokens: 1000,
     temperature: 0.3,

@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 from src.application.dtos.ralph_thinking_input_dto import RalphThinkingInputDTO
 from src.application.phases.additional_planning_phase import AdditionalPlanningPhase
 from src.application.phases.base_thinking_phase import BaseThinkingPhase
+from src.application.phases.decomposition_validation_phase import DecompositionValidationPhase
 from src.application.phases.final_answer_phase import FinalAnswerPhase
 from src.application.phases.general_criteria_phase import GeneralCriteriaPhase
 from src.application.phases.global_verification_phase import GlobalVerificationPhase
@@ -123,6 +124,7 @@ class RalphScenario:
         self.use_case = RalphThinkingUseCase(
             general_criteria_phase=self.__phase(GeneralCriteriaPhase),
             task_decomposition_phase=self.__phase(TaskDecompositionPhase),
+            decomposition_validation_phase=self.__phase(DecompositionValidationPhase),
             planning_learnings_phase=self.__phase(PlanningLearningsPhase),
             task_resolution_phase=self.__phase(TaskResolutionPhase),
             task_verification_phase=self.__phase(TaskVerificationPhase),

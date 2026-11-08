@@ -37,13 +37,15 @@ from src.infra.services.benchmark_ralph_errors_archive_builder import BenchmarkR
 from tests.doubles.benchmark_factories import desfecho, questao
 from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.ralph_scenario import RalphScenario
+from tests.doubles.ralph_scripts import plano_aprovado
 from tests.doubles.scripted_llm_completions import ScriptedLLMCompletions
 
 _MATRIZ = json.loads(
     (Path(__file__).resolve().parents[2] / "fixtures" / "integration_regressions_v1.json").read_text(encoding="utf-8")
 )
 _CASOS = {caso["name"]: caso for caso in _MATRIZ["cases"]}
-_PLANEJAMENTO = [Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_PLANNING_LEARNINGS]
+_PLANEJAMENTO = [Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A3_DECOMPOSITION_VALIDATION,
+                 Phase.A4_PLANNING_LEARNINGS]
 _CICLO = [Phase.B1_TASK_RESOLUTION, Phase.B2_TASK_VERIFICATION, Phase.B4_LEARNINGS_EXTRACTION]
 _SEM_REVISOES = "No stored result has been revised or suspended."
 
@@ -229,7 +231,7 @@ async def test_marte_recuperacao_preserva_o_plano_integral_e_executa_as_tres_tar
     corrigida = _plano(_MARTE_T1, _MARTE_T2, _MARTE_T3)
     pergunta = _pergunta("mars_recovery")
     cenario = _cenario([
-        _MARTE_CRITERIOS, recusada, corrigida, _notas(*_MARTE_A3),
+        _MARTE_CRITERIOS, recusada, corrigida, plano_aprovado(), _notas(*_MARTE_A3),
         *_tarefa_executada("T1", "MARCA_T1: d_max = R + r e d_min = R − r, logo (R + r)/(R − r) ≈ 7,7.",
                            "As distâncias extremas Terra–Marte valem R + r e R − r: órbitas circulares concêntricas."),
         *_tarefa_executada("T2", "MARCA_T2: R/r = (7,7 + 1)/(7,7 − 1) ≈ 1,2985.",
@@ -257,7 +259,8 @@ async def test_marte_recuperacao_preserva_o_plano_integral_e_executa_as_tres_tar
 
     # O plano corrigido inteiro é executado, com as dependências declaradas levadas ao domínio.
     assert _fases(cenario) == [Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A2_TASK_DECOMPOSITION,
-                               Phase.A3_PLANNING_LEARNINGS, *_CICLO * 3, Phase.C1_GLOBAL_VERIFICATION,
+                               Phase.A3_DECOMPOSITION_VALIDATION, Phase.A4_PLANNING_LEARNINGS, *_CICLO * 3,
+                               Phase.C1_GLOBAL_VERIFICATION,
                                Phase.C3_FINAL_ANSWER]
     b1_t3 = _prompts(cenario, Phase.B1_TASK_RESOLUTION, "T3")[0]
     assert "### T3 — Determinar o período de Marte em meses" in _area(b1_t3, "Task")
@@ -280,7 +283,7 @@ async def test_cobertura_de_marte_encaminha_a_c2_completa_a_analise_e_reverifica
         _MARTE_CRITERIOS,
         _plano(_MARTE_T1, _MARTE_T2, _MARTE_T3_SEM_TITULO),
         _plano(_tarefa("T1", "Obter a razão dos raios orbitais", "Obtenha R/r a partir da razão 7,7." + _DETALHE)),
-        _notas(*_MARTE_A3),
+        plano_aprovado(), _notas(*_MARTE_A3),
         *_tarefa_executada("T1", "MARCA_RAZAO: R/r = (7,7 + 1)/(7,7 − 1) ≈ 1,2985.",
                            "A razão dos raios orbitais de Marte e da Terra é R/r ≈ 1,2985: (7,7 + 1)/(7,7 − 1)."),
         _global(lacuna, aprovado=False),
@@ -295,10 +298,11 @@ async def test_cobertura_de_marte_encaminha_a_c2_completa_a_analise_e_reverifica
     eventos = await cenario.run(question=_pergunta("mars_coverage"))
 
     assert _fases(cenario) == [Phase.A1_GENERAL_CRITERIA, Phase.A2_TASK_DECOMPOSITION, Phase.A2_TASK_DECOMPOSITION,
-                               Phase.A3_PLANNING_LEARNINGS, *_CICLO, Phase.C1_GLOBAL_VERIFICATION,
+                               Phase.A3_DECOMPOSITION_VALIDATION, Phase.A4_PLANNING_LEARNINGS, *_CICLO,
+                               Phase.C1_GLOBAL_VERIFICATION,
                                Phase.C2_ADDITIONAL_PLANNING, *_CICLO, Phase.C1_GLOBAL_VERIFICATION,
                                Phase.C3_FINAL_ANSWER]
-    assert cenario.llm.call_count == 14
+    assert cenario.llm.call_count == 15
     c2 = _prompts(cenario, Phase.C2_ADDITIONAL_PLANNING)[0]
     assert lacuna in _area(c2, "Global verification feedback")
     assert "MARCA_RAZAO" in _area(c2, "Results already stored")
@@ -341,7 +345,7 @@ def _colisoes_ate_a_contradicao(t3: str = _C_T3, *notas_t3: str) -> list[str]:
                _tarefa("T2", "Comparar a energia dissipada", "Compare a energia mecânica dissipada em cada caso."),
                _tarefa("T3", "Relacionar força e energia", "Relacione força média e energia dissipada nos dois "
                        "casos, usando os achados registrados.", depends_on=["T1", "T2"])),
-        _notas(*_COLISOES_A3),
+        plano_aprovado(), _notas(*_COLISOES_A3),
         *_tarefa_executada("T1", _C_T1, _C_L1, _C_LDV),
         *_tarefa_executada("T2", _C_T2, _C_L2),
         *_tarefa_executada("T3", t3, *(notas_t3 or (_C_L3, _C_LDV))),
@@ -566,7 +570,7 @@ async def test_tacho_planejamento_separa_origem_e_efeito_sem_transformar_hipotes
                        "Usando a origem da energia registrada em Key Learnings, determine e justifique o efeito da "
                        "energia recebida pelo produto. A análise restringe-se ao efeito no produto.",
                        depends_on=["T1"])),
-        _notas(*_TACHO_A3),
+        plano_aprovado(), _notas(*_TACHO_A3),
         *_tarefa_executada("T1", "MARCA_ORIGEM: análise completa do balanço na camisa (resolução extensa).", l_origem),
         *_tarefa_executada("T2", "MARCA_EFEITO: o produto aquece e parte da sua água evapora.",
                            "A energia recebida pelo produto o aquece e evapora parte da sua água."),
@@ -576,9 +580,12 @@ async def test_tacho_planejamento_separa_origem_e_efeito_sem_transformar_hipotes
     eventos = await cenario.run(question=pergunta)
 
     a2 = _sem_espacos(_prompts(cenario, Phase.A2_TASK_DECOMPOSITION)[0])
-    assert "Investigate the source of transferred energy separately from its effect without prescribing the " \
-           "source" in a2
-    assert "Never introduce a convenient viewing condition, distance reference or physical regime" in a2
+    # A.2 simplificada mantém a regra geral; a auditoria de neutralidade é da rubrica fixa de A.3.
+    assert "must remain open, including in titles and criteria" in a2
+    assert "Never present a convenient condition as a supplied fact" in a2
+    a3 = _sem_espacos(_prompts(cenario, Phase.A3_DECOMPOSITION_VALIDATION)[0])
+    assert "**Neutrality:**" in a3 and "**Applicability:**" in a3 and pergunta in _prompts(
+        cenario, Phase.A3_DECOMPOSITION_VALIDATION)[0]
     _harness_nao_injeta(cenario, pergunta, "condens", "MARCA_ORIGEM")
     b1_t1, b1_t2 = _prompts(cenario, Phase.B1_TASK_RESOLUTION)
     assert "condens" not in _area(b1_t1, "Acceptance criteria for this task")
@@ -621,7 +628,7 @@ async def test_microscopio_preserva_referencias_e_grandeza_linear_com_retentativ
                        depends_on=["T1"]),
                _tarefa("T3", "Aumento linear total", "Determine o aumento linear total a partir dos aumentos "
                        "registrados em Key Learnings.", depends_on=["T1", "T2"])),
-        _notas(*_MICRO_A3),
+        plano_aprovado(), _notas(*_MICRO_A3),
         *_tarefa_executada("T1", "MARCA_OBJ: 1/p' = 1/5 − 1/5,2 ⇒ p' = 130 mm da objetiva; m1 = −25.", l_obj),
         *_tarefa_executada("T2", "MARCA_OCU: p = 190 − 130 = 60 mm da ocular; p'' = −420 mm; m2 = 7.", l_ocu),
         _resolucao("T3", _MICRO_ANGULAR), _local("T3", aprovado=False, justificativa=_MICRO_VEREDITO),
@@ -651,7 +658,10 @@ async def test_microscopio_preserva_referencias_e_grandeza_linear_com_retentativ
         # Cada distância chega com o seu referente, sem troca entre objetiva e ocular.
         assert all(nota in _area(prompt, "Key Learnings") for nota in (*_MICRO_A3, l_obj, l_ocu, l_tot))
     a2 = _sem_espacos(_prompts(cenario, Phase.A2_TASK_DECOMPOSITION)[0])
-    assert "preserve the requested linear or angular quantity and the reference for each distance" in a2
+    # A referência de cada distância é regra de geração de A.2 e item de fidelidade da rubrica de A.3.
+    assert "keeping each value attached to its referent" in a2
+    a3 = _sem_espacos(_prompts(cenario, Phase.A3_DECOMPOSITION_VALIDATION)[0])
+    assert "**Fidelity:**" in a3 and "changed referent" in a3
     _c3_recebe_exatamente_a_ultima_c1(cenario)
     _concluida(cenario, eventos, "Imagem final virtual a 420 mm da ocular, do lado do objeto; aumento linear total "
                                  "de módulo 175.")
@@ -669,6 +679,7 @@ async def test_geografia_retentativa_explicita_o_vinculo_sem_trocar_a_conclusao_
         _criterios("Indicar a alternativa que interpreta o trecho, com fundamento.", "Responder em português."),
         _plano(_tarefa("T1", "Interpretar o trecho", "Compare as alternativas com o trecho e escolha a mais "
                        "sustentada, por eliminação, aplicando o mesmo padrão a todas.")),
+        plano_aprovado(),
         _notas("Trecho: \"Na comunidade, os moradores se reúnem antes da colheita para um rito em que pedem chuva.\"",
                "Alternativas copiadas literalmente: A) A comunidade depende de irrigação artificial. B) O trecho "
                "descreve um conflito por terras. C) O rito é uma atividade comercial. D) O rito expressa a relação "
@@ -706,6 +717,7 @@ async def test_probabilidade_revisao_percorre_as_fases_e_nao_acontece_na_sintese
                        "sete, dado que A venceu a primeira partida, com partidas independentes de probabilidade 1/2."),
                _tarefa("T2", "Escolha da alternativa", "Com a probabilidade registrada em Key Learnings, escolha a "
                        "alternativa sustentada, justificando.", depends_on=["T1"])),
+        plano_aprovado(),
         _notas("Série melhor de sete; partidas independentes; cada equipe vence uma partida com probabilidade 1/2.",
                "Condição dada: a equipe A venceu a primeira partida.",
                "Alternativas: A) 11/32, B) 35/64, C) 21/32, D) 1/2, E) 11/16."),
@@ -761,7 +773,7 @@ async def test_contagem_preserva_definicao_e_igualdade_falsa_vira_investigacao()
         _criterios("Determinar a quantidade de listas e indicar a alternativa sustentada.", "Responder em português."),
         _plano(_tarefa("T1", "Contar as listas", "Conte as listas ordenadas de cinco inteiros positivos com mediana, "
                        "média, amplitude e moda iguais a 23, justificando a contagem por casos.")),
-        _notas(*_LISTAS_A3),
+        plano_aprovado(), _notas(*_LISTAS_A3),
         *_tarefa_executada("T1", "MARCA_L47: 47 listas, o que corresponde exatamente à alternativa D) 44.", l_errado),
         _global(igualdade, aprovado=False),
         _plano(_tarefa("T2", "Investigar a contagem", "Refaça a contagem com todas as condições simultâneas e "
@@ -802,6 +814,7 @@ async def test_quimica_tabela_e_alternativas_chegam_a_c1_e_c3_para_pareamento_li
                    "Responder em português."),
         _plano(_tarefa("T1", "Identificar a espécie e o teste", "Identifique a espécie que forma precipitado "
                        "branco com oxalato de amônio e o teste correspondente da tabela, justificando.")),
+        plano_aprovado(),
         _notas(tabela, alternativas, "Observação: a amostra forma precipitado branco com oxalato de amônio."),
         *_tarefa_executada("T1", "MARCA_CA: o precipitado branco com oxalato indica cálcio; teste 1 — Cálcio.",
                            "O teste 1 (Cálcio) identifica a espécie: oxalato de cálcio é precipitado branco."),
@@ -829,6 +842,7 @@ async def test_aproximacao_legitima_e_aceita_sem_c2_e_apresentada_como_melhor_aj
         _criterios("Determinar o tempo aproximado e indicar a alternativa sustentada.", "Responder em português."),
         _plano(_tarefa("T1", "Estimar o tempo de enchimento", "Estime o tempo para encher 2.000 L com vazão "
                        "aproximada de 37 L/min e escolha a alternativa por melhor ajuste, justificando.")),
+        plano_aprovado(),
         _notas("Caixa d'água: 2.000 L.", "Vazão da bomba: aproximadamente 37 L/min.",
                "Alternativas: A) 30 min, B) 45 min, C) 55 min, D) 70 min, E) 90 min."),
         *_tarefa_executada("T1", estimativa, "O tempo de enchimento é ≈ 54 min e C) 55 min é o melhor ajuste."),
@@ -858,7 +872,7 @@ async def test_pergunta_aberta_preserva_siglas_nomes_unidades_e_condicoes_sem_al
                    "Responder em português."),
         _plano(_tarefa("T1", "Volume da Bomba Alfa", "Determine o volume entregue pela Bomba Alfa (12 L/min) em "
                        "3 minutos, sob vazão constante, explicando.")),
-        _notas(*notas),
+        plano_aprovado(), _notas(*notas),
         *_tarefa_executada("T1", "MARCA_VOL: V = 12 L/min × 3 min = 36 L (Bomba Alfa, vazão constante).",
                            "O volume entregue pela Bomba Alfa em 3 min é 36 L sob vazão constante: V = vazão × tempo."),
         _global(), _final(final),
@@ -910,8 +924,9 @@ async def test_confirmacao_vencida_por_nova_evidencia_sai_do_registro_de_confirm
 
 
 async def test_orcamento_real_esgotado_depois_da_revisao_aplicada_encerra_sem_sintese_e_com_auditoria() -> None:
-    orcamento = CostBudget(max_task_attempts=3, max_additional_planning_rounds=2, max_tasks_per_session=12,
-                           max_llm_calls_per_session=16, session_token_budget=100_000,
+    orcamento = CostBudget(max_task_attempts=3, max_planning_attempts=5, max_additional_planning_rounds=2,
+                           max_tasks_per_session=12,
+                           max_llm_calls_per_session=17, session_token_budget=100_000,
                            final_answer_token_reserve=1_000, session_timeout_seconds=600)
     cenario = _cenario([
         *_colisoes_ate_a_contradicao(), _plano(_revisora()),
@@ -921,11 +936,12 @@ async def test_orcamento_real_esgotado_depois_da_revisao_aplicada_encerra_sem_si
     with pytest.raises(Exception):
         await cenario.run(question=_pergunta("collisions_revision"))
 
-    # A 17ª chamada (B.4 da revisora) é negada antes do envio: nenhum limite foi relaxado.
+    # A 18ª chamada (B.4 da revisora) é negada antes do envio. O teto do cenário acompanha a chamada de A.3
+    # acrescentada ao planejamento, para continuar negando exatamente o mesmo ponto do fluxo.
     falha = cenario.session.failure
     assert falha.reason is SessionFailureReasonEnum.RESOURCE_LIMIT
     assert falha.limit is BudgetLimitEnum.LLM_CALLS_PER_SESSION and falha.phase is Phase.B4_LEARNINGS_EXTRACTION
-    assert cenario.llm.call_count == 16 and Phase.C3_FINAL_ANSWER not in _fases(cenario)
+    assert cenario.llm.call_count == 17 and Phase.C3_FINAL_ANSWER not in _fases(cenario)
     assert cenario.session.final_answer is None
     # A revisão aprovada em B.2 e aplicada em B.3 permanece auditada; não houve nova C.1 nem síntese.
     assert [r.superseded_task_ids for r in cenario.session.result_revisions] == [("T3",)]

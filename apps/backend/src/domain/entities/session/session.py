@@ -13,6 +13,7 @@ from src.domain.entities.thinking.output_recovery import OutputRecovery
 from src.domain.entities.thinking.result_revision import ResultRevision
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.ralph_flow_version_enum import RalphFlowVersionEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 
@@ -43,6 +44,8 @@ class Session:
             invocação, e por isso não têm chamadas individuais correspondentes.
         result_revisions: Revisões de resultados aprovadas e aplicadas em B.3, em ordem; vazia em
             sessões sem revisão e nas gravadas antes deste registro.
+        flow_version: Versão do fluxo Ralph, que define o significado das fases do histórico (em especial
+            `A3`); `None` na inferência direta, que não tem fases Ralph.
     """
 
     id: str
@@ -64,6 +67,7 @@ class Session:
     legacy_totals: bool = False
     benchmark_details: BenchmarkDetails = field(default_factory=BenchmarkDetails)
     result_revisions: list[ResultRevision] = field(default_factory=list)
+    flow_version: RalphFlowVersionEnum | None = None
 
     def add_result_revision(self, revision: ResultRevision) -> None:
         """Registra na auditoria uma revisão de resultados aprovada e aplicada.

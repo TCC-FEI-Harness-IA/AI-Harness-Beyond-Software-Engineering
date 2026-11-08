@@ -1,9 +1,10 @@
 // `unknown` → `ReasoningFrame` (README, FASE 02, seção 5). O backend usa dois formatos na
-// mesma conexão: o frame de 9 campos e o frame reduzido de erro — a forma é decidida antes de
+// mesma conexão: o frame de 10 campos e o frame reduzido de erro — a forma é decidida antes de
 // validar os campos.
 
 import { EVENT_SUBTYPE, isEventSubtype, type EventSubtype } from '@/domain/enums/eventSubtype'
 import { isEventType } from '@/domain/enums/eventType'
+import { FLOW_VERSION, isFlowVersion, type FlowVersion } from '@/domain/enums/flowVersion'
 import { isThinkingPhase, THINKING_PHASE, type ThinkingPhase } from '@/domain/enums/thinkingPhase'
 import type {
   ContextWindowDTO,
@@ -42,12 +43,24 @@ function fallbackPhase(rawPhase: string): ThinkingPhase {
   return THINKING_PHASE.B1
 }
 
+// A versão é lida antes das fases: ela diz o que `A3` significa. Um frame sem o campo vem de um backend
+// anterior à versão e não é reinterpretado como versão nova.
+function parseFlowVersion(obj: Record<string, unknown>): FlowVersion {
+  if (!('flow_version' in obj)) return FLOW_VERSION.LEGACY
+  const value = obj.flow_version
+  if (!isFlowVersion(value)) {
+    throw new ContractError(`campo "flow_version" tem valor fora do enum FlowVersion: "${String(value)}"`)
+  }
+  return value
+}
+
 function parseReasoningEvent(obj: Record<string, unknown>): ReasoningEventDTO {
   const rawType = requireString(obj, 'type', 'type')
   if (!isEventType(rawType)) {
     throw new ContractError(`campo "type" tem valor fora do enum EventType: "${rawType}"`)
   }
 
+  const flowVersion = parseFlowVersion(obj)
   const subtype = fallbackSubtype(requireString(obj, 'subtype', 'subtype'))
   const phase = fallbackPhase(requireString(obj, 'phase', 'phase'))
 
@@ -61,6 +74,7 @@ function parseReasoningEvent(obj: Record<string, unknown>): ReasoningEventDTO {
     total_tokens: requireNumber(obj, 'total_tokens', 'total_tokens'),
     context_window: parseContextWindow(obj),
     inference_time_ms: requireNumber(obj, 'inference_time_ms', 'inference_time_ms'),
+    flow_version: flowVersion,
   }
 }
 
@@ -78,7 +92,7 @@ export function parseReasoningFrame(raw: unknown): ReasoningFrame {
     return parseReasoningErrorFrame(obj)
   }
 
-  // Não é o formato reduzido de erro — a única outra forma válida é o evento de 9 campos.
+  // Não é o formato reduzido de erro — a única outra forma válida é o evento de 10 campos.
   // `parseReasoningEvent` valida campo a campo e nomeia o primeiro que faltar ou tiver tipo
   // errado, o que cobre tanto o evento incompleto quanto qualquer formato desconhecido.
   return parseReasoningEvent(obj)

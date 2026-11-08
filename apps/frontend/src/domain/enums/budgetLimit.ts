@@ -3,6 +3,7 @@
 
 export const BUDGET_LIMIT = {
   TASK_ATTEMPTS: 'task_attempts',
+  PLANNING_ATTEMPTS: 'planning_attempts',
   ADDITIONAL_PLANNING_ROUNDS: 'additional_planning_rounds',
   TASKS_PER_SESSION: 'tasks_per_session',
   LLM_CALLS_PER_SESSION: 'llm_calls_per_session',
@@ -17,6 +18,7 @@ export const isBudgetLimit = (value: unknown): value is BudgetLimit =>
 
 export const BUDGET_LIMIT_LABEL: Record<BudgetLimit, string> = {
   task_attempts: 'Tentativas por tarefa',
+  planning_attempts: 'Tentativas de planejamento',
   additional_planning_rounds: 'Rodadas de replanejamento',
   tasks_per_session: 'Tarefas por sessão',
   llm_calls_per_session: 'Chamadas ao modelo',

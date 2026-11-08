@@ -55,6 +55,7 @@ const VALID_EVENT = {
   total_tokens: 10,
   context_window: { context_id: 'ctx_1', context_size: 5 },
   inference_time_ms: 100,
+  flow_version: 2,
 }
 
 function makeHandlers() {

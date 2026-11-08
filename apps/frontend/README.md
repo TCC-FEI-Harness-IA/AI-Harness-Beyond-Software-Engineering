@@ -196,17 +196,30 @@ nada além disso pode diferir entre a tela ao vivo e a de histórico. A mesma re
 fluxo simples: `<SimpleChatView />` recebe um `SimpleRun`, vindo da resposta do `POST` ou da
 reconstrução de uma sessão `DIRECT`.
 
-A etapa **A.3 — aprendizados do enunciado** segue a mesma regra: o evento ao vivo (`phase = A3`,
-`subtype = learn`, `task = setup`) e a mensagem persistida (`phase = A3`) viram o mesmo passo no
-`ThinkingRun`. Por ser global, ela não cria faixa de tarefa; aparece como o nó **A.3** da trilha
-macro (entre A.2 e a execução em loop) e como uma mensagem no Modo Chat, com a etiqueta
-"A.3 · Aprendizados do enunciado" (`getStepLabel` em `domain/enums/eventSubtype.ts` diferencia o
-`learn` de A.3 do `learn` de B.4). Sessões gravadas antes dessa etapa continuam abrindo, com o nó
-A.3 marcado como "não foi necessária".
+**Versão do fluxo.** Todo frame traz `flow_version` (10 campos) e a sessão persistida também; uma sessão
+Ralph antiga sem o campo é lida como versão 1 e a inferência direta como `null`
+(`domain/enums/flowVersion.ts`). A versão é lida antes das fases, porque `A3` muda de significado:
 
-Uma consequência prática: a mensagem persistida no backend **não tem `subtype`** — só o evento do
-WebSocket tem. `domain/services/deriveSubtype.ts` deriva o `subtype` a partir de
-`(phase, source, content)`, numa tabela única reusada por toda reconstrução de histórico.
+| Versão | Trilha macro | `A3` | `A4` |
+|---|---|---|---|
+| 1 (sessões antigas) | A.1 → A.2 → A.3 → B → C.1 → C.2 → C.3 | Aprendizados do enunciado (`learn`) | — |
+| 2 (atual) | A.1 → A.2 → A.3 → A.4 → B → C.1 → C.2 → C.3 | Validação da decomposição (`plan_rejected`, `plan_approved`, `tasks`) | Aprendizados do enunciado (`learn`) |
+
+No fluxo versão 2, A.2 emite `plan_candidate`, que **nunca** cria faixa de tarefa nem entra no progresso;
+A.3 emite `plan_rejected` ou `plan_approved`; só a confirmação (`tasks`, em A.3, uma única vez) cria as
+tarefas. Cada reprovação ativa o arco `plan-revision` (A.3 → A.2) ao lado do nó A.3. Os rótulos
+completos vêm de `getPhaseLabel(phase, flowVersion)` e de `getStepLabel` ("Plano candidato", "Plano
+reprovado", "Plano aprovado", "Plano confirmado na fila", "Aprendizados do enunciado" em A.4 e, nas
+sessões antigas, em A.3). Sessões versão 1 continuam abrindo com a trilha antiga; nelas, A.3 sem passos
+aparece como "não foi necessária".
+
+**Subtipo no histórico.** Sessões novas gravam em cada mensagem o `subtype` do evento emitido;
+`domain/services/deriveSubtype.ts` usa esse valor diretamente, e registros sem evento (como a auditoria
+de uma saída recusada) não viram passo. Sessões antigas não têm o campo, e o `subtype` continua derivado
+de `(phase, source, content)`, numa tabela única reusada por toda reconstrução de histórico. O passo
+`execute` sintetizado no histórico usa o bloco da tarefa confirmada (`tasks`/`replan`), nunca o de um
+candidato reprovado. `validatedPlanning.test.ts` compara execução ao vivo e histórico para uma sessão com
+revisão do plano e para uma interrompida antes de A.4.
 
 ---
 

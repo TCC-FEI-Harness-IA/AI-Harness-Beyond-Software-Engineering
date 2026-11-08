@@ -74,7 +74,8 @@ class Settings(ISettings):
             "MONGODB_MODELS_COLLECTION": os.getenv("MONGODB_MODELS_COLLECTION", "models"),
             "RALPH_SESSION_FLUSH_EVERY_MESSAGE": os.getenv("RALPH_SESSION_FLUSH_EVERY_MESSAGE", "true"),
             "RALPH_SESSION_ID_PREFIX": os.getenv("RALPH_SESSION_ID_PREFIX", "sess"),
-            "RALPH_MAX_TASK_ATTEMPTS": os.getenv("RALPH_MAX_TASK_ATTEMPTS", "3"),
+            "RALPH_MAX_TASK_ATTEMPTS": os.getenv("RALPH_MAX_TASK_ATTEMPTS", "5"),
+            "RALPH_MAX_PLANNING_ATTEMPTS": os.getenv("RALPH_MAX_PLANNING_ATTEMPTS", "5"),
             "RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS": os.getenv("RALPH_MAX_ADDITIONAL_PLANNING_ROUNDS", "2"),
             "RALPH_MAX_TASKS_PER_SESSION": os.getenv("RALPH_MAX_TASKS_PER_SESSION", "12"),
             "RALPH_MAX_LLM_CALLS_PER_SESSION": os.getenv("RALPH_MAX_LLM_CALLS_PER_SESSION", "60"),
@@ -391,6 +392,11 @@ class Settings(ISettings):
     def ralph_max_task_attempts(self) -> int:
         """Tentativas máximas de B.1/B.2 para a mesma tarefa."""
         return self.__get_int("RALPH_MAX_TASK_ATTEMPTS")
+
+    @property
+    def ralph_max_planning_attempts(self) -> int:
+        """Planos candidatos máximos do planejamento inicial (A.2 avaliado por A.3), incluindo o primeiro."""
+        return self.__get_int("RALPH_MAX_PLANNING_ATTEMPTS")
 
     @property
     def ralph_max_additional_planning_rounds(self) -> int:

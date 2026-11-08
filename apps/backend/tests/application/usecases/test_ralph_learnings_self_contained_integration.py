@@ -15,7 +15,7 @@ from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum as Phase
 from src.infra.providers.file_prompt_template_provider import FilePromptTemplateProvider
 from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.ralph_scenario import RalphScenario
-from tests.doubles.ralph_scripts import aprendizados, aprovado, relatorio, reprovado, resposta_final
+from tests.doubles.ralph_scripts import aprendizados, aprovado, plano_aprovado, relatorio, reprovado, resposta_final
 
 
 _CASES = [
@@ -120,7 +120,7 @@ async def test_notas_autossuficientes_chegam_a_todos_os_destinos_inclusive_taref
     settings = FakeSettings()
     responses = [
         json.dumps({"general_acceptance_criteria": [{"id": "AC1", "description": "Responder ao pedido."}]}),
-        _task("T1"), aprendizados(*given, "  " + given[0] + "  ", "   "),
+        _task("T1"), plano_aprovado(), aprendizados(*given, "  " + given[0] + "  ", "   "),
     ]
     if refuted:
         responses.extend([_result(refuted), reprovado("T1")])
@@ -149,7 +149,7 @@ async def test_notas_autossuficientes_chegam_a_todos_os_destinos_inclusive_taref
         assert len(conversation) == 1  # Nenhuma conversa de outra fase é restaurada.
         prompt = conversation[0]
         assert "{{" not in prompt
-        if invocation.phase is Phase.A3_PLANNING_LEARNINGS:
+        if invocation.phase is Phase.A4_PLANNING_LEARNINGS:
             assert question in _area(prompt, "Question")
             assert "T1-AC1" not in prompt and "## Key Learnings" not in prompt
         if invocation.phase.value.startswith(("B", "C")):
@@ -174,7 +174,7 @@ async def test_notas_autossuficientes_chegam_a_todos_os_destinos_inclusive_taref
         Phase.B1_TASK_RESOLUTION, Phase.B2_TASK_VERIFICATION, Phase.B4_LEARNINGS_EXTRACTION,
         Phase.C1_GLOBAL_VERIFICATION, Phase.C2_ADDITIONAL_PLANNING, Phase.C3_FINAL_ANSWER,
     }
-    a3_event = next(event for event in events if event.phase is Phase.A3_PLANNING_LEARNINGS)
+    a3_event = next(event for event in events if event.phase is Phase.A4_PLANNING_LEARNINGS)
     assert "## Repeated learnings already recorded (not stored again)" in a3_event.content
     assert given[0] in a3_event.content
     b4_events = [event for event in events if event.phase is Phase.B4_LEARNINGS_EXTRACTION]
