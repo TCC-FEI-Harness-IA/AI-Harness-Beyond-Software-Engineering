@@ -20,6 +20,7 @@ from src.domain.interfaces.llm_completions_interface import ILLMCompletions
 from src.domain.interfaces.prompt_template_provider_interface import IPromptTemplateProvider
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.services.learnings_memory import LearningsMemory
+from src.domain.services.results_ledger import ResultsLedger
 from src.domain.services.task_queue import TaskQueue
 from src.infra.adapters.context_window_factory_adapter import ContextWindowFactoryAdapter
 from src.infra.adapters.cost_guard_adapter import CostGuardAdapter
@@ -46,7 +47,7 @@ class RalphScenario:
     """Monta o `RalphThinkingUseCase` inteiro com dublês e expõe cada peça.
 
     Só a porta de completions é falsa por obrigação; o parser, o gravador de
-    sessão, a fila e a memória de aprendizados são as implementações reais, de
+    sessão, a fila, o livro de resultados e a memória de aprendizados são as implementações reais, de
     forma que o cenário exercite a fiação completa do fluxo. O guardião de custo
     é o dublê programável por padrão; informar `budget` troca-o pelo
     `CostGuardAdapter` real, para os cenários que provam a política de orçamento.
@@ -118,6 +119,7 @@ class RalphScenario:
         self.context_window_factory = ContextWindowFactoryAdapter(id_generator=self.id_generator)
         self.task_queue = TaskQueue()
         self.learnings_memory = LearningsMemory()
+        self.results_ledger = ResultsLedger()
         self.use_case = RalphThinkingUseCase(
             general_criteria_phase=self.__phase(GeneralCriteriaPhase),
             task_decomposition_phase=self.__phase(TaskDecompositionPhase),
@@ -130,6 +132,7 @@ class RalphScenario:
             final_answer_phase=self.__phase(FinalAnswerPhase),
             task_queue=self.task_queue,
             learnings_memory=self.learnings_memory,
+            results_ledger=self.results_ledger,
             context_window_factory=self.context_window_factory,
             cost_guard=self.cost_guard,
             session_recorder=self.recorder,

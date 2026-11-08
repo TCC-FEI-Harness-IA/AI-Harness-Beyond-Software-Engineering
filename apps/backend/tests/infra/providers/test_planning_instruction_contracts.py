@@ -37,6 +37,7 @@ def test_matriz_renderiza_dados_literais_nas_areas_reais_sem_injetar_o_exemplo(c
             unmet_criteria="AC1: " + case["general_criteria"][0],
             global_verification_feedback=case["gap"], stored_results=case["stored_results"],
             learnings=case["learnings"], next_task_number=case["tasks"][0]["id"][1:],
+            result_revisions="No stored result has been revised or suspended.",
         )
     prompt = _provider().render(phase=phase, variables=variables)
 

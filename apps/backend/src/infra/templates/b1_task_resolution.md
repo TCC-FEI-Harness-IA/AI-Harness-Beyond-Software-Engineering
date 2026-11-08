@@ -19,6 +19,14 @@ widening the scope of this task.
 
 {{learnings}}
 
+## Results under review
+
+When planning made this task a corrective investigation, the stored results it investigates appear
+below, with the concrete reason for the investigation. They are claims to check, not established
+facts. Otherwise this area states that the task does not review stored results.
+
+{{results_under_review}}
+
 ## Previous attempts at this task
 
 When this task has already been attempted and rejected, the previous attempts and the validator's
@@ -65,6 +73,25 @@ The resolution goes in the `result` field, in markdown, with the result and its 
 when the final answer must be short or contain only a letter. For calculations, show formulas,
 substitution with units, applicability, conventions and justified approximations; for interpretations
 or choices, show the supporting evidence and reasoning.
+
+## Investigating results under review
+
+When results under review are listed above, investigate the named defect with the data, conditions
+and method it requires, without presuming which account is wrong. Then give, in the `revision`
+field, exactly one verdict for each result under review:
+
+- `superseded` only when your investigation identifies the concrete error in that claim (a datum,
+  condition, unit, reference or step) and establishes the corrected conclusion in `result`;
+- `confirmed` when the claim withstands the investigation, including when an apparent conflict is
+  explained by different objects, reference frames or hypotheses.
+
+Recency, a different hypothesis or a different wording is not evidence of an error. Justify each
+verdict with the specific finding, and explain in `result` what was checked and why each verdict
+follows. A superseded result stops being current as a whole: restate in `result` any of its claims
+that your investigation shows to remain valid. A `superseded` result stops being a current fact only
+if the validator approves your investigation. When no result is under review, omit the `revision`
+field: an ordinary task does not revise stored results, even when its conclusion differs from one of
+them.
 
 ## Evidence and consistency policy
 
@@ -126,3 +153,9 @@ Respond **exclusively** with a JSON object, with no text before or after it and 
 the format:
 
 {"task_id": "...", "result": "markdown with the resolution", "conclusion": "final conclusion, without the reasoning"}
+
+Only when results under review are listed, add the `revision` field, with one verdict per result
+under review, in the format:
+
+{"task_id": "...", "result": "...", "conclusion": "...", "revision": [{"task_id": "id of a result
+under review", "verdict": "confirmed or superseded", "justification": "..."}]}

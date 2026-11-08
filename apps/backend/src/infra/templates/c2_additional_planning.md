@@ -24,10 +24,21 @@ do not promote a proposed correction to a proven conclusion.
 
 ## Results already stored
 
-For each task already approved, its statement and the conclusion it reached. The reasoning that
-led to each conclusion was omitted.
+For each current result — approved and neither superseded nor awaiting revalidation —
+its statement and the conclusion it reached. The reasoning that led to each conclusion was omitted.
 
 {{stored_results}}
+
+## Revision record
+
+Results superseded by approved reviews (history, not inputs), results confirmed by approved reviews
+and results awaiting revalidation because they explicitly depend on a result that stopped being
+current. A result awaiting revalidation is not a current input; it may be the target of a review
+that confirms or replaces it. A confirmed result remains current because an approved investigation
+checked it, not because of recency: do not plan another review of the same claim unless the
+feedback gives a new concrete reason.
+
+{{result_revisions}}
 
 ## Key Learnings
 
@@ -46,9 +57,10 @@ prior claims and literal data. Do not decide which conclusion is wrong before ex
 task. Approval of an earlier result does not prohibit investigating a specific defect flagged by
 C.1: a previously approved result may be investigated when the feedback gives a concrete reason,
 such as a conditioning error, a false equality or a statement incompatible with another result.
-Ask the new task to explain its result and to state which prior claim it confirms or corrects, so
-that the next global verification can see the explained outcome. Do not reopen unrelated resolved
-work or rewrite the received general criteria.
+Plan that investigation as a reviewing task (see the `review` field below): the new task explains
+its result and states which prior claim it confirms or corrects, as an explicit verdict that is
+verified before it takes effect. Do not reopen unrelated resolved work or rewrite the received
+general criteria.
 
 The investigation must address the defect itself. A task that would only "choose the closest option"
 to a value already flagged as wrong would cover the known defect and is not a valid investigation;
@@ -120,6 +132,27 @@ an image at infinity.
 Plan only the investigations needed to fill the gaps; there is no preferred task count. Keep
 criteria concise, and avoid tasks merely to transcribe data or restate already supported results.
 
+## Reviewing stored results and declaring dependencies
+
+Two optional structured fields connect a new task to stored results. They are the only way the
+session changes which results are current; titles and descriptions never do.
+
+- `review`: use it only when global verification gives a concrete reason to investigate specific
+  stored results (a contradiction between results, a defective calculation or a missing grounding),
+  or to revalidate a result awaiting revalidation. Give `task_ids`, the stored results whose claims
+  are investigated (current or awaiting revalidation), and `reason`, the concrete defect taken from
+  the feedback. The task receives those results' statements and conclusions and must return a
+  verdict for each: `confirmed` or `superseded`. Do not decide the verdict in planning. Do not list
+  results that merely differ, rest on other hypotheses or are unrelated to the gap. Each result is
+  reviewed by at most one task of the batch; a task cannot review itself or another new task, and a
+  superseded result cannot be reviewed again.
+- `depends_on`: list the tasks whose findings this task explicitly uses, either current stored
+  results or earlier tasks of this batch. If a listed result is later superseded, this task's
+  result will await revalidation. Do not list a result that the same task reviews.
+
+Ordinary tasks omit both fields. A reviewing task automatically receives the criterion
+`<task id>-REV`, which evaluates its verdicts; do not use that identifier yourself.
+
 ## Final plan review
 
 Before returning the JSON, review the stored results together with the new plan within this
@@ -144,5 +177,8 @@ Continue numbering from `T{{next_task_number}}` to avoid collisions with existin
 Respond **exclusively** with a JSON object, with no text before or after it and no code fence, in
 the format:
 
-{"tasks": [{"id": "T1", "title": "...", "description": "...",
-"acceptance_criteria": [{"id": "T1-AC1", "description": "..."}]}]}
+{"tasks": [{"id": "T{{next_task_number}}", "title": "...", "description": "...",
+"acceptance_criteria": [{"id": "T{{next_task_number}}-AC1", "description": "..."}],
+"review": {"task_ids": ["..."], "reason": "..."}, "depends_on": ["..."]}]}
+
+`review` and `depends_on` are optional: omit them in an ordinary task.

@@ -1,33 +1,62 @@
 from abc import ABC, abstractmethod
-from typing import Sequence
+from typing import Iterable, Sequence
 
 from src.domain.entities.thinking.learning import Learning
 
 
 class ILearningsMemory(ABC):
-    """Contrato do armazenamento dos aprendizados pontuais do fluxo (A.3 e B.4)."""
+    """Contrato do armazenamento dos aprendizados pontuais do fluxo (A.3 e B.4).
+
+    A memória guarda a proveniência de cada fato. A visão vigente — o que `all` e `render`
+    devolvem — contém só os fatos com ao menos uma fonte vigente; o enunciado (A.3) é sempre vigente.
+    """
 
     @abstractmethod
     def append(self, learnings: Sequence[Learning]) -> tuple[Learning, ...]:
         """Acumula novos aprendizados extraídos por A.3 ou B.4, descartando os já registrados.
 
-        Compara apenas normalizando espaços. Preserva o primeiro texto, sua origem e a ordem;
-        não interpreta equivalências de símbolos, valores, unidades, referentes ou condições.
+        Compara apenas normalizando espaços. Preserva o primeiro texto e a ordem; uma repetição
+        acrescenta a sua fonte ao fato já registrado. Não interpreta equivalências de símbolos,
+        valores, unidades, referentes ou condições.
 
         Args:
             learnings: Aprendizados a acumular.
 
         Returns:
-            tuple[Learning, ...]: Aprendizados efetivamente acumulados, na ordem recebida.
+            tuple[Learning, ...]: Aprendizados que passaram a fazer parte da visão vigente, na ordem recebida.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def withdraw(self, task_ids: Iterable[str]) -> tuple[Learning, ...]:
+        """Retira tarefas das fontes vigentes, sem apagar o que elas registraram.
+
+        Args:
+            task_ids: Tarefas cujos resultados deixaram de ser vigentes.
+
+        Returns:
+            tuple[Learning, ...]: Aprendizados que saíram da visão vigente por não terem outra fonte.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def restore(self, task_ids: Iterable[str]) -> tuple[Learning, ...]:
+        """Devolve tarefas às fontes vigentes.
+
+        Args:
+            task_ids: Tarefas cujos resultados voltaram a ser vigentes.
+
+        Returns:
+            tuple[Learning, ...]: Aprendizados que voltaram à visão vigente.
         """
         raise NotImplementedError
 
     @abstractmethod
     def all(self) -> tuple[Learning, ...]:
-        """Devolve todos os aprendizados acumulados até o momento.
+        """Devolve a visão vigente dos aprendizados acumulados.
 
         Returns:
-            tuple[Learning, ...]: Aprendizados acumulados, em ordem de extração.
+            tuple[Learning, ...]: Aprendizados com fonte vigente, em ordem de extração.
         """
         raise NotImplementedError
 

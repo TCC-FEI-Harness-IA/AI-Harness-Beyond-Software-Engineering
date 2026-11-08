@@ -73,6 +73,14 @@ distance; establish any viewing condition needed by the chosen relation during e
    contextual inference, and an open question may be answered by an explained estimate. Selecting
    an option alone does not establish correctness.
 
+## Declared dependencies
+
+When a task uses a finding of an earlier task of this plan, list that task's identifier in the
+optional `depends_on` field, for example `"depends_on": ["T1"]` in task T2. It records the explicit
+basis of the conclusion: if that earlier result is later superseded by an approved review, the
+dependent result must be revalidated before the final answer. List only earlier tasks of this plan,
+and omit the field when a task does not use another task's finding.
+
 ## Parsimony and efficiency guidelines
 
 Plan the **smallest possible number of tasks** that covers the request, without a preferred count.
@@ -110,3 +118,6 @@ the format:
 
 {"tasks": [{"id": "T1", "title": "...", "description": "...",
 "acceptance_criteria": [{"id": "T1-AC1", "description": "..."}]}]}
+
+The `depends_on` field is optional: add it, for example `"depends_on": ["T1"]`, only to a task that
+uses the finding of an earlier task of this plan, and omit it in the other tasks.

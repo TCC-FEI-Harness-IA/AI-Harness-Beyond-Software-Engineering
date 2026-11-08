@@ -35,10 +35,11 @@ def _learnings(case: dict) -> str:
 def _variables(case: dict) -> dict[str, str]:
     if case["phase"] == "B2":
         return {"preliminary_result": case["result"], "task_acceptance_criteria": _criteria(case),
-                "learnings": _learnings(case)}
+                "learnings": _learnings(case), "revision_proposal": "None: this task does not review stored results."}
     stored = "\n\n".join(f"## {item['task_id']} — {item['title']}\n\n{item['content']}"
                          for item in case["stored_results"])
-    return {"stored_results": stored, "general_acceptance_criteria": _criteria(case), "learnings": _learnings(case)}
+    return {"stored_results": stored, "general_acceptance_criteria": _criteria(case), "learnings": _learnings(case),
+            "result_revisions": "No stored result has been revised or suspended."}
 
 
 def _report(case: dict, unmet: list[str], decision: str) -> str:

@@ -13,6 +13,7 @@ from src.domain.enums.length_interruption_enum import LengthInterruptionEnum
 from src.domain.enums.output_contract_status_enum import OutputContractStatusEnum
 from src.domain.enums.output_problem_code_enum import OutputProblemCodeEnum
 from src.domain.enums.output_syntax_status_enum import OutputSyntaxStatusEnum
+from src.domain.enums.revision_verdict_enum import RevisionVerdictEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
 from src.domain.enums.verification_decision_enum import VerificationDecisionEnum
 from src.domain.errors.phase_parsing_error import PhaseParsingError
@@ -42,6 +43,8 @@ _TRUNCATED_REASON = (
     "The output was cut off by the length limit before forming a complete JSON object."
 )
 _UNSUPPORTED_PHASE_REASON = "The phase does not produce structured output."
+_REVISION_CRITERION_SUFFIX = "-REV"
+_ABSENT_REVISIONS = (None, [])
 
 
 @dataclass(frozen=True)
@@ -480,11 +483,164 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
                 what=f"criteria of task '{task['id']}'",
                 field=self.__item_field(criteria_container, "id"),
             )
+            self.__validate_task_links(task=task)
 
         self.__require_unique_ids(
             ids=[task["id"] for task in tasks], what="batch tasks", field=self.__item_field("tasks", "id")
         )
         self.__validate_batch_against_session(tasks=tasks, validation=validation)
+        self.__validate_task_references(tasks=tasks, validation=validation)
+
+    def __validate_task_links(self, task: dict[str, Any]) -> None:
+        """Valida a forma dos campos opcionais `depends_on` e `review` de uma tarefa planejada.
+
+        A ausência (ou `null`) dos dois campos mantém o contrato de uma tarefa normal. Nada é
+        inferido do título ou da descrição: só estes campos estruturados mudam o estado da sessão.
+
+        Raises:
+            _ContractViolation: Quando `depends_on` não é uma lista de identificadores únicos; quando
+                `review` não é um objeto com `task_ids` não vazio e sem repetição e `reason` preenchido;
+                ou quando um critério planejado usa o identificador reservado ao critério de revisão.
+        """
+        owner = task["id"]
+        if task.get("depends_on") is not None:
+            self.__require_id_list(
+                source=task, key="depends_on", label="depends_on", allow_empty=True,
+                field=self.__item_field("tasks", "depends_on"), owner_id=owner, what=f"dependencies of task '{owner}'",
+            )
+
+        review = task.get("review")
+        if review is None:
+            return
+        if not isinstance(review, dict):
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.SCHEMA_TYPE,
+                reason="The 'review' field must be an object with 'task_ids' and 'reason'.",
+                field=self.__item_field("tasks", "review"),
+                affected_ids=(owner,),
+            )
+        review_field = self.__item_field("tasks", "review")
+        self.__require_id_list(
+            source=review, key="task_ids", label="review.task_ids", allow_empty=False,
+            field=f"{review_field}{_FIELD_SEPARATOR}task_ids", owner_id=owner, what=f"review targets of task '{owner}'",
+        )
+        self.__require_text(
+            source=review, key="reason", label="review.reason", field=f"{review_field}{_FIELD_SEPARATOR}reason",
+            owner_id=owner,
+        )
+        reserved = f"{owner}{_REVISION_CRITERION_SUFFIX}"
+        if any(criterion["id"] == reserved for criterion in task["acceptance_criteria"]):
+            raise _ContractViolation(
+                code=OutputProblemCodeEnum.INVALID_VALUE,
+                reason=(
+                    f"The criterion identifier '{reserved}' is reserved for the revision verdict of a reviewing task."
+                ),
+                field=self.__item_field("tasks", "acceptance_criteria[].id"),
+                affected_ids=(reserved,),
+            )
+
+    def __validate_task_references(
+        self, tasks: list[dict[str, Any]], validation: ValidationContext | None
+    ) -> None:
+        """Confronta as revisões e dependências do lote com o que a sessão pode honrar.
+
+        Uma revisão só aponta resultados armazenados vigentes ou em revalidação, nunca a própria
+        tarefa nem outra do lote, e cada resultado é revisado por no máximo uma tarefa do lote. Uma
+        dependência aponta uma tarefa anterior do lote ou um resultado vigente: como só se depende do
+        que vem antes, não há ciclo possível.
+
+        Raises:
+            _ContractViolation: Quando alguma referência é inexistente, fora do escopo, autorreferente,
+                futura no lote ou repetida entre tarefas.
+        """
+        context = validation or ValidationContext()
+        batch_ids = [task["id"] for task in tasks]
+        reviewed_by: dict[str, str] = {}
+        for position, task in enumerate(tasks):
+            owner = task["id"]
+            targets = (task.get("review") or {}).get("task_ids", [])
+            for target in targets:
+                self.__require_reviewable(owner=owner, target=target, batch_ids=batch_ids, context=context)
+                if target in reviewed_by:
+                    raise _ContractViolation(
+                        code=OutputProblemCodeEnum.DUPLICATE_ID,
+                        reason=(
+                            f"The result '{target}' is reviewed by more than one task in the batch "
+                            f"('{reviewed_by[target]}' and '{owner}'). Plan a single investigation for it."
+                        ),
+                        field=self.__item_field("tasks", "review.task_ids"),
+                        affected_ids=(target,),
+                    )
+                reviewed_by[target] = owner
+            for dependency in task.get("depends_on") or []:
+                self.__require_dependable(
+                    owner=owner, dependency=dependency, targets=targets, earlier=batch_ids[:position],
+                    batch_ids=batch_ids, context=context,
+                )
+
+    def __require_reviewable(
+        self, owner: str, target: str, batch_ids: list[str], context: ValidationContext
+    ) -> None:
+        """Exige que o alvo de uma revisão seja um resultado armazenado que ainda pode ser revisado.
+
+        Raises:
+            _ContractViolation: Quando o alvo é a própria tarefa, outra tarefa do lote, um resultado
+                já substituído (ou ainda não armazenado) ou um identificador inexistente.
+        """
+        if target in context.reviewable_task_ids:
+            return
+        if target == owner:
+            reason = f"Task '{owner}' cannot review itself."
+        elif target in batch_ids:
+            reason = (
+                f"Task '{owner}' cannot review '{target}': that task belongs to this batch and has not been executed."
+            )
+        elif target in context.known_task_ids:
+            reason = (
+                f"The result '{target}' cannot be reviewed: it is not a stored result that is current or awaiting "
+                "revalidation."
+            )
+        else:
+            reason = f"The task '{target}' reviewed by '{owner}' does not exist in the session."
+        raise _ContractViolation(
+            code=OutputProblemCodeEnum.TASK_REFERENCES, reason=reason,
+            field=self.__item_field("tasks", "review.task_ids"), affected_ids=(target,),
+        )
+
+    def __require_dependable(
+        self,
+        owner: str,
+        dependency: str,
+        targets: list[str],
+        earlier: list[str],
+        batch_ids: list[str],
+        context: ValidationContext,
+    ) -> None:
+        """Exige que uma dependência aponte uma tarefa anterior do lote ou um resultado vigente.
+
+        Raises:
+            _ContractViolation: Quando a dependência é a própria tarefa, um resultado que ela revisa,
+                uma tarefa posterior do lote, um resultado não vigente ou um identificador inexistente.
+        """
+        if dependency == owner:
+            reason = f"Task '{owner}' cannot depend on itself."
+        elif dependency in targets:
+            reason = f"Task '{owner}' cannot depend on a result it reviews ('{dependency}')."
+        elif dependency in earlier or dependency in context.dependable_task_ids:
+            return
+        elif dependency in batch_ids:
+            reason = (
+                f"Task '{owner}' depends on '{dependency}', a later task of this batch. Order the tasks so that each "
+                "dependency comes first; a later or cyclic dependency is not allowed."
+            )
+        elif dependency in context.known_task_ids:
+            reason = f"Task '{owner}' depends on '{dependency}', which is not a current result."
+        else:
+            reason = f"The task '{dependency}' on which '{owner}' depends does not exist in the session."
+        raise _ContractViolation(
+            code=OutputProblemCodeEnum.TASK_REFERENCES, reason=reason,
+            field=self.__item_field("tasks", "depends_on"), affected_ids=(dependency,),
+        )
 
     def __validate_batch_against_session(
         self, tasks: list[dict[str, Any]], validation: ValidationContext | None
@@ -521,13 +677,74 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
     def __validate_task_result(
         self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None
     ) -> None:
-        """Valida o schema de B.1.
+        """Valida o schema de B.1 e, numa tarefa revisora, a proposta de revisão.
+
+        Uma tarefa normal não propõe revisão: o campo `revision` ausente, nulo ou vazio é aceito; uma
+        proposta preenchida é recusada. Uma tarefa revisora precisa de exatamente um veredito por
+        resultado sob investigação.
 
         Raises:
-            _ContractViolation: Quando 'result' ou 'conclusion' não é uma string não vazia.
+            _ContractViolation: Quando 'result' ou 'conclusion' não é uma string não vazia, ou quando a
+                proposta de revisão falta, sobra ou não cobre exatamente os resultados sob investigação.
         """
         self.__require_text(source=parsed, key="result", label="result", field="result")
         self.__require_text(source=parsed, key="conclusion", label="conclusion", field="conclusion")
+        targets = validation.review_target_ids if validation is not None else None
+        if targets is None:
+            if parsed.get("revision") not in _ABSENT_REVISIONS:
+                raise _ContractViolation(
+                    code=OutputProblemCodeEnum.TASK_REFERENCES,
+                    reason="This task does not review stored results; remove the 'revision' field.",
+                    field="revision",
+                )
+            return
+        self.__validate_revision(parsed=parsed, targets=targets)
+
+    def __validate_revision(self, parsed: dict[str, Any], targets: tuple[str, ...]) -> None:
+        """Valida a proposta de revisão de uma tarefa revisora contra os resultados sob investigação.
+
+        Raises:
+            _ContractViolation: Quando a proposta não é uma lista de vereditos completos e conhecidos,
+                repete um alvo, traz um alvo fora da revisão ou omite um resultado sob investigação.
+        """
+        verdicts = self.__require_list(source=parsed, key="revision", label="revision", allow_empty=False)
+        for verdict in verdicts:
+            if not isinstance(verdict, dict):
+                raise _ContractViolation(
+                    code=OutputProblemCodeEnum.SCHEMA_TYPE,
+                    reason="Each item of 'revision' must be an object.",
+                    field=f"revision{_ITEM_SUFFIX}",
+                )
+            self.__require_text(
+                source=verdict, key="task_id", label="revision.task_id", field=self.__item_field("revision", "task_id")
+            )
+            owner = verdict["task_id"]
+            self.__require_choice(
+                source=verdict, key="verdict", choices=tuple(RevisionVerdictEnum),
+                reason=f"The 'verdict' field must be 'confirmed' or 'superseded'. Value: '{verdict.get('verdict')}'.",
+                field=self.__item_field("revision", "verdict"), affected_ids=(owner,),
+            )
+            self.__require_text(
+                source=verdict, key="justification", label="revision.justification",
+                field=self.__item_field("revision", "justification"), owner_id=owner,
+            )
+
+        reviewed = [verdict["task_id"] for verdict in verdicts]
+        field = self.__item_field("revision", "task_id")
+        self.__require_unique_ids(ids=reviewed, what="revision verdicts", field=field)
+        extra = [task_id for task_id in reviewed if task_id not in targets]
+        missing = [task_id for task_id in targets if task_id not in reviewed]
+        for ids, reason in (
+            (extra, "The revision has verdicts for results that this task does not review: {ids}."),
+            (missing, "The revision lacks a verdict for the results under review: {ids}."),
+        ):
+            if ids:
+                raise _ContractViolation(
+                    code=OutputProblemCodeEnum.TASK_REFERENCES,
+                    reason=reason.format(ids=_ID_LIST_SEPARATOR.join(ids)),
+                    field=field,
+                    affected_ids=tuple(ids),
+                )
 
     def __validate_verification(
         self, parsed: dict[str, Any], phase: ThinkingPhaseEnum, validation: ValidationContext | None
@@ -602,20 +819,66 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             _ContractViolation: Quando o campo falta, não é string ou não é um veredito conhecido.
         """
         decision = parsed.get("decision")
-        if decision in tuple(VerificationDecisionEnum):
-            return decision
+        self.__require_choice(
+            source=parsed, key="decision", choices=tuple(VerificationDecisionEnum),
+            reason=f"The 'decision' field must be a known verdict. Value: '{decision}'.", field="decision",
+        )
+        return decision
 
-        if "decision" not in parsed:
+    def __require_choice(
+        self,
+        source: dict[str, Any],
+        key: str,
+        choices: tuple[str, ...],
+        reason: str,
+        field: str,
+        affected_ids: tuple[str, ...] = (),
+    ) -> None:
+        """Exige um valor conhecido num campo, sem converter valores por suposição.
+
+        Raises:
+            _ContractViolation: Quando o campo falta, não é string ou não é um dos valores aceitos.
+        """
+        value = source.get(key)
+        if value in choices:
+            return
+
+        if key not in source:
             code = OutputProblemCodeEnum.MISSING_FIELD
-        elif not isinstance(decision, str):
+        elif not isinstance(value, str):
             code = OutputProblemCodeEnum.SCHEMA_TYPE
         else:
             code = OutputProblemCodeEnum.INVALID_VALUE
-        raise _ContractViolation(
-            code=code,
-            reason=f"The 'decision' field must be a known verdict. Value: '{decision}'.",
-            field="decision",
+        raise _ContractViolation(code=code, reason=reason, field=field, affected_ids=affected_ids)
+
+    def __require_id_list(
+        self,
+        source: dict[str, Any],
+        key: str,
+        label: str,
+        allow_empty: bool,
+        field: str,
+        owner_id: str,
+        what: str,
+    ) -> None:
+        """Exige uma lista de identificadores de tarefa preenchidos e sem repetição.
+
+        Raises:
+            _ContractViolation: Quando o campo não é lista, está indevidamente vazio, tem item que não é
+                texto preenchido ou repete um identificador.
+        """
+        ids = self.__require_list(
+            source=source, key=key, label=label, allow_empty=allow_empty, field=field, owner_id=owner_id
         )
+        for identifier in ids:
+            if not isinstance(identifier, str) or not identifier.strip():
+                raise _ContractViolation(
+                    code=OutputProblemCodeEnum.SCHEMA_TYPE,
+                    reason=f"Each item of '{label}' must be a non-empty string.",
+                    field=f"{field}{_ITEM_SUFFIX}",
+                    affected_ids=(owner_id,),
+                )
+        self.__require_unique_ids(ids=ids, what=what, field=field)
 
     def __require_exact_coverage(self, evaluated_ids: list[str], expected_ids: tuple[str, ...]) -> None:
         """Exige uma avaliação para cada critério esperado, sem omissões, repetições ou extras.

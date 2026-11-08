@@ -28,7 +28,7 @@ Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas a
 12. **Temperatura das retentativas (extensão):** toda chamada de retentativa sai com temperatura `1`: a nova tentativa de B.1 depois de uma reprovação em B.2 e a correção de uma saída inválida (JSON ilegível, relatório inconsistente, lote de tarefas inválido) ou vazia, em qualquer fase. Assim que as retentativas acabam, as chamadas voltam à temperatura pedida pelo usuário.
 13. **Isolamento de contexto e recuperação de saídas (extensão):** cada execução de fase tem a sua janela; só a correção de uma saída inválida, na mesma fase e tarefa, reaproveita a janela, preservando integralmente respostas recusadas e feedbacks, sem repetir o template. A correção depende do defeito: erro de sintaxe pede o mesmo conteúdo em JSON válido, sem nova resolução; violação de contrato pede a saída completa corrigida, preservando conteúdo não afetado; interrupção por comprimento pede uma nova saída completa e concisa, sem continuar a anterior. Em A.2/C.2, a recuperação exige manter a cobertura da determinação solicitada, incluindo passos finais, sem congelar o lote quando o defeito exige alterá-lo. Essa cobertura é orientação ao modelo, não garantia semântica do parser. Os únicos reparos locais são a extração de cercas e o fechamento estrutural inequívoco.
 
-**Separação de estados:** mantenha, no mínimo, `original_question`, `general_acceptance_criteria`, `task_queue`, `approved_task_results`, `accumulated_learnings`, `task_attempts` (o registro das tentativas da tarefa, de onde saem o feedback da nova tentativa e o histórico de B.4), `active_window` (a janela da execução de fase corrente, nunca herdada por outra fase) e o histórico auditado da sessão, separado das janelas. `accumulated_learnings` recebe primeiro as anotações de A.3 e depois os aprendizados de B.4, na ordem em que surgem, e é renderizado na área **Aprendizados Pontuais** de cada template das fases B e C. A temperatura do usuário é um parâmetro fixo da sessão; a temperatura de retentativa vale só para a chamada que repete um pedido que falhou. Os nomes são sugestões de implementação, não nomes exigidos pelo paper. O texto acadêmico define o comportamento conceitual dos templates, mas não fornece seus prompts completos; eles precisam ser implementados de acordo com as responsabilidades descritas, sem alegar que são transcrições do trabalho.
+**Separação de estados:** mantenha, no mínimo, `original_question`, `general_acceptance_criteria`, `task_queue`, `approved_task_results`, `accumulated_learnings`, `task_attempts` (o registro das tentativas da tarefa, de onde saem o feedback da nova tentativa e o histórico de B.4), `active_window` (a janela da execução de fase corrente, nunca herdada por outra fase) e o histórico auditado da sessão, separado das janelas. `accumulated_learnings` recebe primeiro as anotações de A.3 e depois os aprendizados de B.4, na ordem em que surgem, e é renderizado na área **Aprendizados Pontuais** de cada template das fases B e C. Desde a extensão thinking 05, `approved_task_results` guarda também o estado de cada resultado (vigente, substituído ou aguardando revalidação) e `accumulated_learnings` guarda a fonte de cada fato; as fases recebem só a visão vigente, e as revisões aplicadas ficam num registro de auditoria da sessão. A temperatura do usuário é um parâmetro fixo da sessão; a temperatura de retentativa vale só para a chamada que repete um pedido que falhou. Os nomes são sugestões de implementação, não nomes exigidos pelo paper. O texto acadêmico define o comportamento conceitual dos templates, mas não fornece seus prompts completos; eles precisam ser implementados de acordo com as responsabilidades descritas, sem alegar que são transcrições do trabalho.
 
 ## Extensões ao método do paper
 
@@ -337,7 +337,7 @@ aproximações fundamentadas**, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_R
 - **C.2** investiga a lacuna com resultado explicado, inclusive em resultado já aprovado quando há
   motivo concreto; não cria tarefa só de “escolher a mais próxima” nem só de imprimir a linha final.
   **C.3** apresenta aproximação como aproximação. A gestão explícita de resultados corrigidos e
-  aprendizados obsoletos fica para a etapa 05.
+  aprendizados obsoletos é a extensão **thinking 05**, abaixo.
 - **Orquestrador:** a instrução anexada às tentativas reprovadas passou de “corrigir exatamente esses
   pontos” para tratar o problema concreto e manter as conclusões não refutadas.
 
@@ -346,6 +346,114 @@ O parser continua validando só estrutura e coerência formal; reprovação coer
 [`validation_semantics_v1.json`](apps/backend/tests/fixtures/validation_semantics_v1.json) traz casos
 positivos e negativos para avaliação semântica com modelo real; os testes com vereditos roteirizados
 comprovam a fiação, não o reconhecimento dos erros pelo modelo.
+
+### Revisão auditável de resultados e aprendizados vigentes — thinking 05
+
+Esta extensão permite que uma contradição, um cálculo defeituoso ou uma lacuna de fundamentação
+apontados por C.1 levem à **revisão explícita** de um resultado já aprovado, pelo caminho existente
+C.2 → B.1/B.2/B.3/B.4 → C.1, sem fase nova e sem decisão do orquestrador. O detalhamento, o schema, o
+exemplo completo e a verificação estão em **Melhorias do thinking — 05: revisão auditável de
+resultados e aprendizados vigentes**, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+- **Contrato mínimo e opcional.** C.2 marca uma tarefa como revisora com
+  `review: {task_ids, reason}` (resultados sob investigação e motivo concreto, sem antecipar o
+  desfecho). A.2 e C.2 podem declarar `depends_on` (tarefas anteriores do lote ou resultados
+  vigentes). A B.1 de uma revisora devolve `revision`, um veredito `confirmed` ou `superseded` por
+  alvo, com justificativa. O parser valida existência, unicidade, escopo, autorreferência e ordem
+  (o que impede ciclos); uma recusa é defeito de contrato recuperável, sem mutação de estado.
+- **Aprovação explícita.** B.2 recebe a proposta numa área própria e avalia o critério gerado
+  `<id>-REV`. Ordem temporal, hipótese diferente ou outra redação não sustentam uma substituição;
+  confirmar o resultado anterior é desfecho válido.
+- **Aplicação só em B.3.** Depois da aprovação, o livro de resultados aplica os vereditos de forma
+  atômica: `superseded` tira o alvo do estado vigente (sem apagá-lo), `confirmed` o mantém ou o
+  restaura, e dependentes declarados de um resultado não vigente passam a aguardar revalidação, sem
+  refazer tarefas independentes. Reprovação, saída inválida e interrupção não mudam nada.
+- **Memória vigente com proveniência.** Cada fato guarda todas as suas fontes. Só sai da área
+  **Aprendizados Pontuais** o fato sem outra fonte vigente; notas de A.3 nunca saem por revisão.
+  Nada é apagado nem comparado semanticamente.
+- **Visões e aprovação global.** C.1, C.2 e C.3 recebem só resultados vigentes; C.1 e C.2 recebem
+  também um registro de revisões rotulado como histórico e estado (C.2 vê a conclusão dos resultados
+  em revalidação, para revisá-los). Desde a integração da etapa 07, o registro também lista os
+  resultados **confirmados** por uma revisora vigente, com o motivo aprovado: continuam vigentes por
+  essa investigação, não pela ordem. Toda revisão é seguida de nova C.1, e C.3 recebe exatamente os
+  resultados vigentes dessa aprovação.
+- **Auditoria.** Mensagens preservam todas as respostas e aprovações; `result_revisions` na sessão
+  registra substituídos, confirmados, suspensos, restaurados, aprendizados retirados/restaurados,
+  motivo planejado, justificativa aprovada e estado vigente. Sessões antigas são lidas sem revisões.
+
+As referências estruturadas permitem gerir as revisões; a identificação semântica do erro e a
+declaração das dependências relevantes continuam dependendo das fases do modelo. Dependências não
+declaradas não são detectadas, e C.1 continua responsável por contradições residuais.
+
+### Fidelidade da síntese final — thinking 06
+
+O paper já define C.3 como apresentação sem novo raciocínio, para reduzir “o risco de que a fase de
+apresentação introduza inferências não verificadas ou contradiga os resultados produzidos”. Esta
+extensão operacionaliza esse objetivo **dentro da própria C.3**, sem fase nova, sem segunda chamada,
+sem revisor ou pós-validador depois da síntese e sem garantia determinística da verdade do texto. O
+detalhamento, os casos motivadores e os exemplos estão em **Melhorias do thinking — 06: fidelidade da
+síntese final**, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+- **Conferência na mesma chamada.** Antes de escrever `final_answer`, C.3 identifica o conteúdo
+  aprovado que responde a cada parte do pedido e confere que o texto preserva significado, direção
+  das comparações, sinais, unidades e referencial, referências, hipóteses, condições e qualificações
+  (“aproximadamente”, “sob a hipótese X”, “melhor ajuste”, “estimativa”). Tradução e concisão mudam a
+  redação, nunca esses aspectos. A justificativa apresentada não pode apontar em sentido oposto à
+  conclusão.
+- **Resultado calculado × escolha aprovada.** Uma escolha aprovada por melhor ajuste, aproximação ou
+  eliminação é apresentada com essa natureza, mesmo sem igualdade numérica e sem cálculo que produza o
+  valor escolhido. C.3 não a declara igual ao valor obtido e não a revalida com mais rigor que C.1.
+- **Pareamento literal × seleção analítica.** C.3 pode ligar um objeto já determinado ao
+  identificador que literalmente o rotula (letra e texto da alternativa, número do teste, nome,
+  código, mês), usando as anotações do enunciado. Não pode escolher por proximidade quando os
+  resultados não fizeram essa comparação, completar cálculo, resolver conflito residual nem inventar
+  identificador. A aprovação global não autoriza inventar informação.
+- **C.1 harmonizada.** Quando o pedido exige um identificador e nenhum material disponível registra
+  o vínculo entre ele e o item determinado, C.1 reprova o critério e nomeia o vínculo ausente; C.2
+  planeja uma tarefa que o estabelece a partir do enunciado. Se o pedido só exige o conteúdo, não há
+  lacuna. Marcador final, idioma e formato continuam com C.3.
+- **Entradas garantidas por código.** A aprovação global guarda os resultados vigentes e a área de
+  aprendizados exatamente como a última C.1 os recebeu; C.3 usa essa cópia, e a síntese é recusada se
+  o conjunto vigente mudou depois da aprovação. Conclusões substituídas, tentativas rejeitadas e o
+  histórico de mensagens não entram em C.3.
+
+A expressão do paper permanece, com a leitura explícita de que *Resultados Compilados* são os
+resultados vigentes aprovados na última C.1 e de que a área separada de aprendizados serve só para
+conferência literal dos dados do enunciado:
+
+> *Resultados aprovados na última C.1* + *Critérios Gerais (A.1)* + *Aprendizados (conferência literal)* + *Template C.3* → *Resposta Final*
+
+Os testes comprovam preservação das entradas, contrato do prompt e transições, com respostas do modelo
+roteirizadas; **não** comprovam que um modelo real escreve sempre uma resposta fiel.
+
+### Integração das cinco frentes — thinking 07
+
+As extensões 01 a 06 foram exercitadas em conjunto: **estrutura e recuperação** (recuperação integral,
+isolamento de contexto, livro de resultados vigentes e revisão auditável), **aprendizados**,
+**planejamento**, **validação** e **síntese fiel**. Esta etapa não acrescenta fase, chamada, campo de
+schema, limite ou pós-validador; ela corrige incompatibilidades entre as extensões anteriores. O
+detalhamento está em **Melhorias do thinking — 07: integração e evidências das cinco frentes**, em
+[`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md), e o relatório de validação em
+[`RELATORIO_VALIDACAO_MELHORIAS_THINKING.md`](RELATORIO_VALIDACAO_MELHORIAS_THINKING.md).
+
+- **Confirmação visível.** Uma revisão aprovada que **confirma** um resultado não muda seu estado,
+  mas passa a constar no registro de revisões entregue a C.1 e C.2 (“confirmed by `T4`”, com o motivo
+  aprovado). Antes, o registro dizia que nada havia sido revisado, e a regra de C.1 de que um
+  resultado mais recente não prevalece por recência podia levar a reabrir um conflito já explicado.
+  A confirmação, não a ordem temporal, sustenta o resultado; uma nova revisão do mesmo ponto exige
+  novo motivo concreto.
+- **Recuperação coerente com a revisão.** Quando a correção de A.2/C.2 decorre de `review` ou
+  `depends_on`, a mensagem pede corrigir as referências, sem abandonar a investigação dirigida de um
+  defeito apontado nem uma dependência efetivamente usada só para satisfazer o parser.
+- **Formatos de saída alinhados ao parser.** O exemplo de C.2 usa a numeração seguinte da sessão
+  (`T{{next_task_number}}`), e não `T1`, que o parser recusaria por repetir um ID; A.2 documenta
+  `depends_on` como opcional no próprio formato de saída; C.2 descreve sua área de resultados como
+  resultados **vigentes**.
+
+A garantia continua dividida em três níveis: comportamento programático testado (mensagens,
+transições, estado vigente, auditoria, orçamento, renderização), contrato de prompt verificado
+(instruções coerentes entre as nove fases) e desempenho semântico de um modelo real, que **não** foi
+avaliado e não pode ser inferido das respostas roteirizadas dos testes.
 
 ### Diagnóstico estruturado das saídas do modelo (tratamento operacional)
 
@@ -359,7 +467,7 @@ comprovam a fiação, não o reconhecimento dos erros pelo modelo.
 |---|---|---|
 | `syntax_status` | `valid`, `invalid`, `valid_after_repair` (ou `null` = não avaliada) | Havia um objeto JSON? `valid_after_repair` quando o reparo local só acrescentou chaves/colchetes finais (`repaired_closings`). |
 | `contract_status` | `valid`, `invalid`, `not_evaluated` | O objeto confere com o contrato da fase (schema e coerência)? `not_evaluated` quando não havia objeto. |
-| `problem` | `code`, `reason`, `field`, `affected_ids` | Um único problema por saída recusada: código (`json_syntax`, `schema_type`, `missing_field`, `empty_value`, `invalid_value`, `duplicate_id`, `criteria_ids`, `decision_consistency`, `task_ids`, `task_limit`, `unsupported_phase`, `unclassified`), motivo legível (o mesmo da mensagem de correção), campo e critérios/tarefas afetados. |
+| `problem` | `code`, `reason`, `field`, `affected_ids` | Um único problema por saída recusada: código (`json_syntax`, `schema_type`, `missing_field`, `empty_value`, `invalid_value`, `duplicate_id`, `criteria_ids`, `decision_consistency`, `task_ids`, `task_limit`, `task_references` — acrescentado pela revisão de resultados da etapa 05 —, `unsupported_phase`, `unclassified`), motivo legível (o mesmo da mensagem de correção), campo e critérios/tarefas afetados. |
 | `finish_reason` | texto do provedor | Motivo de término original, sem reinterpretação. |
 | `length_interruption` | `confirmed`, `suspected`, `not_detected`, `unknown` | Corte por comprimento, **independente da sintaxe**. Só o provedor confirma (`finish_reason == "length"`); sem motivo de término, uma saída que termina dentro de string ou com estruturas abertas é apenas **indício** (`suspected`). |
 

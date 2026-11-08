@@ -117,6 +117,7 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
   - [`GET /v1/benchmark/questions`](#get-v1benchmarkquestions)
 - [Garantias do harness e encerramento sem conclusão](#garantias-do-harness-e-encerramento-sem-conclusão)
   - [Planejamento e cobertura do pedido — etapa 03](#planejamento-e-cobertura-do-pedido--etapa-03)
+  - [Integração das cinco frentes — etapa 07](#integração-das-cinco-frentes--etapa-07)
 - [Contratos (DTOs)](#contratos-dtos)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Arquitetura em uma imagem](#arquitetura-em-uma-imagem)
@@ -325,9 +326,20 @@ resposta final.
       "temperature": 0.3
     }
   ],
-  "degradations": []
+  "degradations": [],
+  "result_revisions": []
 }
 ```
+
+**Revisões de resultados.** `result_revisions` lista, em ordem, as revisões aprovadas em B.2 e
+aplicadas em B.3: `revising_task_id`, `reason` (motivo planejado em C.2), `verdicts`
+(`task_id`, `verdict` `confirmed`/`superseded`, `justification`), `superseded_task_ids` e
+`confirmed_task_ids` (derivados dos vereditos), `approval_justification` (veredito de B.2 para o
+critério `<id>-REV`), `suspended_task_ids`, `reinstated_task_ids`, `withdrawn_learnings`,
+`restored_learnings`, `current_task_ids` e `occurred_at`. As conclusões substituídas continuam nas
+mensagens; o registro diz que deixaram de ser vigentes, por qual tarefa e por qual motivo. Uma
+confirmação aprovada também é registrada (`confirmed_task_ids`) e, desde a etapa 07, aparece no
+**Revision record** de C.1 e C.2 enquanto a revisora e o resultado confirmado forem vigentes.
 
 `flow` identifica o tipo da sessão: `A1` para `/v1/message/reasoning` e `DIRECT` para
 `/v1/message/default`.
@@ -407,6 +419,7 @@ origem da janela de contexto usada.
 correspondentes, e nenhuma chamada passada é inventada) e `provider`/`failure` nulos. Sessões
 `degraded` e a lista `degradations` também continuam legíveis, sem reclassificação; o fluxo atual não
 produz mais nenhuma das duas.
+Documentos sem `result_revisions` são lidos com a lista vazia: nenhuma revisão é presumida.
 
 **Erros**
 | Status | Quando |
@@ -676,9 +689,10 @@ persistida antes do evento `result`.
 | Qualquer saída estruturada é recusada e há retentativa | A resposta bruta completa e os feedbacks permanecem na janela da execução, sem corte aos 1.000 caracteres nem repetição do template. A correção de contrato pede saída completa e preservação do conteúdo não afetado e das etapas necessárias. |
 | A.2/C.2 precisa corrigir o planejamento | A instrução exige manter a cobertura da determinação solicitada, inclusive os passos finais. Um título ausente não autoriza remover outras tarefas necessárias. Excesso de tarefas e IDs duplicados podem exigir alterar o lote; quantidade, IDs e conteúdo não são congelados. A cobertura semântica continua dependendo do modelo. |
 | Qualquer fase devolve um JSON ilegível ou interrompido pelo limite de comprimento | Erro de sintaxe: o modelo é chamado de novo para devolver o mesmo conteúdo em JSON válido, sem nova resolução. Interrupção por comprimento: pede-se uma nova saída completa e concisa, nunca a continuação da anterior. Os únicos reparos locais são a extração de cercas e o fechamento estrutural inequívoco. |
-| C.1 reprova e há recursos | C.2 cria tarefas para os critérios pendentes, que entram no topo da fila. O template recebe o **Prompt Original**, o relatório de C.1 com os motivos das lacunas em **Global verification feedback** e, em **Resultados já armazenados**, só o enunciado e a conclusão (campo `conclusion` de B.1) de cada tarefa aprovada, sem a resolução completa; C.1 e C.3 continuam recebendo as resoluções completas. |
+| C.1 reprova e há recursos | C.2 cria tarefas para os critérios pendentes, que entram no topo da fila. O template recebe o **Prompt Original**, o relatório de C.1 com os motivos das lacunas em **Global verification feedback**, em **Resultados já armazenados** só o enunciado e a conclusão (campo `conclusion` de B.1) de cada resultado **vigente**, sem a resolução completa, e o **Revision record**; C.1 e C.3 continuam recebendo as resoluções completas dos resultados vigentes. |
+| C.2 planeja uma revisora e B.2 a aprova | B.3 aplica os vereditos `confirmed`/`superseded`: substituídos e dependentes declarados deixam de ser vigentes (sem serem apagados), seus aprendizados exclusivos saem da memória vigente e a revisão fica em `result_revisions`. Uma confirmação mantém o resultado vigente e passa a constar no **Revision record** de C.1/C.2 com o motivo aprovado. Depois do loop, nova C.1; a aprovação global vale só para os vigentes que ela avaliou. |
 | C.1 reprova e não há recursos para C.2 | A execução é interrompida; os critérios pendentes ficam em `failure`. Nunca há C.3. |
-| C.1 aprova e C.3 falha ou não pode rodar | A execução termina sem resposta final. |
+| C.1 aprova e C.3 falha ou não pode rodar | A execução termina sem resposta final. Isso inclui a guarda da etapa 06: se os resultados vigentes não forem mais os que a aprovação global avaliou, C.3 não é chamada e a sessão falha como erro técnico. |
 | Qualquer limite é atingido em qualquer fase ou retentativa | A execução é interrompida (`failure.reason = resource_limit`), sem nenhuma chamada depois do bloqueio. |
 
 **Verificações determinísticas.** Os relatórios de B.2 e C.1 são validados contra os critérios
@@ -833,6 +847,73 @@ vereditos de LLM são roteirizados: os testes comprovam transporte, transições
 (C.1 → C.2 → B → C.1 → C.3), recuperação e contabilização, não a capacidade do modelo de reconhecer
 erros. Detalhes e resultados na seção **Melhorias do thinking — 04** de
 [`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
+
+### Revisão auditável de resultados — etapa 05
+
+Contrato opcional (sem os campos, tudo segue como antes):
+
+| Fase | JSON | Validação (`ValidationContext`) |
+|---|---|---|
+| A.2/C.2 | `"depends_on": ["T1"]` por tarefa | Tarefa anterior do lote ou resultado vigente (`dependable_task_ids`); sem autorreferência, dependência futura, repetição ou dependência do próprio alvo. |
+| C.2 | `"review": {"task_ids": ["T3"], "reason": "..."}` por tarefa | Alvos armazenados vigentes ou em revalidação (`reviewable_task_ids`); sem autorrevisão, tarefa do lote, alvo substituído, repetição ou o mesmo alvo em duas tarefas. Critério `<id>-REV` reservado. |
+| B.1 | `"revision": [{"task_id", "verdict": "confirmed"\|"superseded", "justification"}]` | Só numa revisora (`review_target_ids`): exatamente um veredito por alvo. Numa tarefa normal, ausente, `null` ou `[]`. |
+
+Recusas usam o código de diagnóstico `task_references` (ou `duplicate_id`, `schema_type`,
+`missing_field`, `empty_value`, `invalid_value`) e seguem a recuperação de contrato existente.
+
+`ResultsLedger` (`IResultsLedger`, injetado no caso de uso) substitui o dicionário de B.3 e mantém o
+estado de cada resultado: `current`, `superseded` ou `awaiting_revalidation`. `LearningsMemory` guarda
+as fontes de cada fato (`withdraw`/`restore`); `all()` e `render()` devolvem só a visão vigente.
+B.1 recebe `results_under_review`; B.2, `revision_proposal` e o critério gerado `<id>-REV`; C.1 e C.2,
+`result_revisions`. A sessão ganhou `result_revisions` (auditoria estruturada, lida como lista vazia
+em documentos antigos), visível em `GET /v1/sessions/{session_id}` e na exportação de erros do
+benchmark. Detalhes, exemplo completo e limites na seção **Melhorias do thinking — 05** de
+[`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
+
+### Fidelidade da síntese final — etapa 06
+
+Nenhuma fase, chamada, schema, regra do parser ou limite novo. C.3 continua sendo uma única execução
+de `FinalAnswerPhase`, com saída `{"final_answer": "..."}` e a recuperação de saída inválida existente.
+
+| Ponto | Contrato |
+|---|---|
+| `GlobalApproval` | Ganhou `learnings` (a área **Key Learnings** renderizada para a C.1 aprovadora) e `ensure_current(current_task_ids)`. `task_ids` passou a ser capturado no mesmo instante em que os resultados são renderizados para C.1, e não depois da resposta. |
+| `__run_final_answer` | Chama `approval.ensure_current(...)` antes de abrir a janela de C.3 (`ValueError` se o conjunto vigente mudou; a sessão falha em C.3 sem chamada ao modelo) e monta as variáveis com `approval.stored_results` e `approval.learnings`. Os critérios gerais não mudam depois de A.1 e continuam renderizados por `__synthesis_variables`. |
+| `c3_final_answer.md` | Nova seção `## Fidelity check before answering`, dentro da mesma chamada e antes de `final_answer`: conteúdo aprovado; aspectos preservados (significado, direção, sinais, unidades/referencial, referências, hipóteses, condições, qualificações); resultado calculado × escolha aprovada; identificadores por pareamento literal; pareamento literal × seleção analítica; justificativa coerente com a conclusão. Exemplos novos de fidelidade e extrapolação. A conferência não é mencionada na resposta. |
+| `c1_global_verification.md` | Nova seção `## Identifiers and faithful presentation` e dois exemplos: vínculo item–identificador exigido e não disponível → `met: false` para C.2; pedido só de conteúdo → sem lacuna; marcador, idioma e formato continuam com C.3. |
+
+As variáveis dos templates C.1/C.3 não mudaram (`stored_results`, `general_acceptance_criteria`,
+`learnings`; C.1 também `result_revisions`). Não há entrada especializada do benchmark nem
+`question.options`: as associações vêm dos resultados ou das anotações de A.3. Testes:
+[`test_final_answer_fidelity_contracts.py`](tests/infra/providers/test_final_answer_fidelity_contracts.py),
+[`test_ralph_final_answer_fidelity_integration.py`](tests/application/usecases/test_ralph_final_answer_fidelity_integration.py)
+e [`test_global_approval.py`](tests/domain/entities/thinking/test_global_approval.py). Detalhes e
+limites na seção **Melhorias do thinking — 06** de
+[`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
+
+### Integração das cinco frentes — etapa 07
+
+Nenhuma fase, chamada, campo de schema, regra do parser ou limite novo. A etapa exercitou em conjunto
+estrutura/recuperação, aprendizados, planejamento, validação e síntese, e corrigiu as incompatibilidades
+encontradas entre as etapas 01–06:
+
+| Ponto | Antes | Depois |
+|---|---|---|
+| `__render_revision_record` (C.1/C.2) | Listava substituídos e resultados aguardando revalidação; depois de uma confirmação aprovada, dizia `No stored result has been revised or suspended.` | Também lista `### Results confirmed by an approved review`: `` `T3` — título: confirmed by `T4`. Approved reason: … `` para cada veredito `confirmed` de uma revisora vigente cujo alvo continua vigente. |
+| `_PLANNING_RECOVERY_INSTRUCTIONS` (A.2/C.2) | Cobertura e “approved results”, sem orientação para defeitos de `review`/`depends_on`. | “current approved results” e: corrigir as referências para identificadores permitidos, sem abandonar a investigação dirigida de um defeito apontado nem uma dependência efetivamente usada só para satisfazer o parser. |
+| `c2_additional_planning.md` | Formato de saída com `"id": "T1"` (o parser recusa IDs já usados); área de resultados descrita como “each task already approved”. | Formato com `T{{next_task_number}}`; área descrita como resultados vigentes; **Revision record** explica que um confirmado continua vigente pela investigação, não pela recência. |
+| `c1_global_verification.md` | Regra de recência sem menção a confirmações. | O registro inclui confirmados; um resultado confirmado por revisão aprovada continua vigente e o mesmo conflito não é reaberto sem novo motivo concreto. |
+| `a2_task_decomposition.md` | `depends_on` descrito só em seção própria. | O formato de saída documenta `depends_on` como opcional, sem `review` (A.2 não revisa). |
+
+Testes: [`test_ralph_five_fronts_integration.py`](tests/application/usecases/test_ralph_five_fronts_integration.py)
+(matriz de 12 regressões e fluxos de revisão aprovada, rejeitada, recuperação de contrato, orçamento
+real esgotado e cancelamento, com templates, parser, livro, memória e persistência reais),
+[`test_integration_prompt_contracts.py`](tests/infra/providers/test_integration_prompt_contracts.py)
+(coerência conjunta dos nove templates e das mensagens de recuperação) e a fixture
+[`integration_regressions_v1.json`](tests/fixtures/integration_regressions_v1.json), cujo oráculo é só
+do avaliador. Os cenários são roteirizados: provam fiação, estado e contratos, não acurácia. Detalhes na
+seção **Melhorias do thinking — 07** de [`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md)
+e em [`RELATORIO_VALIDACAO_MELHORIAS_THINKING.md`](../../RELATORIO_VALIDACAO_MELHORIAS_THINKING.md).
 
 ### Limite de tokens por sessão
 

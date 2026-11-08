@@ -9,13 +9,18 @@ from src.domain.entities.thinking.criterion_evaluation import CriterionEvaluatio
 from src.domain.entities.thinking.global_approval import GlobalApproval
 from src.domain.entities.thinking.phase_outcome import PhaseOutcome
 from src.domain.entities.thinking.learning import Learning
+from src.domain.entities.thinking.ledger_change import LedgerChange
+from src.domain.entities.thinking.result_revision import ResultRevision
+from src.domain.entities.thinking.review_request import ReviewRequest
+from src.domain.entities.thinking.revision_verdict import RevisionVerdict
 from src.domain.entities.thinking.task import Task
 from src.domain.entities.thinking.task_attempt import TaskAttempt
-from src.domain.entities.thinking.task_result import TaskResult
 from src.domain.entities.thinking.thinking_event import ThinkingEvent
 from src.domain.entities.thinking.validation_context import ValidationContext
 from src.domain.entities.thinking.verification_report import VerificationReport
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
+from src.domain.enums.result_status_enum import ResultStatusEnum
+from src.domain.enums.revision_verdict_enum import RevisionVerdictEnum
 from src.domain.enums.session_failure_reason_enum import SessionFailureReasonEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.task_status_enum import TaskStatusEnum
@@ -30,6 +35,7 @@ from src.domain.interfaces.clock_interface import IClock
 from src.domain.interfaces.context_window_factory_interface import IContextWindowFactory
 from src.domain.interfaces.cost_guard_interface import ICostGuard
 from src.domain.interfaces.learnings_memory_interface import ILearningsMemory
+from src.domain.interfaces.results_ledger_interface import IResultsLedger
 from src.domain.interfaces.session_recorder_interface import ISessionRecorder
 from src.domain.interfaces.settings_interface import ISettings
 from src.domain.interfaces.task_queue_interface import ITaskQueue
@@ -52,9 +58,52 @@ _RESET_CONTENT = "Context reset for task `{task_id}`. New window: `{context_id}`
 _TASK_HEADER_CONTENT = "### {task_id} — {title}\n\n{description}"
 _TASK_CONTENT = (
     f"{_TASK_HEADER_CONTENT}\n\n"
-    "**Acceptance criteria:**\n{criteria}"
+    "{links}**Acceptance criteria:**\n{criteria}"
 )
+_TASK_REVIEW_CONTENT = "**Reviews:** {ids} — {reason}\n\n"
+_TASK_DEPENDENCIES_CONTENT = "**Depends on:** {ids}\n\n"
 _STORE_CONTENT = "Result of task `{task_id}` stored."
+_STORE_CHANGE_CONTENT = "{label}: {ids}."
+_STORE_WITHDRAWN_CONTENT = "Learnings withdrawn from the current view: {count}."
+_STORE_RESTORED_CONTENT = "Learnings restored to the current view: {count}."
+_SUPERSEDED_LABEL = "Superseded results"
+_CONFIRMED_LABEL = "Confirmed results"
+_SUSPENDED_LABEL = "Results awaiting revalidation"
+_REINSTATED_LABEL = "Reinstated results"
+_WITHHELD_LEARNINGS_HEADING = "## Learnings withheld while the result awaits revalidation"
+# Revisão de resultados (thinking 05): só referências estruturadas mudam o estado vigente. As áreas abaixo
+# entregam às fases, como material delimitado, o que está sob investigação e o que deixou de ser vigente.
+_NO_REVIEW_CONTENT = "None: this task does not review stored results."
+_REVIEW_REASON_CONTENT = "**Reason for the investigation (from planning):** {reason}"
+_REVIEWED_RESULT_CONTENT = (
+    "### {task_id} — {title}\n\n**Statement:**\n\n{description}\n\n**Conclusion under review:** {conclusion}"
+)
+_PROPOSED_VERDICT_CONTENT = "**Proposed verdict for `{task_id}`:** `{verdict}`\n\n**Justification:** {justification}"
+_PREVIOUS_REVISION_CONTENT = "**Revision proposed:**\n\n{verdicts}\n\n"
+_PREVIOUS_VERDICT_ITEM = "- `{task_id}`: `{verdict}` — {justification}"
+_NO_REVISIONS_CONTENT = "No stored result has been revised or suspended."
+_SUPERSEDED_RECORD_HEADING = (
+    "### Superseded results\n\n"
+    "History only: these conclusions were replaced by an approved review and are not current facts."
+)
+_SUPERSEDED_RECORD_ITEM = "- `{task_id}` — {title}: superseded by `{revising_task_id}`. Approved reason: {reason}"
+# Uma confirmação aprovada não muda o estado do alvo, mas precisa constar no registro: sem ela, C.1 e C.2
+# veriam o conflito já investigado como pendente e o registro afirmaria que nada foi revisado.
+_CONFIRMED_RECORD_HEADING = (
+    "### Results confirmed by an approved review\n\n"
+    "Current facts: an approved investigation checked each claim below and confirmed it; they remain among "
+    "the current results because of that investigation, not because of recency."
+)
+_CONFIRMED_RECORD_ITEM = "- `{task_id}` — {title}: confirmed by `{revising_task_id}`. Approved reason: {reason}"
+_AWAITING_RECORD_HEADING = (
+    "### Results awaiting revalidation\n\n"
+    "Not current facts: each one explicitly depends on a result that stopped being current, and it can support "
+    "the answer again only after an approved review confirms or replaces it."
+)
+_AWAITING_RECORD_ITEM = "- `{task_id}` — {title}: depends on {dependencies}."
+_AWAITING_PLANNING_DETAIL = (
+    "\n  - **Statement:** {description}\n  - **Conclusion awaiting revalidation:** {conclusion}"
+)
 _REPORT_CONTENT = "**Decision:** `{decision}`\n\n{evaluations}"
 _EVALUATION_ITEM = "- `{criterion_id}` — {status}: {justification}"
 _MET_LABEL = "met"
@@ -67,7 +116,7 @@ _PREVIOUS_ATTEMPTS_CONTENT = "<previous_attempts>\n{attempts}\n</previous_attemp
 _PREVIOUS_ATTEMPT_CONTENT = (
     "### Attempt {attempt} — rejected\n\n"
     "**Result presented:**\n\n{output}\n\n"
-    "**Validator verdict:**\n\n{report}"
+    "{revision}**Validator verdict:**\n\n{report}"
 )
 _RETRY_INSTRUCTION_CONTENT = (
     "The previous attempt was rejected. Criteria not met: {unmet}.\n\n"
@@ -135,6 +184,7 @@ class RalphThinkingUseCase:
         final_answer_phase: IThinkingPhase,
         task_queue: ITaskQueue,
         learnings_memory: ILearningsMemory,
+        results_ledger: IResultsLedger,
         context_window_factory: IContextWindowFactory,
         cost_guard: ICostGuard,
         session_recorder: ISessionRecorder,
@@ -156,6 +206,7 @@ class RalphThinkingUseCase:
             final_answer_phase: Fase C.3.
             task_queue: Fila de tarefas do loop de execução.
             learnings_memory: Armazenamento dos aprendizados pontuais.
+            results_ledger: Resultados armazenados em B.3 e o seu estado vigente.
             context_window_factory: Fábrica de janelas de contexto novas.
             cost_guard: Ponto único de decisão sobre limites de custo.
             session_recorder: Rastreador e persistidor do histórico da sessão.
@@ -174,6 +225,7 @@ class RalphThinkingUseCase:
         self.final_answer_phase: IThinkingPhase = final_answer_phase
         self.task_queue: ITaskQueue = task_queue
         self.learnings_memory: ILearningsMemory = learnings_memory
+        self.results_ledger: IResultsLedger = results_ledger
         self.context_window_factory: IContextWindowFactory = context_window_factory
         self.cost_guard: ICostGuard = cost_guard
         self.session_recorder: ISessionRecorder = session_recorder
@@ -183,7 +235,6 @@ class RalphThinkingUseCase:
         self.__user_question: str = ""
         self.__session_token_limit: int = 0
         self.__general_criteria: tuple[AcceptanceCriterion, ...] = ()
-        self.__results: dict[str, TaskResult] = {}
         self.__active_task_id: str | None = None
         self.__pending_criteria_ids: tuple[str, ...] = ()
         self.__context: ContextWindow = ContextWindow(context_id="", phase=_RALPH_FLOW)
@@ -406,10 +457,12 @@ class RalphThinkingUseCase:
                 runner=self.task_resolution_phase,
                 context=context,
                 variables=self.__resolution_variables(task=task),
+                validation=ValidationContext(review_target_ids=task.review.task_ids if task.review else None),
                 is_retry=attempt > _FIRST_ATTEMPT,
             )
             preliminary = outcome.parsed["result"]
             conclusion = outcome.parsed["conclusion"]
+            revision_verdicts = self.__to_verdicts(parsed=outcome.parsed)
             resolution_invalid_outputs = outcome.invalid_outputs
             yield await self.__record_and_build(
                 subtype=ThinkingEventSubtypeEnum.REASONING,
@@ -425,9 +478,11 @@ class RalphThinkingUseCase:
             outcome = await self.__execute_phase(
                 runner=self.task_verification_phase,
                 context=verification_context,
-                variables=self.__verification_variables(task=task, preliminary=preliminary),
+                variables=self.__verification_variables(
+                    task=task, preliminary=preliminary, revision_verdicts=revision_verdicts
+                ),
                 validation=ValidationContext(
-                    expected_criteria_ids=tuple(criterion.id for criterion in task.acceptance_criteria)
+                    expected_criteria_ids=tuple(criterion.id for criterion in task.verification_criteria())
                 ),
             )
             report = self.__to_report(parsed=outcome.parsed)
@@ -439,6 +494,7 @@ class RalphThinkingUseCase:
                     report=report,
                     resolution_invalid_outputs=resolution_invalid_outputs,
                     verification_invalid_outputs=outcome.invalid_outputs,
+                    revision_verdicts=revision_verdicts,
                 )
             )
             yield await self.__record_and_build(
@@ -473,6 +529,11 @@ class RalphThinkingUseCase:
         armazenar; a própria tarefa garante isso ao entregá-lo. A etapa não abre janela: ela é
         registrada com a janela da tentativa aprovada, que produziu o resultado armazenado.
 
+        É aqui, e só aqui, que uma revisão muda o estado vigente: os vereditos que B.2 aprovou junto
+        com o resultado são aplicados pelo livro de resultados, de forma atômica; os aprendizados das
+        tarefas que deixaram de ser vigentes saem da visão vigente da memória (sem serem apagados) e os
+        das restauradas voltam. Uma revisora deixa um registro de auditoria na sessão.
+
         Args:
             task: Tarefa recém-aprovada.
 
@@ -481,8 +542,16 @@ class RalphThinkingUseCase:
         """
         self.__running_phase = ThinkingPhaseEnum.B3_RESULT_STORAGE
         context = self.__resolution_context
-        self.__results[task.id] = task.approved_result()
-        content = _STORE_CONTENT.format(task_id=task.id)
+        change = self.results_ledger.store(result=task.approved_result())
+        withdrawn = self.learnings_memory.withdraw(task_ids=change.withdrawn_task_ids)
+        restored = self.learnings_memory.restore(task_ids=change.reinstated_task_ids)
+        if task.review is not None:
+            await self.session_recorder.record_result_revision(
+                revision=self.__to_revision(
+                    task=task, review=task.review, change=change, withdrawn=withdrawn, restored=restored
+                )
+            )
+        content = self.__render_store(task_id=task.id, change=change, withdrawn=withdrawn, restored=restored)
         await self.session_recorder.record_programmatic_step(
             phase=ThinkingPhaseEnum.B3_RESULT_STORAGE,
             content=content,
@@ -506,7 +575,8 @@ class RalphThinkingUseCase:
         do template — a tarefa, o resultado aprovado (o mesmo que B.3 armazenou), o histórico de
         todas as tentativas com as interações com o validador e os aprendizados já registrados,
         para que a extração não os repita. A memória descarta o que já constava nela, e o evento
-        mostra o que entrou e o que foi descartado por repetição.
+        mostra o que entrou e o que foi descartado por repetição. Quando o resultado aguarda
+        revalidação, os aprendizados ficam registrados, mas retidos fora da visão vigente.
 
         Args:
             task: Tarefa recém-aprovada.
@@ -520,11 +590,16 @@ class RalphThinkingUseCase:
         )
         extracted = self.__to_learnings(parsed=outcome.parsed, task_id=task.id)
         learnings = self.learnings_memory.append(learnings=extracted)
+        withheld = [learning for learning in extracted if learning.content.strip()]
+        if self.results_ledger.status_of(task_id=task.id) is not ResultStatusEnum.CURRENT and withheld:
+            content = f"{_WITHHELD_LEARNINGS_HEADING}\n\n{self.__render_items(learnings=withheld)}"
+        else:
+            content = self.__render_learnings(extracted=extracted, stored=learnings)
         yield await self.__record_and_build(
             subtype=ThinkingEventSubtypeEnum.LEARN,
             phase=ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION,
             task=task.id,
-            content=self.__render_learnings(extracted=extracted, stored=learnings),
+            content=content,
             context=context,
             outcome=outcome,
             task_id=task.id,
@@ -534,7 +609,9 @@ class RalphThinkingUseCase:
         """Executa o loop de tarefas, C.1, C.2 (quando necessário) e C.3.
 
         C.3 só é alcançada com uma aprovação global em mãos. Enquanto C.1 reprova, o fluxo
-        volta ao loop pela C.2; se C.2 não puder rodar, a execução é interrompida.
+        volta ao loop pela C.2; se C.2 não puder rodar, a execução é interrompida. Toda revisão
+        aplicada no loop é seguida de uma nova C.1: a aprovação global vale só para os resultados
+        vigentes que essa passagem avaliou, nunca para um conjunto anterior a uma revisão.
 
         Yields:
             ThinkingEvent: Eventos do loop, `compile` (C.1), `replan` (C.2),
@@ -549,11 +626,15 @@ class RalphThinkingUseCase:
                 yield event
 
             context = self.__new_context(phase=ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION)
-            stored_results = self.__render_results()
+            evaluated_task_ids = self.results_ledger.current_task_ids()
+            synthesis = self.__synthesis_variables(stored_results=self.__render_results())
             outcome = await self.__execute_phase(
                 runner=self.global_verification_phase,
                 context=context,
-                variables=self.__synthesis_variables(stored_results=stored_results),
+                variables={
+                    **synthesis,
+                    "result_revisions": self.__render_revision_record(for_planning=False),
+                },
                 validation=ValidationContext(
                     expected_criteria_ids=tuple(criterion.id for criterion in self.__general_criteria)
                 ),
@@ -572,7 +653,10 @@ class RalphThinkingUseCase:
 
             if report.approved:
                 approval = GlobalApproval(
-                    report=report, stored_results=stored_results, task_ids=tuple(self.__results)
+                    report=report,
+                    stored_results=synthesis["stored_results"],
+                    task_ids=evaluated_task_ids,
+                    learnings=synthesis["learnings"],
                 )
                 continue
 
@@ -634,20 +718,31 @@ class RalphThinkingUseCase:
     async def __run_final_answer(self, approval: GlobalApproval) -> AsyncGenerator[ThinkingEvent, None]:
         """Executa C.3 sobre o conjunto de resultados que C.1 aprovou e encerra a sessão.
 
-        A sessão só é concluída depois que a síntese válida foi produzida e persistida; o evento
-        terminal é emitido por último.
+        C.3 recebe os resultados vigentes e a área de aprendizados exatamente como a última C.1 os
+        avaliou, guardados na aprovação; nada é renderizado de novo a partir do estado corrente. A
+        conferência de fidelidade é uma instrução do próprio template C.3, na mesma chamada: não há
+        fase nem verificador depois da síntese. A sessão só é concluída depois que a síntese válida
+        foi produzida e persistida; o evento terminal é emitido por último.
 
         Args:
-            approval: Aprovação global, de onde vêm os resultados que C.3 pode usar.
+            approval: Aprovação global, de onde vêm os resultados e a memória que C.3 pode usar.
 
         Yields:
             ThinkingEvent: Evento `compile` de C.3 e o evento final `result`.
+
+        Raises:
+            ValueError: Quando os resultados vigentes mudaram depois da aprovação global.
         """
+        self.__running_phase = ThinkingPhaseEnum.C3_FINAL_ANSWER
+        approval.ensure_current(current_task_ids=self.results_ledger.current_task_ids())
         context = self.__new_context(phase=ThinkingPhaseEnum.C3_FINAL_ANSWER)
         outcome = await self.__execute_phase(
             runner=self.final_answer_phase,
             context=context,
-            variables=self.__synthesis_variables(stored_results=approval.stored_results),
+            variables={
+                **self.__synthesis_variables(stored_results=approval.stored_results),
+                "learnings": approval.learnings,
+            },
         )
         final_answer = outcome.parsed["final_answer"]
         yield await self.__record_and_build(
@@ -870,11 +965,14 @@ class RalphThinkingUseCase:
         """Monta o contexto que o parser usa para validar um lote de tarefas planejado.
 
         Returns:
-            ValidationContext: Teto de tarefas e identificadores já usados na sessão.
+            ValidationContext: Teto de tarefas, identificadores já usados na sessão e os resultados
+            que o lote pode revisar ou declarar como dependência.
         """
         return ValidationContext(
             max_tasks=self.cost_guard.remaining_task_slots(),
             known_task_ids=self.task_queue.known_task_ids(),
+            reviewable_task_ids=self.results_ledger.reviewable_task_ids(),
+            dependable_task_ids=frozenset(self.results_ledger.current_task_ids()),
         )
 
     async def __record_and_build(
@@ -969,30 +1067,37 @@ class RalphThinkingUseCase:
 
         Returns:
             dict[str, str]: Descrição da tarefa (sem duplicar os critérios), seus critérios de
-            aceite, os aprendizados pontuais e o feedback das tentativas anteriores.
+            aceite, os resultados sob investigação (numa revisora), os aprendizados pontuais e o
+            feedback das tentativas anteriores.
         """
         return {
             "task_description": _TASK_HEADER_CONTENT.format(
                 task_id=task.id, title=task.title, description=task.description
             ),
-            "task_acceptance_criteria": self.__render_criteria(criteria=task.acceptance_criteria),
+            "task_acceptance_criteria": self.__render_criteria(criteria=task.verification_criteria()),
+            "results_under_review": self.__render_results_under_review(task=task),
             "previous_attempts": self.__render_previous_attempts(task=task),
             **self.__learnings_variables(),
         }
 
-    def __verification_variables(self, task: Task, preliminary: str) -> dict[str, str]:
+    def __verification_variables(
+        self, task: Task, preliminary: str, revision_verdicts: Sequence[RevisionVerdict]
+    ) -> dict[str, str]:
         """Monta as variáveis do Template B.2.
 
         Args:
             task: Tarefa verificada.
             preliminary: Resultado preliminar produzido por B.1.
+            revision_verdicts: Proposta de revisão de B.1, vazia numa tarefa normal.
 
         Returns:
-            dict[str, str]: Resultado preliminar, critérios de aceite da tarefa e aprendizados pontuais.
+            dict[str, str]: Resultado preliminar, critérios verificados (com o de revisão, numa
+            revisora), a proposta explícita de revisão e aprendizados pontuais.
         """
         return {
             "preliminary_result": preliminary,
-            "task_acceptance_criteria": self.__render_criteria(criteria=task.acceptance_criteria),
+            "task_acceptance_criteria": self.__render_criteria(criteria=task.verification_criteria()),
+            "revision_proposal": self.__render_revision_proposal(task=task, revision_verdicts=revision_verdicts),
             **self.__learnings_variables(),
         }
 
@@ -1011,7 +1116,7 @@ class RalphThinkingUseCase:
             "task_description": _TASK_HEADER_CONTENT.format(
                 task_id=task.id, title=task.title, description=task.description
             ),
-            "approved_result": self.__results[task.id].content,
+            "approved_result": self.results_ledger.get(task_id=task.id).content,
             "task_history": self.__render_history(task=task),
             **self.__learnings_variables(),
         }
@@ -1051,8 +1156,10 @@ class RalphThinkingUseCase:
 
         Returns:
             dict[str, str]: Prompt original, critérios pendentes, relatório de C.1 com os motivos
-            das lacunas, resultados resumidos (enunciado e conclusão de cada tarefa) e o número
-            inicial das novas tarefas. O relatório é feedback diagnóstico, separado dos resultados.
+            das lacunas, resultados vigentes resumidos (enunciado e conclusão de cada tarefa), o
+            registro de revisões (com as conclusões que aguardam revalidação, para que possam ser
+            revisadas) e o número inicial das novas tarefas. O relatório é feedback diagnóstico,
+            separado dos resultados.
         """
         unmet = tuple(
             criterion for criterion in self.__general_criteria if criterion.id in report.unmet_criteria_ids
@@ -1062,6 +1169,7 @@ class RalphThinkingUseCase:
             "unmet_criteria": self.__render_criteria(criteria=unmet),
             "global_verification_feedback": self.__render_report(report=report),
             "stored_results": self.__render_result_summaries(),
+            "result_revisions": self.__render_revision_record(for_planning=True),
             "next_task_number": str(self.task_queue.total_created() + _FIRST_TASK_NUMBER),
         }
 
@@ -1099,9 +1207,68 @@ class RalphThinkingUseCase:
                     for criterion in task["acceptance_criteria"]
                 ),
                 origin_phase=origin_phase,
+                review=(
+                    ReviewRequest(task_ids=tuple(task["review"]["task_ids"]), reason=task["review"]["reason"])
+                    if task.get("review") is not None
+                    else None
+                ),
+                depends_on=tuple(task.get("depends_on") or ()),
             )
             for task in parsed["tasks"]
         ]
+
+    def __to_verdicts(self, parsed: dict[str, Any]) -> tuple[RevisionVerdict, ...]:
+        """Converte a proposta de revisão de B.1 em vereditos do domínio.
+
+        Args:
+            parsed: Saída já validada de B.1; numa tarefa normal, sem proposta.
+
+        Returns:
+            tuple[RevisionVerdict, ...]: Um veredito por resultado sob investigação, ou nenhum.
+        """
+        return tuple(
+            RevisionVerdict(
+                task_id=verdict["task_id"],
+                verdict=RevisionVerdictEnum(verdict["verdict"]),
+                justification=verdict["justification"],
+            )
+            for verdict in parsed.get("revision") or ()
+        )
+
+    def __to_revision(
+        self,
+        task: Task,
+        review: ReviewRequest,
+        change: LedgerChange,
+        withdrawn: Sequence[Learning],
+        restored: Sequence[Learning],
+    ) -> ResultRevision:
+        """Monta o registro de auditoria de uma revisão aprovada e aplicada.
+
+        Args:
+            task: Tarefa revisora aprovada.
+            review: Pedido de revisão planejado por C.2 para a tarefa.
+            change: Mudança de estado aplicada pelo livro de resultados.
+            withdrawn: Aprendizados que saíram da visão vigente.
+            restored: Aprendizados que voltaram à visão vigente.
+
+        Returns:
+            ResultRevision: Quais resultados mudaram, por qual tarefa, por qual motivo aprovado e o
+            estado vigente resultante.
+        """
+        result = self.results_ledger.get(task_id=task.id)
+        return ResultRevision(
+            revising_task_id=task.id,
+            reason=review.reason,
+            verdicts=result.revision_verdicts,
+            approval_justification=task.revision_approval_justification() or "",
+            suspended_task_ids=change.suspended_task_ids,
+            reinstated_task_ids=change.reinstated_task_ids,
+            withdrawn_learnings=tuple(learning.content for learning in withdrawn),
+            restored_learnings=tuple(learning.content for learning in restored),
+            current_task_ids=self.results_ledger.current_task_ids(),
+            occurred_at=self.clock.now(),
+        )
 
     def __to_report(self, parsed: dict[str, Any]) -> VerificationReport:
         """Converte a saída de B.2 ou C.1 em relatório de verificação.
@@ -1161,12 +1328,20 @@ class RalphThinkingUseCase:
             task: Tarefa a renderizar.
 
         Returns:
-            str: Bloco markdown com descrição e critérios.
+            str: Bloco markdown com descrição, resultados revisados, dependências e critérios.
         """
+        links = ""
+        if task.review is not None:
+            links += _TASK_REVIEW_CONTENT.format(
+                ids=self.__render_ids(ids=task.review.task_ids), reason=task.review.reason
+            )
+        if task.depends_on:
+            links += _TASK_DEPENDENCIES_CONTENT.format(ids=self.__render_ids(ids=task.depends_on))
         return _TASK_CONTENT.format(
             task_id=task.id,
             title=task.title,
             description=task.description,
+            links=links,
             criteria=self.__render_criteria(criteria=task.acceptance_criteria),
         )
 
@@ -1321,7 +1496,16 @@ class RalphThinkingUseCase:
             return _NO_PREVIOUS_ATTEMPTS_CONTENT
         attempts = _BLOCK_SEPARATOR.join(
             _PREVIOUS_ATTEMPT_CONTENT.format(
-                attempt=attempt.number, output=attempt.output, report=self.__render_report(report=attempt.report)
+                attempt=attempt.number,
+                output=attempt.output,
+                revision=(
+                    _PREVIOUS_REVISION_CONTENT.format(
+                        verdicts=self.__render_verdicts(verdicts=attempt.revision_verdicts)
+                    )
+                    if attempt.revision_verdicts
+                    else ""
+                ),
+                report=self.__render_report(report=attempt.report),
             )
             for attempt in task.attempts
         )
@@ -1331,14 +1515,16 @@ class RalphThinkingUseCase:
         return _PREVIOUS_ATTEMPTS_CONTENT.format(attempts=attempts, instruction=instruction)
 
     def __render_results(self) -> str:
-        """Renderiza os resultados armazenados em B.3.
+        """Renderiza os resultados vigentes armazenados em B.3.
+
+        Resultados substituídos ou aguardando revalidação não entram: não são fatos vigentes.
 
         Returns:
-            str: Um bloco markdown por resultado, na ordem de armazenamento.
+            str: Um bloco markdown por resultado vigente, na ordem de armazenamento.
         """
         return _BLOCK_SEPARATOR.join(
             _RESULT_BLOCK.format(task_id=result.task_id, title=result.task_title, content=result.content)
-            for result in self.__results.values()
+            for result in self.results_ledger.current()
         )
 
     def __render_result_summaries(self) -> str:
@@ -1358,5 +1544,182 @@ class RalphThinkingUseCase:
                 description=result.task_description,
                 conclusion=result.conclusion,
             )
-            for result in self.__results.values()
+            for result in self.results_ledger.current()
         )
+
+    def __render_results_under_review(self, task: Task) -> str:
+        """Renderiza, para B.1, os resultados que a tarefa revisora investiga.
+
+        Args:
+            task: Tarefa em resolução.
+
+        Returns:
+            str: O motivo planejado e, para cada resultado investigado, o enunciado e a conclusão sob
+            investigação; ou o aviso de que a tarefa não revisa resultados.
+        """
+        if task.review is None:
+            return _NO_REVIEW_CONTENT
+        blocks = [_REVIEW_REASON_CONTENT.format(reason=task.review.reason)]
+        blocks.extend(self.__render_reviewed_result(task_id=task_id) for task_id in task.review.task_ids)
+        return _BLOCK_SEPARATOR.join(blocks)
+
+    def __render_revision_proposal(self, task: Task, revision_verdicts: Sequence[RevisionVerdict]) -> str:
+        """Renderiza, para B.2, a proposta explícita de revisão que o critério de revisão avalia.
+
+        Args:
+            task: Tarefa verificada.
+            revision_verdicts: Proposta de B.1, um veredito por resultado investigado.
+
+        Returns:
+            str: O motivo planejado e, para cada resultado investigado, o enunciado, a conclusão sob
+            investigação, o veredito proposto e a sua justificativa; ou o aviso de que não há revisão.
+        """
+        if task.review is None:
+            return _NO_REVIEW_CONTENT
+        blocks = [_REVIEW_REASON_CONTENT.format(reason=task.review.reason)]
+        for verdict in revision_verdicts:
+            blocks.append(self.__render_reviewed_result(task_id=verdict.task_id))
+            blocks.append(
+                _PROPOSED_VERDICT_CONTENT.format(
+                    task_id=verdict.task_id, verdict=verdict.verdict.value, justification=verdict.justification
+                )
+            )
+        return _BLOCK_SEPARATOR.join(blocks)
+
+    def __render_reviewed_result(self, task_id: str) -> str:
+        """Renderiza o enunciado e a conclusão de um resultado sob investigação.
+
+        Args:
+            task_id: Tarefa cujo resultado é investigado.
+
+        Returns:
+            str: Bloco markdown do resultado investigado.
+        """
+        result = self.results_ledger.get(task_id=task_id)
+        return _REVIEWED_RESULT_CONTENT.format(
+            task_id=result.task_id, title=result.task_title, description=result.task_description,
+            conclusion=result.conclusion,
+        )
+
+    def __render_verdicts(self, verdicts: Sequence[RevisionVerdict]) -> str:
+        """Renderiza uma proposta de revisão como lista markdown.
+
+        Args:
+            verdicts: Vereditos propostos.
+
+        Returns:
+            str: Um item por veredito.
+        """
+        return _ITEM_SEPARATOR.join(
+            _PREVIOUS_VERDICT_ITEM.format(
+                task_id=verdict.task_id, verdict=verdict.verdict.value, justification=verdict.justification
+            )
+            for verdict in verdicts
+        )
+
+    def __render_revision_record(self, for_planning: bool) -> str:
+        """Renderiza o registro de revisões entregue a C.1 e C.2: o que deixou de ser vigente e o que foi confirmado.
+
+        Os resultados substituídos aparecem só como histórico, sem a conclusão antiga. Os confirmados por
+        uma revisora vigente aparecem com o motivo aprovado: continuam vigentes por essa investigação. Os
+        que aguardam revalidação aparecem com as dependências explícitas; só C.2 recebe também o enunciado
+        e a conclusão deles, para poder planejar a revisão, rotulados como não vigentes.
+
+        Args:
+            for_planning: Indica que o registro vai para C.2.
+
+        Returns:
+            str: Seções de substituídos e de aguardando revalidação, ou o aviso de que não há nenhum.
+        """
+        blocks = []
+        superseded = self.results_ledger.superseded()
+        if superseded:
+            items = [
+                _SUPERSEDED_RECORD_ITEM.format(
+                    task_id=result.task_id, title=result.task_title,
+                    revising_task_id=self.results_ledger.superseded_by(task_id=result.task_id),
+                    reason=self.__superseding_reason(task_id=result.task_id),
+                )
+                for result in superseded
+            ]
+            blocks.append(f"{_SUPERSEDED_RECORD_HEADING}\n\n{_ITEM_SEPARATOR.join(items)}")
+        confirmed = self.__render_confirmations()
+        if confirmed:
+            blocks.append(f"{_CONFIRMED_RECORD_HEADING}\n\n{_ITEM_SEPARATOR.join(confirmed)}")
+        awaiting = self.results_ledger.awaiting_revalidation()
+        if awaiting:
+            items = [
+                _AWAITING_RECORD_ITEM.format(
+                    task_id=result.task_id, title=result.task_title,
+                    dependencies=self.__render_ids(ids=result.depends_on),
+                )
+                + (
+                    _AWAITING_PLANNING_DETAIL.format(description=result.task_description, conclusion=result.conclusion)
+                    if for_planning
+                    else ""
+                )
+                for result in awaiting
+            ]
+            blocks.append(f"{_AWAITING_RECORD_HEADING}\n\n{_ITEM_SEPARATOR.join(items)}")
+        return _BLOCK_SEPARATOR.join(blocks) or _NO_REVISIONS_CONTENT
+
+    def __render_confirmations(self) -> list[str]:
+        """Lista as confirmações aprovadas que ainda sustentam um resultado vigente.
+
+        Só contam as confirmações feitas por uma revisora vigente cujo alvo continua vigente: uma
+        confirmação cuja revisora ou cujo alvo deixou de ser vigente já aparece nas outras seções.
+
+        Returns:
+            list[str]: Um item por resultado confirmado, na ordem de armazenamento das revisoras.
+        """
+        return [
+            _CONFIRMED_RECORD_ITEM.format(
+                task_id=verdict.task_id, title=self.results_ledger.get(task_id=verdict.task_id).task_title,
+                revising_task_id=revising.task_id, reason=verdict.justification,
+            )
+            for revising in self.results_ledger.current()
+            for verdict in revising.revision_verdicts
+            if verdict.verdict is RevisionVerdictEnum.CONFIRMED
+            and self.results_ledger.status_of(task_id=verdict.task_id) is ResultStatusEnum.CURRENT
+        ]
+
+    def __superseding_reason(self, task_id: str) -> str:
+        """Devolve a justificativa aprovada do veredito que substituiu o resultado.
+
+        Args:
+            task_id: Tarefa substituída.
+
+        Returns:
+            str: Justificativa do veredito `superseded` da tarefa revisora.
+        """
+        revising = self.results_ledger.get(task_id=self.results_ledger.superseded_by(task_id=task_id) or "")
+        return next(verdict.justification for verdict in revising.revision_verdicts if verdict.task_id == task_id)
+
+    def __render_store(
+        self, task_id: str, change: LedgerChange, withdrawn: Sequence[Learning], restored: Sequence[Learning]
+    ) -> str:
+        """Renderiza o registro da etapa B.3, com as mudanças de estado que ela aplicou.
+
+        Args:
+            task_id: Tarefa armazenada.
+            change: Mudança de estado aplicada pelo livro de resultados.
+            withdrawn: Aprendizados que saíram da visão vigente.
+            restored: Aprendizados que voltaram à visão vigente.
+
+        Returns:
+            str: Confirmação do armazenamento seguida de uma linha por mudança.
+        """
+        lines = [_STORE_CONTENT.format(task_id=task_id)]
+        for label, ids in (
+            (_SUPERSEDED_LABEL, change.superseded_task_ids),
+            (_CONFIRMED_LABEL, change.confirmed_task_ids),
+            (_SUSPENDED_LABEL, change.suspended_task_ids),
+            (_REINSTATED_LABEL, change.reinstated_task_ids),
+        ):
+            if ids:
+                lines.append(_STORE_CHANGE_CONTENT.format(label=label, ids=self.__render_ids(ids=ids)))
+        if withdrawn:
+            lines.append(_STORE_WITHDRAWN_CONTENT.format(count=len(withdrawn)))
+        if restored:
+            lines.append(_STORE_RESTORED_CONTENT.format(count=len(restored)))
+        return _SENTENCE_SEPARATOR.join(lines)

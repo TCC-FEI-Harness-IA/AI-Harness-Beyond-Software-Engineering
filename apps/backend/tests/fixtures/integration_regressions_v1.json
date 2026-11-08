@@ -1,0 +1,286 @@
+{
+  "version": 1,
+  "purpose": "Matriz de regressões integradas das cinco frentes do thinking (etapa 07). Cada caso traz um pedido sintético, o defeito original observado, o comportamento programático exercitado pelos testes determinísticos e uma rubrica para avaliação semântica futura com modelo real. O campo reference_oracle pertence exclusivamente ao avaliador: não é enviado ao modelo, não é lido pelo código de produção e os testes verificam que o harness não o injeta em nenhum prompt antes das saídas do modelo.",
+  "cases": [
+    {
+      "name": "mars_recovery",
+      "fronts": [
+        "structure_recovery",
+        "planning"
+      ],
+      "question": "Na configuração considerada, a razão entre a maior e a menor distância entre a Terra e Marte é aproximadamente 7,7. Suponha órbitas circulares, coplanares e concêntricas ao Sol, com período terrestre de 12 meses. Determine o período orbital de Marte, em meses. A) 12 B) 15 C) 18 D) 22 E) 27",
+      "original_defect": "A.2 devolveu três tarefas com o título de T3 ausente; a recuperação cortava a saída recusada em 1.000 caracteres e a correção devolveu só T1.",
+      "programmatic_behavior": "A segunda chamada de A.2 recebe a saída recusada integral, inclusive T2/T3 depois de 1.000 caracteres, e a orientação de cobertura; o plano corrigido executa as três tarefas.",
+      "deterministic_tests": [
+        "test_marte_recuperacao_preserva_o_plano_integral_e_executa_as_tres_tarefas"
+      ],
+      "reference_oracle": {
+        "values": [
+          "R/r≈1,2985",
+          "17,76 meses"
+        ],
+        "choice": "C",
+        "derivation": "(R+r)/(R-r)≈7,7 ⇒ R/r≈1,2985; T=12·(R/r)^(3/2)≈17,76 meses; C) 18 é o melhor ajuste."
+      },
+      "review_checks": [
+        "The corrected plan still covers the period in months, not only a distance ratio.",
+        "The corrected output is complete JSON, not a continuation of the refused one."
+      ]
+    },
+    {
+      "name": "mars_coverage",
+      "fronts": [
+        "planning",
+        "validation",
+        "synthesis"
+      ],
+      "question": "Na configuração considerada, a razão entre a maior e a menor distância entre a Terra e Marte é aproximadamente 7,7. Suponha órbitas circulares, coplanares e concêntricas ao Sol, com período terrestre de 12 meses. Determine o período orbital de Marte, em meses. A) 12 B) 15 C) 18 D) 22 E) 27",
+      "original_defect": "Só a razão de distâncias foi obtida e C.1 a considerou suficiente para responder um período em meses.",
+      "programmatic_behavior": "C.1 reprova, C.2 recebe o motivo e planeja a determinação do período com depends_on; a nova tarefa roda B.1/B.2/B.4 e uma nova C.1 aprova antes de C.3.",
+      "deterministic_tests": [
+        "test_cobertura_de_marte_encaminha_a_c2_completa_a_analise_e_reverifica_antes_de_c3"
+      ],
+      "reference_oracle": {
+        "values": [
+          "17,76 meses"
+        ],
+        "choice": "C",
+        "derivation": "A razão adimensional não é o período; Kepler: T≈17,76 meses ⇒ C) 18 por melhor ajuste."
+      },
+      "review_checks": [
+        "C.1 rejects a dimensionless ratio as the answer to a period.",
+        "C.2 plans the period itself, not a task that only picks the nearest option to the ratio."
+      ]
+    },
+    {
+      "name": "collisions_revision",
+      "fronts": [
+        "validation",
+        "structure_recovery",
+        "learnings",
+        "synthesis"
+      ],
+      "question": "Dois carros iguais, de massa m e velocidade inicial v, colidem durante o mesmo intervalo de tempo: um contra uma barreira de pneus, da qual retorna com velocidade de módulo u > 0, e outro contra blocos de concreto, nos quais para. Compare a força média sobre cada carro e a energia mecânica dissipada em cada colisão.",
+      "original_defect": "T1/T2 corretas e T3 contraditória; C.1 aprovou e a síntese misturou as versões.",
+      "programmatic_behavior": "C.1 encaminha a contradição, C.2 planeja uma revisora com review, B.2 aprova o critério -REV, B.3 substitui T3, retira da memória vigente só os fatos exclusivos de T3 e registra a auditoria; a nova C.1 e C.3 recebem só os vigentes.",
+      "deterministic_tests": [
+        "test_colisoes_revisao_aprovada_atualiza_resultados_e_memoria_vigentes_com_historico_auditado"
+      ],
+      "reference_oracle": {
+        "values": [
+          "impulso nos pneus m(v+u)",
+          "impulso nos blocos mv"
+        ],
+        "conclusion": "Força média maior nos pneus (mesma duração, impulso maior); dissipação maior nos blocos."
+      },
+      "review_checks": [
+        "C.1 names the incompatible claims about the same objects and conditions without deciding which is wrong.",
+        "The reviewing task identifies the concrete error before superseding."
+      ]
+    },
+    {
+      "name": "steam_kettle_planning",
+      "fronts": [
+        "planning",
+        "learnings"
+      ],
+      "question": "Num tacho encamisado, vapor d'água entra na camisa a 120 °C e sai como água líquida a 100 °C, enquanto o produto no interior aquece e parte da sua água evapora. Explique de onde vem a energia que aquece o produto e qual efeito essa energia produz no produto.",
+      "original_defect": "O planejamento prescreveu a origem da energia (vaporização do produto) e B.2 aprovou concordância com essa premissa.",
+      "programmatic_behavior": "O plano separa origem e efeito sem prescrever a conclusão; os dados literais chegam pela memória; a tarefa dependente recebe a conclusão da anterior sem a resolução completa.",
+      "deterministic_tests": [
+        "test_tacho_planejamento_separa_origem_e_efeito_sem_transformar_hipotese_em_obrigacao"
+      ],
+      "reference_oracle": {
+        "conclusion": "A energia vem do resfriamento e da condensação do vapor na camisa; a evaporação de parte da água do produto é destino dessa energia."
+      },
+      "review_checks": [
+        "Criteria ask to determine and justify the source; they do not require a named source.",
+        "Origin and effect are not merged into one prescribed statement."
+      ]
+    },
+    {
+      "name": "microscope_quantities",
+      "fronts": [
+        "learnings",
+        "planning",
+        "validation"
+      ],
+      "question": "Um microscópio composto tem objetiva de distância focal 5 mm e ocular de distância focal 70 mm, separadas por 190 mm. Um objeto é colocado a 5,2 mm da objetiva. Determine a posição da imagem final em relação à ocular e o aumento linear total.",
+      "original_defect": "A referência das distâncias foi trocada e o aumento linear foi substituído silenciosamente pelo angular, com imagem no infinito assumida sem fundamento.",
+      "programmatic_behavior": "A.3 conserva cada distância com seu referente; B.2 reprova a troca de grandeza; a retentativa recebe o histórico explicitamente em janela nova e temperatura 1; só o resultado aprovado chega à memória, a C.1 e a C.3.",
+      "deterministic_tests": [
+        "test_microscopio_preserva_referencias_e_grandeza_linear_com_retentativa_em_janela_nova"
+      ],
+      "reference_oracle": {
+        "values": [
+          "imagem da objetiva a 130 mm dela",
+          "objeto da ocular a 60 mm",
+          "imagem final a −420 mm",
+          "|m1|=25",
+          "|m2|=7",
+          "aumento linear total 175"
+        ]
+      },
+      "review_checks": [
+        "The linear magnification is computed, not the angular one.",
+        "Every distance keeps its reference (objective or ocular).",
+        "No image-at-infinity hypothesis is introduced as a fact."
+      ]
+    },
+    {
+      "name": "geography_interpretation",
+      "fronts": [
+        "validation"
+      ],
+      "question": "Leia o trecho: \"Na comunidade, os moradores se reúnem antes da colheita para um rito em que pedem chuva.\" Qual alternativa interpreta o trecho? A) A comunidade depende de irrigação artificial. B) O trecho descreve um conflito por terras. C) O rito é uma atividade comercial. D) O rito expressa a relação da comunidade com o ciclo das chuvas e da colheita. E) A colheita ocorre na estação seca.",
+      "original_defect": "B.2 reprovou a alternativa sustentada por não conter literalmente uma palavra e aceitou conteúdo implícito em outra opção.",
+      "programmatic_behavior": "A retentativa recebe a instrução de manter a conclusão não refutada e explicitar o vínculo; o mesmo padrão de conteúdo implícito vale para todas as opções.",
+      "deterministic_tests": [
+        "test_geografia_retentativa_explicita_o_vinculo_sem_trocar_a_conclusao_sustentada"
+      ],
+      "reference_oracle": {
+        "choice": "D"
+      },
+      "review_checks": [
+        "B.2 applies the same implicit-content standard to every option.",
+        "The retry keeps the supported option and makes the link explicit."
+      ]
+    },
+    {
+      "name": "probability_conditioning",
+      "fronts": [
+        "validation",
+        "structure_recovery",
+        "synthesis"
+      ],
+      "question": "Duas equipes igualmente fortes disputam uma série melhor de sete; cada partida é independente e cada equipe vence com probabilidade 1/2. Sabendo que a equipe A venceu a primeira partida, qual é a probabilidade de A vencer a série? A) 11/32 B) 35/64 C) 21/32 D) 1/2 E) 11/16",
+      "original_defect": "A conta multiplicou de novo por 1/2 a primeira vitória já condicionada; outra tarefa escolheu a opção próxima e C.1 aprovou.",
+      "programmatic_behavior": "C.1 encaminha o erro; a revisão percorre C.2 → B.1/B.2/B.3/B.4 → C.1; C.3 recebe só o resultado vigente e não reconcilia nada.",
+      "deterministic_tests": [
+        "test_probabilidade_revisao_percorre_as_fases_e_nao_acontece_na_sintese"
+      ],
+      "reference_oracle": {
+        "values": [
+          "1/8 + 3/16 + 6/32 + 10/64 = 42/64 = 21/32"
+        ],
+        "choice": "C",
+        "defect": "Usar 2^(−n) com a primeira partida já fixada introduz fator 1/2 indevido."
+      },
+      "review_checks": [
+        "The rejection names the double conditioning, not the distance between options.",
+        "The nearest option to a wrong value is not accepted as a fit."
+      ]
+    },
+    {
+      "name": "integer_lists_count",
+      "fronts": [
+        "learnings",
+        "planning",
+        "validation"
+      ],
+      "question": "Considere listas ordenadas de cinco números inteiros positivos cujas mediana, média, amplitude e moda são todas iguais a 23. Quantas listas satisfazem simultaneamente essas condições? A) 8 B) 12 C) 36 D) 44 E) 47",
+      "original_defect": "O plano enfraqueceu a definição (moda e ordenação) e C.1 escreveu que 47 corresponde exatamente a 44.",
+      "programmatic_behavior": "A definição e as condições simultâneas chegam íntegras a cada B.1 pela memória; C.1 reprova a igualdade falsa; a investigação corretiva substitui a contagem defeituosa.",
+      "deterministic_tests": [
+        "test_contagem_preserva_definicao_e_igualdade_falsa_vira_investigacao"
+      ],
+      "reference_oracle": {
+        "values": [
+          "8 listas com moda 23"
+        ],
+        "choice": "A",
+        "defect": "Admitir cinco valores distintos acrescenta 36 casos; 47 inclui outros erros e proximidade não demonstra a conta."
+      },
+      "review_checks": [
+        "The mode condition is not weakened to 'any repeated value' or dropped.",
+        "A false equality between different counts is not confused with an explicit best-fit choice."
+      ]
+    },
+    {
+      "name": "chemistry_table",
+      "fronts": [
+        "learnings",
+        "synthesis"
+      ],
+      "question": "Uma estação de tratamento realiza os testes 1-Cálcio, 2-Cloreto, 3-Turbidez, 4-Coliformes totais e 5-Sólidos sedimentáveis. Uma amostra forma precipitado branco com oxalato de amônio. Qual teste identifica a espécie responsável? A) 1 B) 2 C) 3 D) 4 E) 5",
+      "original_defect": "A.3 omitiu o mapeamento letra–código e C.3 escreveu uma letra que não rotulava o teste aprovado.",
+      "programmatic_behavior": "A.3 conserva tabela e alternativas; C.1 e C.3 recebem as associações literais; C.3 recebe exatamente o que a última C.1 aprovou.",
+      "deterministic_tests": [
+        "test_quimica_tabela_e_alternativas_chegam_a_c1_e_c3_para_pareamento_literal"
+      ],
+      "reference_oracle": {
+        "choice": "A",
+        "conclusion": "Teste 1 — cálcio."
+      },
+      "review_checks": [
+        "The letter written labels the approved test, by the literal option mapping."
+      ]
+    },
+    {
+      "name": "legitimate_approximation",
+      "fronts": [
+        "validation",
+        "synthesis"
+      ],
+      "question": "Uma caixa d'água de 2.000 L é abastecida por uma bomba de vazão aproximada 37 L/min. Em quanto tempo, aproximadamente, a caixa enche? A) 30 min B) 45 min C) 55 min D) 70 min E) 90 min",
+      "original_defect": "Risco oposto: reprovar uma escolha fundamentada por falta de coincidência exata ou exigir cálculo direto até o valor da opção.",
+      "programmatic_behavior": "Uma estimativa com melhor ajuste explícito é aprovada sem C.2 e apresentada como aproximação.",
+      "deterministic_tests": [
+        "test_aproximacao_legitima_e_aceita_sem_c2_e_apresentada_como_melhor_ajuste"
+      ],
+      "reference_oracle": {
+        "values": [
+          "≈54 min"
+        ],
+        "choice": "C"
+      },
+      "review_checks": [
+        "C.1 approves the best fit without asking for an exact match.",
+        "C.3 presents the choice as a best fit, never as an equality."
+      ]
+    },
+    {
+      "name": "open_question",
+      "fronts": [
+        "learnings",
+        "planning",
+        "synthesis"
+      ],
+      "question": "No contrato, SLA significa Acordo de Nível de Serviço. A Bomba Alfa entrega 12 L/min e a Bomba Alfa II entrega 8 L/min. Mantida a vazão constante, qual volume, em litros, a Bomba Alfa entrega em 3 minutos? Explique brevemente.",
+      "original_defect": "Risco de o fluxo depender de alternativas, marcadores ou campos do benchmark para responder.",
+      "programmatic_behavior": "Sem alternativas ou marcadores, siglas, nomes, unidades e condições chegam a todas as fases e a resposta final é a apresentação dos resultados aprovados.",
+      "deterministic_tests": [
+        "test_pergunta_aberta_preserva_siglas_nomes_unidades_e_condicoes_sem_alternativas"
+      ],
+      "reference_oracle": {
+        "values": [
+          "36 L"
+        ]
+      },
+      "review_checks": [
+        "The answer names Bomba Alfa (not Alfa II), the unit and the constant-flow condition."
+      ]
+    },
+    {
+      "name": "confirmatory_review",
+      "fronts": [
+        "structure_recovery",
+        "validation",
+        "learnings"
+      ],
+      "question": "Dois carros iguais, de massa m e velocidade inicial v, colidem durante o mesmo intervalo de tempo: um contra uma barreira de pneus, da qual retorna com velocidade de módulo u > 0, e outro contra blocos de concreto, nos quais para. Compare a força média sobre cada carro e a energia mecânica dissipada em cada colisão.",
+      "original_defect": "Risco de tratar a investigação mais recente como substituta automática, ou de apagar fontes independentes ao revisar.",
+      "programmatic_behavior": "Uma revisão confirmatória mantém o resultado revisado vigente com seus aprendizados, registra a confirmação para C.1 e C.2 e não elimina dados de A.3 nem fatos de outras fontes.",
+      "deterministic_tests": [
+        "test_revisao_confirmatoria_nao_substitui_por_recencia_e_e_registrada_para_c1"
+      ],
+      "reference_oracle": {
+        "conclusion": "As afirmações sob hipóteses explícitas diferentes são compatíveis; a revisada permanece vigente."
+      },
+      "review_checks": [
+        "The reviewing task explains why the apparent conflict comes from different hypotheses.",
+        "C.1 does not re-flag a conflict already explained by an approved confirmation."
+      ]
+    }
+  ]
+}

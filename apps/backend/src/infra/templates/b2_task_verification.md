@@ -10,6 +10,15 @@ Evaluate whether the preliminary result below meets the task's acceptance criter
 
 {{task_acceptance_criteria}}
 
+## Proposed revision
+
+When the task investigates stored results, the solver's explicit revision proposal appears below:
+for each result under review, its statement, the conclusion under review, the proposed verdict and
+its justification. The revision criterion (`<task id>-REV`) listed above evaluates it. Otherwise this
+area states that the task does not review stored results.
+
+{{revision_proposal}}
+
 ## Key Learnings
 
 Compact notes accumulated throughout the flow: the points of attention from the question and the
@@ -62,6 +71,17 @@ conditions outside the goal or announcing the global solution when the criterion
 violation. Internal explanations must not be judged by the format of the final answer: a marker
 line, an answer limited to a letter or the final language is not an internal obligation unless
 such a restriction appears in the local criteria received; all of those remain mandatory.
+
+## Revision criterion
+
+The revision criterion is met only when the preliminary result demonstrates every proposed verdict.
+`superseded` requires the concrete error in the reviewed claim to be identified and the corrected
+conclusion to be established by the analysis shown; `confirmed` requires the reviewed claim to
+withstand the investigation. Recency, a different hypothesis, a different wording or a bare
+assertion that the earlier result is wrong does not support `superseded`, and confirming an earlier
+result is a valid outcome. Approving the task approves the proposal: an approved `superseded` result
+stops being a current fact. Do not rewrite the proposal or substitute another verdict; when support
+is missing, mark the criterion as not met and name what is missing.
 
 ## Evidence and consistency policy
 

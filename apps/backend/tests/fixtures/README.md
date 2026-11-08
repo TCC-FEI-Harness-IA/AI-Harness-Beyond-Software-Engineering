@@ -49,3 +49,24 @@ caso, preserve versão da matriz, commit, modelo, temperatura e saída bruta, co
 referência e registre evidência textual para cada `review_check` — por exemplo, se a reprovação do
 condicionamento nomeia a dupla contagem e não a distância entre as opções. Mudanças substanciais nos
 casos ou na rubrica devem gerar uma nova versão.
+
+# Matriz de regressões integradas — versão 1
+
+`integration_regressions_v1.json` contém os 12 casos da etapa 07 (Marte — recuperação e cobertura,
+colisões, tacho, microscópio, geografia, probabilidade, contagem de listas, química, aproximação
+legítima, pergunta aberta e revisão confirmatória). Cada caso registra as frentes envolvidas
+(`structure_recovery`, `learnings`, `planning`, `validation`, `synthesis`), um pedido sintético, o
+defeito original, o comportamento programático exercitado, os nomes dos testes determinísticos em
+`tests/application/usecases/test_ralph_five_fronts_integration.py` e a rubrica `review_checks`.
+
+**Finalidade.** Os testes determinísticos usam só a pergunta: as saídas do modelo são roteirizadas e
+provam fiação, estado vigente, auditoria, contabilização e o material entregue a cada fase. O campo
+`reference_oracle` (valores, escolha, derivação ou conclusão esperados) pertence **exclusivamente ao
+avaliador** de uma avaliação semântica futura: não é enviado ao modelo, não é lido pelo código de
+produção, e um teste de contrato verifica que nenhum oráculo aparece nos nove templates; os cenários
+também verificam que o harness não o injeta nos prompts de planejamento.
+
+Para avaliar um modelo real, envie apenas a pergunta pelo fluxo completo, preserve versão da matriz,
+commit dos templates, modelo, temperatura, saída bruta e sessão exportada, compare com o oráculo e
+registre evidência textual para cada `review_check`. Uma resposta roteirizada correta nos testes não é
+evidência de acurácia; mudanças substanciais nos casos ou no oráculo devem gerar uma nova versão.

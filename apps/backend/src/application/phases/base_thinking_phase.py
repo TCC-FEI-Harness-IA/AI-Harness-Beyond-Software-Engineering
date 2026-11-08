@@ -66,10 +66,14 @@ _PLANNING_PHASES = frozenset({ThinkingPhaseEnum.A2_TASK_DECOMPOSITION, ThinkingP
 _PLANNING_RECOVERY_INSTRUCTIONS = (
     "\n\n### Planning coverage\n\n"
     "The complete corrected plan must still cover the requested determination, including the final steps "
-    "needed to obtain it. In additional planning, cover the remaining gaps using the supplied approved results. "
+    "needed to obtain it. In additional planning, cover the remaining gaps using the supplied current approved "
+    "results. "
     "A missing title does not authorize dropping other necessary tasks. Preserve unaffected content; "
     "change the batch, task IDs or content when the reported defect requires it, such as a task limit "
-    "or duplicate IDs, while preserving the necessary coverage."
+    "or duplicate IDs, while preserving the necessary coverage. "
+    "When the defect concerns `review` or `depends_on`, correct the references to identifiers the instructions "
+    "allow; do not drop the targeted investigation of a flagged defect or a dependency the task actually uses "
+    "merely to satisfy the parser."
 )
 _INVALID_OUTPUT_AUDIT_TEMPLATE = (
     "Saída inválida descartada na fase {phase} ({defect}): {reason}\n"

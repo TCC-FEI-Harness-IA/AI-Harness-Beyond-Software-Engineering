@@ -2641,3 +2641,767 @@ depois dos ajustes, passou em **2.231 testes**, em **79,12 s**, mantendo **100,0
 anteriores foram preservadas. A verificação de código não encontrou novos IDs, gabaritos,
 `question.options` ou imports de fixtures no núcleo. A evidência continua sendo programática e de
 contrato de prompts, sem inferências pagas ou medição de acurácia real.
+
+---
+
+## Melhorias do thinking — 05: revisão auditável de resultados e aprendizados vigentes
+
+### Problema e alcance
+
+Até a etapa 04, C.1 já reconhecia contradições e C.2 já podia planejar uma investigação de um
+resultado aprovado. Faltava a consequência: os resultados ficavam num dicionário acumulativo por
+tarefa, a memória de aprendizados só crescia e deduplicava texto, e uma tarefa corretiva aprovada
+era **acrescentada** ao lado da conclusão que ela corrigia. C.1, C.2, C.3 e a área **Aprendizados
+Pontuais** continuavam recebendo as duas versões, e as fases seguintes podiam seguir a antiga.
+
+Exemplo motivador: T1 conclui que a força média de frenagem é maior com pneus travados, T2 conclui
+que a energia dissipada é igual nos dois casos e T3 afirma força maior com os blocos de freio. C.1
+deve pedir uma investigação, não escolher qual narrativa vence. “A tarefa mais recente sempre vence”
+também é incorreto: ordem não prova correção, perguntas podem envolver hipóteses distintas e uma
+investigação pode **confirmar** o resultado anterior.
+
+Esta etapa é uma **extensão metodológica explícita**: define um contrato mínimo para que uma
+revisão seja planejada, executada, aprovada e aplicada pelo caminho já existente
+C.2 → B.1/B.2/B.3/B.4 → C.1, com efeito sobre os resultados e a memória vigentes e com auditoria.
+Não há fase nova, reconciliação feita pelo orquestrador nem inferência de supersessão por palavras
+(“correção”), regex ou ordem temporal. **As referências estruturadas permitem gerir revisões; a
+identificação semântica do erro continua dependendo das fases do modelo.**
+
+### Contrato mínimo
+
+Os campos novos são opcionais: sem eles, tarefas, saídas de B.1 e sessões antigas seguem o contrato
+anterior. Só eles mudam o estado vigente.
+
+| Onde | Campo | Significado |
+|---|---|---|
+| A.2 e C.2, por tarefa | `depends_on: ["T1", ...]` | Tarefas cujos achados a tarefa usa explicitamente: tarefas **anteriores** do mesmo lote ou resultados **vigentes**. |
+| C.2, por tarefa | `review: {"task_ids": ["T3"], "reason": "..."}` | Tarefa **revisora**: os resultados armazenados cujas afirmações investiga (candidatos, não condenados) e o defeito concreto apontado por C.1. |
+| B.1 de uma revisora | `revision: [{"task_id": "T3", "verdict": "confirmed" \| "superseded", "justification": "..."}]` | Proposta de revisão: exatamente um veredito por resultado sob investigação. |
+| B.2 de uma revisora | critério `<id>-REV` (gerado) | Critério acrescentado só na verificação, sem reescrever os critérios planejados: a proposta é sustentada pela investigação? |
+
+O critério `<id>-REV` diz: *“The revision proposal gives, for each result under review, exactly one
+verdict (confirmed or superseded) that the investigation in this result demonstrates: superseded only
+when it identifies the concrete error in the reviewed claim, confirmed when the claim withstands the
+investigation. Recency, a different hypothesis or a different wording is not evidence for either
+verdict.”* O identificador é reservado: um critério planejado com esse ID é recusado.
+
+O parser (`StructuredResponseParserAdapter`) valida as referências contra dados da sessão entregues
+em `ValidationContext` (`reviewable_task_ids`, `dependable_task_ids`, `review_target_ids`), nunca lidos
+do prompt. Toda recusa é um defeito de **contrato** recuperável, com diagnóstico, e acontece antes de
+qualquer mutação de fila, resultados ou memória:
+
+| Saída | Código | Exemplo de recusa |
+|---|---|---|
+| Revisão de ID inexistente | `task_references` | `review.task_ids: ["T9"]` sem T9 na sessão. |
+| Revisão fora do escopo | `task_references` | Alvo já substituído, ou tarefa ainda não executada do próprio lote. |
+| Autorrevisão | `task_references` | T4 revisando T4. |
+| Mesmo alvo em duas tarefas do lote | `duplicate_id` | T4 e T5 revisando T3. |
+| Alvo ou dependência repetidos | `duplicate_id` | `["T3", "T3"]`. |
+| Dependência futura (ciclo) ou autodependência | `task_references` | T4 dependendo de T5 do mesmo lote. Como só se depende do que vem antes, ciclos são impossíveis por construção. |
+| Dependência não vigente ou inexistente | `task_references` | Depender de resultado substituído ou aguardando revalidação. |
+| Depender do próprio alvo | `task_references` | Revisar T3 e declarar `depends_on: ["T3"]`. |
+| Forma inválida | `schema_type`, `missing_field`, `empty_value` | `review` sem `reason`, `task_ids` vazio, item não textual. |
+| B.1 de tarefa normal com `revision` preenchida | `task_references` | Uma tarefa normal não revisa resultados, mesmo com conclusão divergente. `revision` ausente, `null` ou `[]` é aceito. |
+| B.1 de revisora sem veredito completo | `missing_field`, `invalid_value`, `task_references` | Proposta ausente, veredito desconhecido, alvo extra ou faltante. |
+
+A.2 usa as mesmas regras com o conjunto de resultados revisáveis vazio: não pode planejar revisões.
+O livro de resultados (`ResultsLedger`) e a entidade `Task` repetem as validações essenciais como
+invariantes de domínio, de forma atômica.
+
+### Estados dos resultados e transições
+
+`ResultsLedger` (domínio, injetado por `IResultsLedger`) substitui o dicionário de B.3. Cada resultado
+tem um estado:
+
+| Estado | Entra em C.1/C.2/C.3 como fato? | Pode ser revisado? | Pode ser dependência nova? |
+|---|---|---|---|
+| `current` (vigente) | Sim | Sim | Sim |
+| `awaiting_revalidation` | Não; aparece no registro de revisões | Sim | Não |
+| `superseded` | Não; aparece só como histórico | Não | Não |
+
+| Evento (sempre em B.3, após aprovação em B.2) | Efeito |
+|---|---|
+| Resultado normal armazenado | Fica vigente; se alguma dependência declarada não é vigente, entra aguardando revalidação. |
+| Veredito `superseded` aprovado | O alvo deixa de ser vigente e registra a revisora que o substituiu. |
+| Veredito `confirmed` aprovado | O alvo continua vigente; se aguardava revalidação, volta a ser vigente (a confirmação vale como revalidação das dependências que já não eram vigentes). |
+| Qualquer resultado deixa de ser vigente | Todo resultado vigente que depende dele, explícita e transitivamente, passa a aguardar revalidação. Dependentes de um resultado restaurado **não** são restaurados automaticamente. |
+| B.2 reprova, saída inválida, tentativas esgotadas, interrupção | Nada muda: resultados, memória e auditoria ficam como estavam. |
+
+As substituições de uma mesma revisão são aplicadas antes das confirmações. A substituição é por
+**resultado inteiro**: B.1 é instruída a restabelecer no próprio resultado as afirmações do resultado
+substituído que continuam válidas.
+
+### Entradas de cada fase
+
+| Fase | O que muda |
+|---|---|
+| C.1 | `Stored results` traz só os vigentes. Nova área `## Revision record` (`result_revisions`): substituídos (ID, título, revisora, motivo aprovado — sem a conclusão antiga) e aguardando revalidação (ID, título, dependências). É histórico, não evidência; C.1 identifica os resultados envolvidos por ID e reprova o critério que dependia de um resultado em revalidação. |
+| C.2 | `Results already stored` só com vigentes; `## Revision record` também com enunciado e conclusão dos que aguardam revalidação, rotulados como não vigentes, para poder revisá-los. Seção nova sobre `review`/`depends_on` e formato de saída com os campos opcionais. |
+| B.1 | Nova área `## Results under review` (`results_under_review`): motivo planejado e, para cada alvo, enunciado e conclusão sob investigação; ou o aviso de que a tarefa não revisa resultados. Critérios incluem `<id>-REV`. Tentativas anteriores mostram a proposta reprovada. |
+| B.2 | Nova área `## Proposed revision` (`revision_proposal`): motivo, alvo, conclusão sob investigação, veredito proposto e justificativa. O critério `<id>-REV` é avaliado explicitamente; aprovar a tarefa aprova a proposta. |
+| B.3 | Aplica a mudança no livro, atualiza a memória e grava o registro de auditoria. |
+| B.4 | Roda depois de B.3, já vendo a memória vigente; registra as conclusões confirmadas ou corrigidas como fatos do problema, nunca como relato da revisão. Se o próprio resultado aguarda revalidação, os aprendizados são registrados, mas **retidos** fora da visão vigente. |
+| C.3 | Sem área nova: recebe exatamente os resultados vigentes aprovados na última C.1 e a memória vigente. |
+| A.2 | Pode declarar `depends_on` entre tarefas do plano inicial. |
+
+### Memória, proveniência e fatos vigentes
+
+`LearningsMemory` passou a guardar, para cada fato, todas as fontes que o registraram (`None` para A.3,
+ID da tarefa para B.4). A deduplicação continua textual (espaços normalizados) e a área **Aprendizados
+Pontuais** não repete fatos; uma repetição apenas acrescenta a sua fonte. Assim a deduplicação não
+oculta que o mesmo fato veio de mais de uma origem.
+
+- `withdraw(task_ids)`: retira tarefas das fontes vigentes; sai da visão só o fato sem nenhuma outra
+  fonte vigente. Fatos de A.3 nunca saem por revisão de tarefa.
+- `restore(task_ids)`: devolve as fontes; os fatos voltam na ordem original.
+- `all()`/`render()`: a visão vigente. Nada é apagado.
+
+Nenhuma comparação semântica é usada para retirar fatos. Um aprendizado obsoleto escrito com outras
+palavras por uma tarefa não afetada continua vigente — essa tarefa é fonte independente; se ele for
+incompatível com os resultados vigentes, cabe a C.1 apontá-lo.
+
+### Dependências: como são produzidas e o que não cobrem
+
+As dependências vêm só de `depends_on`, declarado pelo planejador (A.2 ou C.2) quando uma tarefa usa
+o achado de outra. O orquestrador não extrai dependências do texto das resoluções nem dos
+aprendizados. Quando um resultado deixa de ser vigente, os dependentes declarados deixam de fornecer
+conteúdo final até uma revisora aprovada confirmá-los ou substituí-los. Tarefas independentes não são
+refeitas. Dependências ocultas (uma tarefa que usou um aprendizado sem declará-lo) não são detectadas;
+C.1 continua responsável por reconhecer contradições residuais.
+
+### Aprovação global
+
+`GlobalApproval` continua vinculando o relatório aprovado de C.1 ao texto dos resultados que ele
+avaliou e aos IDs vigentes (`ResultsLedger.current_task_ids()`). Como toda revisão acontece no loop e
+é seguida de nova C.1, nenhuma aprovação anterior a uma revisão chega a C.3. C.3 recebe exatamente o
+`stored_results` da aprovação.
+
+### Auditoria e compatibilidade
+
+As mensagens da sessão continuam guardando todas as respostas, tentativas e relatórios, inclusive a
+conclusão antiga, que não é apagada nem apresentada como se nunca tivesse sido aprovada. A mensagem de
+B.3 registra a mudança (`Result of task `T4` stored. Superseded results: `T3`. Learnings withdrawn from
+the current view: 1.`), e a mensagem de C.2 mostra `**Reviews:**` e `**Depends on:**` de cada tarefa.
+
+Cada revisão aplicada vira um registro estruturado na sessão, `result_revisions`, gravado pelo
+`ISessionRecorder.record_result_revision` e mapeado pelo `SessionDocumentMapper`. É consultável em
+`GET /v1/sessions/{id}` e na exportação de erros do benchmark, sem mudança no frontend:
+
+```json
+"result_revisions": [{
+  "revising_task_id": "T4",
+  "reason": "T3 afirma força maior nos blocos, incompatível com T1 para o mesmo carro e as mesmas condições.",
+  "verdicts": [{"task_id": "T3", "verdict": "superseded",
+                "justification": "O tempo de parada de T3 foi trocado; com Δt correto, a força é maior nos pneus."}],
+  "superseded_task_ids": ["T3"],
+  "confirmed_task_ids": [],
+  "approval_justification": "A investigação demonstra o tempo trocado em T3; o veredito superseded está sustentado.",
+  "suspended_task_ids": [],
+  "reinstated_task_ids": [],
+  "withdrawn_learnings": ["A força média de frenagem é maior com blocos de freio: atribuída ao contato prolongado."],
+  "restored_learnings": [],
+  "current_task_ids": ["T1", "T2", "T4"],
+  "occurred_at": "2026-11-07T12:00:00+00:00"
+}]
+```
+
+`superseded_task_ids` e `confirmed_task_ids` são gravados para leitura e derivados dos vereditos na
+leitura. Sessões antigas, sem a chave, são lidas com `result_revisions = []`: nenhuma revisão é
+presumida. Nenhuma migração ou exclusão de sessão histórica foi feita.
+
+### Exemplo completo
+
+1. **Planejamento e loop.** A.3 anota “O carro parte de 20 m/s e para nos dois casos”. T1 conclui
+   força maior com pneus travados (aprendizado `L1`); T2 conclui energia dissipada igual (aprendizado
+   `Lc`); T3 conclui força maior com blocos (aprendizado `L3`) e repete `Lc`, que passa a ter as
+   fontes T2 e T3.
+2. **C.1 reprova** AC1: “T1 e T3 fazem afirmações incompatíveis sobre a força média; investigar a
+   força, sem decidir antes.”
+3. **C.2 planeja** uma revisora, sem antecipar o veredito:
+
+   ```json
+   {"tasks": [{"id": "T4", "title": "Investigação da força média",
+     "description": "Investigue a força média nos dois casos de frenagem e explique qual afirmação registrada ela confirma ou corrige.",
+     "acceptance_criteria": [{"id": "T4-AC1", "description": "Resultado explicado."}],
+     "review": {"task_ids": ["T3"], "reason": "T3 afirma força maior nos blocos, incompatível com T1 para o mesmo carro e as mesmas condições."}}]}
+   ```
+
+4. **B.1** recebe em `Results under review` o enunciado e a conclusão de T3 e devolve o resultado
+   explicado com `"revision": [{"task_id": "T3", "verdict": "superseded", "justification": "O tempo de
+   parada de T3 foi trocado; com Δt correto, a força é maior nos pneus."}]`.
+5. **B.2** recebe `T4-AC1`, `T4-REV` e a área `Proposed revision`; aprova os dois critérios.
+   (Se reprovar `T4-REV`, nada muda; a nova tentativa vê a proposta reprovada em `previous_attempts`.)
+6. **B.3** armazena T4 e aplica o veredito: T3 → `superseded` por T4. A memória retira a fonte T3:
+   `L3` sai da visão; `Lc` fica (fonte T2); `L1` e a nota de A.3 ficam. O registro acima é gravado.
+7. **B.4** de T4 já vê a memória vigente e registra o fato corrigido `L4`.
+8. **Nova C.1** recebe `Stored results` com T1, T2 e T4 e, em `Revision record`, “`T3` — …: superseded
+   by `T4`. Approved reason: …”. Aprova; `GlobalApproval.task_ids == ("T1", "T2", "T4")`.
+9. **C.3** recebe exatamente esses resultados e a memória sem `L3`.
+
+**Variante de confirmação.** Se a investigação mostrar que T3 tratava de condições diferentes, B.1
+devolve `confirmed`; aprovado, T3 continua vigente com `L3`, e o registro traz
+`confirmed_task_ids: ["T3"]`, sem aprendizados retirados.
+
+**Variante de dependência.** Se o plano inicial tiver T2 com `depends_on: ["T1"]` e a revisora
+substituir T1, T2 passa a `awaiting_revalidation`: sai de `Stored results`, seus aprendizados exclusivos
+saem da visão e o registro mostra “depends on `T1`”. T3, independente, não é refeito. A nova C.1
+aponta a pendência, C.2 recebe a conclusão de T2 rotulada como não vigente e planeja
+`review: {"task_ids": ["T2"], ...}`; o veredito aprovado substitui T2 ou o confirma (restaurando-o e
+devolvendo seus aprendizados à visão).
+
+### Falhas e limites
+
+- **Reprovação em B.2:** nenhuma mudança; retentativa com temperatura `1`, como em toda tarefa.
+- **Tentativas esgotadas** ou **orçamento insuficiente para C.2**: interrupção controlada
+  (`resource_limit`), sem C.3 e sem síntese sobre o conteúdo conflitante; `result_revisions` reflete
+  só o que foi efetivamente aprovado.
+- **Interrupção depois de uma revisão aplicada:** o registro já gravado permanece; as tarefas restantes
+  são descartadas e citadas no diagnóstico; não há nova C.1 nem C.3.
+- **Saída de contrato inválida:** recuperação na mesma janela, como antes; a chamada é contada uma vez.
+- IDs únicos na sessão, teto de tarefas e de rodadas de C.2, orçamento, *Fresh Context*, temperatura
+  de retentativa e contabilização por invocação continuam iguais. Uma revisora é uma tarefa comum para
+  esses limites.
+
+### Implementação concreta
+
+| Camada | Arquivos |
+|---|---|
+| Domínio | `ResultsLedger`/`IResultsLedger`, `LedgerChange`, `ReviewRequest`, `RevisionVerdict`, `ResultRevision`, `RevisionVerdictEnum`, `ResultStatusEnum`; `Task` (`review`, `depends_on`, `revision_criterion`, `verification_criteria`), `TaskAttempt`/`TaskResult` (`revision_verdicts`, `depends_on`), `ValidationContext` (campos de revisão), `LearningsMemory` (proveniência, `withdraw`, `restore`), `Session.result_revisions`, `OutputProblemCodeEnum.TASK_REFERENCES`. |
+| Aplicação | `RalphThinkingUseCase`: livro injetado; B.1 com validação de revisão; B.2 com critério e proposta; B.3 aplica e audita; B.4 retém aprendizados não vigentes; C.1/C.2 com `result_revisions`; aprovação global com IDs vigentes. |
+| Infra | Parser (referências e proposta), templates A.2/B.1/B.2/B.4/C.1/C.2, gravador, mapeador, startup. |
+
+### Expressão no formato da Metodologia (orientação para o paper)
+
+```
+C.2: novas tarefas ← planejar(critérios pendentes, relatório de C.1, resultados vigentes, registro de revisões)
+     tarefa revisora = tarefa + {resultados sob investigação, motivo}
+B.1: resultado, proposta ← resolver(tarefa, resultados sob investigação, aprendizados vigentes)
+B.2: aprovado ← verificar(resultado, critérios da tarefa + critério de revisão, proposta)
+B.3: se aprovado: armazenar(resultado); aplicar(proposta); suspender dependentes declarados;
+     retirar da memória vigente as fontes que deixaram de ser vigentes; registrar auditoria
+C.1: verificar(resultados vigentes, registro de revisões) → nova aprovação global
+```
+
+O texto do paper que proíbe reabrir o que foi aprovado passa a ter a exceção explícita: um resultado
+aprovado pode ser investigado quando C.1 aponta motivo concreto, e só uma execução corretiva aprovada
+em B.2 o substitui.
+
+### TDD e verificação executada
+
+Os testes foram escritos antes da implementação e falharam por ausência dos módulos e campos novos.
+Arquivos novos:
+[`test_result_revision_entities.py`](apps/backend/tests/domain/entities/thinking/test_result_revision_entities.py),
+[`test_results_ledger.py`](apps/backend/tests/domain/services/test_results_ledger.py),
+[`test_learnings_memory_provenance.py`](apps/backend/tests/domain/services/test_learnings_memory_provenance.py),
+[`test_structured_response_parser_revisions.py`](apps/backend/tests/infra/adapters/test_structured_response_parser_revisions.py),
+[`test_session_document_mapper_revisions.py`](apps/backend/tests/infra/mappers/test_session_document_mapper_revisions.py),
+[`test_revision_prompt_contracts.py`](apps/backend/tests/infra/providers/test_revision_prompt_contracts.py) e
+[`test_ralph_result_revision_integration.py`](apps/backend/tests/application/usecases/test_ralph_result_revision_integration.py)
+(templates reais, LLM roteirizado). Cobrem: substituição aprovada com C.1/C.3 só sobre vigentes e
+conclusão antiga na auditoria; correção reprovada sem mudança; tentativa reprovada seguida de
+confirmação; hipótese diferente sem referência; tarefa normal propondo revisão; cinco referências
+inválidas em C.2 recuperadas sem mutação; dependente suspenso e revisado sem refazer o independente;
+revalidação que restaura aprendizados; dependente planejado no mesmo lote retido fora da síntese;
+interrupções por C.2 negada e por orçamento depois da revisão; ida e volta e sessão antiga.
+
+Testes existentes ajustados sem afrouxar garantias: os dicionários de variáveis dos testes de contrato
+de templates ganharam `result_revisions`/`revision_proposal`; a lista de placeholders por fase ganhou
+as áreas novas; o teste do startup verifica o livro injetado. A frase “which prior claim it confirms or
+corrects”, protegida pela etapa 04, foi mantida em C.2, agora como veredito explícito.
+
+Comandos em `apps/backend`, com `.venv`:
+
+```bash
+pytest -o addopts='' -q <os sete arquivos novos>
+flake8 src tests
+pytest --cov=src --cov-report=term-missing --cov-fail-under=100
+```
+
+| Verificação | Resultado |
+|---|---|
+| Testes novos | **118 passaram**. |
+| `flake8 src tests` | Sem saída, código 0. |
+| Suíte completa | **2.349 testes passaram**; cobertura **100,00%** (5.584 statements, 1.000 branches). |
+
+Nenhuma chamada paga a modelos foi feita.
+
+### Limites da evidência
+
+- Os testes com LLM roteirizado provam protocolo, transições e gestão de estado; não provam que um
+  modelo real detecta a contradição, escolhe o alvo certo em C.2, dá o veredito correto em B.1 ou o
+  verifica corretamente em B.2. A aprovação de B.2 não é prova infalível de verdade.
+- Dependências não declaradas em `depends_on` não são detectadas; aprendizados reformulados por outras
+  tarefas não são retirados por semelhança. C.1 continua responsável por contradições residuais.
+- A substituição é por resultado inteiro; a preservação das partes válidas depende de B.1 restabelecê-las.
+- Pendências de avaliação com modelo real: frequência de uso correto de `review` e `depends_on` por C.2
+  e A.2; taxa de recusas de contrato dos campos novos; viés para `superseded` ou `confirmed`; custo
+  adicional das áreas novas.
+
+---
+
+## Melhorias do thinking — 06: fidelidade da síntese final
+
+### Problema e alcance
+
+C.1 aprova a suficiência e a coerência de um conjunto de resultados; C.3 o apresenta no idioma e no
+formato pedidos. As etapas 01 a 05 trataram das fontes (recuperação e aprendizados), da análise
+(planejamento e validação) e dos resultados vigentes (revisão). Esta etapa trata do último elo: a
+**fidelidade entre os resultados aprovados e o texto efetivamente entregue**. Mesmo com boa análise,
+a apresentação pode trocar uma identificação, inverter uma comparação, apagar uma hipótese,
+transformar aproximação em igualdade ou acrescentar uma conclusão que não estava sustentada.
+
+Casos que motivaram a mudança (relatos do benchmark, não uma nova execução):
+
+| Caso | O que aconteceu | Onde a regra atua |
+|---|---|---|
+| Química Q094 | Resultado aprovado `teste 1 — cálcio`; alternativas originais `A) 1, B) 2, C) 3, D) 4, E) 5`. A.3 omitiu o mapeamento e C.3 escreveu `B (1-Cálcio)`. A química estava certa; a apresentação introduziu o erro. | C.3 pareia literalmente o objeto determinado com o identificador que o rotula. Sem o mapeamento disponível, C.1 não aprova o critério de identificação e C.2 recupera o vínculo do enunciado. |
+| Colisões Q105 | A síntese mostrou fórmulas que implicavam força maior nos pneus e concluiu força maior nos blocos; escolheu energia igual e explicou dissipação maior nos blocos. | C.3 preserva a direção das comparações e confere que a justificativa aponta no mesmo sentido da conclusão. |
+| FUVEST Q034 | Uma análise obteve 47 e a resposta escolheu 44. | A escolha por melhor ajuste aprovada pode ser apresentada; dizer que 47 é exatamente 44, não. |
+| Marte Q005 | Apresentar uma razão de distâncias e acrescentar uma opção de período não completa a análise. | A lacuna de determinação é de C.1/C.2 (etapa 04); C.3 não a preenche. |
+
+Não há fase nova, nova chamada, revisor ou pós-validador depois de C.3. O schema `final_answer`, o
+diagnóstico estruturado, a recuperação de saída inválida, o orçamento e a contabilização não mudam.
+Não foi criado parser de verdade factual por regex nem entrada especializada do benchmark
+(`question.options`). A conferência é uma instrução do template C.3, executada pelo modelo na mesma
+chamada; **não é uma garantia determinística da verdade do texto**.
+
+### Responsabilidade da síntese
+
+C.3 apresenta o conteúdo aprovado. Ela **pode**: escolher a redação, traduzir, resumir conforme o
+pedido, aplicar a linha marcadora, omitir a justificativa opcional, apresentar a justificativa
+obrigatória já aprovada e parear um objeto determinado com o identificador que literalmente o
+rotula. Ela **não pode**: escolher por proximidade quando a comparação ainda falta, completar um
+cálculo, resolver um conflito residual, inventar um identificador ausente, transformar aproximação
+em igualdade, remover uma hipótese ou condição, nem mencionar etapas, tarefas, critérios,
+aprendizados ou outros detalhes internos do harness ao usuário.
+
+**Pareamento literal não é seleção analítica.** Pareamento literal é ler, numa associação já
+registrada, qual rótulo pertence ao objeto que os resultados determinaram (“o teste 1 é a
+alternativa cujo texto é `1`, portanto A”). Seleção analítica é decidir qual objeto ou opção
+responde ao problema (“47 está mais perto de 44 do que de 60, logo A”). A primeira é apresentação;
+a segunda pertence aos resultados aprovados. **A aprovação global não autoriza inventar
+informação**: ela certifica que o conteúdo necessário está nos resultados, não que C.3 possa supri-lo.
+
+### Regras novas em C.3
+
+O template [`c3_final_answer.md`](apps/backend/src/infra/templates/c3_final_answer.md) ganhou a seção
+`## Fidelity check before answering`, posicionada antes do formato de saída e executada “within this
+same response, before writing `final_answer`”. Ela tem seis passos:
+
+1. **Conteúdo aprovado:** identificar, para cada parte do pedido, o objeto, valor, escolha ou
+   conclusão determinados e o resultado que os sustenta.
+2. **Aspectos preservados:** significado; direção de cada comparação e o objeto a que se refere;
+   sinais; unidades e referencial; referências a objetos, períodos e fontes; hipóteses e condições;
+   qualificações como “approximately”, “under hypothesis X”, “best fit” e “estimate”. “Translation and
+   concision change the wording, never these aspects.”
+3. **Resultado calculado × escolha aprovada:** apresentar cada um com a natureza que os resultados
+   lhe deram. Uma escolha por melhor ajuste ou eliminação pode ser apresentada “even without
+   numerical equality and without a calculation that produces the chosen value”; C.3 não a revalida
+   com mais rigor que C.1 e não a descarta por falta de exatidão.
+4. **Identificadores:** o rótulo escrito deve rotular o próprio objeto determinado (letra e texto
+   da alternativa, número do teste, nome da entidade, código de produto, mês). Quando as associações
+   estão nas notas do enunciado, elas são usadas para conferência literal; posição numa lista, número
+   do próprio item e memória não substituem a associação.
+5. **Pareamento literal × seleção analítica:** a lista explícita do que é proibido. No caso
+   excepcional de um identificador exigido sem vínculo disponível, C.3 apresenta o conteúdo aprovado
+   sem adivinhar o rótulo e nunca apresenta mensagem de erro interno como resposta.
+6. **Justificativa coerente:** fórmulas, comparações e explicações apresentadas apontam no mesmo
+   sentido da conclusão; se a redação contradiz o conteúdo aprovado, é reescrita a partir dele.
+
+A seção termina com “The check is internal”: a resposta não descreve a conferência nem o processo.
+Foram preservadas as regras anteriores (apresentação sem novo raciocínio, tradução como
+apresentação, aproximação apresentada como aproximação, justificativa opcional ≠ obrigatória, sem
+limites de linhas inventados). A introdução do template passou a dizer que os resultados recebidos
+são os vigentes “exactly as the last global verification (C.1) approved them”, sem conclusões
+substituídas nem tentativas rejeitadas.
+
+Exemplos novos do template, todos genéricos (não carregam casos do benchmark):
+
+| Situação | Válido | Inválido |
+|---|---|---|
+| Alternativa: resultado `sample 2 — iron`, notas `A) 1, B) 2, C) 3` | `B` | `A (2 — iron)`: junta uma letra a um objeto que ela não rotula. |
+| Aproximação: ≈ 8,4 cm, `B) 8 cm` escolhida como melhor ajuste | “B) 8 cm, o melhor ajuste para os 8,4 cm estimados” | “8,4 cm é exatamente 8 cm”; recusar B porque 8,4 ≠ 8. |
+| Pergunta aberta com tradução: “north warehouse used 1.5 MWh in June, assuming two shifts per day” | Mesmo depósito, 1,5 MWh, junho e hipótese de dois turnos, em português. | Omitir a hipótese; trocar MWh por kWh sem converter; nomear outro depósito. |
+| Direção: estoque caiu na filial leste e subiu na oeste | Justificativa e conclusão no mesmo sentido. | Justificativa dizendo que a leste ganhou estoque com conclusão dizendo que perdeu. |
+| Análise ausente: só razão entre distâncias, pedido de período | — | Calcular o período em C.3 ou escolher a opção mais próxima da razão. |
+
+### Harmonização de C.1
+
+O template [`c1_global_verification.md`](apps/backend/src/infra/templates/c1_global_verification.md)
+ganhou a seção `## Identifiers and faithful presentation`:
+
+- Quando o pedido exige um identificador, ele faz parte do conteúdo. O critério está coberto quando os
+  resultados declaram o identificador do item determinado, ou quando determinam o item e as notas de
+  **Key Learnings** registram literalmente, copiado do enunciado, qual rótulo o identifica. As notas
+  podem fornecer esse pareamento literal, **nunca a determinação**.
+- Se os resultados determinam o item, o pedido exige o identificador e nenhum material registra o
+  vínculo, C.1 marca `met: false` e nomeia o vínculo ausente, para C.2 planejar a tarefa que o
+  estabelece a partir do enunciado. C.1 não adivinha o vínculo nem conta com C.3 para inferi-lo.
+- Se o pedido só exige o conteúdo, não há lacuna de identificador. Linha marcadora, idioma e formato
+  continuam sendo aplicados por C.3.
+- A aprovação não autoriza C.3 a inventar: C.3 aplica só pareamento literal e apresentação; qualquer
+  comparação, cálculo, seleção ou conciliação necessária já precisa estar nos resultados.
+
+A área **Key Learnings** de C.1 ganhou uma frase para evitar a aparente contradição com “do not count
+as coverage”: dados do enunciado copiados literalmente só mostram qual rótulo pertence a um item já
+determinado. Dois exemplos foram acrescentados (pareamento literal aprovado; vínculo ausente
+reprovado sem atribuir letra por posição). A política comum de evidência de B.1/B.2/C.1 não mudou
+(o teste de identidade das três versões continua passando).
+
+### Mudança de lógica e de entradas
+
+Antes, `GlobalApproval` guardava o relatório, os resultados renderizados e os IDs vigentes; a área de
+aprendizados de C.3 era renderizada de novo a partir da memória no momento da síntese, e os IDs
+eram lidos depois do evento de C.1. Agora:
+
+| Peça | Antes | Depois |
+|---|---|---|
+| `GlobalApproval` | `report`, `stored_results`, `task_ids` | + `learnings` (área **Key Learnings** exatamente como C.1 a recebeu) e `ensure_current(current_task_ids)`, que recusa a síntese (`ValueError`) se o conjunto vigente mudou. |
+| `__run_synthesis` | IDs lidos após a resposta de C.1 | IDs capturados no mesmo instante em que os resultados são renderizados para C.1; as variáveis de C.1 viram a cópia guardada na aprovação. |
+| `__run_final_answer` | `stored_results` da aprovação; aprendizados renderizados de novo | Chama `ensure_current` antes de abrir a janela; usa `stored_results` **e** `learnings` da aprovação. Os critérios gerais, imutáveis depois de A.1, continuam renderizados por `__synthesis_variables`. |
+
+No fluxo normal nada roda entre a C.1 aprovadora e C.3, então as entradas já coincidiam; a mudança
+transforma essa propriedade em invariante verificado por código. Se ela for violada (por um defeito
+futuro, por exemplo), C.3 não é chamada e a sessão termina `failed` como erro técnico em C.3, sem
+resposta final e com um único evento de erro — não com uma síntese sobre conteúdo não aprovado.
+
+Entradas de C.3 depois desta etapa:
+
+| Área | Origem | Não contém |
+|---|---|---|
+| `Stored results` | `GlobalApproval.stored_results`: resultados vigentes renderizados para a última C.1 | Conclusões substituídas, resultados aguardando revalidação, tentativas rejeitadas, histórico de mensagens, registro de revisões. |
+| `General acceptance criteria` | Critérios de A.1 | — |
+| `Key Learnings` | `GlobalApproval.learnings`: memória vigente vista pela última C.1 | Aprendizados retirados por revisão (etapa 05). Não é resultado aprovado; serve à conferência literal. |
+
+A expressão conceitual de C.3 passa a ser lida como:
+
+> *Resultados aprovados na última C.1* + *Critérios Gerais (A.1)* + *Aprendizados (conferência literal)* + *Template C.3* → *Resposta Final*
+
+### Transições
+
+| Situação | Caminho |
+|---|---|
+| Conteúdo suficiente, sem linha final, idioma ou formato aplicados | C.1 → C.3. |
+| Escolha aprovada por melhor ajuste ou aproximação | C.1 → C.3, sem replanejamento por divergência numérica. |
+| Análise essencial ausente (ex.: só a razão de distâncias) | C.1 → C.2 → B → C.1 → C.3 (etapa 04). |
+| Vínculo item–identificador exigido e não recuperável dos resultados nem das notas | C.1 → C.2 (tarefa que copia as alternativas do enunciado e identifica o rótulo) → B → C.1 → C.3. |
+| Contradição entre resultados | C.1 → C.2 (revisora) → B → C.1 → C.3 (etapa 05). |
+| Conjunto vigente mudou após a aprovação | Sem C.3; sessão `failed` (erro técnico). |
+| Saída de C.3 inválida | Recuperação existente na mesma janela, contada como chamada; sem fase nova. |
+
+Nenhuma dessas transições faz chamada analítica dentro da síntese.
+
+### Exemplos
+
+**Alternativa.** Pergunta: “Qual teste identifica o cálcio? A) 1 B) 2 C) 3 D) 4 E) 5”. A.3 anota
+“Alternativas copiadas literalmente: A) 1, B) 2, C) 3, D) 4, E) 5”; T1 conclui `teste 1 — cálcio`.
+C.1 aprova (a nota rotula o teste 1 como A). C.3 confere: o objeto é o teste 1; a alternativa cujo
+texto é `1` é A. Resposta fiel: `RESPOSTA_FINAL: A`. Extrapolação indevida: `B (1-Cálcio)`.
+*Variante sem mapeamento:* se A.3 tivesse anotado só “o teste 1 forma precipitado branco com
+oxalato”, C.1 reprovaria o critério de identificação nomeando o vínculo ausente; C.2 criaria uma
+tarefa para copiar as alternativas do enunciado (que C.2 recebe em **Original Prompt**) e
+identificar a letra; só a nova C.1 liberaria C.3.
+
+**Pergunta aberta.** Resultado: “The Lisbon plant consumed 3.2 MWh in March, assuming 8-hour shifts
+on 22 working days; the Porto plant is not included.” Pedido em português. Fiel: “A planta de Lisboa
+consumiu 3,2 MWh em março, supondo turnos de 8 horas em 22 dias úteis; a planta do Porto não está
+incluída.” Indevido: “A planta consumiu cerca de 3 200 kWh” sem a hipótese, ou atribuir o consumo à
+planta do Porto.
+
+**Unidade e referencial.** Resultado: “velocidade de 12 m/s em relação ao vagão”. Fiel: manter “em
+relação ao vagão”. Indevido: “12 m/s em relação ao solo” ou “12 km/h”. Trocar o referencial ou a
+unidade não é tradução.
+
+**Aproximação.** Resultado: “≈ 47 mm; A) 44 mm é o melhor ajuste (3 mm, contra mais de 13 mm das
+demais); não há igualdade”. Fiel: “A) 44 mm — melhor ajuste para o valor estimado de cerca de 47 mm”
+(ou só `A`, se o pedido for “apenas a letra”). Indevido: “47 mm corresponde exatamente a 44 mm”; e
+também indevido recusar A ou pedir novo cálculo porque 47 ≠ 44.
+
+**Resultado revisado.** T2 afirmava força maior com blocos de freio; C.1 apontou a contradição com T1;
+a revisora T3, aprovada em B.2, substituiu T2 (etapa 05). A nova C.1 aprova T1 e T3. C.3 recebe
+exatamente T1 e T3 e a memória sem o fato exclusivo de T2; a conclusão antiga não aparece em nenhuma
+área de C.3 nem como registro de revisão. Fiel: “a força média é maior com pneus travados, porque o
+tempo de parada é menor”.
+
+**Apresentação conforme o pedido.** Com o mesmo resultado interno do cálcio: “somente o resultado” →
+`A`; “pode justificar” → `A` ou `A — o teste 1 identifica o cálcio`; “justifique” → a fundamentação
+aprovada (precipitado branco com oxalato). A explicação interna não obriga explicação final.
+
+### TDD e verificação executada
+
+Testes escritos antes da implementação:
+
+| Arquivo | Escopo | Antes da implementação |
+|---|---|---|
+| [`test_final_answer_fidelity_contracts.py`](apps/backend/tests/infra/providers/test_final_answer_fidelity_contracts.py) | Seção de conferência em C.3 antes do formato, aspectos preservados, calculado × aprovado, identificadores, pareamento × seleção, sem identificador inventado nem erro técnico, justificativa coerente, sem menção ao processo, garantias e schema anteriores, exemplos; seção nova de C.1; ausência de `question.options`, IDs `Qnnn` e nomes de casos nos nove templates; nenhuma fase depois de C.3. 25 testes. | 14 falhas e 11 aprovações (guardas de generalidade, de fase e das garantias já existentes). Uma das falhas vinha de uma frase citada errada no próprio teste (`selects` em vez de `select`), corrigida no teste. |
+| [`test_ralph_final_answer_fidelity_integration.py`](apps/backend/tests/application/usecases/test_ralph_final_answer_fidelity_integration.py) | Fluxo completo com templates reais, parser, livro, memória e persistência; LLM roteirizado. Pareamento disponível (C.1 → C.3, `RESPOSTA_FINAL: A`); vínculo ausente (C.1 → C.2 → B → C.1 → C.3); pergunta aberta traduzida; melhor ajuste sem C.2; comparação direcional; resultado revisado; três apresentações; recuperação de saída inválida de C.3; aprovação desatualizada. 11 testes. | 11 falhas. Duas expectativas do próprio teste foram corrigidas (contagem de chamadas da recuperação: 9, não 10; nome do campo `output_diagnostic`). O teste da aprovação desatualizada mostrou que os IDs eram lidos depois do evento de C.1, o que motivou capturá-los no instante da renderização. |
+| [`test_global_approval.py`](apps/backend/tests/domain/entities/thinking/test_global_approval.py) | `learnings` e `ensure_current` (aceita o mesmo conjunto; recusa subconjunto, acréscimo, reordenação e conjunto vazio). 8 testes. | 8 falhas (campo `learnings` e método inexistentes; os três testes antigos falharam porque o construtor já usa o campo novo). |
+
+Em todos os cenários de integração, um auxiliar confere que C.3 roda numa janela com uma única
+mensagem e recebe `Stored results` e critérios idênticos aos da última C.1, e que a área de
+aprendizados de ambas termina com a mesma memória vigente; que C.3 roda uma única vez, é a última
+fase, a sessão é concluída e o evento terminal `result` carrega a resposta persistida.
+
+Os testes de pareamento não leem `question.options`: a associação chega pela saída roteirizada de
+A.3 ou pela tarefa criada por C.2, e o código de produção não contém mapeamentos de alternativas.
+
+Comandos em `apps/backend`, com `.venv`:
+
+```bash
+pytest -o addopts='' -q tests/infra/providers/test_final_answer_fidelity_contracts.py \
+  tests/application/usecases/test_ralph_final_answer_fidelity_integration.py \
+  tests/domain/entities/thinking/test_global_approval.py
+flake8 src tests
+pytest --cov=src --cov-report=term-missing --cov-fail-under=100
+git diff --check
+```
+
+| Verificação | Resultado |
+|---|---|
+| Testes focados | **44 passaram**. |
+| `flake8 src tests` | Sem saída, código 0. |
+| Suíte completa | **2.390 testes passaram**; cobertura **100,00%** (5.591 statements, 1.002 branches). |
+| `git diff --check` | Sem erros. |
+
+Os testes existentes de escopo, aproximação, validação e revisão continuaram passando sem alteração;
+só os três construtores de `GlobalApproval` em `test_global_approval.py` receberam o campo novo.
+Nenhuma chamada paga a modelos foi feita.
+
+### Limites da evidência
+
+- **Preservação das entradas** é verificada por código e por testes: C.3 recebe o que a última C.1
+  aprovou, e não há síntese sobre aprovação desatualizada.
+- **Contrato de prompt** é verificado sobre os templates reais e os prompts renderizados: as
+  instruções e exemplos chegam a C.1 e C.3.
+- **Qualidade semântica da saída não foi medida.** As respostas fiéis dos testes são roteirizadas;
+  elas não provam que um modelo real faz o pareamento correto, mantém a direção das comparações,
+  preserva hipóteses ao traduzir ou deixa de escrever igualdades falsas. Não há garantia semântica
+  absoluta em texto livre, e nenhum verificador posterior a C.3 foi acrescentado.
+- A detecção de vínculo ausente em C.1 depende do modelo; se C.1 aprovar indevidamente, C.3 é
+  instruída a não adivinhar o identificador, o que pode produzir uma resposta sem letra em vez de
+  uma letra errada.
+- Pendências para avaliação com modelo real, mantendo modelo, parâmetros e perguntas: Q094 com e sem
+  o mapeamento em A.3; Q105 com resultados vigentes coerentes; Q034 com melhor ajuste aprovado;
+  perguntas abertas com unidade, referencial e hipótese sob tradução; comparar antes/depois a taxa
+  de respostas com identificador incompatível com o resultado aprovado e o custo do template maior.
+
+---
+
+## Melhorias do thinking — 07: integração e evidências das cinco frentes
+
+### Problema e alcance
+
+As etapas 01 a 06 foram implementadas e testadas por partes. Partes corretas isoladamente podem
+formar contratos incoerentes: um template pode ensinar um formato que o parser recusa, uma mensagem
+de recuperação anterior à revisão pode empurrar o modelo a abandonar a investigação para “passar”
+no parser, e um registro de estado pode omitir um fato que outra fase precisa para não reabrir um
+conflito já resolvido. Esta etapa exercita as **cinco frentes juntas** — estrutura/recuperação
+(incluindo a revisão auditável de resultados), aprendizados, planejamento, validação e síntese fiel —,
+transforma as lacunas encontradas em testes que falharam e corrige o mínimo nos componentes responsáveis.
+
+Não há fase nova, chamada adicional, campo de schema, regra de parser, pós-validador de C.3, limite
+removido ou relaxado. O núcleo continua generalista: nenhum uso de `question.options`, gabarito, ID de
+questão ou fixture no código de produção. Aproximações fundamentadas, melhor ajuste, eliminação e
+interpretação contextual continuam permitidos.
+
+### Relação com as seções anteriores
+
+As seções 01 a 06 permanecem como registro de procedência. Esta seção **complementa**, sem revogar:
+
+- **05 (registro de revisões):** o registro entregue a C.1/C.2 passa a listar também as confirmações
+  aprovadas. A tabela “Entradas de cada fase” da seção 05, que descreve o registro com substituídos e
+  aguardando revalidação, continua válida e ganha esse terceiro grupo.
+- **01 (recuperação de planejamento):** a orientação de cobertura ganha uma frase para defeitos de
+  `review`/`depends_on` (criados depois, pela 05). O restante do texto da 01 está inalterado.
+- **03/05 (formatos de saída):** o exemplo de saída de C.2 passa a usar a numeração da sessão e o de
+  A.2 passa a mencionar `depends_on`; as regras de planejamento das seções 03 e 05 não mudam.
+
+### Incompatibilidades encontradas e correções
+
+| # | Frentes em atrito | Defeito de integração | Teste que falhou antes | Correção |
+|---|---|---|---|---|
+| 1 | Estrutura (05) × validação (04/C.1) | Depois de uma revisão aprovada que **confirma** um resultado, o registro entregue a C.1 dizia `No stored result has been revised or suspended.` — falso — e C.1 só tinha a regra “um resultado mais recente não prevalece por recência”. O conflito já explicado continuava parecendo pendente, induzindo nova C.2 sobre o mesmo ponto. | `test_revisao_confirmatoria_nao_substitui_por_recencia_e_e_registrada_para_c1`; contratos de C.1/C.2 sobre confirmados | `__render_revision_record` lista `### Results confirmed by an approved review`; C.1 e C.2 explicam que o confirmado continua vigente pela investigação, não pela recência, e que o mesmo conflito só volta com novo motivo concreto. |
+| 2 | Recuperação (01) × revisão (05) | A correção de A.2/C.2 falava em cobertura e em “approved results”, mas nada sobre defeitos de `review`/`depends_on`. Diante de `task_references`, o caminho mais curto para satisfazer o parser é apagar o campo e, com ele, a investigação dirigida do defeito apontado por C.1. | `test_recuperacao_de_c2_com_referencia_invalida_corrige_a_referencia_sem_abandonar_a_investigacao` | `_PLANNING_RECOVERY_INSTRUCTIONS` pede corrigir as referências para identificadores permitidos, sem abandonar a investigação dirigida nem uma dependência efetivamente usada, e qualifica os resultados como “current approved results”. |
+| 3 | Planejamento (03) × estrutura (parser) | O formato de saída de C.2 exemplificava `"id": "T1"`, que o parser recusa (`task_ids`) por já existir na sessão; a instrução dizia para continuar a numeração. | `test_formato_de_saida_de_c2_numera_a_partir_da_proxima_tarefa_da_sessao` | Exemplo com `T{{next_task_number}}` e `T{{next_task_number}}-AC1`. |
+| 4 | Planejamento (03) × estrutura (05) | A.2 aceitava `depends_on`, descrito numa seção própria, mas o formato de saída não o mencionava. | `test_formato_de_saida_de_a2_documenta_depends_on_opcional_sem_campo_de_revisao` | O formato de saída documenta `depends_on` opcional, sem `review` (A.2 não revisa). |
+| 5 | Planejamento (03) × estrutura (05) | C.2 descrevia sua área como “each task already approved”, mas recebe só os resultados vigentes; substituídos também foram aprovados um dia. | `test_c2_descreve_os_resultados_recebidos_como_vigentes` | Área descrita como resultados vigentes, “neither superseded nor awaiting revalidation”, preservando a frase “its statement and the conclusion” protegida por teste anterior. |
+
+Um ajuste sem efeito de contrato foi feito no B.1: uma linha de 130+ caracteres, resultado da etapa 05,
+foi quebrada; o texto é o mesmo.
+
+### Mudança de lógica: confirmações no registro de revisões
+
+**Motivação.** Um veredito `confirmed` aprovado não muda o estado do alvo; por isso o registro, que
+mostrava só mudanças de estado, o omitia. Mas a confirmação é exatamente a evidência de que o conflito
+apontado foi investigado e explicado. Sem ela, C.1 recebe o resultado antigo, a revisora e uma regra
+contra a recência, sem saber que existe uma revisão aprovada entre eles.
+
+**Funcionamento.** Ao renderizar o registro para C.1 (`for_planning=False`) ou C.2 (`True`), o caso de
+uso percorre os resultados **vigentes** do livro, na ordem de armazenamento, e, para cada veredito
+`confirmed` cujo alvo continua vigente, acrescenta um item. Não há novo campo, nova consulta ao modelo
+nem mudança no `ResultsLedger`; a fonte é o próprio `TaskResult.revision_verdicts` aprovado em B.2.
+
+| Situação | Aparece em “Results confirmed by an approved review”? |
+|---|---|
+| Revisora vigente confirmou um alvo vigente | Sim, com o motivo aprovado. |
+| O alvo confirmado foi substituído depois por nova revisão | Não: aparece em “Superseded results”, com a nova revisora. |
+| A revisora foi substituída ou aguarda revalidação | Não: a confirmação perdeu sua base vigente; os estados aparecem nas outras seções. |
+| Nenhuma revisão aplicada | O registro continua `No stored result has been revised or suspended.` |
+
+**Transições.** C.1 reprova por conflito → C.2 planeja `review` → B.1 propõe `confirmed` → B.2 aprova
+`<id>-REV` → B.3 mantém o alvo vigente e grava `result_revisions` → B.4 → nova C.1 recebe o confirmado
+nos resultados vigentes **e** a linha de confirmação no registro → aprova (ou aponta um novo motivo) →
+C.3 recebe os vigentes da aprovação, sem registro de revisões.
+
+**Exemplo (renderização real do teste).**
+
+```markdown
+### Results confirmed by an approved review
+
+Current facts: an approved investigation checked each claim below and confirmed it; they remain among the current results because of that investigation, not because of recency.
+
+- `T3` — Relacionar força e energia: confirmed by `T4`. Approved reason: As afirmações tratam de intervalos diferentes; a hipótese de T3 é explícita e não contradiz T1.
+```
+
+Se uma C.1 posterior trouxer **novo** motivo concreto (por exemplo, a hipótese de T3 contraria o mesmo
+intervalo fixado pelo pedido), C.2 pode planejar uma nova revisão; aprovada a substituição, a linha de
+confirmação sai e T3 aparece como “superseded by `T5`”
+(`test_confirmacao_vencida_por_nova_evidencia_sai_do_registro_de_confirmados`).
+
+### Mensagem de recuperação do planejamento
+
+Trecho acrescentado ao final de `### Planning coverage`, enviado em toda correção de A.2/C.2 (em
+inglês, na mesma janela, após a saída recusada integral):
+
+```markdown
+In additional planning, cover the remaining gaps using the supplied current approved results.
+[...]
+When the defect concerns `review` or `depends_on`, correct the references to identifiers the
+instructions allow; do not drop the targeted investigation of a flagged defect or a dependency the
+task actually uses merely to satisfy the parser.
+```
+
+No teste, C.2 devolve `review.task_ids: ["T9"]` (inexistente). A segunda chamada recebe
+`[template de C.2, saída recusada integral, correção com o motivo "does not exist in the session" e a
+orientação acima]`; nada do lote recusado entra na fila ou no livro; o lote corrigido revisa T3 e a
+revisão aprovada é aplicada normalmente.
+
+### Auditoria conjunta dos nove templates e das mensagens internas
+
+`test_integration_prompt_contracts.py` lê A.1–A.3, B.1, B.2, B.4 e C.1–C.3 e as mensagens fixas do
+código (três correções por defeito, orientação de planejamento e instrução de retentativa de B.1).
+Nenhum deles contém comandos que contradigam a política vigente: “considerar atendido se selecionou
+uma opção”, “aproximação permitida desde que se escolha uma opção”, “mais próxima sempre válida”,
+“nunca reabrir/investigar resultado aprovado”, “o mais recente prevalece” ou “corrigir exatamente
+esses pontos”. As afirmações que precisam coexistir foram conferidas juntas:
+
+| Tema | Onde | Formulação vigente |
+|---|---|---|
+| Retrabalho × revisão | C.2 | Evitar refazer investigação estabelecida **sem motivo**; um resultado aprovado pode ser investigado com motivo concreto, verificado antes de ter efeito; trabalho não relacionado não é reaberto. |
+| Aproximação × igualdade | B.2, C.1, C.3 | Diferença numérica sozinha não é defeito; selecionar não aprova; nunca escrever igualdade; C.3 não revalida com mais rigor que C.1. |
+| Revisão × síntese | C.2, C.3 | Só `review`/`depends_on` mudam o estado vigente; C.3 não recebe registro, não concilia nem recalcula. |
+| Recência × confirmação | C.1, C.2 | Recência não prova nada; a confirmação aprovada mantém o resultado vigente. |
+
+### Matriz de regressões integradas
+
+Todos os casos estão em `apps/backend/tests/application/usecases/test_ralph_five_fronts_integration.py`
+e na fixture `apps/backend/tests/fixtures/integration_regressions_v1.json`, que guarda a pergunta, o
+defeito original, a rubrica e o oráculo do avaliador.
+
+| Caso | Teste | Comportamento programático verificado |
+|---|---|---|
+| Recuperação de Marte | `test_marte_recuperacao_preserva_o_plano_integral_e_executa_as_tres_tarefas` | A.2 recusada por `title` ausente em T3 (depois do caractere 1.000) volta inteira na mesma janela com a orientação de cobertura; temperatura 1 só na correção; T1–T3 executadas com `depends_on` no livro; notas de A.3 em todas as fases B/C; nenhum oráculo injetado no planejamento. |
+| Cobertura de Marte | `test_cobertura_de_marte_encaminha_a_c2_completa_a_analise_e_reverifica_antes_de_c3` | Recuperação que devolve só a razão é aceita pelo parser; C.1 → C.2 (motivo, Prompt Original, resultados vigentes) → B → nova C.1 → C.3, em 14 chamadas; C.3 recebe os vigentes da última C.1. |
+| Colisões | `test_colisoes_revisao_aprovada_atualiza_resultados_e_memoria_vigentes_com_historico_auditado` | T3 contraditória substituída por revisora aprovada; livro, memória (sai só o fato exclusivo de T3; fato com fonte independente e notas de A.3 ficam), mensagens antigas, `result_revisions`, B.3, nova C.1, C.3, mapeador, sessão antiga e exportação ZIP. |
+| Tacho | `test_tacho_planejamento_separa_origem_e_efeito_sem_transformar_hipotese_em_obrigacao` | Instruções de A.2 sobre origem × efeito e regime físico chegam renderizadas; oráculo não injetado; tarefa dependente recebe a conclusão anterior pela memória, nunca a resolução; B.2 não toma antecipação do plano como padrão. |
+| Microscópio | `test_microscopio_preserva_referencias_e_grandeza_linear_com_retentativa_em_janela_nova` | Retentativa de T3 em janela nova, temperatura 1, com tentativa e veredito explícitos; B.4 vê o histórico; memória, C.1 e C.3 recebem só o resultado linear aprovado; referências “da objetiva”/“da ocular” intactas; A.2 preserva grandeza e referencial. |
+| Geografia | `test_geografia_retentativa_explicita_o_vinculo_sem_trocar_a_conclusao_sustentada` | Retentativa recebe a instrução de manter conclusão não refutada e explicitar o vínculo; B.2 traz o mesmo padrão de conteúdo implícito para todas as opções. |
+| Probabilidade | `test_probabilidade_revisao_percorre_as_fases_e_nao_acontece_na_sintese` | Revisora substitui T1 e T2 via C.2 → B → C.1; C.3 roda uma vez, recebe só T3 e nenhuma ocorrência de `21/64`. |
+| Contagem FUVEST | `test_contagem_preserva_definicao_e_igualdade_falsa_vira_investigacao` | Definição e condições simultâneas idênticas em B.1/B.2/B.4/C.1/C.2/C.3; a igualdade falsa chega a C.2 como diagnóstico; C.1 distingue igualdade falsa de melhor ajuste; C.3 sem a contagem substituída. |
+| Química | `test_quimica_tabela_e_alternativas_chegam_a_c1_e_c3_para_pareamento_literal` | Tabela e alternativas de A.3 literais em C.1 e C.3; C.3 com conferência de fidelidade e pareamento literal. |
+| Aproximação legítima | `test_aproximacao_legitima_e_aceita_sem_c2_e_apresentada_como_melhor_ajuste` | Sem C.2; C.1 com “a numerical difference alone is not a defect”; C.3 recebe o melhor ajuste e a regra de nunca transformá-lo em igualdade. |
+| Pergunta aberta | `test_pergunta_aberta_preserva_siglas_nomes_unidades_e_condicoes_sem_alternativas` | Sem alternativas, marcadores ou benchmark: sigla, nomes semelhantes, unidade e condição em todas as fases; resposta final persistida. |
+| Revisão confirmatória | `test_revisao_confirmatoria_nao_substitui_por_recencia_e_e_registrada_para_c1` e `test_confirmacao_vencida_por_nova_evidencia_sai_do_registro_de_confirmados` | Confirmação mantém o alvo vigente com seus aprendizados, sem retirar nada; registro de C.1 mostra a confirmação; nova evidência pode substituí-lo depois. |
+
+Fluxos transversais no mesmo arquivo:
+
+| Fluxo | Teste | Verificação |
+|---|---|---|
+| Revisão rejeitada até esgotar | `test_revisao_rejeitada_ate_esgotar_as_tentativas_nao_muda_estado_e_contabiliza_tudo` | Três propostas sem sustentação; `resource_limit`/`task_attempts` em T4; livro, memória e `result_revisions` inalterados; janelas novas e temperaturas; sem C.3. |
+| Recuperação de contrato | `test_recuperacao_de_c2_com_referencia_invalida_corrige_a_referencia_sem_abandonar_a_investigacao` | Seção anterior. |
+| Orçamento real esgotado | `test_orcamento_real_esgotado_depois_da_revisao_aplicada_encerra_sem_sintese_e_com_auditoria` | `CostGuardAdapter` real com 16 chamadas: a 17ª (B.4 da revisora) é negada antes do envio; revisão já aplicada permanece auditada; sem nova C.1 nem C.3. |
+| Cancelamento | `test_cancelamento_propaga_sem_sintese_e_sem_chamada_fora_da_contabilizacao` (duas variantes) | Cancelamento durante B.2 da revisora (nada aplicado) e depois da revisão aplicada (auditoria mantida); a chamada em curso conta nos totais como invocação `started`; sem C.3. |
+
+Em todos os cenários concluídos, um auxiliar confere que C.3 é a última chamada, roda numa janela com
+uma mensagem, recebe resultados e critérios idênticos aos da última C.1 e a mesma memória renderizada,
+e que o `prompt_input` persistido é a conversa efetivamente enviada; outro confere que toda chamada
+virou invocação concluída e entrou nos totais.
+
+### Revisão e dependência de ponta a ponta
+
+| Camada | Verificação |
+|---|---|
+| Produção (prompt) | A.2 e C.2 documentam `depends_on`; C.2 documenta `review`; B.1 documenta `revision` (contratos novos e anteriores). |
+| Validação | Parser recusa referência inexistente com `task_references`, recuperada na mesma janela. |
+| Transporte e domínio | `depends_on` e `review` chegam a `Task`/`TaskResult`; o livro aplica os vereditos só em B.3. |
+| Memória | Retirada só de fatos sem fonte vigente; A.3 nunca sai; confirmação não retira nada. |
+| Auditoria | Mensagens antigas preservadas; `result_revisions` com motivo, vereditos e estado. |
+| Consulta/exportação | Documento do mapeador e ZIP de erros do benchmark trazem `result_revisions`. |
+| Sessões antigas | Documento sem a chave é lido com lista vazia. |
+
+### Três níveis de evidência
+
+1. **Garantia programática testada:** preservação integral das saídas recusadas, transições entre
+   fases, contratos do parser, estado vigente do livro e da memória, auditoria, contabilização,
+   limites de orçamento e tentativas, cancelamento e o material renderizado para cada fase.
+2. **Contrato de prompt verificado:** os nove templates e as mensagens internas instruem planejamento
+   sem resposta antecipada, memória com associações, aproximação fundamentada sem igualdade falsa,
+   consistência da união, revisão explícita e apresentação fiel, sem comandos contraditórios. Isso
+   prova o que é **enviado**, não o que um modelo fará.
+3. **Desempenho semântico de modelo real:** **não avaliado.** Os testes usam respostas roteirizadas,
+   inclusive as corretas; nenhum deles é evidência de que um modelo real resolveria Marte, colisões,
+   microscópio, probabilidade ou contagem. Não houve chamada paga nem benchmark.
+
+### TDD e verificação executada
+
+Os testes novos foram escritos antes das correções. Na primeira execução, um erro do próprio teste
+(comparar o texto descritivo da área **Key Learnings**, que difere entre C.1 e C.3, em vez da memória
+renderizada) e uma suposição errada sobre `benchmark_details` (é um objeto com `is_banchmark=False`, não
+`None`) foram corrigidos no teste. O estado vermelho válido foi **8 falhas e 38 aprovações**: as 8
+falhas eram as cinco incompatibilidades acima (2 cenários integrados e 6 contratos); as 38 aprovações
+eram guardas das garantias das etapas 01–06, que já se combinavam corretamente nesses pontos. Depois
+das correções, os 46 passaram. Foram acrescentados em seguida dois testes, ambos verdes na primeira
+execução: a confirmação vencida por nova evidência (para exercitar o ramo em que o alvo confirmado
+deixa de ser vigente) e o orçamento real esgotado. Um teste anterior
+(`test_template_de_planejamento_adicional_traz_o_prompt_original_antes_dos_resultados`) acusou a perda
+da frase “its statement and the conclusion”; a redação de C.2 foi ajustada para preservá-la, sem alterar
+o teste.
+
+Comandos, na pasta `apps/backend`, com `.venv` (Python 3.12.10):
+
+```bash
+pytest -o addopts='' -q tests/application/usecases/test_ralph_five_fronts_integration.py \
+  tests/infra/providers/test_integration_prompt_contracts.py
+flake8 src tests
+pytest --cov=src --cov-report=term-missing --cov-fail-under=100
+git diff --check
+```
+
+Os resultados finais estão em [`RELATORIO_VALIDACAO_MELHORIAS_THINKING.md`](RELATORIO_VALIDACAO_MELHORIAS_THINKING.md).
+
+### Limites e pendências
+
+- A substituição continua sendo de resultado inteiro, dependências não declaradas não são detectadas e
+  fatos reformulados por outra tarefa não são retirados por semelhança (limites da etapa 05).
+- No caso de uso, um cancelamento (`CancelledError` ou fechamento do gerador por desconexão do
+  WebSocket) é propagado sem `__fail`: a sessão não é encerrada como `failed` ali. No benchmark, o
+  `BenchmarkFlowRunnerAdapter` encerra a sessão; na rota WebSocket, ela permanece `running`. É um
+  comportamento anterior às etapas 01–07, não alterado aqui; as chamadas continuam contabilizadas.
+- Avaliação semântica pendente, com modelo real, controlada e registrada: ver o relatório de validação.
+
+### Orientação para o paper
+
+Nenhuma etapa nova. Na extensão de revisão de resultados, acrescentar: *“O registro de revisões
+entregue à verificação global e ao planejamento adicional lista os resultados substituídos, os que
+aguardam revalidação e os confirmados por revisão aprovada; a confirmação, e não a ordem temporal,
+sustenta um resultado que já foi investigado.”* A transcrição literal da Metodologia não muda.

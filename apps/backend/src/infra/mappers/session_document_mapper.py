@@ -15,6 +15,8 @@ from src.domain.entities.session.session_totals import SessionTotals
 from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
 from src.domain.entities.thinking.output_problem import OutputProblem
 from src.domain.entities.thinking.output_recovery import OutputRecovery
+from src.domain.entities.thinking.result_revision import ResultRevision
+from src.domain.entities.thinking.revision_verdict import RevisionVerdict
 from src.domain.enums.budget_limit_enum import BudgetLimitEnum
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.length_interruption_enum import LengthInterruptionEnum
@@ -25,6 +27,7 @@ from src.domain.enums.output_problem_code_enum import OutputProblemCodeEnum
 from src.domain.enums.output_syntax_status_enum import OutputSyntaxStatusEnum
 from src.domain.enums.recovery_result_enum import RecoveryResultEnum
 from src.domain.enums.recovery_strategy_enum import RecoveryStrategyEnum
+from src.domain.enums.revision_verdict_enum import RevisionVerdictEnum
 from src.domain.enums.session_failure_reason_enum import SessionFailureReasonEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
@@ -41,6 +44,8 @@ _PROMPT_INPUT_CONTAINER = "prompt de entrada da mensagem"
 _DIAGNOSTIC_CONTAINER = "diagnóstico da saída da invocação"
 _PROBLEM_CONTAINER = "problema da saída da invocação"
 _RECOVERY_CONTAINER = "recuperação da saída da invocação"
+_REVISION_CONTAINER = "revisão de resultados da sessão"
+_VERDICT_CONTAINER = "veredito da revisão de resultados"
 
 TEnum = TypeVar("TEnum", bound=StrEnum)
 
@@ -58,6 +63,8 @@ class SessionDocumentMapper(ISessionDocumentMapper):
     totais como legados em vez de inventar chamadas passadas. Invocações gravadas antes do diagnóstico
     de saída voltam sem diagnóstico, recuperação ou vínculo — aceitação desconhecida, nunca presumida.
     `content_accepted` é gravado só para leitura humana: na leitura, ele é derivado do diagnóstico.
+    Sessões gravadas antes da auditoria de revisões voltam sem revisões — nenhuma revisão é presumida.
+    `superseded_task_ids` e `confirmed_task_ids` são gravados só para leitura: derivam dos vereditos.
     """
 
     def to_document(self, session: Session) -> dict[str, Any]:
@@ -92,6 +99,9 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             ],
             "invocations": [
                 self.__invocation_to_document(invocation=invocation) for invocation in session.invocations
+            ],
+            "result_revisions": [
+                self.__revision_to_document(revision=revision) for revision in session.result_revisions
             ],
         }
 
@@ -162,6 +172,9 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             self.__invocation_from_document(document=item) for item in document.get("invocations", [])
         ]
         session.legacy_totals = "invocations" not in document or document.get("legacy_totals", False)
+        session.result_revisions = [
+            self.__revision_from_document(document=item) for item in document.get("result_revisions", [])
+        ]
         return session
 
     # ── Sessão → documento ───────────────────────────────────────────────────
@@ -286,7 +299,57 @@ class SessionDocumentMapper(ISessionDocumentMapper):
             "pending_criteria_ids": list(failure.pending_criteria_ids),
         }
 
+    def __revision_to_document(self, revision: ResultRevision) -> dict[str, Any]:
+        """Converte uma revisão de resultados aplicada no seu documento de auditoria."""
+        return {
+            "revising_task_id": revision.revising_task_id,
+            "reason": revision.reason,
+            "verdicts": [
+                {"task_id": verdict.task_id, "verdict": verdict.verdict.value, "justification": verdict.justification}
+                for verdict in revision.verdicts
+            ],
+            "superseded_task_ids": list(revision.superseded_task_ids),
+            "confirmed_task_ids": list(revision.confirmed_task_ids),
+            "approval_justification": revision.approval_justification,
+            "suspended_task_ids": list(revision.suspended_task_ids),
+            "reinstated_task_ids": list(revision.reinstated_task_ids),
+            "withdrawn_learnings": list(revision.withdrawn_learnings),
+            "restored_learnings": list(revision.restored_learnings),
+            "current_task_ids": list(revision.current_task_ids),
+            "occurred_at": revision.occurred_at.isoformat(),
+        }
+
     # ── Documento → sessão ───────────────────────────────────────────────────
+
+    def __revision_from_document(self, document: dict[str, Any]) -> ResultRevision:
+        """Reconstrói uma revisão de resultados aplicada a partir do documento de auditoria."""
+        def required(key: str) -> Any:
+            return self.__required(document=document, key=key, container=_REVISION_CONTAINER)
+
+        return ResultRevision(
+            revising_task_id=required("revising_task_id"),
+            reason=required("reason"),
+            verdicts=tuple(self.__verdict_from_document(document=item) for item in required("verdicts")),
+            approval_justification=required("approval_justification"),
+            suspended_task_ids=tuple(required("suspended_task_ids")),
+            reinstated_task_ids=tuple(required("reinstated_task_ids")),
+            withdrawn_learnings=tuple(required("withdrawn_learnings")),
+            restored_learnings=tuple(required("restored_learnings")),
+            current_task_ids=tuple(required("current_task_ids")),
+            occurred_at=self.__datetime_from_document(
+                document=document, key="occurred_at", container=_REVISION_CONTAINER
+            ),
+        )
+
+    def __verdict_from_document(self, document: dict[str, Any]) -> RevisionVerdict:
+        """Reconstrói um veredito de revisão a partir do documento."""
+        return RevisionVerdict(
+            task_id=self.__required(document=document, key="task_id", container=_VERDICT_CONTAINER),
+            verdict=self.__enum_from_document(
+                document=document, key="verdict", container=_VERDICT_CONTAINER, enum_type=RevisionVerdictEnum
+            ),
+            justification=self.__required(document=document, key="justification", container=_VERDICT_CONTAINER),
+        )
 
     def __optional_provider(self, document: dict[str, Any]) -> ModelProviderEnum | None:
         """Reconstrói o provedor da sessão, ausente em documentos anteriores ao registro."""

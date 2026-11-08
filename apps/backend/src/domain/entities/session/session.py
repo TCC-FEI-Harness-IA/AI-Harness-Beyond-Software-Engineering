@@ -10,6 +10,7 @@ from src.domain.entities.session.session_message import SessionMessage
 from src.domain.entities.session.session_totals import SessionTotals
 from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
 from src.domain.entities.thinking.output_recovery import OutputRecovery
+from src.domain.entities.thinking.result_revision import ResultRevision
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
@@ -40,6 +41,8 @@ class Session:
         benchmark_details: Identificação e avaliação do benchmark; padrão não benchmark para a API.
         legacy_totals: Indica que os totais vêm de uma sessão gravada antes do registro por
             invocação, e por isso não têm chamadas individuais correspondentes.
+        result_revisions: Revisões de resultados aprovadas e aplicadas em B.3, em ordem; vazia em
+            sessões sem revisão e nas gravadas antes deste registro.
     """
 
     id: str
@@ -60,6 +63,16 @@ class Session:
     failure: SessionFailure | None = None
     legacy_totals: bool = False
     benchmark_details: BenchmarkDetails = field(default_factory=BenchmarkDetails)
+    result_revisions: list[ResultRevision] = field(default_factory=list)
+
+    def add_result_revision(self, revision: ResultRevision) -> None:
+        """Registra na auditoria uma revisão de resultados aprovada e aplicada.
+
+        Args:
+            revision: Revisão aplicada em B.3.
+        """
+        self.result_revisions.append(revision)
+        self.updated_at = revision.occurred_at
 
     def add_message(self, message: SessionMessage) -> None:
         """Anexa uma mensagem ao histórico e atualiza os totais da sessão.

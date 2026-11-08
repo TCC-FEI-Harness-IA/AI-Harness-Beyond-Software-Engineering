@@ -9,14 +9,18 @@ _PLACEHOLDERS_POR_FASE = {
     ThinkingPhaseEnum.A2_TASK_DECOMPOSITION: {"user_question", "max_tasks"},
     ThinkingPhaseEnum.A3_PLANNING_LEARNINGS: {"user_question"},
     ThinkingPhaseEnum.B1_TASK_RESOLUTION: {
-        "task_description", "task_acceptance_criteria", "learnings", "previous_attempts"
+        "task_description", "task_acceptance_criteria", "learnings", "previous_attempts", "results_under_review"
     },
-    ThinkingPhaseEnum.B2_TASK_VERIFICATION: {"preliminary_result", "task_acceptance_criteria", "learnings"},
+    ThinkingPhaseEnum.B2_TASK_VERIFICATION: {
+        "preliminary_result", "task_acceptance_criteria", "learnings", "revision_proposal"
+    },
     ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: {"task_description", "approved_result", "task_history", "learnings"},
-    ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: {"stored_results", "general_acceptance_criteria", "learnings"},
+    ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: {
+        "stored_results", "general_acceptance_criteria", "learnings", "result_revisions"
+    },
     ThinkingPhaseEnum.C2_ADDITIONAL_PLANNING: {
         "user_question", "unmet_criteria", "global_verification_feedback", "stored_results",
-        "next_task_number", "max_tasks", "learnings"
+        "next_task_number", "max_tasks", "learnings", "result_revisions"
     },
     ThinkingPhaseEnum.C3_FINAL_ANSWER: {"stored_results", "general_acceptance_criteria", "learnings"},
 }
@@ -102,6 +106,7 @@ def test_templates_de_planejamento_informam_o_teto_de_tarefas_do_lote() -> None:
                 "next_task_number": "2",
                 "max_tasks": "7",
                 "learnings": "l",
+                "result_revisions": "r",
             },
         )
         assert "at most 7" in renderizado

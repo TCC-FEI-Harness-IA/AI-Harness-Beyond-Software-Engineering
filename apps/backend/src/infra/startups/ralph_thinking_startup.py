@@ -17,6 +17,7 @@ from src.domain.entities.resilience.cost_budget import CostBudget
 from src.domain.entities.thinking.thinking_event import ThinkingEvent
 from src.domain.interfaces.settings_interface import ISettings
 from src.domain.services.learnings_memory import LearningsMemory
+from src.domain.services.results_ledger import ResultsLedger
 from src.domain.services.task_queue import TaskQueue
 from src.infra.adapters.clock_adapter import ClockAdapter
 from src.infra.adapters.context_window_factory_adapter import ContextWindowFactoryAdapter
@@ -135,6 +136,7 @@ class RalphThinkingStartup:
 
         self.task_queue = TaskQueue()
         self.learnings_memory = LearningsMemory()
+        self.results_ledger = ResultsLedger()
 
         self.ralph_thinking_use_case = RalphThinkingUseCase(
             general_criteria_phase=self.general_criteria_phase,
@@ -148,6 +150,7 @@ class RalphThinkingStartup:
             final_answer_phase=self.final_answer_phase,
             task_queue=self.task_queue,
             learnings_memory=self.learnings_memory,
+            results_ledger=self.results_ledger,
             context_window_factory=self.context_window_factory,
             cost_guard=self.cost_guard,
             session_recorder=self.session_recorder,

@@ -7,6 +7,18 @@ general criterion of the final answer.
 
 {{stored_results}}
 
+## Revision record
+
+Earlier results that an approved review superseded or confirmed, and results awaiting revalidation
+because they explicitly depend on a result that stopped being current. This is history and status,
+not evidence: superseded and awaiting conclusions are not part of the stored results above. Do not
+mark a criterion as unmet merely because a superseded conclusion is absent. When a criterion needs
+content that only a result awaiting revalidation provided, mark it as not met and name the result to
+be revalidated. A confirmed result remains among the stored results: an approved investigation, not
+recency, checked its claim, and the reviewing result explains why it stands.
+
+{{result_revisions}}
+
 ## General acceptance criteria
 
 {{general_acceptance_criteria}}
@@ -17,7 +29,8 @@ Compact notes accumulated throughout the flow: the points of attention from the 
 facts recorded by the tasks already completed, in the order in which they appeared. Use them only
 as a reference to check the question data.
 The learnings **are not criteria** and **do not count as coverage**: a general criterion is met only
-when the stored results cover it.
+when the stored results cover it. Question data they copy literally, such as the identifiers of
+options or items, may only show which label belongs to an item the results already determined.
 
 {{learnings}}
 
@@ -115,9 +128,13 @@ the request.
 
 A result approved by its own task may still rest on an identifiable error that the union makes
 visible, such as a condition counted twice or a unit swapped between tasks. Name the error and the
-investigation needed; the earlier local approval does not cover it. A later result that explicitly
-investigates a flagged contradiction or error, and explains which earlier claim it confirms or
-corrects and why, can resolve it; an unexplained later claim does not.
+investigation needed; the earlier local approval does not cover it. Identify the stored results
+involved by their identifiers, so that additional planning can target them. A result superseded by
+an approved review no longer appears among the stored results; a later result without an approved
+review does not override an earlier one merely by being more recent, so if both remain and are
+incompatible, the contradiction persists. A result confirmed by an approved review stays current;
+judge whether the confirming investigation explains the apparent conflict (for example, different
+explicit hypotheses) rather than flagging the same conflict again without a new concrete reason.
 
 Describe the relation between an obtained value and an option accurately in your own
 justifications: when a calculated value and the chosen option differ, call the option the best fit
@@ -130,6 +147,24 @@ criterion and, when pertinent, the grounding of the approximation or selection g
 results. When rejecting, identify the gap or contradiction and what must be investigated, without
 performing the missing analysis and without deciding in advance which task is wrong. The C.2
 planner receives these justifications as diagnostic feedback.
+
+## Identifiers and faithful presentation
+
+When the request requires the answer to be given by an identifier — an option letter, a test
+number, an entity name, a product code, a month or another label — the identifier is part of the
+content. The criterion is covered when the stored results state the identifier of the determined
+item, or when the results determine the item and the Key Learnings record literally which
+identifier labels it, as copied from the question: the notes may supply that literal pairing, but
+never the determination itself. When the results determine an item but no available material
+records which identifier labels it, and the request requires that identifier, mark the criterion as
+`met: false` and name the missing link, so that C.2 can plan a task that establishes the link from
+the question. Do not guess the link yourself and do not count on C.3 to infer it.
+
+If the request asks only for the content and not for an identifier, do not create that gap. A
+missing marker line, the language or the format alone is still applied by C.3 and is not a content
+gap. Your approval does not authorize C.3 to invent information: it may apply only literal pairing and
+presentation to the approved content, so any comparison, calculation, selection or reconciliation
+the answer needs must already be in the stored results.
 
 ## Examples of sufficiency, consistency and real gaps
 
@@ -179,6 +214,11 @@ planner receives these justifications as diagnostic feedback.
   conditions and there are only lists of isolated checks. Even if it seems possible to choose or
   format a letter, the required joint analysis is missing. Mark that criterion as not met and forward
   the gap to C.2.
+- Approve a literal pairing: the results determine "sample 2" and the notes copy the options
+  `A) 1, B) 2, C) 3` from the question. The identifier can be read literally (B); C.3 presents it.
+- Reject a missing link: the results determine "sample 2", the request requires the option letter,
+  and neither the results nor the notes record which letter labels sample 2. Mark the criterion as not
+  met and name the missing link. Do not assign a letter by position or by guess.
 - Optional justification: the lack of an explanation aimed at the user is not, by itself, a pending
   item if the request allows it without requiring it and the conclusion is already supported.
   Mandatory justification: if the request requires grounding and it is not in the results, reject

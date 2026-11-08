@@ -82,6 +82,10 @@ Write each learning in a self-sufficient way: explicitly name the statement, qua
 example, "statement I", "the car's average speed"), never "it", "the value above" or "the case
 analyzed".
 
+**Key Learnings show only current facts:** facts that came only from results superseded by an
+approved review were withdrawn. When this task reviewed stored results, record its confirmed or
+corrected conclusions as facts about the problem, never as a report about the review.
+
 **Prioritize the finally approved conclusion.** Values, classifications or relations that appear in
 the rejected attempts and were refuted, corrected or replaced in the approved attempt **are not
 current learnings**: do not record them. From the history, use only facts that remain valid and that

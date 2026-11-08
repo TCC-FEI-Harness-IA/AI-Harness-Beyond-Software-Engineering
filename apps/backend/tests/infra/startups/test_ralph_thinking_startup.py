@@ -14,6 +14,7 @@ from src.domain.interfaces.context_window_factory_interface import IContextWindo
 from src.domain.interfaces.cost_guard_interface import ICostGuard
 from src.domain.interfaces.id_generator_interface import IIdGenerator
 from src.domain.interfaces.learnings_memory_interface import ILearningsMemory
+from src.domain.interfaces.results_ledger_interface import IResultsLedger
 from src.domain.interfaces.llm_completions_interface import ILLMCompletions
 from src.domain.interfaces.prompt_template_provider_interface import IPromptTemplateProvider
 from src.domain.interfaces.session_document_mapper_interface import ISessionDocumentMapper
@@ -80,6 +81,7 @@ def test_injeta_os_adapters_de_infraestrutura_pela_interface() -> None:
     assert isinstance(startup.llm_completions, ILLMCompletions)
     assert isinstance(startup.task_queue, ITaskQueue)
     assert isinstance(startup.learnings_memory, ILearningsMemory)
+    assert isinstance(startup.results_ledger, IResultsLedger)
 
 
 def test_injeta_o_caso_de_uso_do_fluxo_harness() -> None:

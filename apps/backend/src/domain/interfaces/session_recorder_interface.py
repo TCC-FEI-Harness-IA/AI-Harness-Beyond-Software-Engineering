@@ -7,6 +7,7 @@ from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
 from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
 from src.domain.entities.thinking.output_recovery import OutputRecovery
+from src.domain.entities.thinking.result_revision import ResultRevision
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.session_status_enum import SessionStatusEnum
@@ -77,6 +78,15 @@ class ISessionRecorder(ABC):
 
         Returns:
             SessionMessage: Mensagem registrada.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def record_result_revision(self, revision: ResultRevision) -> None:
+        """Registra e persiste na auditoria da sessão uma revisão de resultados aplicada em B.3.
+
+        Args:
+            revision: Revisão aprovada e aplicada.
         """
         raise NotImplementedError
 

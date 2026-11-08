@@ -16,6 +16,9 @@ class OutputProblemCodeEnum(StrEnum):
         DECISION_CONSISTENCY: Decisão, avaliações e pendências que se contradizem.
         TASK_IDS: Identificador de tarefa já usado na sessão.
         TASK_LIMIT: Lote de tarefas acima do teto que a sessão comporta.
+        TASK_REFERENCES: Referência estruturada a tarefa ou resultado que a sessão não pode honrar:
+            inexistente, fora do escopo de revisão, autorreferente, futura no lote ou ausente/excedente
+            numa proposta de revisão.
         UNCLASSIFIED: Recusa sem classificação estruturada informada pelo parser.
     """
 
@@ -30,4 +33,5 @@ class OutputProblemCodeEnum(StrEnum):
     DECISION_CONSISTENCY = "decision_consistency"
     TASK_IDS = "task_ids"
     TASK_LIMIT = "task_limit"
+    TASK_REFERENCES = "task_references"
     UNCLASSIFIED = "unclassified"

@@ -9,6 +9,7 @@ from src.domain.entities.session.session_failure import SessionFailure
 from src.domain.entities.session.session_message import SessionMessage
 from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
 from src.domain.entities.thinking.output_recovery import OutputRecovery
+from src.domain.entities.thinking.result_revision import ResultRevision
 from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
 from src.domain.enums.message_source_enum import MessageSourceEnum
 from src.domain.enums.model_provider_enum import ModelProviderEnum
@@ -170,6 +171,19 @@ class SessionRecorderAdapter(ISessionRecorder):
             prompt_input=prompt_input,
             invocation_id=None,
         )
+
+    async def record_result_revision(self, revision: ResultRevision) -> None:
+        """Registra e persiste na auditoria da sessão uma revisão de resultados aplicada em B.3.
+
+        Args:
+            revision: Revisão aprovada e aplicada.
+
+        Raises:
+            ValueError: Quando a sessão ainda não foi iniciada.
+        """
+        session = self.session
+        session.add_result_revision(revision=revision)
+        await self.__flush(session=session)
 
     async def record_programmatic_step(
         self,
