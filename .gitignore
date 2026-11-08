@@ -37,6 +37,9 @@ htmlcov/
 # Logs
 *.log
 
+# Sessoes persistidas (RALPH_SESSIONS_STORAGE_PATH)
+apps/backend/data/
+
 
 *.bkp
 
@@ -64,3 +67,13 @@ docs/analises/vitor/local
 
 
 node_modules
+feature_ralph
+feature_front
+
+# Backend secrets (o .env.example versionado documenta as variaveis)
+apps/backend/.env
+
+# Resultados locais do antigo script de benchmark (o benchmark agora roda pela aplicacao)
+teste benchmark/resultados/
+benchmark-session*
+exemplo_interno_prompt*

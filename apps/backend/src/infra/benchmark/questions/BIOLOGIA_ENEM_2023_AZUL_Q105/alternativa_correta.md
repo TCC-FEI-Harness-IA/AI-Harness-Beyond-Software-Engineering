@@ -1,0 +1,1 @@
+E) nutrição das raízes.

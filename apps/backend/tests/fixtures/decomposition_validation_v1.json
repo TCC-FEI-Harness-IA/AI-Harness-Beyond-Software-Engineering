@@ -1,0 +1,261 @@
+{
+  "version": 1,
+  "purpose": "Synthetic open cases for the A.3 decomposition validator: template inputs, parser contract and human semantic review. No automatic semantic score, benchmark question or answer key.",
+  "cases": [
+    {
+      "name": "gas_condition_dropped",
+      "kind": "omitted_condition",
+      "question": "Um gás ideal é comprimido isotermicamente de 2,0 L para 1,0 L, partindo de 100 kPa. Qual é a pressão final?",
+      "general_criteria": [
+        "AC1: Determine the final pressure with its unit.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Final pressure of the compressed gas",
+          "description": "An ideal gas is compressed from 2.0 L to 1.0 L starting at 100 kPa. Determine the final pressure, explaining the relation used, the substitution with units and its conditions.",
+          "acceptance_criteria": [
+            {
+              "id": "T1-AC1",
+              "description": "Determine the final pressure with its unit and justify the relation used."
+            },
+            {
+              "id": "T1-AC2",
+              "description": "Show the substitution of the supplied values with units."
+            }
+          ]
+        }
+      ],
+      "expected_review": "Reject: the description drops the isothermal condition on which the choice of relation depends.",
+      "reference_report": {
+        "approved": false,
+        "issues": [
+          {
+            "task_id": "T1",
+            "criterion_id": null,
+            "problem": "The description omits the isothermal condition stated in the question, so the solver cannot justify the relation it would need.",
+            "adjustment": "Copy the isothermal condition into the description and ask the task to justify, from the supplied conditions, the relation it applies."
+          }
+        ]
+      }
+    },
+    {
+      "name": "resistor_power_anticipated",
+      "kind": "anticipated_result",
+      "question": "Dois resistores, de 4 Ω e de 12 Ω, são ligados em paralelo a uma fonte ideal de 6 V. Qual deles dissipa maior potência?",
+      "general_criteria": [
+        "AC1: Identify which resistor dissipates more power, with justification.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Show that the 12 Ω resistor dissipates more power",
+          "description": "Two resistors, 4 Ω and 12 Ω, are connected in parallel to an ideal 6 V source. Show that the 12 Ω resistor dissipates more power, explaining the formulas with units.",
+          "acceptance_criteria": [
+            {
+              "id": "T1-AC1",
+              "description": "Prove that the 12 Ω resistor dissipates the greater power."
+            },
+            {
+              "id": "T1-AC2",
+              "description": "Explain the formulas used with the substitution of values and units."
+            }
+          ]
+        }
+      ],
+      "expected_review": "Reject: title, description and T1-AC1 impose the comparison that the task should determine.",
+      "reference_report": {
+        "approved": false,
+        "issues": [
+          {
+            "task_id": "T1",
+            "criterion_id": "T1-AC1",
+            "problem": "The criterion requires a specific comparison outcome that execution has not established (neutrality).",
+            "adjustment": "Ask the task to determine which resistor dissipates more power and justify it, keeping the comparison open in the title, description and criterion."
+          }
+        ]
+      }
+    },
+    {
+      "name": "rectangle_marker_task",
+      "kind": "redundant_task",
+      "question": "Qual é a área de um retângulo de lados 3 cm e 5 cm? Responda apenas o número.",
+      "general_criteria": [
+        "AC1: State the area of the rectangle.",
+        "AC2: Answer only with the number."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Area of the rectangle",
+          "description": "A rectangle has sides 3 cm and 5 cm. Determine its area, explaining the formula and the substitution with units.",
+          "acceptance_criteria": [
+            {
+              "id": "T1-AC1",
+              "description": "Determine the area with the formula, substitution and unit."
+            }
+          ]
+        },
+        {
+          "id": "T2",
+          "title": "Write the final answer",
+          "description": "Write the area found in T1 as only the number, without explanation.",
+          "acceptance_criteria": [
+            {
+              "id": "T2-AC1",
+              "description": "The output contains only the number."
+            }
+          ],
+          "depends_on": [
+            "T1"
+          ]
+        }
+      ],
+      "expected_review": "Reject: T2 only formats the final answer, which belongs to C.3.",
+      "reference_report": {
+        "approved": false,
+        "issues": [
+          {
+            "task_id": "T2",
+            "criterion_id": null,
+            "problem": "The task only writes the final answer in the requested format and adds no investigation (necessity).",
+            "adjustment": "Remove the presentation task; the final format is applied when the answer is composed."
+          }
+        ]
+      }
+    },
+    {
+      "name": "average_speed_with_data",
+      "kind": "valid_numeric_data",
+      "question": "Um carro percorre 120 km em 1,5 h. Qual é sua velocidade média em km/h?",
+      "general_criteria": [
+        "AC1: Determine the average speed in km/h.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Average speed of the car",
+          "description": "A car travels 120 km in 1.5 h. Determine its average speed in km/h, explaining the definition used and the substitution with units.",
+          "acceptance_criteria": [
+            {
+              "id": "T1-AC1",
+              "description": "Determine the average speed in km/h from the supplied distance and time."
+            },
+            {
+              "id": "T1-AC2",
+              "description": "Explain the definition used and the substitution with units."
+            }
+          ]
+        }
+      ],
+      "expected_review": "Approve: supplied numbers are copied as data and the result stays open.",
+      "reference_report": {
+        "approved": true,
+        "issues": []
+      }
+    },
+    {
+      "name": "pendulum_small_amplitude",
+      "kind": "valid_method_and_hypothesis",
+      "question": "Um pêndulo simples de 1,0 m oscila com amplitude de 5°. Estime seu período (g = 9,8 m/s²).",
+      "general_criteria": [
+        "AC1: Estimate the period with its unit.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Period of the pendulum",
+          "description": "A simple pendulum of length 1.0 m oscillates with an amplitude of 5°, with g = 9.8 m/s². Check whether the small-amplitude condition is adequate for this amplitude and, if it is, estimate the period with the corresponding relation, stating the assumption and its limits.",
+          "acceptance_criteria": [
+            {
+              "id": "T1-AC1",
+              "description": "Justify whether the small-amplitude assumption applies to the stated amplitude."
+            },
+            {
+              "id": "T1-AC2",
+              "description": "Estimate the period with its unit, showing the relation and the substitution."
+            }
+          ]
+        }
+      ],
+      "expected_review": "Approve: the method's applicability is verified during execution and the hypothesis is explicit.",
+      "reference_report": {
+        "approved": true,
+        "issues": []
+      }
+    },
+    {
+      "name": "mixture_with_dependency",
+      "kind": "valid_dependencies",
+      "question": "Misturam-se 200 g de água a 80 °C com 300 g de água a 20 °C, sem perdas de calor. Qual é a temperatura final e quanto calor a água quente cede?",
+      "general_criteria": [
+        "AC1: Determine the final temperature.",
+        "AC2: Determine the heat released by the hot water.",
+        "AC3: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Equilibrium temperature",
+          "description": "200 g of water at 80 °C are mixed with 300 g of water at 20 °C with no heat losses. Determine the equilibrium temperature, explaining the energy balance with units.",
+          "acceptance_criteria": [
+            {
+              "id": "T1-AC1",
+              "description": "Determine the equilibrium temperature from an energy balance of the stated masses and temperatures."
+            }
+          ]
+        },
+        {
+          "id": "T2",
+          "title": "Heat released by the hot water",
+          "description": "200 g of water initially at 80 °C reach the equilibrium temperature recorded in Key Learnings. Determine the heat it releases, explaining the formula, the substitution and the sign convention.",
+          "acceptance_criteria": [
+            {
+              "id": "T2-AC1",
+              "description": "Determine the heat released using the equilibrium temperature found in Key Learnings, with units and sign convention."
+            }
+          ],
+          "depends_on": [
+            "T1"
+          ]
+        }
+      ],
+      "expected_review": "Approve: the dependence is declared and the later task does not guess the earlier result.",
+      "reference_report": {
+        "approved": true,
+        "issues": []
+      }
+    },
+    {
+      "name": "heartbeats_estimate",
+      "kind": "valid_approximation",
+      "question": "Estime quantas vezes o coração de uma pessoa bate em um ano, considerando 70 batimentos por minuto.",
+      "general_criteria": [
+        "AC1: Give an estimate of the number of heartbeats in one year.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Yearly heartbeat estimate",
+          "description": "Considering 70 beats per minute, estimate how many times a heart beats in one year, explaining the unit conversions and the approximations adopted.",
+          "acceptance_criteria": [
+            {
+              "id": "T1-AC1",
+              "description": "Estimate the number of beats in one year, explaining the conversions and the precision of the estimate."
+            }
+          ]
+        }
+      ],
+      "expected_review": "Approve: an explained estimate is a legitimate answer to an open estimation request.",
+      "reference_report": {
+        "approved": true,
+        "issues": []
+      }
+    }
+  ]
+}

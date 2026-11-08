@@ -1,32 +1,18 @@
-from fastapi import APIRouter
-from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from pydantic import ValidationError
+from starlette.websockets import WebSocketState
 
-from src.application.usecases.chain_of_thought_usecase import SendReasoningMessageUsecase
+from src.domain.enums.session_status_enum import SessionStatusEnum
+from src.infra.config.settings import Settings
 from src.infra.routes.v1.message.dtos.default_input_dto import DefaultInputDTO
 from src.infra.routes.v1.message.dtos.default_output_dto import DefaultOutputDTO
 from src.infra.routes.v1.message.dtos.reasoning_input_dto import ReasoningInputDTO
 from src.infra.startups.default_message_startup import DefaultMessageStartup
+from src.infra.startups.ralph_thinking_startup import RalphThinkingStartup
+
+_ERROR_EVENT_TYPE = "error"
 
 router = APIRouter(prefix="/message", tags=["message"])
-
-
-@router.post("/reasoning", status_code=200)
-async def reasoning(payload: ReasoningInputDTO) -> StreamingResponse:
-    usecase = SendReasoningMessageUsecase()
-
-    async def stream():
-        async for chunk in usecase.execute(payload.message.user_input):
-            yield f"data: {chunk}\n\n"
-
-    return StreamingResponse(
-        stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-        },
-    )
 
 
 @router.post(
@@ -35,8 +21,52 @@ async def reasoning(payload: ReasoningInputDTO) -> StreamingResponse:
     responses={500: {"description": "Internal Server Error"}},
 )
 async def default_message(payload: DefaultInputDTO) -> DefaultOutputDTO:
+    """Executa o fluxo baseline: uma única chamada direta ao modelo."""
     try:
         startup = DefaultMessageStartup()
-        return startup.run(payload=payload)
+        return await startup.run(payload=payload)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.websocket("/reasoning")
+async def reasoning(websocket: WebSocket) -> None:
+    """Executa o fluxo harness (Ralph Loop adaptado), emitindo um evento por etapa."""
+    settings = Settings()
+    logger = settings.logger(module_file=__file__)
+
+    await websocket.accept()
+
+    raw = await websocket.receive_text()
+    if len(raw.encode("utf-8")) > settings.ralph_websocket_max_message_bytes:
+        await websocket.close(code=1009)
+        return
+
+    try:
+        payload = ReasoningInputDTO.model_validate_json(raw)
+    except ValidationError as error:
+        await websocket.send_json({"type": "error", "content": str(error)})
+        await websocket.close(code=1003)
+        return
+
+    startup = RalphThinkingStartup()
+    generator = startup.run(payload=payload)
+    domain_error_sent = False
+
+    try:
+        async for event in generator:
+            await websocket.send_json(event.model_dump())
+            domain_error_sent = event.type == _ERROR_EVENT_TYPE
+        await websocket.close(code=1000)
+    except WebSocketDisconnect:
+        await generator.aclose()
+        if startup.session_recorder.session.status is SessionStatusEnum.RUNNING:
+            await startup.session_recorder.finish(status=SessionStatusEnum.FAILED, final_answer=None)
+        logger.info("Cliente desconectou durante a execução do fluxo harness")
+    except Exception as error:
+        # O caso de uso já emite o evento `error` do domínio quando a execução termina sem
+        # conclusão; um segundo frame de erro duplicaria o desfecho terminal.
+        if not domain_error_sent and websocket.client_state == WebSocketState.CONNECTED:
+            await websocket.send_json({"type": _ERROR_EVENT_TYPE, "content": str(error)})
+        await websocket.close(code=1011)
+        logger.exception("Erro ao executar o fluxo harness")

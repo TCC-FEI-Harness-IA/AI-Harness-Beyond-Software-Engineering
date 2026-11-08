@@ -1,0 +1,47 @@
+.item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.label {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
+.value {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.toneAccent .value {
+  color: var(--color-accent);
+}
+
+.toneSuccess .value {
+  color: var(--color-success);
+}
+
+.toneWarning .value {
+  color: var(--color-warning);
+}
+
+.toneDanger .value {
+  color: var(--color-danger);
+}
+
+.toneContext .value {
+  color: var(--color-context);
+}

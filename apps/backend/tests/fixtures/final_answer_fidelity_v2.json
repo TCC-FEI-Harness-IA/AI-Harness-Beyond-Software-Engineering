@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "extends": "final_answer_fidelity_v1.json",
+  "purpose": "Extends the four unchanged v1 cases with a conflict between an unambiguous approved object and its mistaken identifier in stored results. The question's explicit literal pairing supplies the presentation label without reopening the analytical determination. reference_answer, invalid_presentation and review_checks are never sent to the model nor read by production code. Scripted tests prove transport and contract, not semantic fidelity of a real model.",
+  "cases": [
+    {
+      "name": "question_pairing_over_mistaken_result_identifier",
+      "kind": "result_identifier_conflicts_with_question_pairing",
+      "user_question": "Os equipamentos são QX-42 (bomba) e RV-07 (válvula). Informe o código do equipamento reprovado no ensaio de pressão.",
+      "general_criteria": [
+        "AC1: Answer in Portuguese.",
+        "AC2: Give the code of the equipment that failed the pressure test."
+      ],
+      "stored_results": "## T1 — Pressure test outcome\n\nThe pump failed the pressure test, while the valve passed.\n\n**Conclusion:** The pump is the equipment that failed. Equipment code: RV-07.",
+      "learnings": [
+        {"content": "Equipamentos: QX-42 — bomba; RV-07 — válvula.", "source": null}
+      ],
+      "reference_answer": "O equipamento reprovado é a bomba, código QX-42.",
+      "invalid_presentation": "O equipamento reprovado é a bomba, código RV-07.",
+      "review_checks": [
+        "Keeps the approved analytical determination that the pump failed and the valve passed.",
+        "Uses the question's explicit pump-to-QX-42 pairing instead of copying the mistaken RV-07 identifier from the result.",
+        "Only changes the presentation label: no new calculation, choice between objects or rewriting of stored results."
+      ]
+    }
+  ]
+}

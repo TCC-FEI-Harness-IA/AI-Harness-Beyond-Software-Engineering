@@ -1,0 +1,683 @@
+import asyncio
+import json
+from typing import Any, AsyncGenerator
+
+import pytest
+from fastapi.testclient import TestClient
+from starlette.testclient import WebSocketTestSession
+from starlette.websockets import WebSocketDisconnect, WebSocketState
+
+from src.domain.errors.benchmark_question_not_rerunnable_error import BenchmarkQuestionNotRerunnableError
+from src.domain.errors.benchmark_session_not_finished_error import BenchmarkSessionNotFinishedError
+from src.domain.errors.benchmark_session_not_found_error import BenchmarkSessionNotFoundError
+from src.domain.errors.benchmark_session_import_conflict_error import BenchmarkSessionImportConflictError
+from src.domain.errors.invalid_benchmark_archive_error import InvalidBenchmarkArchiveError
+from src.domain.errors.invalid_benchmark_request_error import InvalidBenchmarkRequestError
+from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
+from src.infra.routes.v1.benchmark import router as benchmark_router_module
+from src.infra.routes.v1.benchmark.dtos.benchmark_frame_dto import BenchmarkFrameDTO
+from src.infra.routes.v1.benchmark.router import rerun_benchmark_question, run_benchmark
+from src.infra.services.benchmark_ralph_errors_archive_builder import BenchmarkArchive
+from src.main import create_app
+
+
+def _frame(tipo: str = "progress", status: str = "running") -> BenchmarkFrameDTO:
+    return BenchmarkFrameDTO(type=tipo, benchmark_session={"id": "bench_1", "status": status})
+
+
+class _FakeRunStartup:
+    """Dublê do startup de execução, para isolar a rota do caso de uso."""
+
+    frames: list[BenchmarkFrameDTO] = []
+    error: BaseException | None = None
+    construction_error: Exception | None = None
+    payloads: list[Any] = []
+    closed = 0
+
+    def __init__(self) -> None:
+        if _FakeRunStartup.construction_error is not None:
+            raise _FakeRunStartup.construction_error
+
+    async def run(self, payload: Any) -> AsyncGenerator[BenchmarkFrameDTO, None]:
+        _FakeRunStartup.payloads.append(payload)
+        try:
+            for frame in _FakeRunStartup.frames:
+                yield frame
+            if _FakeRunStartup.error is not None:
+                raise _FakeRunStartup.error
+        finally:
+            _FakeRunStartup.closed += 1
+
+
+class _FakeQueryStartup:
+    """Dublê do startup de consultas, com respostas e falhas programáveis."""
+
+    error: Exception | None = None
+
+    def __init__(self) -> None:
+        if _FakeQueryStartup.error is not None:
+            raise _FakeQueryStartup.error
+
+    def describe_dataset(self) -> dict[str, Any]:
+        return {"question_ids": ["Q1"], "max_parallel_limit": 10}
+
+    async def list_benchmark_session_documents(self) -> list[dict[str, Any]]:
+        return [{"id": "bench_1"}]
+
+    async def get_benchmark_session_document(self, benchmark_session_id: str) -> dict[str, Any]:
+        return {"id": benchmark_session_id}
+
+
+class _QueryStartupQueLevanta(_FakeQueryStartup):
+    """Consulta de bateria que levanta o erro programado."""
+
+    lookup_error: Exception = RuntimeError()
+
+    async def get_benchmark_session_document(self, benchmark_session_id: str) -> dict[str, Any]:
+        raise _QueryStartupQueLevanta.lookup_error
+
+
+class _FakeExportStartup:
+    """Dublê do startup de exportação, com arquivo e falha programáveis."""
+
+    error: Exception | None = None
+    requested: list[str] = []
+    imported: list[bytes] = []
+
+    async def export_ralph_errors(self, benchmark_session_id: str) -> BenchmarkArchive:
+        _FakeExportStartup.requested.append(benchmark_session_id)
+        if _FakeExportStartup.error is not None:
+            raise _FakeExportStartup.error
+        return BenchmarkArchive(
+            filename=f"benchmark-session-{benchmark_session_id}-ralph-loop-errors.zip", content=b"PK-zip"
+        )
+
+    async def export_session(self, benchmark_session_id: str) -> BenchmarkArchive:
+        _FakeExportStartup.requested.append(benchmark_session_id)
+        if _FakeExportStartup.error is not None:
+            raise _FakeExportStartup.error
+        return BenchmarkArchive(filename=f"benchmark-session-{benchmark_session_id}.zip", content=b"PK-completo")
+
+    async def import_session(self, content: bytes) -> dict[str, Any]:
+        _FakeExportStartup.imported.append(content)
+        if _FakeExportStartup.error is not None:
+            raise _FakeExportStartup.error
+        return {"id": "bench_importada", "status": "completed"}
+
+
+def _abertura(**sobrescritas: Any) -> dict[str, Any]:
+    corpo: dict[str, Any] = {
+        "question_count": 3,
+        "max_parallel": 2,
+        "llm_model_config": {
+            "provider": "open_router",
+            "provider_config": {"model_name": "vendor/modelo"},
+            "max_tokens": 1200,
+            "temperature": 0.3,
+        },
+    }
+    corpo.update(sobrescritas)
+    return corpo
+
+
+def _coletar(ws: WebSocketTestSession) -> tuple[list[dict], int | None]:
+    frames = []
+    try:
+        while True:
+            frames.append(ws.receive_json())
+    except WebSocketDisconnect as exc:
+        return frames, exc.code
+
+
+@pytest.fixture
+def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    """Cliente com os startups de benchmark substituídos por dublês."""
+    _FakeRunStartup.frames = []
+    _FakeRunStartup.error = None
+    _FakeRunStartup.construction_error = None
+    _FakeRunStartup.payloads = []
+    _FakeRunStartup.closed = 0
+    _FakeQueryStartup.error = None
+    monkeypatch.setattr(benchmark_router_module, "BenchmarkRunStartup", _FakeRunStartup)
+    monkeypatch.setattr(benchmark_router_module, "BenchmarkQueryStartup", _FakeQueryStartup)
+    return TestClient(create_app())
+
+
+# ── Consultas ────────────────────────────────────────────────────────────────
+
+
+def test_consultas_delegam_ao_startup(client: TestClient) -> None:
+    assert client.get("/v1/benchmark/questions").json() == {"question_ids": ["Q1"], "max_parallel_limit": 10}
+    assert client.get("/v1/benchmark/sessions").json() == {"benchmark_sessions": [{"id": "bench_1"}]}
+    assert client.get("/v1/benchmark/sessions/bench_7").json() == {"id": "bench_7"}
+
+
+@pytest.mark.parametrize("caminho", ["/v1/benchmark/questions", "/v1/benchmark/sessions", "/v1/benchmark/sessions/x"])
+def test_falha_inesperada_nas_consultas_vira_500(client: TestClient, caminho: str) -> None:
+    _FakeQueryStartup.error = RuntimeError("disco fora do ar")
+
+    resposta = client.get(caminho)
+
+    assert resposta.status_code == 500
+    assert resposta.json()["detail"] == "disco fora do ar"
+
+
+@pytest.mark.parametrize(
+    ("erro", "status"),
+    [(BenchmarkSessionNotFoundError("bench_9"), 404), (ValueError("identificador inválido"), 400)],
+)
+def test_erros_conhecidos_da_consulta_viram_404_e_400(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, erro: Exception, status: int
+) -> None:
+    _QueryStartupQueLevanta.lookup_error = erro
+    monkeypatch.setattr(benchmark_router_module, "BenchmarkQueryStartup", _QueryStartupQueLevanta)
+
+    resposta = client.get("/v1/benchmark/sessions/bench_9")
+
+    assert resposta.status_code == status
+    assert resposta.json()["detail"] == str(erro)
+
+
+# ── Exportação ───────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def exportacao(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    _FakeExportStartup.error = None
+    _FakeExportStartup.requested = []
+    _FakeExportStartup.imported = []
+    monkeypatch.setattr(benchmark_router_module, "BenchmarkExportStartup", _FakeExportStartup)
+    return client
+
+
+def test_exportacao_devolve_o_zip_como_anexo(exportacao: TestClient) -> None:
+    resposta = exportacao.get("/v1/benchmark/sessions/bench_7/ralph-loop-errors/export")
+
+    assert resposta.status_code == 200
+    assert resposta.content == b"PK-zip"
+    assert resposta.headers["content-type"] == "application/zip"
+    assert resposta.headers["content-disposition"] == (
+        'attachment; filename="benchmark-session-bench_7-ralph-loop-errors.zip"'
+    )
+    assert _FakeExportStartup.requested == ["bench_7"]
+
+
+@pytest.mark.parametrize(
+    ("erro", "status"),
+    [
+        (BenchmarkSessionNotFoundError("bench_9"), 404),
+        (BenchmarkSessionNotFinishedError("bench_9"), 409),
+        (NoBenchmarkErrorsToExportError("bench_9"), 409),
+        (ValueError("identificador inválido"), 400),
+        (RuntimeError("disco fora do ar"), 500),
+    ],
+)
+def test_falhas_da_exportacao_viram_o_status_http_correspondente(
+    exportacao: TestClient, erro: Exception, status: int
+) -> None:
+    _FakeExportStartup.error = erro
+
+    resposta = exportacao.get("/v1/benchmark/sessions/bench_9/ralph-loop-errors/export")
+
+    assert resposta.status_code == status
+    assert resposta.json()["detail"] == str(erro)
+
+
+def test_exportacao_completa_devolve_o_zip_da_bateria(exportacao: TestClient) -> None:
+    resposta = exportacao.get("/v1/benchmark/sessions/bench_7/export")
+
+    assert resposta.status_code == 200
+    assert resposta.content == b"PK-completo"
+    assert resposta.headers["content-type"] == "application/zip"
+    assert resposta.headers["content-disposition"] == 'attachment; filename="benchmark-session-bench_7.zip"'
+    assert _FakeExportStartup.requested == ["bench_7"]
+
+
+@pytest.mark.parametrize(
+    ("erro", "status"),
+    [
+        (BenchmarkSessionNotFoundError("bench_9"), 404),
+        (BenchmarkSessionNotFinishedError("bench_9"), 409),
+        (ValueError("identificador inválido"), 400),
+        (RuntimeError("disco fora do ar"), 500),
+    ],
+)
+def test_falhas_da_exportacao_completa_viram_o_status_http_correspondente(
+    exportacao: TestClient, erro: Exception, status: int
+) -> None:
+    _FakeExportStartup.error = erro
+
+    resposta = exportacao.get("/v1/benchmark/sessions/bench_9/export")
+
+    assert resposta.status_code == status
+    assert resposta.json()["detail"] == str(erro)
+
+
+def test_importacao_recebe_o_zip_bruto_e_devolve_a_bateria(exportacao: TestClient) -> None:
+    resposta = exportacao.post(
+        "/v1/benchmark/sessions/import", content=b"PK-zip", headers={"Content-Type": "application/zip"}
+    )
+
+    assert resposta.status_code == 201
+    assert resposta.json() == {"id": "bench_importada", "status": "completed"}
+    assert _FakeExportStartup.imported == [b"PK-zip"]
+
+
+def test_importacao_sem_corpo_e_recusada(exportacao: TestClient) -> None:
+    resposta = exportacao.post("/v1/benchmark/sessions/import", content=b"")
+
+    assert resposta.status_code == 400
+    assert _FakeExportStartup.imported == []
+
+
+def test_importacao_recusa_corpo_declarado_maior_que_o_limite(
+    exportacao: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(benchmark_router_module, "MAX_ARCHIVE_BYTES", 4)
+
+    resposta = exportacao.post("/v1/benchmark/sessions/import", content=b"PK-zip")
+
+    assert resposta.status_code == 413
+    assert _FakeExportStartup.imported == []
+
+
+def test_importacao_recusa_corpo_em_partes_maior_que_o_limite(
+    exportacao: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(benchmark_router_module, "MAX_ARCHIVE_BYTES", 4)
+
+    def partes():
+        yield b"PK-"
+        yield b"zip"
+
+    resposta = exportacao.post("/v1/benchmark/sessions/import", content=partes())
+
+    assert resposta.status_code == 413
+    assert _FakeExportStartup.imported == []
+
+
+@pytest.mark.parametrize(
+    ("erro", "status"),
+    [
+        (InvalidBenchmarkArchiveError("manifesto ausente."), 400),
+        (BenchmarkSessionImportConflictError("bench_1", ["bench_1"]), 409),
+        (ValueError("identificador inválido"), 400),
+        (RuntimeError("disco fora do ar"), 500),
+    ],
+)
+def test_falhas_da_importacao_viram_o_status_http_correspondente(
+    exportacao: TestClient, erro: Exception, status: int
+) -> None:
+    _FakeExportStartup.error = erro
+
+    resposta = exportacao.post("/v1/benchmark/sessions/import", content=b"PK-zip")
+
+    assert resposta.status_code == status
+    assert resposta.json()["detail"] == str(erro)
+
+
+# ── WebSocket ────────────────────────────────────────────────────────────────
+
+
+def test_bateria_concluida_envia_os_frames_e_fecha_com_1000(client: TestClient) -> None:
+    _FakeRunStartup.frames = [_frame(), _frame(), _frame("result", "completed")]
+
+    with client.websocket_connect("/v1/benchmark/run") as ws:
+        ws.send_json(_abertura())
+        frames, codigo = _coletar(ws)
+
+    assert [frame["type"] for frame in frames] == ["progress", "progress", "result"]
+    assert codigo == 1000
+    payload = _FakeRunStartup.payloads[0]
+    assert (payload.question_count, payload.max_parallel) == (3, 2)
+
+
+def test_abertura_sem_quantidade_e_paralelismo_usa_os_defaults(client: TestClient) -> None:
+    _FakeRunStartup.frames = [_frame("result", "completed")]
+    abertura = _abertura()
+    del abertura["question_count"], abertura["max_parallel"]
+
+    with client.websocket_connect("/v1/benchmark/run") as ws:
+        ws.send_json(abertura)
+        _coletar(ws)
+
+    payload = _FakeRunStartup.payloads[0]
+    assert (payload.question_count, payload.max_parallel) == (None, 5)
+
+
+@pytest.mark.parametrize("status", ["failed", "interrupted"])
+def test_bateria_que_nao_conclui_fecha_com_1011(client: TestClient, status: str) -> None:
+    _FakeRunStartup.frames = [_frame(), _frame("result", status)]
+
+    with client.websocket_connect("/v1/benchmark/run") as ws:
+        ws.send_json(_abertura())
+        frames, codigo = _coletar(ws)
+
+    assert frames[-1]["benchmark_session"]["status"] == status
+    assert codigo == 1011
+
+
+@pytest.mark.parametrize("sobrescrita", [{"question_count": 0}, {"max_parallel": 0}, {"llm_model_config": None}])
+def test_abertura_fora_do_contrato_gera_erro_e_fecha_com_1003(client: TestClient, sobrescrita: dict) -> None:
+    with client.websocket_connect("/v1/benchmark/run") as ws:
+        ws.send_json(_abertura(**sobrescrita))
+        frames, codigo = _coletar(ws)
+
+    assert frames[0]["type"] == "error"
+    assert codigo == 1003
+    assert _FakeRunStartup.payloads == []
+
+
+def test_pedido_recusado_pelo_caso_de_uso_gera_erro_e_fecha_com_1003(client: TestClient) -> None:
+    _FakeRunStartup.error = InvalidBenchmarkRequestError("question_count deve estar entre 1 e 15. Valor: 20.")
+
+    with client.websocket_connect("/v1/benchmark/run") as ws:
+        ws.send_json(_abertura())
+        frames, codigo = _coletar(ws)
+
+    assert frames == [{"type": "error", "content": "question_count deve estar entre 1 e 15. Valor: 20."}]
+    assert codigo == 1003
+
+
+def test_frame_acima_do_tamanho_maximo_fecha_com_1009(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RALPH_WEBSOCKET_MAX_MESSAGE_BYTES", "10")
+
+    with client.websocket_connect("/v1/benchmark/run") as ws:
+        ws.send_json(_abertura())
+        frames, codigo = _coletar(ws)
+
+    assert frames == []
+    assert codigo == 1009
+
+
+def test_falha_inesperada_gera_frame_de_erro_fecha_com_1011_e_encerra_o_gerador(client: TestClient) -> None:
+    _FakeRunStartup.frames = [_frame()]
+    _FakeRunStartup.error = RuntimeError("quebrou")
+
+    with client.websocket_connect("/v1/benchmark/run") as ws:
+        ws.send_json(_abertura())
+        frames, codigo = _coletar(ws)
+
+    assert frames[-1] == {"type": "error", "content": "quebrou"}
+    assert codigo == 1011
+    assert _FakeRunStartup.closed == 1
+
+
+def test_falha_ao_montar_o_startup_gera_frame_de_erro(client: TestClient) -> None:
+    _FakeRunStartup.construction_error = ValueError("configuração inválida")
+
+    with client.websocket_connect("/v1/benchmark/run") as ws:
+        ws.send_json(_abertura())
+        frames, codigo = _coletar(ws)
+
+    assert frames == [{"type": "error", "content": "configuração inválida"}]
+    assert codigo == 1011
+
+
+def test_cliente_desconectado_encerra_o_gerador_sem_derrubar_o_servidor(client: TestClient) -> None:
+    _FakeRunStartup.frames = [_frame()]
+    _FakeRunStartup.error = WebSocketDisconnect(code=1001)
+
+    with client.websocket_connect("/v1/benchmark/run") as ws:
+        ws.send_json(_abertura())
+        ws.receive_json()
+
+    assert _FakeRunStartup.closed == 1
+
+
+class _SocketDesconectado:
+    """Dublê de baixo nível: socket que a camada ASGI já marcou como desconectado."""
+
+    def __init__(self, raw_text: str) -> None:
+        self.raw_text = raw_text
+        self.client_state = WebSocketState.DISCONNECTED
+        self.sent: list[dict[str, Any]] = []
+
+    async def accept(self) -> None:
+        pass
+
+    async def receive_text(self) -> str:
+        return self.raw_text
+
+    async def send_json(self, data: dict[str, Any]) -> None:
+        self.sent.append(data)
+
+    async def close(self, code: int) -> None:
+        raise AssertionError("não deveria fechar um socket desconectado")
+
+
+def test_falha_inesperada_nao_envia_frame_quando_o_socket_ja_esta_desconectado(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _FakeRunStartup.frames = []
+    _FakeRunStartup.error = RuntimeError("quebrou")
+    _FakeRunStartup.construction_error = None
+    monkeypatch.setattr(benchmark_router_module, "BenchmarkRunStartup", _FakeRunStartup)
+    websocket = _SocketDesconectado(raw_text=json.dumps(_abertura()))
+
+    asyncio.run(run_benchmark(websocket))
+
+    assert websocket.sent == []
+
+
+# ── WebSocket de reexecução ──────────────────────────────────────────────────
+
+_RERUN_PATH = "/v1/benchmark/sessions/bench_1/questions/Q1/rerun"
+
+
+class _FakeRerunStartup:
+    """Dublê do startup de reexecução, para isolar a rota do caso de uso."""
+
+    frames: list[BenchmarkFrameDTO] = []
+    error: BaseException | None = None
+    construction_error: Exception | None = None
+    requested: list[tuple[str, str]] = []
+    requested_many: list[tuple[str, list[str]]] = []
+    closed = 0
+
+    def __init__(self) -> None:
+        if _FakeRerunStartup.construction_error is not None:
+            raise _FakeRerunStartup.construction_error
+
+    async def run(self, benchmark_session_id: str, question_id: str) -> AsyncGenerator[BenchmarkFrameDTO, None]:
+        _FakeRerunStartup.requested.append((benchmark_session_id, question_id))
+        try:
+            for frame in _FakeRerunStartup.frames:
+                yield frame
+            if _FakeRerunStartup.error is not None:
+                raise _FakeRerunStartup.error
+        finally:
+            _FakeRerunStartup.closed += 1
+
+    async def run_many(
+        self, benchmark_session_id: str, question_ids: list[str]
+    ) -> AsyncGenerator[BenchmarkFrameDTO, None]:
+        _FakeRerunStartup.requested_many.append((benchmark_session_id, question_ids))
+        try:
+            for frame in _FakeRerunStartup.frames:
+                yield frame
+            if _FakeRerunStartup.error is not None:
+                raise _FakeRerunStartup.error
+        finally:
+            _FakeRerunStartup.closed += 1
+
+
+@pytest.fixture
+def reexecucao(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    _FakeRerunStartup.frames = []
+    _FakeRerunStartup.error = None
+    _FakeRerunStartup.construction_error = None
+    _FakeRerunStartup.requested = []
+    _FakeRerunStartup.requested_many = []
+    _FakeRerunStartup.closed = 0
+    monkeypatch.setattr(benchmark_router_module, "BenchmarkRerunStartup", _FakeRerunStartup)
+    return client
+
+
+def test_reexecucao_envia_os_frames_sem_abertura_e_fecha_com_1000(reexecucao: TestClient) -> None:
+    _FakeRerunStartup.frames = [_frame("progress", "completed"), _frame("result", "completed")]
+
+    with reexecucao.websocket_connect(_RERUN_PATH) as ws:
+        frames, codigo = _coletar(ws)
+
+    assert [frame["type"] for frame in frames] == ["progress", "result"]
+    assert codigo == 1000
+    assert _FakeRerunStartup.requested == [("bench_1", "Q1")]
+    assert _FakeRerunStartup.closed == 1
+
+
+_RERUN_MANY_PATH = "/v1/benchmark/sessions/bench_1/questions/rerun"
+
+
+def test_reexecucao_em_lote_recebe_ids_e_envia_progresso_e_resultado(reexecucao: TestClient) -> None:
+    _FakeRerunStartup.frames = [_frame("progress", "completed"), _frame("result", "completed")]
+
+    with reexecucao.websocket_connect(_RERUN_MANY_PATH) as ws:
+        ws.send_json({"question_ids": ["Q1", "Q2"]})
+        frames, codigo = _coletar(ws)
+
+    assert [frame["type"] for frame in frames] == ["progress", "result"]
+    assert codigo == 1000
+    assert _FakeRerunStartup.requested_many == [("bench_1", ["Q1", "Q2"])]
+    assert _FakeRerunStartup.closed == 1
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["{", "{}", '{"question_ids": []}', '{"question_ids": "Q1"}', '{"question_ids": [1]}',
+     '{"question_ids": [""]}', '{"question_ids": ["   "]}', '{"question_ids": ["Q1"], "max_parallel": 2}'],
+)
+def test_abertura_invalida_do_lote_e_recusada_sem_iniciar_execucao(reexecucao: TestClient, raw: str) -> None:
+    with reexecucao.websocket_connect(_RERUN_MANY_PATH) as ws:
+        ws.send_text(raw)
+        frames, codigo = _coletar(ws)
+
+    assert frames[0]["type"] == "error"
+    assert codigo == 1003
+    assert _FakeRerunStartup.requested_many == []
+
+
+def test_abertura_do_lote_acima_do_limite_fecha_com_1009(
+    reexecucao: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("RALPH_WEBSOCKET_MAX_MESSAGE_BYTES", "10")
+    with reexecucao.websocket_connect(_RERUN_MANY_PATH) as ws:
+        ws.send_json({"question_ids": ["Q1", "Q2"]})
+        frames, codigo = _coletar(ws)
+
+    assert frames == []
+    assert codigo == 1009
+    assert _FakeRerunStartup.requested_many == []
+
+
+@pytest.mark.parametrize("erro", [
+    BenchmarkSessionNotFoundError("bench_1"),
+    BenchmarkSessionNotFinishedError("bench_1"),
+    BenchmarkQuestionNotRerunnableError("bench_1", "Q2"),
+    InvalidBenchmarkRequestError("Questões repetidas."),
+    RuntimeError("persistência indisponível"),
+])
+def test_recusas_e_falhas_do_lote_chegam_ao_cliente(reexecucao: TestClient, erro: Exception) -> None:
+    _FakeRerunStartup.error = erro
+    with reexecucao.websocket_connect(_RERUN_MANY_PATH) as ws:
+        ws.send_json({"question_ids": ["Q1", "Q2"]})
+        frames, codigo = _coletar(ws)
+
+    assert frames == [{"type": "error", "content": str(erro)}]
+    assert codigo == (1011 if isinstance(erro, RuntimeError) else 1003)
+    assert _FakeRerunStartup.closed == 1
+
+
+@pytest.mark.parametrize(
+    "erro",
+    [
+        BenchmarkSessionNotFoundError("bench_1"),
+        BenchmarkSessionNotFinishedError("bench_1"),
+        BenchmarkQuestionNotRerunnableError("bench_1", "Q1"),
+        InvalidBenchmarkRequestError("A questão 'Q1' não existe mais no dataset da bateria."),
+    ],
+)
+def test_reexecucao_recusada_gera_frame_de_erro_e_fecha_com_1003(reexecucao: TestClient, erro: Exception) -> None:
+    _FakeRerunStartup.error = erro
+
+    with reexecucao.websocket_connect(_RERUN_PATH) as ws:
+        frames, codigo = _coletar(ws)
+
+    assert frames == [{"type": "error", "content": str(erro)}]
+    assert codigo == 1003
+
+
+def test_falha_inesperada_na_reexecucao_gera_frame_de_erro_fecha_com_1011_e_encerra_o_gerador(
+    reexecucao: TestClient,
+) -> None:
+    _FakeRerunStartup.frames = [_frame()]
+    _FakeRerunStartup.error = RuntimeError("quebrou")
+
+    with reexecucao.websocket_connect(_RERUN_PATH) as ws:
+        frames, codigo = _coletar(ws)
+
+    assert frames[-1] == {"type": "error", "content": "quebrou"}
+    assert codigo == 1011
+    assert _FakeRerunStartup.closed == 1
+
+
+def test_falha_ao_montar_o_startup_de_reexecucao_gera_frame_de_erro(reexecucao: TestClient) -> None:
+    _FakeRerunStartup.construction_error = ValueError("configuração inválida")
+
+    with reexecucao.websocket_connect(_RERUN_PATH) as ws:
+        frames, codigo = _coletar(ws)
+
+    assert frames == [{"type": "error", "content": "configuração inválida"}]
+    assert codigo == 1011
+
+
+def test_cliente_desconectado_durante_a_reexecucao_encerra_o_gerador(reexecucao: TestClient) -> None:
+    _FakeRerunStartup.frames = [_frame()]
+    _FakeRerunStartup.error = WebSocketDisconnect(code=1001)
+
+    with reexecucao.websocket_connect(_RERUN_PATH) as ws:
+        ws.receive_json()
+
+    assert _FakeRerunStartup.closed == 1
+
+
+def test_falha_na_reexecucao_nao_envia_frame_quando_o_socket_ja_esta_desconectado(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _FakeRerunStartup.frames = []
+    _FakeRerunStartup.error = RuntimeError("quebrou")
+    _FakeRerunStartup.construction_error = None
+    monkeypatch.setattr(benchmark_router_module, "BenchmarkRerunStartup", _FakeRerunStartup)
+    websocket = _SocketDesconectado(raw_text="")
+
+    asyncio.run(rerun_benchmark_question(websocket, "bench_1", "Q1"))
+
+    assert websocket.sent == []
+
+
+@pytest.mark.parametrize("counts", [{"FISICA": -1}, {"FISICA": 1.5}, {"FISICA": True}, {"FISICA": "2"}])
+def test_contrato_de_cotas_recusa_valores_nao_inteiros_nao_negativos(counts: dict) -> None:
+    from pydantic import ValidationError
+    from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
+
+    with pytest.raises(ValidationError):
+        BenchmarkRunInputDTO.model_validate(_abertura(subject_counts=counts))
+
+
+@pytest.mark.parametrize("dataset", ["mmlu", "gpqa"])
+def test_contrato_aceita_cotas_por_disciplina_nos_datasets_cientificos(dataset: str) -> None:
+    from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
+
+    payload = BenchmarkRunInputDTO.model_validate(_abertura(benchmark=dataset, subject_counts={"physics": 1}))
+    assert payload.subject_counts == {"physics": 1}
+
+
+@pytest.mark.parametrize("dataset", ["mmlu", "gpqa"])
+def test_contrato_recusa_cotas_junto_de_subjects(dataset: str) -> None:
+    from pydantic import ValidationError
+    from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
+
+    with pytest.raises(ValidationError, match="não podem ser usados juntos"):
+        BenchmarkRunInputDTO.model_validate(
+            _abertura(benchmark=dataset, subject_counts={"physics": 1}, subjects=["physics"]),
+        )

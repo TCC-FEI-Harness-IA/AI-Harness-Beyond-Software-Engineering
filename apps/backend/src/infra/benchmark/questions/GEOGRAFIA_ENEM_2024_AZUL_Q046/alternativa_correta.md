@@ -1,0 +1,1 @@
+C) Zonas de subducção.

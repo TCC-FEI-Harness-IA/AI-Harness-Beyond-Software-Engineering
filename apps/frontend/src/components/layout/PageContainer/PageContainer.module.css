@@ -1,0 +1,17 @@
+.container {
+  margin-inline: auto;
+  padding-inline: var(--space-4);
+  padding-block: var(--space-8);
+}
+
+.content {
+  max-width: var(--content-max);
+}
+
+.wide {
+  max-width: calc(var(--content-max) * 1.5);
+}
+
+.full {
+  max-width: none;
+}

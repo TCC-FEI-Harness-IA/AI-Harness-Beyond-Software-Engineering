@@ -1,0 +1,54 @@
+/* Base visual de todo controle de formulário de uma linha — o Select herda via `composes`. */
+.control {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  /* Sem isso, Safari/iOS desenha o próprio campo nativo por cima do nosso. */
+  appearance: none;
+  -webkit-appearance: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out);
+}
+
+.control::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.control:hover:not(:disabled) {
+  border-color: var(--color-text-tertiary);
+}
+
+.control:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.control:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.control::-webkit-search-decoration,
+.control::-webkit-search-cancel-button,
+.control::-webkit-search-results-button,
+.control::-webkit-search-results-decoration {
+  display: none;
+}
+
+.sm {
+  height: 30px;
+}
+
+.md {
+  height: 36px;
+}

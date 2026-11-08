@@ -1,0 +1,20 @@
+.block {
+  display: block;
+  width: var(--sk-width);
+  height: var(--sk-height);
+  border-radius: var(--sk-radius);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-sunken) 25%,
+    var(--color-hairline) 50%,
+    var(--color-surface-sunken) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

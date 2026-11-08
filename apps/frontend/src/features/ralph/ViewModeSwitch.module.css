@@ -1,0 +1,11 @@
+.wrapper {
+  position: sticky;
+  top: var(--topbar-height);
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) 0;
+  background: var(--color-surface-overlay);
+  backdrop-filter: var(--blur-overlay);
+  -webkit-backdrop-filter: var(--blur-overlay);
+}

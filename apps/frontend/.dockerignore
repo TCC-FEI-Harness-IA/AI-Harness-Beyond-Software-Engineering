@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+# .env fica no build context de propósito: são só variáveis VITE_* (config pública),
+# o Vite as lê em build-time e o `npm run dev` do target dev também depende delas.
+.env.local
+.env.*.local
+README.md

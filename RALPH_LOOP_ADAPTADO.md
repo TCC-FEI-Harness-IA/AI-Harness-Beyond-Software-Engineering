@@ -1,0 +1,1018 @@
+# Ralph Wiggum Loop adaptado para perguntas em linguagem natural
+
+## Resumo
+
+Este documento contextualiza uma adaptação do **Ralph Wiggum Loop**, originalmente empregado em engenharia de software, para responder perguntas gerais em linguagem natural, incluindo questões de múltipla escolha. A arquitetura utiliza planejamento, decomposição em tarefas atômicas, execução e validação iterativas, reinicialização de contexto entre tarefas (*Fresh Context*) e síntese final sujeita a critérios de aceite globais. A seção **Metodologia original** abaixo é uma transcrição literal do trecho fornecido no paper, sem correções ou reformulações. Depois da transcrição do paper, o fluxo implementado recebeu extensões e um tratamento operacional de diagnóstico: a etapa **A.3 — Aprendizados pontuais do enunciado**, a área de **Aprendizados Pontuais em todo prompt das fases B e C**, a **temperatura 1 nas retentativas**, as **regras de redação das tarefas em A.2 e C.2** (sem entradas e saída declaradas, critérios complementares entre si e resultado sempre acompanhado da explicação) e a **reinicialização de contexto entre fases com recuperação de saídas inválidas** (toda mudança de fase abre um contexto novo; a nova tentativa de B.1 e B.4 recebem o feedback e o histórico da tarefa como entradas explícitas; cada defeito de saída recebe uma correção própria). Também recebeu o **registro dos resultados parciais em B.4**, com fato compacto e breve explicação, e o **reforço da separação entre escopo, suficiência e apresentação**. O planejamento também distingue dados, métodos, hipóteses e resultados, admite dependências pela memória e revisa a cobertura até a determinação final (melhoria do thinking 03). A validação aplica em B.1, B.2 e C.1 uma política única que aceita resultado exato e aproximação ou melhor ajuste fundamentados e reprova contradição real e conteúdo essencial ausente, sem aprovar uma escolha só porque alguma opção foi selecionada (melhoria do thinking 04). O tratamento operacional registra diagnósticos de saída e recuperação por invocação, sem acrescentar uma fase analítica. Os prompts internos do fluxo também passaram a ser escritos em inglês, mantendo a resposta final no idioma da pergunta. Por fim, a **nova fase de validação — 01** acrescentou a etapa **A.3 — Task Decomposition Validator**, que julga cada plano candidato de A.2 antes de qualquer tarefa e o devolve a A.2 quando reprovado, e renumerou a extração dos aprendizados do enunciado para **A.4** (nas sessões gravadas antes dela, `A3` continua sendo essa extração). A **nova fase de validação — 02** fez de B.2 a verificação da **tarefa inteira**: B.2 recebe a identificação, o título e a descrição da tarefa numa área própria e avalia, além dos critérios planejados (e de `<task_id>-REV` numa revisora), o critério técnico fixo **`<task_id>-TECH`**, acrescentado pelo harness a toda tarefa e conhecido por B.1 antes de resolver; a tarefa só é aprovada com todos atendidos. Elas estão descritas na seção **Extensões ao método do paper** e detalhadas, com exemplos, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+## O que é o Ralph Wiggum Loop?
+
+O Ralph Wiggum Loop é um paradigma de orquestração iterativa atribuído a Geoffrey Huntley, originalmente voltado ao desenvolvimento de software. Requisitos são decompostos em histórias ou tarefas pequenas, cada uma executada e validada contra critérios de aceite. Se uma tentativa falha, ela é revista e repetida. Ao passar para uma tarefa diferente, inicia-se um contexto novo, preservando apenas aprendizados relevantes de forma compacta, para reduzir a degradação associada ao crescimento do histórico (*context rot*).
+
+Na adaptação proposta pelo paper, histórias de usuário tornam-se **tarefas autônomas de raciocínio**. Como o produto esperado deixa de ser código versionado e passa a ser uma resposta ao usuário, acrescenta-se uma fase explícita de **Criação da Resposta Final**.
+
+## Guia de implementação para agentes de desenvolvimento CLI
+
+> **Nota de procedência:** esta seção é uma orientação operacional derivada da Metodologia, não faz parte da transcrição literal. Em caso de divergência, prevalece a Metodologia original abaixo, com as exceções da seção **Extensões ao método do paper**: a validação da decomposição **A.3** e a extração **A.4** (itens 2 e 3, nova fase de validação — 01), a verificação da tarefa inteira com o critério técnico **`<task_id>-TECH`** (itens 4 e 5, nova fase de validação — 02), a área de **Aprendizados Pontuais** em todo prompt das fases B e C (itens 4 a 11), a **temperatura das retentativas** (item 12), as **regras de redação das tarefas** (itens 2 e 10) e a **reinicialização de contexto entre fases** com recuperação de saídas inválidas (itens 4, 5, 7, 8 e 13). Todas são posteriores ao paper e estão registradas em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+1. **A.1 — Critérios gerais:** receber a pergunta original e executar um prompt fixo `Template A.1` para definir idioma, formato, restrições e condições reais da resposta final; persistir esses critérios. Objetividade genérica não autoriza inventar limites de linhas ou palavras; justificativa opcional não se torna obrigatória.
+2. **A.2 — Planejamento (plano candidato):** executar `Template A.2` sobre a pergunta original para criar uma lista ordenada de tarefas de objetivo único, cada uma com título, descrição autossuficiente, critérios individuais de aceite e dependências declaradas. *(Nova fase de validação — 01:)* a saída é um **plano candidato**, ainda não executável: não entra na fila nem consome os espaços de tarefa da sessão. O template foi simplificado para a geração — dados literais copiados com unidades, referentes e condições; métodos pertinentes sem presumir aplicabilidade não estabelecida; valores, classificações, comparações e conclusões em aberto, inclusive em títulos e critérios; critérios complementares que exigem resultado fundamentado; sem tarefas de transcrição, marcador, redação ou repetição; cobertura até a determinação pedida e respeito ao teto —, e a auditoria detalhada passou para A.3. Depois de uma reprovação, A.2 roda em janela nova, recebendo explicitamente só o **último candidato reprovado e o relatório correspondente**, com temperatura `0.5` na primeira revisão e `1` nas seguintes *(refinamentos 03; antes, `1` em toda revisão)*. *(Regras de redação, extensão:)* a tarefa **não** declara entradas e saída esperadas; seus critérios são **complementares entre si**, nunca mutuamente exclusivos; e a tarefa exige que o resultado venha **acompanhado da explicação** (fórmulas, substituição de valores com unidades, convenções e justificativa de cada passo), com um critério de aceite que verifique isso.
+3. **A.3 — Task Decomposition Validator e A.4 — Aprendizados pontuais do enunciado (extensões):** executar `Template A.3` em janela nova sobre o pedido original, os critérios gerais de A.1 e **somente o candidato atual**, pela rubrica fixa (fidelidade, neutralidade, aplicabilidade, critérios, coerência, cobertura e necessidade), sem resolver a pergunta nem devolver um plano substituto. A saída é `{"approved": bool, "issues": [...]}`. Reprovado, o fluxo volta a A.2 (item 2), até `RALPH_MAX_PLANNING_ATTEMPTS` candidatos (padrão 5); esgotado o limite, a sessão termina sem tarefas, A.4 ou síntese. Aprovado, o plano é confirmado na fila **uma única vez** e então executa-se `Template A.4` sobre a pergunta original, em janela própria, para anotar os pontos que chamam a atenção no enunciado: valores com unidades de medida, alternativas, fórmulas, condições e restrições. Acrescentar essas anotações à memória de aprendizados **antes** de qualquer tarefa; uma lista vazia é válida. Não resolver a pergunta. Nas sessões gravadas antes da validação (fluxo versão 1), essa extração aparece como `A3`.
+4. **B.1 — Seleção e resolução:** selecionar programaticamente a próxima tarefa; iniciar um contexto novo com a tarefa e `Template B.1`, cuja área **Aprendizados Pontuais** traz os aprendizados compactos acumulados (as anotações de A.4 e os aprendizados de B.4 das tarefas anteriores, ou o aviso de que ainda não há nenhum). A seção **Tentativas anteriores desta tarefa** declara que esta é a primeira tentativa. Limitar a análise ao próprio objetivo; a tarefa responsável pela determinação final pode concluí-la, com explicação. *(Thinking 04:)* manter separados o resultado calculado e a opção escolhida por melhor ajuste, sem igualá-los; preservar dados literais fornecidos e verificar valores derivados, conclusões ou hipóteses introduzidos pelo planejamento; corrigir um erro identificável antes de comparar opções. *(Nova fase de validação — 02:)* a lista de critérios de B.1 é o **conjunto efetivo** que B.2 avaliará — os planejados, o critério técnico fixo `<task_id>-TECH` e, numa revisora, `<task_id>-REV` —, e o template pede conferir a base analítica (premissas, referentes, aplicabilidade do método, encadeamento e consistência) **antes** de aproximar ou escolher por melhor ajuste.
+5. **B.2 — Validação:** avaliar a resposta preliminar contra todos os critérios individuais usando `Template B.2`, que também traz a área **Aprendizados Pontuais**, só como referência para conferir dados (os aprendizados não são critérios). *(Nova fase de validação — 02:)* B.2 valida a **tarefa inteira**, em janela nova, com áreas separadas para a tarefa (identificação, título e descrição, que explicam o escopo e não são resultado nem critério), o resultado preliminar, o conjunto efetivo de critérios (planejados + `<task_id>-TECH` + `<task_id>-REV` quando houver — o mesmo que B.1 recebeu e que o parser exige), a proposta de revisão e os aprendizados. `<task_id>-TECH` exige que o resultado resolva o objetivo daquela tarefa com fundamento compatível com dados, métodos e condições aplicáveis; uma resolução que cumpre todos os critérios planejados pode ser reprovada só por ele. Aprovação exige todos os critérios atendidos; TECH e REV são independentes. B.2 não resolve, não completa etapas e não edita critérios: aponta o dado, a premissa e a relação conferidos e, ao reprovar, o que investigar. *(Extensão:)* se reprovar, repetir B.1 **num contexto novo**, sem restaurar a conversa anterior: as tentativas reprovadas e os vereditos do validador entram como entrada explícita do `Template B.1` (`previous_attempts`, delimitada por `<tentativas_anteriores>`), seguidas da instrução de refazer, que pede tratar o problema concreto apontado e manter as conclusões que o veredito não refutou. *(Thinking 04:)* B.2 confere tecnicamente fórmula, condições, dados e conclusão (explicação presente não é explicação correta), aplica o mesmo padrão de conteúdo implícito a todas as opções comparadas e só aprova uma seleção fundamentada, nunca por ser a opção mais próxima de um valor com erro identificável.
+6. **B.3 — Resultado aprovado:** persistir somente a resposta aprovada, indexada pelo identificador da tarefa. Não enviar tentativas reprovadas para a síntese final.
+7. **B.4 — Aprendizados pontuais:** executar `Template B.4` sobre o histórico completo da tarefa e extrair fatos compactos úteis para tarefas seguintes. A área **Aprendizados Pontuais** do template mostra os aprendizados já registrados, para que não sejam repetidos. Os aprendizados nunca se misturam aos resultados armazenados. *(Resultados parciais, extensão:)* B.4 roda numa **janela própria**, sem herdar a conversa de B.1, e recebe como entradas explícitas a tarefa, o resultado aprovado, o histórico das tentativas (com os vereditos do validador) e os aprendizados já registrados. Registra **todo resultado parcial novo** da tarefa aprovada, cada um como um **fato compacto** seguido de uma **breve explicação**, sem copiar a resolução, sem valores refutados nas tentativas e sem instruções, critérios, vereditos ou relatos do processo. A memória descarta aprendizados repetidos.
+8. **Fresh Context:** ao avançar para outra tarefa, descartar o histórico da tarefa anterior e criar uma nova chamada/contexto. *(Extensão:)* o mesmo vale para toda mudança de fase, inclusive B.1 → B.2, B.2 → B.1, B.1 → B.4 e C.1 → C.2/C.3. Os aprendizados compactos (inclusive as anotações de A.4) chegam à tarefa seguinte pela área **Aprendizados Pontuais** do `Template B.1`. A checagem de existência de tarefas pendentes é programática.
+9. **C.1 — Validação global:** reunir apenas os resultados aprovados e os critérios gerais de A.1; executar `Template C.1` para verificar se o conteúdo permite construir a resposta solicitada. Explicações internas e ausência da linha final formatada não são lacunas quando C.3 pode aplicar a apresentação sem nova análise. Exigências de conteúdo, como análise conjunta explícita, precisam estar cobertas nos resultados. A área **Aprendizados Pontuais** traz todos os aprendizados do fluxo, como referência: eles não contam como cobertura de critério. *(Thinking 04:)* C.1 também verifica a consistência da união: contradição sobre o mesmo objeto e condições, erro identificável sob uma seleção, igualdade falsa e determinação ausente vão a C.2; aproximação fundamentada e hipóteses diferentes explícitas não. Ao aprovar, cita a evidência; ao reprovar, diz o que investigar sem decidir qual tarefa está errada.
+10. **Planejamento adicional:** se a validação global reprovar, identificar critérios pendentes, gerar novas tarefas específicas e retornar ao loop de execução. O `Template C.2` traz a área **Aprendizados Pontuais**, para que as descrições das novas tarefas repitam os dados do enunciado de que precisam. As novas tarefas seguem as mesmas **regras de redação** de A.2 (item 2). C.2 recebe também os motivos de C.1 como feedback separado: uma contradição concreta admite investigação direcionada, sem o planejador decidir antecipadamente qual conclusão está errada. *(Thinking 04:)* a investigação trata o defeito e explica o que confirma ou corrige; uma tarefa que só "escolha a opção mais próxima" de um valor já apontado como errado não é investigação.
+11. **Resposta final:** após aprovação global, sintetizar a resposta a partir dos resultados aprovados, obedecendo idioma, formato e restrições gerais. O `Template C.3` traz a área **Aprendizados Pontuais** só para conferir dados do enunciado (por exemplo, a letra da alternativa); o conteúdo da resposta continua vindo apenas dos resultados aprovados. *(Thinking 04:)* aproximação é apresentada como aproximação e estimativa como estimativa, sem transformar melhor ajuste em igualdade.
+12. **Temperatura das retentativas (extensão):** toda chamada de retentativa sai com temperatura `1`: a nova tentativa de B.1 depois de uma reprovação em B.2 e a correção de uma saída inválida (JSON ilegível, relatório inconsistente, lote de tarefas inválido) ou vazia, em qualquer fase. Assim que as retentativas acabam, as chamadas voltam à temperatura pedida pelo usuário.
+13. **Isolamento de contexto e recuperação de saídas (extensão):** cada execução de fase tem a sua janela; só a correção de uma saída inválida, na mesma fase e tarefa, reaproveita a janela, preservando integralmente respostas recusadas e feedbacks, sem repetir o template. A correção depende do defeito: erro de sintaxe pede o mesmo conteúdo em JSON válido, sem nova resolução; violação de contrato pede a saída completa corrigida, preservando conteúdo não afetado; interrupção por comprimento pede uma nova saída completa e concisa, sem continuar a anterior. Em A.2/C.2, a recuperação exige manter a cobertura da determinação solicitada, incluindo passos finais, sem congelar o lote quando o defeito exige alterá-lo. Essa cobertura é orientação ao modelo, não garantia semântica do parser. Os únicos reparos locais são a extração de cercas e o fechamento estrutural inequívoco.
+
+**Separação de estados:** mantenha, no mínimo, `original_question`, `general_acceptance_criteria`, `task_queue`, `approved_task_results`, `accumulated_learnings`, `task_attempts` (o registro das tentativas da tarefa, de onde saem o feedback da nova tentativa e o histórico de B.4), `active_window` (a janela da execução de fase corrente, nunca herdada por outra fase) e o histórico auditado da sessão, separado das janelas. `accumulated_learnings` recebe primeiro as anotações de A.4 (A.3 nas sessões antigas) e depois os aprendizados de B.4, na ordem em que surgem, e é renderizado na área **Aprendizados Pontuais** de cada template das fases B e C, com o rótulo de procedência de cada nota (`[Question]`, `[Task T1]`), montado a partir das fontes vigentes *(refinamentos 03)*. Desde a extensão thinking 05, `approved_task_results` guarda também o estado de cada resultado (vigente, substituído ou aguardando revalidação) e `accumulated_learnings` guarda a fonte de cada fato; as fases recebem só a visão vigente, e as revisões aplicadas ficam num registro de auditoria da sessão. A temperatura do usuário é um parâmetro fixo da sessão; a temperatura de retentativa vale só para a chamada que repete um pedido que falhou. Os nomes são sugestões de implementação, não nomes exigidos pelo paper. O texto acadêmico define o comportamento conceitual dos templates, mas não fornece seus prompts completos; eles precisam ser implementados de acordo com as responsabilidades descritas, sem alegar que são transcrições do trabalho.
+
+## Extensões ao método do paper
+
+> **Nota de procedência:** as regras desta seção **não constam** da transcrição literal da Metodologia. Elas foram introduzidas depois de testes com o fluxo implementado e, por isso, aparecem separadas do texto do paper. O relatório completo, com exemplos, está em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+### A.3 — Aprendizados pontuais do enunciado
+
+> **Renumeração:** desde a **nova fase de validação — 01** (abaixo), esta etapa é a **A.4**, executada depois da aprovação do plano, com a mesma regra. O texto desta subseção registra a extensão como foi introduzida; nas sessões gravadas antes da validação (fluxo versão 1), a extração continua identificada como `A3`.
+
+**Problema observado.** Cada tarefa roda em contexto novo (*Fresh Context*) e só enxerga a própria descrição e os aprendizados acumulados. Na versão do paper, o primeiro aprendizado só nasce em B.4, depois da primeira tarefa. Se o decompositor (A.2) não repetir na descrição de uma tarefa um dado importante do enunciado, como as alternativas de uma questão de múltipla escolha, um valor com sua unidade ou uma fórmula, esse dado se perde para a tarefa.
+
+**Regra.** A terceira etapa do Planejamento, executada logo depois de A.2, salva os aprendizados pontuais do enunciado:
+
+> *Pergunta do usuário* + *Template A.3* → *Aprendizados Pontuais do Enunciado*
+
+- A entrada é **somente a pergunta original**, em janela de contexto própria. A etapa não vê os critérios de A.1 nem as tarefas de A.2.
+- A saída é uma lista de fatos secos e atômicos, copiados como aparecem no enunciado: valores **com unidades de medida**, **alternativas** (com sua letra ou número, sem omitir nenhuma), **fórmulas**, **condições e restrições** (inclusive as simultâneas) e qualquer outro dado que chamaria a atenção de quem não leu a pergunta.
+- A etapa **não resolve** a pergunta: conclusões, cálculos e palpites de resposta são proibidos.
+- Uma lista vazia é válida (enunciado sem nada a anotar); nesse caso nenhum bloco é injetado.
+- Os fatos entram na mesma memória de aprendizados de B.4, **antes** de qualquer tarefa. Portanto chegam a **toda** tarefa, inclusive a primeira e as criadas pelo Planejamento Adicional (C.2), antes dos aprendizados que B.4 for acrescentando.
+- Valem para A.3 as mesmas regras dos demais aprendizados. Desde a extensão **Aprendizados Pontuais em todo prompt das fases B e C** (abaixo), isso significa que as anotações também chegam a B.2, B.4, C.1, C.2 e C.3, sempre numa área própria e nunca misturadas aos resultados armazenados.
+
+**Consequência na primeira tarefa.** Na versão do paper, "na primeira tarefa do ciclo não há aprendizados acumulados". Com A.3, a primeira tarefa já recebe as anotações do enunciado, quando A.3 as produz.
+
+### Aprendizados Pontuais em todo prompt das fases B e C
+
+O reforço de completude e autossuficiência de A.3/B.4 está descrito na extensão
+**Aprendizados completos e autossuficientes (thinking — 02)** abaixo e na seção de mesmo número em
+[`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+**Problema observado.** Na versão do paper (e na primeira versão de A.3), os aprendizados só chegavam ao contexto de B.1, como um bloco no início da janela da tarefa. O validador de tarefa (B.2), a extração de aprendizados (B.4) e toda a fase C não os recebiam. Nos testes, isso fez dados do enunciado se perderem ao longo do *thinking*: B.2 julgava um resultado sem saber quais eram as alternativas, C.2 criava tarefas sem os dados de que elas precisavam e C.3 não tinha como associar o valor obtido à letra da alternativa.
+
+**Regra.** Todo template enviado ao modelo nas fases B e C tem a área **Aprendizados Pontuais**, preenchida com **todos** os aprendizados acumulados até o momento da chamada: as anotações de A.3 seguidas dos aprendizados de B.4, na ordem em que surgiram.
+
+| Template | O que a área traz | Como deve ser usada |
+|---|---|---|
+| B.1 | Tudo o que foi acumulado antes da tarefa (repetido em cada nova tentativa) | Contexto de apoio, sem ampliar o escopo da tarefa. |
+| B.2 | Idem | Referência para conferir dados; **não** são critérios de aceite. |
+| B.4 | Tudo o que foi acumulado antes da tarefa, sem os aprendizados dela própria | Mostra o que já foi registrado, para que não seja repetido. |
+| C.1 | Todos os aprendizados do fluxo | Referência; **não** contam como cobertura de critério geral. |
+| C.2 | Todos os aprendizados do fluxo | Copiar para as novas tarefas os dados do enunciado de que precisam. |
+| C.3 | Todos os aprendizados do fluxo | Só para conferir dados (por exemplo, a letra da alternativa); o conteúdo da resposta continua vindo apenas dos resultados armazenados. |
+
+- A área existe mesmo sem aprendizados: nesse caso traz o aviso "Nenhum aprendizado pontual registrado até o momento."
+- A janela de B.1 deixa de receber o bloco avulso "Aprendizados acumulados": os aprendizados chegam pelo próprio Template B.1, sem duplicação.
+- A separação entre resultado armazenado e aprendizado continua: os aprendizados chegam numa área própria do template e **nunca** entram nos resultados armazenados que alimentam C.1 e C.3.
+- Os templates de A.1, A.2 e A.3 não têm a área, porque rodam antes de existir qualquer aprendizado.
+
+> *Aprendizados Pontuais* + *Entradas do Template X* + *Template X* → *Resultado Fase X*, para X ∈ {B.1, B.2, B.4, C.1, C.2, C.3}
+
+### Temperatura das retentativas
+
+**Problema observado.** Nos testes apareceram muitas retentativas em "loop": o modelo repetia a mesma saída reprovada (ou o mesmo JSON inválido) até esgotar as tentativas. Repetir um pedido que acabou de falhar com a mesma temperatura do usuário, em geral baixa, tende a reproduzir a mesma resposta.
+
+**Regra.** Toda chamada de **retentativa** é feita com temperatura `1`. Assim que as retentativas acabam, as chamadas voltam à temperatura fornecida pelo usuário na entrada.
+
+| Situação | Chamada com temperatura `1` | Volta à temperatura do usuário |
+|---|---|---|
+| B.2 reprova a tentativa de uma tarefa | A nova tentativa de B.1 (e as correções de saída dentro dela) | Na verificação B.2 dessa nova tentativa |
+| Saída inválida ou vazia em qualquer fase (JSON ilegível, relatório inconsistente, lote de tarefas acima do teto, completion vazia) | Cada correção pedida ao modelo | Na primeira chamada da fase seguinte |
+| C.1 reprova o conjunto de resultados | Nenhuma: C.2 e as novas tarefas são trabalho novo, não a repetição de um pedido | — |
+| A.3 reprova um plano candidato *(nova fase de validação — 01)* | A partir do candidato 3; o candidato 2 usa `0.5` *(exceção dos refinamentos 03)* | Na A.3 seguinte |
+
+- A temperatura do usuário nunca é sobrescrita: a de retentativa vale só para a chamada que repete um pedido que falhou.
+- O número de retentativas não muda: os limites de tentativas por tarefa e de correções de saída continuam valendo.
+- Cada invocação registra na sessão a temperatura efetivamente enviada (`temperature`), o que permite auditar quais chamadas foram retentativas.
+- *Exceção (refinamentos 03):* a regra geral “toda revisão de A.2 usa `1`” não vale para a **primeira** revisão depois de uma reprovação de A.3, que usa `0.5`; ver a seção **Refinamentos 03**, abaixo. As correções de saída inválida ou vazia continuam a `1`.
+
+### Regras de redação das tarefas (A.2 e C.2)
+
+**Problema observado.** Três pontos dos templates de planejamento prejudicavam as tarefas geradas:
+
+1. A diretriz "declarar as **entradas** de que precisa e a **saída** que produz" levava o modelo a preencher os campos `expected_input` e `expected_output`. Como cada tarefa é autossuficiente e roda em contexto novo, a "entrada" já está na descrição, e a "saída" competia com os critérios de aceite como definição do que a tarefa deve entregar. Em especial, uma "saída esperada" curta, como "a lista de primos, por exemplo [2, 3, 5, 7]", sugeria uma resposta sem justificativa.
+2. Nada impedia critérios **mutuamente exclusivos** na mesma tarefa, como "responda somente a alternativa" e "a resposta deve conter explicações". Nenhum resultado atende aos dois ao mesmo tempo, e a tarefa fica reprovada em B.2 a cada tentativa, até esgotar o limite.
+3. Nada exigia que o resultado da tarefa viesse **justificado**. Um resultado que só traz o valor final, sem a fórmula, as unidades ou o porquê de cada passo, não permite que B.2, C.1 e C.3 confiram de onde ele veio.
+
+**Regra.** Cada tarefa criada por A.2 ou C.2 deve:
+
+1. Ter **um único objetivo**, que pode depender de um resultado anterior recebido pelos aprendizados. A autonomia de contexto não exige independência lógica.
+2. Trazer os **próprios critérios de aceite individuais**, com identificadores no formato `T1-AC1`, **complementares entre si e nunca mutuamente exclusivos**: tem de ser possível que uma única resposta atenda a todos os critérios ao mesmo tempo. O modelo confere os critérios aos pares antes de fechar a lista.
+3. Trazer, entre os critérios, **restrições de escopo** sobre ações fora do próprio objetivo, permitindo a conclusão fundamentada da tarefa responsável pela determinação final.
+4. Exigir que o resultado venha **acompanhado da explicação de por que ele é válido**, nunca isolado. Numa conta: as fórmulas usadas, a substituição dos valores com unidades de medida, as convenções adotadas (sinais, referenciais, aproximações) e a justificativa de cada passo. Numa classificação ou escolha: o raciocínio que a sustenta. A exigência aparece na descrição da tarefa **e** num critério de aceite, para que B.2 a verifique.
+
+- A diretriz de **entradas e saída** foi removida. A tarefa passa a ter só `id`, `title`, `description` e `acceptance_criteria`; o bloco da tarefa enviado a B.1 deixa de ter as linhas "Entrada esperada" e "Saída esperada".
+- Se o modelo ainda enviar `expected_input` ou `expected_output`, o lote **não** é recusado: os campos são ignorados.
+- As regras valem para A.2 e C.2. A fórmula de cada etapa não muda:
+
+> *Pergunta do usuário* + *Template A.2* → *Resultado Fase A.2*
+>
+> *Critérios Não Atendidos* + *Resultados Armazenados* + *Aprendizados Pontuais* + *Template C.2* → *Novas Tarefas*
+
+### Reinicialização de contexto entre fases e recuperação de saídas inválidas
+
+**Problema observado.** A tarefa tinha uma única janela de contexto. A nova tentativa de B.1 renderizava o Template B.1 de novo nessa janela (instruções e aprendizados repetidos a cada tentativa), e B.4 rodava sobre ela, herdando a conversa ativa de B.1 (prompts, JSONs brutos, correções) em vez de receber o histórico como material de extração. Além disso, toda saída recusada pelo parser recebia a mesma mensagem de correção, embora um JSON mal serializado, um relatório incoerente e uma saída cortada pelo limite de tokens peçam correções diferentes.
+
+**Regra de contexto.**
+
+- Uma correção de saída na mesma fase e na mesma tarefa pode reutilizar a janela dessa execução.
+- Uma tarefa diferente sempre recebe janela nova, mesmo executando a mesma fase.
+- Toda mudança de fase cria uma janela nova, inclusive B.1 → B.2, B.2 → B.1, B.1 → B.4 e C.1 → C.2/C.3. Ao voltar a uma fase, a conversa anterior não é restaurada.
+- Só os aprendizados acumulados atravessam fases como memória. Conversas anteriores nunca são encaminhadas como histórico de mensagens da fase seguinte.
+- Reiniciar o contexto não elimina as entradas previstas no paper: elas chegam explicitamente pelo template de cada fase. B.2 recebe o resultado preliminar e os critérios; a nova tentativa de B.1 recebe as tentativas reprovadas e os vereditos; B.4 recebe o histórico da tarefa como material delimitado; C.1 e C.3 recebem os resultados aprovados e os critérios gerais; C.2 recebe os critérios não atendidos e os resultados armazenados.
+- A auditoria completa (cada conversa enviada, cada saída recusada, cada veredito) é persistida na sessão, separada das janelas enviadas ao modelo.
+
+| Conceito | Atravessa fases? | Papel |
+|---|---|---|
+| Memória de aprendizados | Sim, é a única memória transversal | Área "Aprendizados Pontuais" dos templates de B e C. |
+| Entradas explícitas | Só como dado, nunca como conversa | Variáveis do template de cada fase (por exemplo, `previous_attempts` e `task_history`). |
+| Histórico auditado | Não é enviado ao modelo | Sessão persistida e registro das tentativas da tarefa. |
+| Janela ativa | Não | A conversa de uma execução de fase; serve só às correções de saída dela. |
+
+> *Aprendizados Pontuais* + *Tarefa Selecionada* + *Tentativas Anteriores Reprovadas* + *Template B.1* → *Resultado Preliminar B*, sempre em contexto novo (na primeira tentativa, não há tentativas anteriores)
+>
+> *Aprendizados Pontuais* + *Histórico da Tarefa* + *Template B.4* → *Aprendizados Pontuais*, em contexto novo
+
+**Recuperação de saídas inválidas.** O parser classifica cada recusa, e a correção pedida ao modelo, na mesma janela e sem repetir o template, depende do defeito:
+
+| Defeito | Correção pedida |
+|---|---|
+| Erro de sintaxe (sem JSON legível) | O mesmo conteúdo em JSON válido, sem nova resolução. |
+| Violação de contrato (JSON legível que contraria o schema ou a coerência da fase) | O próprio modelo confere e devolve a saída completa corrigida, preservando conteúdo não afetado e etapas necessárias; o veredito nunca é ajustado automaticamente. |
+| Interrupção por comprimento (sem JSON legível e `finish_reason = "length"`) | Uma nova saída completa e concisa, sem continuar a anterior; nada é emendado. |
+
+Os únicos reparos locais são os que não alteram conteúdo: a extração de dentro de cercas ou de texto solto e o fechamento estrutural inequívoco das chaves e colchetes finais. Nunca se fabricam campos, se completam strings interrompidas, se inventam explicações ou se transforma uma reprovação em aprovação. A temperatura `1` das correções, os limites de correção, o schema estrito, a contabilização de todas as chamadas e a política de orçamento não mudam. Uma correção de formato continua distinta de uma nova tentativa de resolução depois de uma reprovação: a correção reaproveita a janela e não consome tentativa da tarefa; a nova tentativa consome uma tentativa e abre uma janela nova.
+
+### Melhorias do thinking — 01: recuperação integral de saídas
+
+**Problema observado.** Uma A.2 pode ser JSON legível e ainda faltar `title` em uma tarefa.
+No caso relatado de Física ITA 2024 Q005, o plano tinha três tarefas, chegando à aplicação da
+terceira lei de Kepler para determinar o período de Marte em meses. O backend auditava o plano
+inteiro, mas reenviava apenas os primeiros 1.000 caracteres e `...` à chamada de correção.
+O modelo perdeu T2/T3 e devolveu só T1; o parser aceitou esse lote estruturalmente válido.
+O julgamento posterior de C.1 sobre sua suficiência constitui um segundo problema.
+
+**Regra.** A janela da execução mantém toda resposta recusada e toda correção integralmente,
+em ordem, para qualquer fase e qualquer defeito. A auditoria registra o mesmo conteúdo bruto
+completo, mas não substitui o reenvio. O template aparece uma única vez. A resposta aceita é
+sempre uma única saída completa do modelo; nunca é montada com objetos ou fragmentos recusados.
+As correções, em inglês e Markdown, distinguem sintaxe, contrato e interrupção por comprimento
+conforme a tabela anterior.
+
+Em A.2/C.2, a correção pede explicitamente que o plano continue cobrindo a determinação
+solicitada, incluindo os passos finais necessários. Em C.2, deve cobrir as lacunas restantes
+com os resultados aprovados fornecidos. Corrigir um título não autoriza eliminar outras
+tarefas necessárias apenas para satisfazer o parser. Um defeito como excesso de tarefas ou
+IDs duplicados pode exigir mudar o lote, IDs ou conteúdo, preservando a orientação de cobertura.
+Não há quantidade fixa de tarefas nem detecção semântica por regex.
+
+> *Janela da fase: template único + saídas recusadas integrais + correções integrais*
+> → *Nova saída completa, avaliada sozinha pelo parser*
+
+Uma fase/tarefa seguinte abre contexto novo e volta à temperatura da sessão; só as retentativas
+da execução corrente usam temperatura `1`. O reenvio integral pode aumentar consumo de entrada,
+latência e espaço de contexto/persistência. Os limites existentes continuam autorizando ou
+interrompendo cada chamada, sem corte silencioso para fazê-la caber. Diagnósticos, vínculos de
+recuperação, contabilização e persistência permanecem; cancelamento controlado encerra as
+recuperações como falha e é propagado.
+
+**Limite da garantia.** O código preserva o conteúdo para a correção. O modelo ainda pode devolver
+um plano incompleto que passe no parser. A cobertura semântica é orientação nesta etapa; a
+revisão do planejamento e de C.1 será reforçada depois. Testes com respostas e vereditos
+roteirizados não provam qualidade semântica de um modelo real. O relato detalhado, o exemplo
+com três tarefas e os resultados dos testes estão em
+[Melhorias do thinking — 01](NOVAS_REGRAS_RALPH_LOOP.md#melhorias-do-thinking--01-recuperação-integral-de-saídas).
+
+### B.4 — Registro dos resultados parciais da tarefa aprovada
+
+**Problema observado.** O Template B.4 já pedia conclusões e valores, mas o modelo omitia resultados de que as tarefas seguintes precisavam. No benchmark de Matemática ITA 2024 Q037, a conclusão correta de que a afirmação I é verdadeira não foi salva nos aprendizados, e a tarefa seguinte, que roda em contexto novo, perdeu essa informação. Outros aprendizados registravam critérios e o processo de execução, e não fatos do problema. Além disso, B.4 era executado sobre a própria janela de B.1, herdando a conversa de outra fase.
+
+**Regra.** B.4 registra **todo resultado parcial novo** da tarefa aprovada, com significado suficiente para ser usado sem o histórico anterior. Cada aprendizado é uma única frase com duas partes:
+
+| Parte | O que é | Exemplo (Q037) |
+|---|---|---|
+| **Fato compacto** | A conclusão em si, nomeando explicitamente o objeto: a grandeza com valor, unidade e condições; a afirmação com sua classificação; a fórmula ou relação com suas hipóteses. | "A afirmação I é verdadeira" |
+| **Breve explicação** *(nova)* | O motivo, a propriedade ou a fórmula que sustenta o fato, em poucas palavras. Não é a resolução completa. | "C ⊆ A implica A ∩ C = C, pela distributividade." |
+
+- **Valores:** grandeza, valor, unidade e condições relevantes. **Classificações:** a afirmação, a classificação e um motivo breve. **Relações:** a fórmula ou relação e as hipóteses necessárias.
+- Prevalece a **conclusão finalmente aprovada**: valores ou classificações refutados ou substituídos nas tentativas reprovadas não viram aprendizados vigentes.
+- Não se registram instruções da tarefa, critérios, vereditos, relatos do processo nem fatos que já constam na memória. A memória também descarta, de forma programática, aprendizados em branco ou repetidos (normalizando apenas espaços, sem ignorar maiúsculas e minúsculas); o evento `learn` lista os descartados.
+- `{"learnings": []}` só é válido quando a tarefa não trouxe fato novo ou quando todas as conclusões já estão registradas. A simplicidade de uma conclusão nova não justifica omiti-la.
+- **Isolamento de contexto:** B.4 roda numa janela própria e não herda a conversa de B.1. O histórico da tarefa exigido pelo paper continua disponível, mas como **dado delimitado** do template, separado da memória de aprendizados. O resultado aprovado é o mesmo que B.3 armazenou; B.4 só o lê. Os aprendizados continuam fora dos resultados armazenados, e nenhuma resposta completa passa de uma tarefa para outra.
+
+> *Tarefa* + *Resultado Aprovado* + *Histórico da Tarefa* + *Aprendizados Pontuais* + *Template B.4* → *Novos Aprendizados Pontuais*
+
+### Aprendizados completos e autossuficientes (thinking — 02)
+
+Este reforço atua nos templates A.3 e B.4. As chamadas, os envelopes JSON, a memória, a recuperação
+de saídas e as políticas das outras fases conservam seus contratos.
+
+- **A.3 copia dados fornecidos:** nomes e nomenclaturas, objetos, siglas e definições explicitadas,
+  símbolos e referentes, valores e unidades, fórmulas, relações, tabelas completas, listas,
+  identificadores e textos integrais das alternativas, condições simultâneas e a determinação
+  solicitada. A revisão de completude ocorre na mesma chamada, antes da resposta JSON.
+- **Associações fazem parte do dado:** código–significado, teste–parâmetro, valor–objeto,
+  distância–referência espacial, prazo–evento, unidade–grandeza. Preservar só o número ou a sigla
+  não basta. A.3 não corrige dados aparentes, converte unidades, arredonda, interpreta ambiguidades,
+  expande siglas não definidas ou acrescenta conhecimento inferido.
+- **B.4 registra conclusões novas:** fato compacto e motivo breve, com objeto, grandeza, unidade,
+  sinal/referencial, hipóteses, condições e caráter exato ou aproximado. Resultado calculado e
+  alternativa escolhida por melhor ajuste permanecem distintos; valores diferentes não viram uma
+  igualdade. Resultados simples ou intermediários úteis também são registrados.
+- **Papéis separados:** dados fornecidos entram por A.3; conclusões derivadas entram por B.4.
+  Uma conclusão nova pode repetir um dado necessário para identificar seu referente. Não entram
+  critérios, instruções, vereditos, raciocínio integral nem conclusões refutadas de tentativas rejeitadas.
+- **Transporte:** todos os aprendizados, na ordem de extração, chegam à área `## Key Learnings`
+  de B.1, B.2, B.4, C.1, C.2 e C.3, inclusive nas tarefas adicionais. Não contam como cobertura de
+  critérios nem substituem evidência nos resultados aprovados.
+- **Memória:** `Learning(content, source_task_id)` mantém o contrato. A origem é `None` em A.3
+  e o identificador da tarefa em B.4. A deduplicação compara apenas espaços; preserva o primeiro
+  texto, sua origem e a ordem. Diferenças de caixa, unidades, referentes e hipóteses permanecem.
+  Listas vazias e auditoria dos aprendizados aceitos e repetidos continuam funcionando.
+
+O núcleo continua recebendo somente o pedido textual genérico; não consulta campos de alternativas,
+identificadores de questões ou gabaritos do benchmark. Os testes de contrato usam templates reais;
+os testes de transporte usam extrações roteirizadas e verificam preservação programática, sem
+demonstrar que um modelo real sempre extrairá todos os dados. Exemplos e validação estão em
+**Melhorias do thinking — 02: aprendizados completos e autossuficientes**, em
+[`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+### Reforço da separação entre escopo, suficiência e apresentação
+
+Este ajuste reforça os templates existentes, sem acrescentar fases, alterar a política de quantidade
+de tarefas, reconciliar conclusões, revisar critérios recebidos ou verificar a resposta depois de C.3.
+O detalhamento e os exemplos estão na seção 7 de [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+- **A.1:** registrar restrições reais. "Seja objetivo; pode justificar" não significa "duas linhas
+  e justificativa obrigatória". Se o pedido explicita duas linhas e justificativa, ambas são preservadas.
+- **A.2/C.2:** restringir ações analíticas externas ao objetivo, preservando resultado explicado.
+  "Não calcular a massa por colher" limita a resolução; "não mencionar colheres" proíbe uma palavra
+  sem necessidade. A referência contextual é permitida; efetuar a conta proibida viola o escopo.
+  Análise conjunta que constitui o objetivo da tarefa deve ser permitida com conclusão fundamentada.
+- **B.2:** avaliar todos os critérios recebidos sem ignorar, dispensar ou reescrever nenhum.
+  A distinção entre referência e resolução interpreta a ação restringida; não permite desconsiderar
+  uma proibição literal de palavras se o planejador ainda a produzir.
+- **C.1:** verificar suficiência para a resposta a construir. Se os resultados explicados já
+  identificam inequivocamente C, não é preciso que contenham `RESPOSTA_FINAL: C`; C.3 pode aplicar
+  essa linha ou apresentar só `C`. Em contrapartida, listas isoladas não cobrem uma exigência
+  explícita de análise conjunta. C.1 não executa a análise ausente para declará-la atendida.
+- **C.2:** suprir lacunas de conteúdo de C.1 com tarefas autossuficientes e explicadas. Proibir a
+  justificativa ou criar tarefa só para imprimir uma linha final confundiria conteúdo com apresentação.
+- **C.3:** aplicar idioma, formato e restrições finais exclusivamente aos resultados aprovados,
+  sem novo raciocínio analítico. Justificativa opcional pode ser omitida; a obrigatória deve usar a
+  fundamentação já aprovada. A memória transversal não completa conteúdo ausente.
+
+As entradas continuam sendo montadas explicitamente para cada etapa, com janelas próprias no
+planejamento, nas verificações e em C.1, C.2 e C.3. Cada nova tarefa inicia em *fresh context*;
+retentativas de resolução recebem o histórico como entrada explícita numa janela nova, e B.4 o
+recebe para extração numa janela própria. Aprendizados permanecem em memória transversal, renderizada em área separada dos resultados aprovados.
+
+### Planejamento sem respostas antecipadas e cobertura do pedido — thinking 03
+
+Esta extensão reescreve A.1/A.2/C.2 e alinha B.1, mantendo os schemas JSON e as fases. O detalhamento,
+os exemplos e os requisitos de integração estão em **Melhorias do thinking — 03: planejamento sem
+respostas antecipadas e cobertura do pedido**, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+- **A.1** extrai conteúdo a determinar, idioma, formato e restrições reais. Não transforma método,
+  demonstração não solicitada, tolerância inventada ou palavras de um distrator em obrigação.
+  Conteúdo obrigatório e justificativa opcional na apresentação continuam distintos.
+- **A.2/C.2** distinguem dado literal, método pertinente, hipótese cuja aplicabilidade precisa ser
+  estabelecida e resultado ainda desconhecido. A proibição de antecipar vale também para ordenações,
+  classificações e conclusões qualitativas, em títulos, descrições e critérios. Planejar conservação
+  de energia é permitido; impor uma fonte de energia ainda não investigada não é.
+- **Dependência lógica** é compatível com objetivo único: a descrição conserva seus dados e
+  referências e pede os resultados anteriores pelos aprendizados, sem adivinhá-los. A tarefa final
+  pode realizar a integração ou comparação que falta; C.3 só apresenta e faz pareamento literal já
+  sustentado, sem completar análise.
+- **Revisão do plano** ocorre na própria geração de A.2/C.2, sem chamada extra ou campo novo. O
+  conjunto deve chegar à determinação pedida: razão de distâncias sozinha não responde período em
+  meses. Nem quantidade de tarefas nem JSON aceito certificam cobertura semântica. C.1 julga a
+  suficiência dos resultados aprovados posteriormente.
+- **C.2** pode citar resultados existentes como entradas. Recebe o relatório de C.1 pela variável
+  `global_verification_feedback`, em área separada dos critérios pendentes, resultados e memória.
+  A regra de evitar retrabalho admite investigar contradição ou erro concreto, sem escolher no
+  planejamento qual conclusão deve ser corrigida. Formatação ausente não cria tarefa de redação.
+- **B.1** resolve seu próprio objetivo final quando designado. Aproximações e escolhas por melhor
+  ajuste continuam permitidas com sustentação; selecionar alguma opção não equivale a acerto.
+
+Os contratos e o transporte são testados com saídas roteirizadas e templates reais. A matriz
+[`planning_semantics_v1.json`](apps/backend/tests/fixtures/planning_semantics_v1.json) fornece casos
+para inspeção semântica posterior, sem heurística de palavras, contagem de tarefas ou gabarito.
+A integração com as etapas 01 (recuperação integral) e 02 (memória) deve preservar essas distinções;
+esta etapa não altera `base_thinking_phase.py`, A.3 ou B.4. A transcrição literal abaixo é preservada.
+
+### Validação, consistência e aproximações fundamentadas — thinking 04
+
+Esta extensão reescreve as passagens de B.1/B.2/C.1 que aprovavam uma seleção só por ter sido feita,
+ou que rejeitavam boa solução por literalidade, e harmoniza A.1/A.2/C.2/C.3. Fases, schemas, parser,
+limites, temperaturas e isolamento não mudam. O detalhamento, os casos motivadores (Q046, Q137, Q105,
+Q005, Q034) e os exemplos estão em **Melhorias do thinking — 04: validação, consistência e
+aproximações fundamentadas**, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+- **Política única** (`## Evidence and consistency policy`, texto idêntico em B.1, B.2 e C.1):
+  *resultado exato* sustentado é aceito; *aproximação ou melhor ajuste* é aceito quando fundamentado
+  por comparação, eliminação, precisão, hipótese explícita, ordem de grandeza ou inferência
+  contextual, sem exigir coincidência exata ou cálculo direto até a opção; *contradição real* (mesmo
+  objeto, grandeza e condições; conta contra a própria conclusão; troca de unidade ou referência;
+  igualdade falsa; hipótese contra os dados) pede revisão; *conteúdo essencial ausente* pede
+  complementação. Não há tolerância percentual universal, nem “qualquer divergência reprova”, nem
+  “escolheu, aprova”.
+- **B.1** preserva dados literais fornecidos e verifica as antecipações do planejamento; separa
+  valor calculado e opção escolhida, rotula estimativas, corrige erro identificável
+  antes de comparar opções e, numa nova tentativa, mantém a conclusão sustentada quando o veredito só
+  reclama de um termo implícito.
+- **B.2** faz verificação técnica local (aplicabilidade, dados, encadeamento e conclusão) e trata
+  conteúdo implícito com a mesma régua para todas as opções. Não exige que tarefa intermediária
+  responda tudo nem formato final interno.
+- **C.1** avalia suficiência **e consistência** da união. Ao aprovar, indica a evidência e o
+  fundamento da aproximação; ao reprovar, identifica a lacuna ou contradição e o que investigar, sem
+  executar a análise nem escolher a tarefa errada. Não escreve igualdades falsas.
+- **C.2** investiga a lacuna com resultado explicado, inclusive em resultado já aprovado quando há
+  motivo concreto; não cria tarefa só de “escolher a mais próxima” nem só de imprimir a linha final.
+  **C.3** apresenta aproximação como aproximação. A gestão explícita de resultados corrigidos e
+  aprendizados obsoletos é a extensão **thinking 05**, abaixo.
+- **Orquestrador:** a instrução anexada às tentativas reprovadas passou de “corrigir exatamente esses
+  pontos” para tratar o problema concreto e manter as conclusões não refutadas.
+
+O parser continua validando só estrutura e coerência formal; reprovação coerente é saída aceita, e
+`met=false` com `approved` continua erro de contrato recuperável. A matriz
+[`validation_semantics_v1.json`](apps/backend/tests/fixtures/validation_semantics_v1.json) traz casos
+positivos e negativos para avaliação semântica com modelo real; os testes com vereditos roteirizados
+comprovam a fiação, não o reconhecimento dos erros pelo modelo.
+
+### Revisão auditável de resultados e aprendizados vigentes — thinking 05
+
+Esta extensão permite que uma contradição, um cálculo defeituoso ou uma lacuna de fundamentação
+apontados por C.1 levem à **revisão explícita** de um resultado já aprovado, pelo caminho existente
+C.2 → B.1/B.2/B.3/B.4 → C.1, sem fase nova e sem decisão do orquestrador. O detalhamento, o schema, o
+exemplo completo e a verificação estão em **Melhorias do thinking — 05: revisão auditável de
+resultados e aprendizados vigentes**, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+- **Contrato mínimo e opcional.** C.2 marca uma tarefa como revisora com
+  `review: {task_ids, reason}` (resultados sob investigação e motivo concreto, sem antecipar o
+  desfecho). A.2 e C.2 podem declarar `depends_on` (tarefas anteriores do lote ou resultados
+  vigentes); os dois campos são independentes: toda tarefa que usa achado de outra o declara, seja
+  ou não revisora. A B.1 de uma revisora devolve `revision`, um veredito `confirmed` ou `superseded` por
+  alvo, com justificativa. O parser valida existência, unicidade, escopo, autorreferência e ordem
+  (o que impede ciclos); uma recusa é defeito de contrato recuperável, sem mutação de estado.
+- **Aprovação explícita.** B.2 recebe a proposta numa área própria e avalia o critério gerado
+  `<id>-REV`. Ordem temporal, hipótese diferente ou outra redação não sustentam uma substituição;
+  confirmar o resultado anterior é desfecho válido.
+- **Aplicação só em B.3.** Depois da aprovação, o livro de resultados aplica os vereditos de forma
+  atômica: `superseded` tira o alvo do estado vigente (sem apagá-lo), `confirmed` o mantém ou o
+  restaura (as confirmações de uma mesma revisora valem em conjunto, sem depender da ordem dos
+  vereditos), e dependentes declarados de um resultado não vigente passam a aguardar revalidação, sem
+  refazer tarefas independentes. Reprovação, saída inválida e interrupção não mudam nada.
+- **Memória vigente com proveniência.** Cada fato guarda todas as suas fontes. Só sai da área
+  **Aprendizados Pontuais** o fato sem outra fonte vigente; notas de A.3 nunca saem por revisão.
+  Nada é apagado nem comparado semanticamente. B.4 repete, copiado literalmente, o fato já
+  registrado que a tarefa reestabeleceu de forma independente, para registrá-la como fonte.
+- **Visões e aprovação global.** C.1, C.2 e C.3 recebem só resultados vigentes; C.1 e C.2 recebem
+  também um registro de revisões rotulado como histórico e estado (C.2 vê a conclusão dos resultados
+  em revalidação, para revisá-los). Desde a integração da etapa 07, o registro também lista os
+  resultados **confirmados** por uma revisora vigente, com o motivo aprovado: continuam vigentes por
+  essa investigação, não pela ordem. Toda revisão é seguida de nova C.1, e C.3 recebe exatamente os
+  resultados vigentes dessa aprovação.
+- **Auditoria.** Mensagens preservam todas as respostas e aprovações; `result_revisions` na sessão
+  registra substituídos, confirmados, suspensos, restaurados, aprendizados retirados/restaurados,
+  motivo planejado, justificativa aprovada e estado vigente. Sessões antigas são lidas sem revisões.
+
+As referências estruturadas permitem gerir as revisões; a identificação semântica do erro e a
+declaração das dependências relevantes continuam dependendo das fases do modelo. Dependências não
+declaradas não são detectadas, e C.1 continua responsável por contradições residuais.
+
+### Fidelidade da síntese final — thinking 06
+
+O paper já define C.3 como apresentação sem novo raciocínio, para reduzir “o risco de que a fase de
+apresentação introduza inferências não verificadas ou contradiga os resultados produzidos”. Esta
+extensão operacionaliza esse objetivo **dentro da própria C.3**, sem fase nova, sem segunda chamada,
+sem revisor ou pós-validador depois da síntese e sem garantia determinística da verdade do texto. O
+detalhamento, os casos motivadores e os exemplos estão em **Melhorias do thinking — 06: fidelidade da
+síntese final**, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md).
+
+- **Conferência na mesma chamada.** Antes de escrever `final_answer`, C.3 identifica o conteúdo
+  aprovado que responde a cada parte do pedido e confere que o texto preserva significado, direção
+  das comparações, sinais, unidades e referencial, referências, hipóteses, condições e qualificações
+  (“aproximadamente”, “sob a hipótese X”, “melhor ajuste”, “estimativa”). Tradução e concisão mudam a
+  redação, nunca esses aspectos. A justificativa apresentada não pode apontar em sentido oposto à
+  conclusão.
+- **Resultado calculado × escolha aprovada.** Uma escolha aprovada por melhor ajuste, aproximação ou
+  eliminação é apresentada com essa natureza, mesmo sem igualdade numérica e sem cálculo que produza o
+  valor escolhido. C.3 não a declara igual ao valor obtido e não a revalida com mais rigor que C.1.
+- **Pareamento literal × seleção analítica.** C.3 pode ligar um objeto já determinado ao
+  identificador que literalmente o rotula (letra e texto da alternativa, número do teste, nome,
+  código, mês), usando as anotações do enunciado. Não pode escolher por proximidade quando os
+  resultados não fizeram essa comparação, completar cálculo, resolver conflito residual nem inventar
+  identificador. A aprovação global não autoriza inventar informação.
+- **C.1 harmonizada.** Quando o pedido exige um identificador e nenhum material disponível registra
+  o vínculo entre ele e o item determinado, C.1 reprova o critério e nomeia o vínculo ausente; C.2
+  planeja uma tarefa que o estabelece a partir do enunciado. Se o pedido só exige o conteúdo, não há
+  lacuna. Marcador final, idioma e formato continuam com C.3.
+- **Entradas garantidas por código.** A aprovação global guarda os resultados vigentes e a área de
+  aprendizados exatamente como a última C.1 os recebeu; C.3 usa essa cópia, e a síntese é recusada se
+  o conjunto vigente mudou depois da aprovação. Conclusões substituídas, tentativas rejeitadas e o
+  histórico de mensagens não entram em C.3.
+
+A expressão do paper permanece, com a leitura explícita de que *Resultados Compilados* são os
+resultados vigentes aprovados na última C.1 e de que a área separada de aprendizados serve só para
+conferência literal dos dados do enunciado:
+
+> *Resultados aprovados na última C.1* + *Critérios Gerais (A.1)* + *Aprendizados (conferência literal)* + *Template C.3* → *Resposta Final*
+
+Os testes comprovam preservação das entradas, contrato do prompt e transições, com respostas do modelo
+roteirizadas; **não** comprovam que um modelo real escreve sempre uma resposta fiel.
+
+### Integração das cinco frentes — thinking 07
+
+As extensões 01 a 06 foram exercitadas em conjunto: **estrutura e recuperação** (recuperação integral,
+isolamento de contexto, livro de resultados vigentes e revisão auditável), **aprendizados**,
+**planejamento**, **validação** e **síntese fiel**. Esta etapa não acrescenta fase, chamada, campo de
+schema, limite ou pós-validador; ela corrige incompatibilidades entre as extensões anteriores. O
+detalhamento está em **Melhorias do thinking — 07: integração e evidências das cinco frentes**, em
+[`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md), e o relatório de validação em
+[`RELATORIO_VALIDACAO_MELHORIAS_THINKING.md`](RELATORIO_VALIDACAO_MELHORIAS_THINKING.md).
+
+- **Confirmação visível.** Uma revisão aprovada que **confirma** um resultado não muda seu estado,
+  mas passa a constar no registro de revisões entregue a C.1 e C.2 (“confirmed by `T4`”, com o motivo
+  aprovado). Antes, o registro dizia que nada havia sido revisado, e a regra de C.1 de que um
+  resultado mais recente não prevalece por recência podia levar a reabrir um conflito já explicado.
+  A confirmação, não a ordem temporal, sustenta o resultado; uma nova revisão do mesmo ponto exige
+  novo motivo concreto.
+- **Recuperação coerente com a revisão.** Quando a correção de A.2/C.2 decorre de `review` ou
+  `depends_on`, a mensagem pede corrigir as referências, sem abandonar a investigação dirigida de um
+  defeito apontado nem uma dependência efetivamente usada só para satisfazer o parser.
+- **Formatos de saída alinhados ao parser.** O exemplo de C.2 usa a numeração seguinte da sessão
+  (`T{{next_task_number}}`), e não `T1`, que o parser recusaria por repetir um ID; A.2 documenta
+  `depends_on` como opcional no próprio formato de saída; C.2 descreve sua área de resultados como
+  resultados **vigentes**.
+
+A garantia continua dividida em três níveis: comportamento programático testado (mensagens,
+transições, estado vigente, auditoria, orçamento, renderização), contrato de prompt verificado
+(instruções coerentes entre as nove fases) e desempenho semântico de um modelo real, que **não** foi
+avaliado e não pode ser inferido das respostas roteirizadas dos testes.
+
+### Nova fase de validação — 01: planejamento aprovado antes da execução
+
+**Problema observado.** O lote de A.2 passava pela validação estrutural do parser e entrava direto na fila. O parser confere JSON, campos, referências e limites, mas não sabe se uma tarefa antecipou uma conclusão ou exigiu aplicar um método cuja validade ainda deveria ser investigada. Mesmo com as instruções de A.2 para manter conclusões em aberto, execuções reais produziram critérios que obrigavam a confirmar uma interpretação; as tarefas seguintes cumpriam essa especificação errada e eram aprovadas.
+
+**Regra.** O planejamento passa a ter uma avaliação semântica separada antes de confirmar o plano:
+
+```text
+A.1 — Critérios gerais
+  → A.2 — Plano candidato
+  → A.3 — Task Decomposition Validator
+       ├─ reprovado → nova A.2 com o último candidato e o relatório → nova A.3
+       └─ aprovado → confirma o plano na fila → A.4 — Key Learnings from the Question
+  → B e C
+```
+
+> *Pergunta do usuário* + *Template A.2* (+ *Último candidato reprovado* + *Relatório de A.3*, nas revisões) → *Plano candidato*
+>
+> *Pergunta do usuário* + *Critérios gerais* + *Plano candidato atual* + *Template A.3* → *Relatório da validação*
+>
+> *Pergunta do usuário* + *Template A.4* → *Aprendizados Pontuais do Enunciado*
+
+- **A.2** gera o candidato com as regras de geração (seção acima e item 2 do guia); a autoavaliação extensa saiu do template. A primeira geração usa a temperatura da sessão; a geração depois de uma reprovação era retentativa a temperatura `1` — *substituído pelos refinamentos 03: `0.5` na primeira revisão e `1` nas seguintes*. Pode mudar quantidade, conteúdo, ordem, IDs e dependências quando o defeito exige, preservando o que não foi questionado e a cobertura.
+- **A.3** recebe, em janela nova, o enunciado (referência principal), os critérios gerais de A.1 e **somente** o candidato atual, com descrições, critérios e dependências — nunca candidatos ou relatórios anteriores, a conversa de A.2 ou aprendizados ainda não extraídos. Julga por rubrica fixa do harness, não pelos critérios que o próprio plano escreveu: **fidelidade**, **neutralidade**, **aplicabilidade**, **critérios**, **coerência**, **cobertura** e **necessidade**. Não resolve a pergunta, não escolhe resposta, não calcula uma conclusão alternativa e não rejeita automaticamente números, fórmulas, hipóteses explícitas justificáveis, dependências ou aproximações legítimas. Se A.1 inventou uma exigência, o enunciado prevalece: A.3 aponta o conflito sem reescrever A.1. Volta sempre à temperatura da sessão.
+- **Contrato de A.3:** `{"approved": true, "issues": []}` ou `{"approved": false, "issues": [{"task_id", "criterion_id", "problem", "adjustment"}]}`, com booleano real. `task_id`/`criterion_id` são obrigatórios no objeto e anuláveis: ambos nulos, problema do plano inteiro; só a tarefa, problema da tarefa; ambos, critério daquela tarefa no candidato julgado. Critério sem tarefa, referência inexistente, booleano como texto, campo ausente, texto vazio ou decisão incoerente com os problemas são violação de contrato, recuperada pela correção estrutural existente (mesma janela, temperatura `1`, sem contar como candidato novo). Uma reprovação coerente é saída aceita, não erro de parsing; o parser não fabrica aprovação, problemas ou ajustes. O ajuste diz o que investigar, sem impor um resultado.
+- **Fila:** só o plano aprovado entra na fila e consome os espaços de tarefa; candidatos recusados não reservam IDs nem slots, e o teto continua valendo para cada candidato. A confirmação é registrada uma única vez, depois da aprovação.
+- **A.4** é a antiga A.3: mesma extração, só do pedido original, em janela própria, uma vez, depois da confirmação e antes da primeira tarefa.
+- **Limite:** `RALPH_MAX_PLANNING_ATTEMPTS` (padrão 5) candidatos semânticos, incluindo o primeiro, independentes das tentativas por tarefa (5), das rodadas de C.2 (2) e das correções de saída (2). Esgotado sem aprovação, a sessão termina com `planning_attempts`, sem promover o último plano, sem A.4, tarefas ou síntese. Os demais tetos continuam podendo encerrar antes.
+- **Auditoria e versão:** cada candidato e cada relatório são mensagens próprias (janela, `prompt_input`, invocação, consumo e subtipo `plan_candidate`/`plan_rejected`/`plan_approved`); a confirmação tem subtipo `tasks`. A sessão grava `flow_version = 2`; sessões antigas sem o campo são lidas como versão 1, em que `A3` é a extração.
+- **Fora desta etapa:** C.2 não usa A.3; não há revisão automática de A.1, retorno de B.2 para A.2 nem o critério técnico `TECH` de B.2, previsto para a etapa seguinte (implementado na nova fase de validação — 02, abaixo).
+
+**Limite da garantia.** O código garante o protocolo: entradas e isolamento das janelas, contrato do relatório, confirmação só depois da aprovação, contagem e auditoria. Que o modelo identifique planos ruins sem rejeitar planos válidos é uma propriedade semântica ainda **não medida**. A nova chamada acrescenta ao menos uma inferência por sessão. Detalhes e exemplos em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md#nova-fase-de-validação--01-planejamento-aprovado-antes-da-execução).
+
+### Nova fase de validação — 02: validade técnica obrigatória das tarefas
+
+**Problema observado.** B.2 recebia o resultado preliminar, os critérios locais, os aprendizados e a eventual proposta de revisão, sem a descrição da tarefa, e sua aprovação estruturada dependia só dos critérios escritos pelo planejador. Um resultado podia cumprir formalmente esses critérios usando uma premissa inventada, um método fora das suas condições, um referente trocado ou uma inferência que não sustenta a conclusão; houve aprovações que apenas recontavam a explicação de B.1 como prova de correção, e escolhas da opção mais próxima de um cálculo errado.
+
+**Regra.**
+
+> *Tarefa (identificação, título e descrição)* + *Resultado preliminar* + *Critérios efetivos (planejados + `<task_id>-TECH` + `<task_id>-REV` quando houver)* + *Proposta de revisão* + *Aprendizados Pontuais* + *Template B.2* → *Relatório da verificação da tarefa*
+
+- **Critério técnico fixo.** O harness acrescenta a toda tarefa — comum ou revisora, de A.2 ou de C.2 — o critério `<task_id>-TECH` (por exemplo, `T2-TECH`), com uma única definição em inglês no código: o resultado resolve **o objetivo daquela tarefa** com fundamento compatível com dados, métodos e condições aplicáveis — premissas fornecidas ou justificadas, sem hipótese tratada como fato; referentes, unidades, condições e estágio temporal preservados; método aplicável e contribuições relevantes consideradas; encadeamento que sustenta a conclusão; cálculo, texto e conclusão consistentes; aproximação, hipótese ou melhor ajuste com suporte pertinente. Não depende de palavra-chave, disciplina, alternativas ou presença de cálculo.
+- **Composição única.** O conjunto efetivo é composto deterministicamente: critérios planejados (autoria do planejador, guardados à parte), depois `TECH`, depois `REV` numa revisora — cada um uma única vez, em toda tentativa. B.1 o recebe antes de resolver, B.2 o avalia e o parser exige exatamente esses identificadores. A.2/A.3 e o plano confirmado continuam mostrando só os critérios planejados.
+- **Identificadores reservados.** O planejador não pode emitir `<task_id>-TECH` (em qualquer tarefa) nem `<task_id>-REV` (numa revisora). O domínio recusa a tarefa e o parser recusa o lote de A.2/C.2 com violação de contrato, recuperada pela correção estrutural existente; nada é removido silenciosamente. A.3 não reprova um plano por não conter TECH, que só existe na execução.
+- **Aprovação.** O relatório mantém `criteria_evaluation`, `unmet_criteria_ids` e `decision`. Só é aprovado com **todos** os critérios efetivos atendidos. TECH e REV são independentes: uma revisão pode demonstrar seu veredito e ter erro técnico em outra parte, ou ser tecnicamente correta sem demonstrar a substituição. TECH ausente, repetido, ID desconhecido ou decisão incompatível com os `met` é defeito de contrato; `TECH: false` num relatório coerente é reprovação semântica válida.
+- **Fundamento antes da aproximação.** B.1 e B.2 conferem a base analítica antes de aceitar aproximação, estimativa, eliminação ou melhor ajuste. Dado fornecido não é resultado inferido; ausência de informação não demonstra sua negação; coerência narrativa não comprova atribuição a uma fonte (sem inventar referência e sem exigir consulta ou citação externa); a opção mais próxima não valida o cálculo de origem; uma hipótese precisa ser compatível com o cenário e justificada, com o mesmo padrão de suporte e de conteúdo implícito para as hipóteses comparadas. Aproximações, estimativas e melhor ajuste sustentados continuam aceitos, sem tolerância universal; restrições explícitas do usuário continuam valendo, e uma antecipação do planejador não vira obrigação do usuário. A política compartilhada de B.1/B.2/C.1 não mudou.
+- **Escopo local.** TECH avalia o objetivo daquela tarefa: não cobra análises de outras tarefas, formato final, justificativa externa não pedida nem exatidão incompatível com uma estimativa fundamentada. Uma tarefa intermediária correta não precisa responder a pergunta inteira.
+- **Critério com conclusão imposta inválida.** Se um critério planejado exige um número, expressão ou outra conclusão incompatível com os dados da tarefa e os aprendizados, B.2 marca esse critério como não atendido e registra o defeito de planejamento. Uma resolução tecnicamente correta pode atender a TECH e ainda deixar a tarefa reprovada pelo critério planejado; B.2 não o substitui nem exige um cálculo incorreto para satisfazê-lo. Isso é diferente de um critério que pede aproximação ou melhor ajuste fundamentado, que continua avaliado pela política de evidência, sem exigência universal de coincidência exata.
+- **Reprovação e retentativa.** B.2 aponta o dado ou trecho, a premissa decisiva e a relação conferida; ao reprovar, diz o que falhou e o que investigar, sem produzir a solução corrigida. B.1 recebe o relatório pelo mecanismo de tentativas anteriores, em janela nova, a temperatura `1`, corrige o defeito e preserva o que não foi refutado; a B.2 seguinte volta à temperatura da sessão. São **cinco tentativas por tarefa** (inicial + quatro), independentes das cinco do planejamento. Um critério planejado inviável que A.3 deixou passar é registrado na justificativa; não há retorno de B.2 a A.2.
+- **Estado.** Só resultado aprovado chega a B.3 e B.4; uma reprovação por TECH não altera resultados vigentes nem memória, e uma proposta de revisão só é aplicada com todos os critérios, incluindo TECH e REV, aprovados. B.4 recebe o histórico com os vereditos, mas não registra critérios, TECH/REV ou vereditos como fatos. C.1 continua com os critérios gerais (TECH não é critério global) e C.3 com os resultados vigentes da última aprovação global.
+- **Compatibilidade.** Sessões gravadas antes desta etapa não ganham TECH: a leitura, a consulta, a exportação e a importação não passam pelo parser e não revalidam relatórios antigos.
+
+**Limite da garantia.** O código garante a composição, o transporte, os contratos, as tentativas e o estado. Que um modelo real reprove premissas inventadas e métodos inaplicáveis sem rejeitar aproximações e inferências legítimas é propriedade semântica **não medida**; TECH não garante verdade factual. Detalhes e exemplos em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md#nova-fase-de-validação--02-validade-técnica-obrigatória-das-tarefas).
+
+### Refinamentos 03: planejamento, validação, retentativas e apresentação
+
+**Problema observado.** Depois de A.3 e TECH, a análise de 25 erros exportados ainda encontrou planos com condições omitidas, objetos trocados e prioridades impostas; reprovações de planos que só pediam uma investigação aberta, inclusive com pareceres que reprovam dizendo não haver defeito; aprovações técnicas por plausibilidade ou por uma afirmação estar no contexto; hipóteses do modelo tratadas como dados; retentativas que só reformulam; comparações com exigência seletiva; e uma resposta final que trocou o identificador da conclusão aprovada. O recorte inclui erros também da inferência simples e itens de gabarito duvidoso, por isso não serviu de definição automática de acerto.
+
+**Regra.** Sete refinamentos dentro das responsabilidades existentes, sem fase, chamada, schema, limite ou versão de fluxo novos:
+
+1. **A.3 — condições, referentes e prioridades.** A rubrica confronta o objetivo e as condições do pedido (referentes, unidades, relações temporais, condições simultâneas, restrições) com o que o plano investiga, inclusive na **integração** entre tarefas, e trata como defeito uma **prioridade imposta** (“mais geral”, “mais simples”, “mais específico”, “mais completo”) que decida a resposta sem estar no pedido. Copiar um dado do usuário é obrigatório quando pertinente; não é antecipação. O parecer nomeia a condição perdida e a investigação que deve preservá-la, sem calcular a resposta. A.2 e C.2 receberam as regras de geração correspondentes.
+2. **A.3 — investigação × conclusão.** Interpretar, comparar, classificar, formular oposição, verificar hipótese ou decidir se algo precisa de correção são investigações abertas; só título, descrição ou critério que fixem o resultado são antecipação. A reprovação exige defeito bloqueante (especificação errada, incompleta ou inviável) com exigência, regra violada e ajuste; um ponto que não precisa de ajuste não é problema. O parser continua validando só o contrato.
+3. **TECH — relação decisiva.** B.2 confere a relação que sustenta o veredito, com verificação proporcional (substituir a solução, conferir vínculo entre grandezas ou com a tabela, condição de aplicação, direção da comparação, correspondência com a definição); explicação longa, método citado ou “plausível” não bastam. Ao reprovar, aponta o que falha sem entregar a resolução. Aproximações fundamentadas continuam válidas.
+4. **Procedência visível.** A área **Aprendizados Pontuais** mostra a origem de cada nota pelas fontes vigentes: `[Question]`, `[Task T1]`, `[Tasks T1, T3]` ou `[Question; Task T2]`. O rótulo indica origem, não veracidade, e não entra no conteúdo, na deduplicação nem nos eventos. As fases B/C são orientadas a não tomar como sustentada uma afirmação só por estar na descrição ou na memória; resultados herdados conservam escopo e condições; B.4 copia só o texto da nota e preserva hipóteses e qualificações.
+5. **Retentativas.** A nova B.1 enfrenta a objeção (corrige premissa, relação, cálculo ou interpretação, ou mostra por que ela não invalida a conclusão), deixa ver o que mudou e revisa as restrições que ela mesma assumiu antes de declarar impossibilidade; A.2 revisa o defeito apontado mantendo o pedido como referência. **Temperatura de A.2:** candidato 1 na temperatura da sessão; candidato 2 (primeira revisão depois de uma reprovação válida de A.3) a `0.5`; candidatos 3–5 a `1`. A.3 sempre na temperatura da sessão; correções de saída inválida ou vazia a `1`, sem criar candidato nem avançar a escala; B.1 retentada continua a `1`.
+6. **Comparações.** B.1/B.2 comparam candidatos sob as mesmas condições e o mesmo padrão de suporte; característica compartilhada não distingue; a preferência precisa de diferença pertinente ao objetivo; “melhor explicação” não significa que as demais sejam falsas; não se criam exclusões inexistentes entre categorias.
+7. **C.3 — identificadores.** C.3 preserva o objeto ou a escolha analítica aprovados. Quando as notas do enunciado fornecem um pareamento literal explícito para esse item inequívoco, apresenta o identificador desse pareamento, mesmo se o resultado tiver anexado outro código ao mesmo item. Sem esse mapeamento, pode usar o identificador informado nos resultados, desde que consistente com o conteúdo aprovado. Depois de redigir, confere todo identificador — inclusive na linha marcadora — com esse vínculo. Não reescreve resultados armazenados nem escolhe entre conclusões analíticas conflitantes; continua sendo apresentação.
+
+**Limite da garantia.** São programáticos a escala de temperatura (enviada e auditada) e os rótulos de procedência; o restante é instrução ao modelo, cuja eficácia depende de **avaliação semântica ainda não executada** (matrizes `decomposition_validation_v2.json`, `technical_validation_v2.json` e `final_answer_fidelity_v1.json`). Nenhum ganho de acurácia é declarado. Detalhes, exemplos e testes em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md#refinamentos-03--planejamento-validação-retentativas-e-apresentação).
+
+### Diagnóstico estruturado das saídas do modelo (tratamento operacional)
+
+> **Natureza da regra:** isto **não** é uma etapa de raciocínio nem altera o fluxo do paper. Nenhum template, critério, tarefa ou decisão muda; o número de retentativas e a política de orçamento também não. É o registro, na sessão, de *por que* o parser aceitou ou recusou cada saída do modelo, para auditar falhas de protocolo sem confundi-las com resultados semânticos.
+
+**Problema observado.** O parser já validava JSON, tipos, campos, identificadores de critérios e a coerência dos vereditos, e a sessão guardava a saída recusada, o consumo e o `finish_reason`. Mas a recusa só existia como texto livre: não dava para separar, no benchmark, uma string cortada pelo limite de comprimento (Q056, Química ITA), um JSON inválido terminado com `stop` (Q042, Matemática ITA), um campo com tipo errado (Q163) e uma decisão incompatível com as avaliações (Q037). Além disso, o desfecho `success` de uma invocação dizia só que o provedor respondeu, não que o conteúdo foi aceito.
+
+**Regra.** Toda saída avaliada pelo parser — aceita ou recusada — recebe um diagnóstico gravado **na invocação que a produziu** (`invocations[].output_diagnostic`):
+
+| Campo | Valores | Significado |
+|---|---|---|
+| `syntax_status` | `valid`, `invalid`, `valid_after_repair` (ou `null` = não avaliada) | Havia um objeto JSON? `valid_after_repair` quando o reparo local só acrescentou chaves/colchetes finais (`repaired_closings`). |
+| `contract_status` | `valid`, `invalid`, `not_evaluated` | O objeto confere com o contrato da fase (schema e coerência)? `not_evaluated` quando não havia objeto. |
+| `problem` | `code`, `reason`, `field`, `affected_ids` | Um único problema por saída recusada: código (`json_syntax`, `schema_type`, `missing_field`, `empty_value`, `invalid_value`, `duplicate_id`, `criteria_ids`, `decision_consistency`, `task_ids`, `task_limit`, `task_references` — acrescentado pela revisão de resultados da etapa 05 —, `unsupported_phase`, `unclassified`), motivo legível (o mesmo da mensagem de correção), campo e critérios/tarefas afetados. |
+| `finish_reason` | texto do provedor | Motivo de término original, sem reinterpretação. |
+| `length_interruption` | `confirmed`, `suspected`, `not_detected`, `unknown` | Corte por comprimento, **independente da sintaxe**. Só o provedor confirma (`finish_reason == "length"`); sem motivo de término, uma saída que termina dentro de string ou com estruturas abertas é apenas **indício** (`suspected`). |
+
+- A invocação ganha `content_accepted` (`true`/`false`; `null` = desconhecido), separado do desfecho do provedor (`outcome`), que continua com o mesmo significado: uma chamada `success` pode ter conteúdo recusado.
+- **Recuperação:** a invocação recusada guarda `recovery` (`strategy`: `correction_prompt` ou `none`; `result`: `pending`, `recovered` ou `failed`; `resolved_by_invocation_id`). Cada nova chamada da mesma execução de fase aponta a invocação original em `recovers_invocation_id`. Em cancelamento controlado, as recuperações pendentes são persistidas como `failed` antes de propagar o cancelamento, sem nova tentativa nem alteração dos totais. A auditoria da saída recusada (mensagem de sistema com motivo e saída bruta) aponta a invocação em `invocation_id`.
+- **Sem dupla contagem:** uma saída com dois diagnósticos (por exemplo, truncada **e** com sintaxe inválida) é uma recusa só; os totais de chamadas, tokens e tempo não mudam com o diagnóstico.
+- **Validação estrita mantida:** avaliações ausentes não são preenchidas, tipos não são convertidos (`"true"` não vira `true`) e a decisão nunca é forçada. Uma reprovação **válida** de B.2 ou C.1 é resultado semântico normal: conteúdo aceito, sem problema nem recuperação.
+- **Sessões antigas:** documentos sem os campos novos são lidos com diagnóstico, recuperação e vínculo ausentes (`content_accepted: null`), nunca como sucesso presumido. Os campos aparecem na consulta `GET /v1/sessions/{id}` e na exportação ZIP dos erros do benchmark.
+
+### Idioma dos prompts internos (tratamento operacional)
+
+> **Natureza da regra:** isto **não** muda nenhuma etapa, critério ou decisão do fluxo. Só o idioma em que as instruções chegam ao modelo.
+
+Todo o fluxo de pensamento roda em **inglês**: os dez templates (`apps/backend/src/infra/templates/`), as mensagens de correção de saída inválida, os motivos de recusa do parser e o material que o orquestrador monta para os templates (tentativas anteriores, histórico da tarefa, resultados armazenados e o aviso de memória vazia). O **idioma da resposta final continua sendo o da pergunta**: A.1 registra como critério o idioma em que a pergunta foi escrita (salvo pedido explícito de outro), e as instruções em inglês não definem esse idioma. Os resultados internos podem estar em outro idioma; C.1 não trata isso como lacuna e C.3 traduz o conteúdo aprovado ao apresentar a resposta, sem novo raciocínio.
+
+Os nomes usados neste documento correspondem, nos templates, a:
+
+| Neste documento | Nos templates |
+|---|---|
+| Aprendizados Pontuais | Key Learnings |
+| Prompt Original | Original Prompt |
+| Resultados armazenados / Resultados já armazenados | Stored results / Results already stored |
+| `<tentativas_anteriores>` | `<previous_attempts>` |
+| `<resultado_aprovado>` | `<approved_result>` |
+| `<historico_da_tarefa>` | `<task_history>` |
+| "Nenhum aprendizado pontual registrado até o momento." | "No key learnings recorded so far." |
+
+No benchmark, cada dataset tem a própria instrução de resposta, no idioma das suas questões (`apps/backend/src/infra/benchmark/prompts/`): vestibulares em português, terminando com `RESPOSTA_FINAL: LETRA`; MMLU e GPQA em inglês, terminando com `FINAL_ANSWER: LETTER`. O avaliador aceita os dois marcadores.
+
+## Metodologia original — transcrição literal
+
+> **Atenção:** o bloco abaixo descreve o Planejamento em duas etapas (A.1 e A.2), afirma que a primeira tarefa não tem aprendizados acumulados, restringe os aprendizados à Execução em Loop (B.1), não trata da temperatura das retentativas, descreve tarefas com entradas e saídas esperadas, afirma que o contexto só é reinicializado ao iniciar uma nova tarefa e não durante as tentativas de repetição de uma mesma tarefa, e faz B.4 operar sobre o "contexto completo da tarefa" acumulado. Essas afirmações valem para o paper, mas **não** para o fluxo implementado, que inclui a validação da decomposição (A.3, com retorno a A.2), a extração dos aprendizados do enunciado (A.4; A.3 nas sessões antigas), a área de Aprendizados Pontuais em todo prompt das fases B e C, a temperatura `1` nas retentativas, as regras de redação das tarefas, sem entradas e saída declaradas, com critérios complementares e resultado sempre justificado, e a reinicialização de contexto a cada mudança de fase, com a tentativa anterior e o histórico da tarefa entregues como entradas explícitas (ver **Extensões ao método do paper**). O texto abaixo permanece inalterado de propósito.
+
+O bloco abaixo preserva exatamente os caracteres do trecho original enviado, inclusive marcação LaTeX/Markdown, fórmulas, exemplos, referências a figuras e eventuais erros tipográficos. Referências a imagens permanecem como caminhos do documento de origem; os arquivos das figuras não foram fornecidos. A seção separada **“Métodologia de avaliação”** não foi incluída, pois não faz parte da seção intitulada **“Metodologia”** no arquivo original.
+
+### Metodologia
+
+<!-- ================================================= -->
+
+![Visão geral do Ralph Wiggum Loop adaptado para resolução de perguntas em linguagem natural.](diagrams/ralph_loop_adaptado_png)
+
+Visão geral do *Ralph Wiggum Loop* adaptado para resolução de perguntas em linguagem natural.
+
+<a id="fig-ralph_loop_adaptado"></a>
+
+<!-- ============================================================= -->
+
+<!-- METODOLOGIA — Adaptação do Ralph Wiggum Loop -->
+
+<!-- ============================================================= -->
+
+A adaptação do *Ralph Wiggum Loop* para um contexto generalista de resolução de perguntas em linguagem natural exige ajustes estruturais em relação à formulação original, que foi concebida exclusivamente para fluxos de engenharia de software. A Figura [fig:ralph_loop_adaptado](#fig-ralph_loop_adaptado) apresenta uma visão geral do fluxo proposto, que preserva os princípios centrais do paradigma original, representado na Figura fig:ralph_loop_original.
+
+Em linhas gerais, propomos uma conversão do conceito de histórias de usuário para tarefas, o que nos permite manter um fluxo muito próximo do original, contendo as etapas de “Planejamento” e “Execução em Loop”. Entretanto, passa a ser necessário considerar a criação de um retorno ao usuário, algo que não constitui uma preocupação no *Ralph Wiggum Loop* original. Dessa forma, incorporamos uma nova fase após o fluxo de execução, denominada “Criação da Resposta Final”, que contém toda a lógica necessária para agrupar os resultados produzidos pelas tarefas anteriores em uma resposta que apresente o conteúdo e o formato esperados pelo usuário.
+
+Para ilustrar concretamente cada etapa do fluxo, adota-se ao longo desta seção o seguinte *input* de referência:
+
+**Exemplo**
+
+Qual dos seguintes números é simultaneamente primo, par e maior que 2?
+
+- A) 2
+
+- B) 4
+
+- C) 6
+
+- D) Nenhuma das anteriores
+
+Ao longo da descrição de cada fase, são apresentadas expressões que indicam quais informações compõem a entrada submetida ao modelo e qual saída é esperada. As nomenclaturas adotadas nessas expressões, como “Pergunta do usuário” ou “Template A.1”, representam os componentes lógicos necessários para montar o *prompt* de cada fase. O termo “Pergunta do usuário” refere-se ao *input* original fornecido ao sistema. Os termos na forma “Template X” referem-se a *prompts* fixos de instrução, cuja função é orientar o modelo sobre o que deve fazer naquela etapa específica. Já os termos na forma “Resultado Fase X” referem-se à saída produzida pelo modelo em uma etapa anterior, que pode ser reutilizada como entrada em etapas seguintes. Essas expressões não descrevem uma implementação concreta, mas sim a organização conceitual das informações que devem ser reunidas para que cada etapa do fluxo cumpra sua função.
+
+<!-- ────────────────────────────────────────────────────────────── -->
+
+<!-- A. Planejamento -->
+
+<!-- ────────────────────────────────────────────────────────────── -->
+
+#### Planejamento
+
+O planejamento é o início de todo o fluxo, compreendendo duas etapas que preparam toda a estrutura de execução: a definição dos critérios que a resposta final deverá respeitar e a decomposição da pergunta em tarefas autônomas e verificáveis.
+
+<!-- ———————————————————————— -->
+
+<a id="subsec-PlanejamentoA1"></a>
+
+##### Definição dos critérios de aceite gerais
+
+Essa etapa representa uma adição em relação ao paradigma original. No contexto de engenharia de software, cada tarefa concluída resultava em um *commit* que preservava o progresso diretamente no repositório, de modo que, ao término de todas as histórias de usuário, o produto final já estava pronto. No fluxo adaptado, entretanto, a conclusão de todas as tarefas não produz automaticamente uma saída utilizável: após todas as tarefas serem concluídas, é necessário construir uma resposta final que consolide os resultados gerados. Os critérios de aceite gerais definem as regras que essa resposta deverá respeitar, abrangendo aspectos como o idioma a ser utilizado, o formato de apresentação esperado e os tópicos-chave que devem constar no conteúdo final.
+
+A execução desta etapa envolve a associação da pergunta do usuário com instruções estruturadas, representadas pelo Template A.1. Este gabarito orienta o modelo a analisar o enunciado recebido e produzir as diretrizes gerais que a resposta final precisará satisfazer. Especificamente, as instruções orientam o modelo a identificar o idioma de resposta adequado, a estrutura ideal do formato de saída (como seleção de alternativas ou desenvolvimento textual) e os termos e restrições obrigatórios definidos no enunciado. A relação de entrada e saída que formaliza essa transformação de prompts é descrita na expressão ([eq:fluxo_a1](#eq-fluxo_a1)):
+
+<a id="eq-fluxo_a1"></a>
+
+> *Pergunta do usuário* + *Template A.1* → *Resultado Fase A.1*
+
+Nesta expressão, “Pergunta do usuário” representa o enunciado inicial e as opções de escolha inseridas no sistema, enquanto “Template A.1” constitui o prompt fixo de instrução que orienta a análise. O “Resultado Fase A.1” corresponde à lista final de critérios de aceite gerais que deverão ser satisfeitos para que a resposta final seja homologada.
+
+Os critérios de aceite estruturados gerados no Resultado Fase A.1 são persistidos localmente (em disco ou em memória) para posterior validação global na fase de Criação da Resposta Final.
+
+**Exemplo**
+
+Considerando o *input* de referência, o modelo deveria retornar uma lista de critérios como os seguintes.
+
+**Saída LLM**
+
+> “A pergunta deve ser respondida em Português do Brasil.”
+>
+> “Responda somente a alternativa, sem conter explicações adicionais.”
+>
+> “Garanta que o valor encontrado ao final corresponde a uma das alternativas fornecidas.”
+
+<!-- ———————————————————————— -->
+
+<a id="subsec-PlanejamentoA2"></a>
+
+##### Quebra em tarefas de objetivo único com critérios de aceite individuais
+
+A segunda etapa do planejamento é responsável por quebrar a pergunta do usuário em pequenas tarefas autônomas. Cada tarefa precisa ter pelo menos um critério de aceite, isto é, uma condição que define o conteúdo esperado para que a tarefa possa ser considerada concluída. A ideia central é criar tarefas que gerem insumos capazes de, em conjunto, sustentar a construção da resposta final.
+
+Esta etapa é operacionalizada ao submeter a pergunta do usuário juntamente com o Template A.2, cuja finalidade é instruir o modelo a realizar a decomposição em tarefas de responsabilidade única. O template orienta a caracterização detalhada de cada tarefa (como as respectivas entradas e saídas esperadas), deixando explícito que o contexto não será compartilhado diretamente entre as iterações subsequentes para mitigar o *context rot*. Adicionalmente, exige-se que cada tarefa traga seus próprios critérios de aceite individuais e restrições de escopo que evitem resoluções precoces do problema principal. A relação operacional de transformação é formalizada na expressão ([eq:fluxo_a2](#eq-fluxo_a2)):
+
+<a id="eq-fluxo_a2"></a>
+
+> *Pergunta do usuário* + *Template A.2* → *Resultado Fase A.2*
+
+Na formulação descrita, “Pergunta do usuário” corresponde ao enunciado principal que orienta a resolução, “Template A.2” identifica o prompt estruturado que instrui o modelo a realizar a divisão em tarefas, e “Resultado Fase A.2” é o cronograma resultante contendo a lista ordenada de tarefas e as condições de aceitação individuais de cada uma delas. O Resultado Fase A.2 gerado é armazenado localmente para posterior coordenação na fase de Execução em Loop.
+
+**Exemplo**
+
+Considerando o *input* de referência, o modelo deveria retornar uma decomposição como a seguinte.
+
+**Saída LLM**
+
+**Tarefa 1**
+
+- Tarefa: “Dadas as opções (2, 4, 6), identifique quais desses números são primos.”
+
+- Critérios de aceite:
+
+    - “Deve retornar a lista de números primos encontrados nas alternativas.”
+
+    - “Deve incluir uma breve explicação da regra de identificação de números primos.”
+
+    - “A resposta não deve tentar resolver a questão final.”
+
+    - “A resposta não deve avaliar nenhuma outra condição.”
+
+**Tarefa 2**
+
+- Tarefa: “Dadas as opções (2, 4, 6), identifique quais desses números são pares.”
+
+- Critérios de aceite:
+
+    - “Deve retornar a lista de números pares encontrados nas alternativas.”
+
+    - “Deve incluir uma breve explicação da regra de identificação de números pares.”
+
+    - “A resposta não deve tentar resolver a questão final.”
+
+    - “A resposta não deve avaliar nenhuma outra condição.”
+
+**Tarefa 3**
+
+- Tarefa: “Dadas as opções (2, 4, 6), identifique quais desses números são estritamente maiores que 2.”
+
+- Critérios de aceite:
+
+    - “Deve retornar a lista de números maiores que 2 encontrados nas alternativas.”
+
+    - “Deve incluir uma breve justificativa matemática para a comparação estabelecida.”
+
+    - “A resposta não deve tentar resolver a questão final.”
+
+    - “A resposta não deve avaliar nenhuma outra condição.”
+
+<!-- ────────────────────────────────────────────────────────────── -->
+
+<!-- B. Execução em Loop -->
+
+<!-- ────────────────────────────────────────────────────────────── -->
+
+#### Execução em Loop
+
+A fase de execução preserva a estrutura iterativa do paradigma original, mas adapta o mecanismo de conclusão de cada unidade de trabalho. Na formulação original, a conclusão de uma história de usuário é verificada por meio da execução de testes automatizados e da análise dos critérios de aceite associados ao código produzido. No fluxo adaptado, como não há código a ser testado, o modelo simplesmente resolve a tarefa selecionada e, em seguida, verifica se o resultado satisfaz os critérios de aceite individuais definidos no planejamento. Caso os critérios não sejam atingidos, o modelo repete a resolução da mesma tarefa até que sejam satisfeitos.
+
+Ao concluir uma tarefa com sucesso, o modelo realiza dois registros distintos com finalidades diferentes: **(i)** persiste a resposta aprovada em armazenamento local ou na memória da aplicação, em formato suficientemente estruturado para que cada resultado possa ser recuperado individualmente, servindo de insumo para a fase de Criação da Resposta Final; e **(ii)** extrai os aprendizados pontuais da execução, isto é, informações objetivas descobertas ao longo das tentativas, que serão injetados no contexto da próxima tarefa como mecanismo de *Fresh Context*. É fundamental ressaltar que esses dois registros têm escopos completamente distintos: os resultados armazenados alimentam exclusivamente a fase de Criação da Resposta Final; os aprendizados pontuais têm papel restrito à Execução em Loop e não participam da construção da resposta final. Antes de iniciar a execução da tarefa seguinte, o contexto é reinicializado, ou seja, o contexto é descartado e, atravez de uma nova chamada ao modelo, é recriado e os aprendizados acumulados são injetados como primeira entrada do novo contexto, de forma estruturada e explícita. Esse mecanismo garante que o conhecimento relevante seja preservado sem que o ruído e as redundâncias das etapas anteriores sejam herdados, mitigando ativamente o fenômeno de *context rot* [hong2025context].
+
+Após cada tarefa concluída, o fluxo verifica programaticamente se ainda existem tarefas disponíveis na lista produzida pelo planejamento. Caso haja, uma nova iteração é iniciada: o contexto é reinicializado, os aprendizados acumulados são injetados e a próxima tarefa é selecionada. Caso contrário, o fluxo avança para a fase de Criação da Resposta Final, levando consigo apenas os resultados armazenados, sem os aprendizados pontuais. Essa verificação é puramente programática e não envolve chamada ao LLM.
+
+<!-- ———————————————————————— -->
+
+<a id="subsec-ExecucaoB1"></a>
+
+##### Seleção da tarefa e resolução
+
+Essa subseção corresponde às etapas B.1 e B.2 do fluxo ilustrado na Figura [fig:ralph_loop_adaptado](#fig-ralph_loop_adaptado): a seleção da próxima tarefa disponível na lista gerada pelo planejamento (B.1) e sua subsequente resolução pelo modelo (B.2). Ao iniciar uma nova tarefa, e somente nesse momento, o contexto é reinicializado. Os aprendizados pontuais acumulados nas tarefas anteriores são injetados no início do novo contexto, antes da descrição da tarefa atual, garantindo continuidade do conhecimento relevante sem carregar o ruído das execuções anteriores. Na primeira tarefa do ciclo, não há aprendizados acumulados, de modo que o contexto inicial contém apenas a tarefa a ser resolvida.
+
+Para processar esta etapa, a descrição da tarefa selecionada é enviada ao modelo em conjunto com o Template B.1 e, caso existam iterações anteriores concluídas, com a memória de aprendizados acumulados. O Template B.1 impõe um limite estrito ao modelo, instruindo-o a focar unicamente no escopo demarcado para a tarefa e a abster-se de resolver a questão final prematuramente. O fluxo lógico de processamento de entradas e geração de respostas preliminares é modelado na expressão ([eq:fluxo_b1](#eq-fluxo_b1)):
+
+<a id="eq-fluxo_b1"></a>
+
+> *Aprendizados Acumulados* + *Tarefa Selecionada* + *Template B.1* → *Resultado Preliminar B*
+
+Nessa relação operacional, “Aprendizados Acumulados” refere-se ao conjunto de anotações internas compactas sintetizadas nas iterações anteriores (que se inicia vazio), “Tarefa Selecionada” consiste no bloco descritivo e critérios individuais definidos em Resultado Fase A.2, e “Template B.1” é o prompt estruturado de instrução. A variável “Resultado Preliminar B” denota a resposta preliminar produzida que será submetida à validação. O Resultado Preliminar B gerado por esta operação é subsequentemente direcionado à fase de controle de qualidade para validação individual dos critérios.
+
+**Exemplo**
+
+Considerando a Tarefa 1 como primeira tarefa do ciclo, o contexto não contém aprendizados acumulados.
+
+**Saída LLM**
+
+> “Entre as alternativas (2, 4, 6), somente o número 2 é primo. Um número primo é aquele divisível exclusivamente por 1 e por ele mesmo. O número 4 possui divisores adicionais (1, 2 e 4) e o 6 também (1, 2, 3 e 6), portanto nenhum dos dois é primo. Resultado: [2].”
+
+<!-- ———————————————————————— -->
+
+<a id="subsec-ExecucaoB2"></a>
+
+##### Verificação dos critérios de aceitação da tarefa
+
+Essa etapa verifica se o Resultado Preliminar B produzido na etapa anterior atende a todos os critérios de aceite individuais associados à tarefa em execução. Trata-se de um mecanismo de controle de qualidade interno: se todos os critérios forem atendidos, o fluxo avança para o armazenamento do resultado; caso contrário, a tarefa é reapresentada ao modelo para uma nova tentativa. É importante destacar que, ao contrário do que ocorre na transição entre tarefas distintas, o contexto *não* é reinicializado durante as tentativas de repetição de uma mesma tarefa. Essa escolha é intencional e tambem é usada no *Ralph Loop* original: a tentativa anterior, com os critérios não satisfeitos explicitamente sinalizados, permanece no contexto e auxilia o modelo a identificar o que deve ser corrigido na próxima execução.
+
+Esta validação lógica é formalizada na expressão ([eq:fluxo_b2](#eq-fluxo_b2)), onde se cruzam os resultados da inferência com os critérios estabelecidos:
+
+<a id="eq-fluxo_b2"></a>
+
+> *Resultado Preliminar B* + *Critérios da Tarefa* + *Template B.2* → *Decisão (Aprovado / Reprovado)*
+
+Nesta expressão, “Resultado Preliminar B” é a resposta candidata produzida pelo modelo, “Critérios da Tarefa” corresponde às condições específicas indexadas no Resultado Fase A.2, e “Template B.2” é o prompt estruturado de validação que define as regras do processo de qualidade, culminando na “Decisão (Aprovado / Reprovado)”. Esta etapa de validação operacionaliza-se por meio do Template B.2, o **Cenário de reprovação e nova tentativa.**
+
+**Exemplo**
+
+Considere a Tarefa 2 (“identifique quais números são pares”). O aprendizado acumulado da Tarefa 1 já está no contexto: “O único número primo entre as alternativas é o 2”. Suponha que o modelo produza na primeira tentativa:
+
+**Saída LLM**
+
+> “Todos os números 2, 4 e 6 são pares, pois são divisíveis por 2. No entanto, como apenas o 2 é primo (identificado anteriormente) e o 2 não é maior que 2, nenhuma alternativa satisfaz simultaneamente as três condições. Portanto, a resposta é D) Nenhuma das anteriores.”
+
+Avaliando esse resultado contra os critérios da Tarefa 2:
+
+**Saída LLM**
+
+> - “Deve retornar a lista de números pares.”  *Atendido*: os três números foram identificados.
+>
+> - “Deve incluir explicação da regra de identificação de pares.”  *Atendido*: a divisibilidade por 2 foi mencionada.
+>
+> - “A resposta não deve tentar resolver a questão final.”  **Não atendido**: o modelo antecipou a resposta final.
+>
+> - “A resposta não deve avaliar nenhuma outra condição.”  **Não atendido**: o modelo cruzou condições de outras tarefas.
+>
+> Decisão: **Reprovado**.
+
+O fluxo retorna à resolução da Tarefa 2, mantendo o contexto com a tentativa reprovada e os critérios não satisfeitos identificados. Na segunda tentativa, com o *feedback* anterior no contexto, o modelo retorna:
+
+**Saída LLM**
+
+> “Entre as alternativas (2, 4, 6), todos os três números são pares, pois cada um deles é divisível por 2 sem deixar resto (2÷2=1, 4÷2=2, 6÷2=3). Resultado: [2, 4, 6].”
+
+Todos os critérios da Tarefa 2 são agora atendidos. Decisão: **Aprovado**. O fluxo avança.
+
+<!-- ———————————————————————— -->
+
+<a id="subsec-ExecucaoB3"></a>
+
+##### Armazenamento do resultado
+
+Quando a resposta de uma tarefa é aprovada na verificação dos critérios de aceite, ela é persistida localmente. Somente essa resposta aprovada é armazenada: todo o ruído gerado pelos ciclos de tentativa anteriores (incluindo respostas reprovadas, histórico de verificações e *feedback* intermediário) é descartado na reinicialização do contexto. O armazenamento é indexado por tarefa, de modo que cada resultado possa ser recuperado individualmente como insumo exclusivo da fase de Criação da Resposta Final. A persistência é meramente operacional e não envolve novas chamadas ao modelo, sendo formalizada na expressão ([eq:fluxo_b3](#eq-fluxo_b3)):
+
+<a id="eq-fluxo_b3"></a>
+
+> *Resposta Aprovada* → *Armazenamento local*
+
+Nesta expressão, “Resposta Aprovada” representa a solução da tarefa que atendeu satisfatoriamente a todos os critérios na etapa anterior, a qual é direcionada para o “Armazenamento local”, que consiste na persistência física (em disco ou memória) indexada pelo identificador da tarefa correspondente.
+
+**Exemplo**
+
+A Tarefa 2 exigiu duas tentativas antes de ser aprovada. Somente a segunda é armazenada. A primeira tentativa reprovada, aquela que antecipou indevidamente a resposta final, permanece apenas no contexto ativo durante o ciclo de repetição e é descartada na reinicialização.
+
+Ao término da Execução em Loop, o armazenamento contém exclusivamente as respostas aprovadas de cada tarefa:
+
+- Tarefa 1: “Entre as alternativas (2, 4, 6), somente o número 2 é primo. Um número primo é aquele divisível exclusivamente por 1 e por ele mesmo. O número 4 possui divisores adicionais (1, 2 e 4) e o 6 também (1, 2, 3 e 6), portanto nenhum dos dois é primo. Resultado: [2].”
+
+- Tarefa 2: “Entre as alternativas (2, 4, 6), todos os três números são pares, pois cada um deles é divisível por 2 sem deixar resto (2÷2=1, 4÷2=2, 6÷2=3). Resultado: [2, 4, 6].”
+
+- Tarefa 3: “Os números estritamente maiores que 2 entre as alternativas são 4 e 6. O número 2 não satisfaz essa condição pois 2 > 2 é falso. Resultado: [4, 6].”
+
+Esse conjunto é entregue à fase de Criação da Resposta Final como base exclusiva para a construção da resposta.
+
+<!-- ———————————————————————— -->
+
+<a id="subsec-ExecucaoB4"></a>
+
+##### Armazenamento dos aprendizados pontuais
+
+Os aprendizados pontuais funcionam como as “anotações internas” do fluxo de *thinking*: são fatos secos e objetivos descobertos durante a execução de uma tarefa que podem ser úteis para guiar as tarefas subsequentes. Esses aprendizados não devem ser conceitos redundantes ou óbvios, mas sim dados de controle, metadados operacionais e restrições práticas descobertas na execução, como, por exemplo, registrar uma versão da linguagem específica disponível no ambiente. A extração de aprendizados considera o contexto completo da tarefa, incluindo as tentativas reprovadas, pois fatos úteis podem ter emergido mesmo em execuções que não passaram na verificação de critérios. Os aprendizados pontuais têm escopo estritamente restrito à Execução em Loop: são injetados no início do contexto de cada nova tarefa para subsidiar a resolução, mas não são incluídos, em nenhuma hipótese, na fase de Criação da Resposta Final.
+
+A extração de conhecimento é estruturada ao aplicar o Template B.4 sobre o histórico completo de execução da tarefa. A instrução exige que o modelo compile exclusivamente fatos concretos descobertos durante as tentativas (aprovadas ou não), registrando-os em formato de tópicos sucintos e secos, sem justificativas ou descrições narrativas de processo. A geração dessas anotações internas é representada na expressão ([eq:fluxo_b4](#eq-fluxo_b4)):
+
+<a id="eq-fluxo_b4"></a>
+
+> *Contexto Completo da Tarefa* + *Template B.4* → *Aprendizados Pontuais*
+
+Nessa expressão, “Contexto Completo da Tarefa” compreende todo o histórico acumulado no contexto (incluindo tentativas anteriores reprovadas e interações com o validador), “Template B.4” representa o prompt fixo que rege a compilação puramente factual, e “Aprendizados Pontuais” representa os tópicos secos resultantes anexados à Memória Acumulada. Os aprendizados pontuais resultantes são anexados à Memória Acumulada da aplicação. Diferente dos resultados estruturados de B.3, esses fatos acumulados destinam-se unicamente a guiar os novos contextos das tarefas subsequentes e não alimentam a resposta do usuário.
+
+**Exemplo**
+
+Após a conclusão da Tarefa 1 (identificação de números primos), a Memória Acumulada conteria um único aprendizado pontual realmente útil para guiar as etapas subsequentes, em vez de uma cópia da resposta completa gerada na etapa anterior ou de definições óbvias:
+
+**Saída LLM**
+
+> “Um número primo é aquele que só é divisível por 1 e por ele mesmo.”
+>
+>  
+>
+> “um numero par é aquele que é divisível por 2 sem deixar resto”
+>
+>  
+>
+> “Primos entre (2,4,6): [2]”
+>
+>  
+>
+> “Pares entre(2,4,6): [2, 4,6]”
+>
+>  
+>
+> “Maiores que 2 entre(2,4, 6): [4, 6]”
+
+Esse bloco compacto de fatos atômicos é injetado no início do contexto das tarefas subsequentes para auxiliá-las, sem carregar a descrição e o formato verbal da resposta completa gerada anteriormente.
+
+Como contraponto, o trecho a seguir ilustra o formato **inválido** de aprendizado, por ser excessivamente verboso, conter contexto processual irrelevante e não focar na restrição operacional útil:
+
+> *Inválido:* “Durante a execução da Tarefa 1, analisamos os números 2, 4 e 6, e depois de validarmos os divisores de cada um deles, concluímos que apenas o 2 é primo pois é divisível apenas por 1 e por ele mesmo.”
+
+O aprendizado pontual válido extrai puramente a informação útil: “Um número primo é aquele que só é divisível por 1 e por ele mesmo.”.
+
+A distinção entre resultado armazenado (etapa anterior) e aprendizado pontual é estrutural e intencional. O resultado é a resposta completa e verificada da tarefa, destinada à síntese da fase de Criação da Resposta Final. O aprendizado é um fragmento seco de fato, destinado exclusivamente a subsidiar a execução das tarefas seguintes dentro do loop.
+
+<!-- ────────────────────────────────────────────────────────────── -->
+
+<!-- C. Criação da Resposta Final -->
+
+<!-- ────────────────────────────────────────────────────────────── -->
+
+#### Criação da Resposta Final
+
+A terceira fase constitui uma adição exclusiva do fluxo adaptado, sem correspondência direta na formulação original. No *Ralph Wiggum Loop* concebido para engenharia de software, o produto final é o próprio código implementado e versionado ao longo das histórias; não há, portanto, necessidade de uma etapa de síntese do conteúdo e geração de resposta. No fluxo adaptado, os resultados das tarefas individuais são fragmentos de raciocínio que precisam ser compilados em uma resposta coesa e completa.
+
+Após o encerramento do loop, o modelo compila os resultados armazenados e verifica se as informações produzidas são suficientes para satisfazer todos os critérios de aceite gerais definidos no planejamento. Se os critérios forem integralmente atendidos, o modelo constrói a resposta final e a retorna ao usuário. Caso contrário, o sistema infere que o planejamento inicial foi insuficiente para cobrir todos os aspectos da pergunta e inicia uma fase de Planejamento Adicional: o modelo identifica os critérios ainda não atendidos, cria novas tarefas individuais para supri-los e retorna à fase de Execução em Loop. Esse mecanismo garante que lacunas de planejamento sejam identificadas e corrigidas antes que a resposta final seja construída, preservando a completude e a coerência da saída.
+
+<!-- ———————————————————————— -->
+
+<a id="subsec-RespostaC1"></a>
+
+##### Compilação dos resultados e verificação dos critérios gerais
+
+Essa etapa reúne todos os resultados armazenados durante a Execução em Loop e verifica se o conjunto de informações produzido é suficiente para satisfazer cada um dos critérios de aceite gerais definidos na etapa A.1. A distinção central em relação à verificação realizada na fase de Execução em Loop reside no escopo da avaliação: na etapa anterior, a verificação possui caráter local, avaliando cada tarefa individualmente frente aos seus próprios critérios; nesta etapa, por outro lado, a avaliação é global, considerando se a união dos dados acumulados atende plenamente ao enunciado geral.
+
+A validação global é efetuada ao associar os resultados consolidados com os critérios de A.1 sob as diretrizes do Template C.1. O modelo avalia individualmente as condições e emite um veredito estruturado (aprovado ou reprovado), apontando as eventuais pendências. A dinâmica de controle global é formalizada na expressão ([eq:fluxo_c1](#eq-fluxo_c1)):
+
+<a id="eq-fluxo_c1"></a>
+
+> *Resultados Armazenados* + *Critérios Gerais (A.1)* + *Template C.1* → *Decisão (Aprovado / Reprovado)*
+
+Nesta formulação global, “Resultados Armazenados” refere-se ao conjunto de respostas das tarefas que foram homologadas individualmente, “Critérios Gerais (A.1)” denota as diretrizes gerais de aceitação mapeadas no Resultado Fase A.1, e “Template C.1” é o prompt estruturado de validação global que orienta o modelo a tomar a “Decisão (Aprovado / Reprovado)”. Em caso de conformidade de todas as diretrizes, o fluxo prossegue diretamente para a consolidação e resposta; caso contrário, é deflagrada a etapa de Planejamento Adicional.
+
+**Exemplo**
+
+**Cenário de aprovação.** Com os três resultados disponíveis ao término do loop, a avaliação contra os critérios gerais de A.1 produz:
+
+**Saída LLM**
+
+> Resultados disponíveis:
+>
+> - Tarefa 1: “Entre as alternativas (2, 4, 6), somente o número 2 é primo. Um número primo é aquele divisível exclusivamente por 1 e por ele mesmo. O número 4 possui divisores adicionais (1, 2 e 4) e o 6 também (1, 2, 3 e 6), portanto nenhum dos dois é primo. Resultado: [2].”
+>
+> - Tarefa 2: “Entre as alternativas (2, 4, 6), todos os três números são pares, pois cada um deles é divisível por 2 sem deixar resto (2÷2=1, 4÷2=2, 6÷2=3). Resultado: [2, 4, 6].”
+>
+> - Tarefa 3: “Os números estritamente maiores que 2 entre as alternativas são 4 e 6. O número 2 não satisfaz essa condição pois 2 > 2 é falso. Resultado: [4, 6].”
+>
+> Avaliação dos critérios gerais:
+>
+> - “A pergunta deve ser respondida em Português do Brasil.”  *Atendível*: todos os resultados estão em português.
+>
+> - “Responda somente a alternativa, sem explicações adicionais.”  *Atendível*: os dados disponíveis permitem identificar a alternativa correta.
+>
+> - “O valor encontrado deve corresponder a uma das alternativas.”  *Atendível*: primo ∩ par ∩ maior que 2 = ∅, o que corresponde à alternativa D.
+>
+> Decisão: **Aprovado**.
+
+O fluxo avança para a construção da resposta final.
+
+**Cenário de reprovação.** Considere uma variação em que os critérios gerais incluam: “A resposta deve ser sustentada por uma verificação explícita de qual conjunto de alternativas satisfaz simultaneamente todas as condições enunciadas.” Os três resultados cobrem cada condição individualmente, mas nenhuma tarefa realizou a análise de interseção.
+
+**Saída LLM**
+
+> - “Verificação explícita da interseção dos conjuntos.”  **Não atendido**: nenhuma tarefa realizou a verificação combinada das três condições.
+>
+> Decisão: **Reprovado**.
+
+O fluxo avança para o Planejamento Adicional.
+
+<!-- ———————————————————————— -->
+
+<a id="subsec-RespostaC2"></a>
+
+##### Planejamento Adicional
+
+Quando os critérios gerais não são atendidos, o Planejamento Adicional funciona como uma extensão da fase A.2: identifica as lacunas específicas nos resultados disponíveis e cria novas tarefas individuais para supri-las. Diferentemente do planejamento inicial, que parte da pergunta do usuário sem qualquer contexto de execução, o Planejamento Adicional tem acesso ao conjunto de resultados já produzidos e ao mapeamento preciso dos critérios que ainda não foram satisfeitos. Essa informação torna as novas tarefas mais pontuais e direcionadas, evitando retrabalho sobre o que já foi verificado. As novas tarefas são adicionadas à fila de execução e o fluxo retorna à etapa B.1, agora com o contexto dos aprendizados acumulados de todas as tarefas anteriores disponível.
+
+O planejamento adicional atua de forma cirúrgica para suprir as lacunas apontadas pela verificação global. Ao conjugar os critérios não satisfeitos e as saídas previamente geradas com o Template C.2, o modelo é induzido a planejar novos subproblemas independentes capazes de complementar o conteúdo em falta. Esse processo de expansão do escopo é delineado na expressão ([eq:fluxo_c2](#eq-fluxo_c2)):
+
+<a id="eq-fluxo_c2"></a>
+
+> *Critérios Não Atendidos* + *Resultados Armazenados* + *Template C.2* → *Novas Tarefas*
+
+Nesta expressão, “Critérios Não Atendidos” são os critérios gerais identificados como não satisfeitos na etapa anterior, “Resultados Armazenados” são as respostas aprovadas de todas as tarefas já concluídas, e “Template C.2” é o prompt fixo de instrução descrito acima que direciona o modelo a produzir as “Novas Tarefas”. As novas tarefas, estruturadas com critérios individuais de aceite próprios, são inseridas no topo da fila e processadas no ciclo de Execução em Loop, garantindo que o planejamento convirja para o aceite global.
+
+**Exemplo**
+
+A partir da reprovação identificada no cenário anterior, o modelo produziria novas tarefas como a seguinte.
+
+**Saída LLM**
+
+> **Tarefa 4**
+>
+> - Tarefa: “Dadas as listas já identificadas — primos: [2]; pares: [2, 4, 6]; maiores que 2: [4, 6] —, determine quais números aparecem simultaneamente nas três listas.”
+>
+> - Critérios de aceite:
+>
+>     - “Deve retornar o resultado da interseção das três listas, podendo ser um conjunto vazio.”
+>
+>     - “Deve apresentar justificativa explicitando a presença ou ausência de cada candidato em cada lista.”
+>
+>     - “A resposta não deve construir a resposta final ao usuário.”
+
+Essa nova tarefa é enviada à Execução em Loop. Com os aprendizados de T1, T2 e T3 injetados no contexto, o modelo executa a Tarefa 4.
+
+**Saída LLM**
+
+> “Verificando a interseção: primos [2] ∩ pares [2, 4, 6] ∩ maiores que 2 [4, 6]. O número 2 está em {primos} e {pares}, mas não em {maiores que 2} (pois 2 > 2 é falso). Os números 4 e 6 estão em {pares} e {maiores que 2}, mas não em {primos}. Resultado da interseção: {} (conjunto vazio — nenhum número satisfaz simultaneamente as três condições).”
+
+Após a aprovação da Tarefa 4, o fluxo retorna à compilação dos resultados para nova verificação. Desta vez, com quatro resultados disponíveis, todos os critérios gerais são atendidos e o fluxo avança para a construção da resposta final.
+
+O mecanismo de Planejamento Adicional pode ocorrer mais de uma vez caso as novas tarefas criadas ainda não sejam suficientes para satisfazer todos os critérios gerais. A cada retorno à compilação, o conjunto de resultados disponíveis é maior, convergindo progressivamente para a completude.
+
+<!-- ———————————————————————— -->
+
+<a id="subsec-RespostaC3"></a>
+
+##### Construção da resposta final
+
+Com todos os critérios gerais satisfeitos, o modelo compõe a resposta final ao usuário. Essa etapa não realiza um novo raciocínio analítico sobre o problema: seu objetivo é exclusivamente organizar e apresentar os resultados já produzidos no formato e idioma definidos pelos critérios gerais (Resultado Fase A.1). A distinção entre esta etapa e as anteriores é deliberada: ao separar o raciocínio analítico, realizado de forma incremental e verificada durante a Execução em Loop, da síntese da resposta final, reduz-se o risco de que a fase de apresentação introduza inferências não verificadas ou contradiga os resultados produzidos.
+
+A síntese final é operacionalizada ao mesclar os resultados consolidados e os critérios gerais com as diretrizes do Template C.3, que proíbe terminantemente a inserção de novos fatos ou especulações que não estejam fundamentados na base de conhecimento gerada pelas tarefas. A relação operacional é expressa na expressão ([eq:fluxo_c3](#eq-fluxo_c3)):
+
+<a id="eq-fluxo_c3"></a>
+
+> *Resultados Compilados* + *Critérios Gerais (A.1)* + *Template C.3* → *Resposta Final*
+
+Nessa expressão, “Resultados Compilados” são as respostas aprovadas de todas as tarefas resolvidas e acumuladas, “Critérios Gerais (A.1)” são os critérios gerais definidos no Resultado Fase A.1, e “Template C.3” é o prompt fixo de instrução que orienta a compilação e formatação para produzir a “Resposta Final”. Esta resposta compilada é finalmente entregue ao usuário, concluindo todo o ciclo do harness de IA.
+
+**Exemplo**
+
+Em ambos os cenários (aprovação direta com três tarefas ou com Planejamento Adicional em quatro tarefas), os resultados indicam que primo ∩ par ∩ maior que 2 = ∅. Respeitando os critérios gerais, a resposta final produzida é:
+
+**Saída LLM**
+
+> **D) Nenhuma das anteriores**
+
+Essa resposta é então retornada ao usuário, encerrando o fluxo.
+
+<!-- ------------------------------------------------- -->

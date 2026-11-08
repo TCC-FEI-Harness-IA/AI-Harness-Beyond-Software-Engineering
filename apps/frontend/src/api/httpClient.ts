@@ -1,0 +1,129 @@
+// Único cliente HTTP do app (README, seção 9, regra de reuso 6). Toda resposta entra como
+// `unknown` e só sai tipada depois de passar por um parser de fronteira.
+
+import { env } from '../config/env'
+import { CanceledError } from './errors/CanceledError'
+import { ContractError } from './errors/ContractError'
+import { HttpError } from './errors/HttpError'
+import { NetworkError } from './errors/NetworkError'
+import { TimeoutError } from './errors/TimeoutError'
+
+function buildUrl(path: string): string {
+  return `${env.apiBaseUrl}${path}`
+}
+
+async function readDetail(response: Response): Promise<string | null> {
+  try {
+    const text = await response.text()
+    if (text === '') return null
+    const parsed: unknown = JSON.parse(text)
+    if (typeof parsed === 'object' && parsed !== null && 'detail' in parsed) {
+      const detail = (parsed as { detail: unknown }).detail
+      return typeof detail === 'string' ? detail : null
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+async function parseBody<T>(response: Response, parse: (raw: unknown) => T): Promise<T> {
+  const text = await response.text()
+  let raw: unknown
+  try {
+    raw = JSON.parse(text)
+  } catch {
+    throw new ContractError(`corpo da resposta não é JSON válido: ${text.slice(0, 200)}`)
+  }
+  return parse(raw)
+}
+
+async function request<T>(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  body: unknown,
+  readBody: (response: Response) => Promise<T>,
+  callerSignal?: AbortSignal,
+): Promise<T> {
+  const controller = new AbortController()
+  let timedOut = false
+  const timer = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, env.requestTimeoutMs)
+
+  const forwardAbort = () => controller.abort()
+  callerSignal?.addEventListener('abort', forwardAbort)
+
+  try {
+    // `Blob` (arquivo) segue bruto, com o próprio tipo; o resto vira JSON.
+    const isRaw = body instanceof Blob
+    const init: RequestInit = {
+      method,
+      body: body === undefined ? null : isRaw ? body : JSON.stringify(body),
+      signal: controller.signal,
+    }
+    if (body !== undefined) {
+      init.headers = {
+        'Content-Type': isRaw ? body.type || 'application/octet-stream' : 'application/json',
+      }
+    }
+
+    const response = await fetch(buildUrl(path), init)
+
+    if (response.status >= 400) {
+      const detail = await readDetail(response)
+      throw new HttpError(response.status, detail)
+    }
+
+    return await readBody(response)
+  } catch (error) {
+    if (error instanceof HttpError || error instanceof ContractError) throw error
+
+    if (controller.signal.aborted) {
+      if (timedOut) throw new TimeoutError(env.requestTimeoutMs)
+      // Cancelamento vindo do `signal` do chamador. Repassar o `AbortError` cru violaria o
+      // contrato da camada `api/` (só rejeita com `AppError`) e a tela o exibiria como
+      // "Violação de contrato" — que é exatamente o que ele não é.
+      throw new CanceledError()
+    }
+
+    throw new NetworkError(error)
+  } finally {
+    clearTimeout(timer)
+    callerSignal?.removeEventListener('abort', forwardAbort)
+  }
+}
+
+export const httpClient = {
+  get: <T>(path: string, parse: (raw: unknown) => T, signal?: AbortSignal): Promise<T> =>
+    request('GET', path, undefined, (response) => parseBody(response, parse), signal),
+  /** Baixa um arquivo: devolve o corpo como `Blob`, sem interpretá-lo como JSON. */
+  getBlob: (path: string, signal?: AbortSignal): Promise<Blob> =>
+    request('GET', path, undefined, (response) => response.blob(), signal),
+  post: <T>(
+    path: string,
+    body: unknown,
+    parse: (raw: unknown) => T,
+    signal?: AbortSignal,
+  ): Promise<T> =>
+    request('POST', path, body, (response) => parseBody(response, parse), signal),
+  put: <T>(
+    path: string,
+    body: unknown,
+    parse: (raw: unknown) => T,
+    signal?: AbortSignal,
+  ): Promise<T> =>
+    request('PUT', path, body, (response) => parseBody(response, parse), signal),
+  /** Envia um arquivo como corpo bruto (`Content-Type` do próprio `Blob`) e interpreta a resposta JSON. */
+  upload: <T>(
+    path: string,
+    file: Blob,
+    parse: (raw: unknown) => T,
+    signal?: AbortSignal,
+  ): Promise<T> =>
+    request('POST', path, file, (response) => parseBody(response, parse), signal),
+  /** Remove um recurso; a resposta (204) não tem corpo. */
+  delete: (path: string, signal?: AbortSignal): Promise<void> =>
+    request('DELETE', path, undefined, () => Promise.resolve(), signal),
+}

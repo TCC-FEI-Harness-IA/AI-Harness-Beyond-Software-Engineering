@@ -1,0 +1,1 @@
+E) Desterritorialização da produção.

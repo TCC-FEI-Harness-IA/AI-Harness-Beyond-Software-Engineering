@@ -1,0 +1,37 @@
+{
+  "dataset": "Idavidrein/gpqa",
+  "revision": "56686c06f5e19865c153de0fdb11be3890014df7",
+  "license": "CC-BY-4.0",
+  "source_url": "https://raw.githubusercontent.com/idavidrein/gpqa/56686c06f5e19865c153de0fdb11be3890014df7/dataset.zip",
+  "archive_sha256": "461ae7329f15a3e35f8184d2dac24b990f34fdf12f366ca4062d8e6638cd08dc",
+  "choice_seed": 0,
+  "subsets": {
+    "diamond": {
+      "sha256": "41d1213cd7a4998605a26c2798500652572007161b3a92817ba46b35befcd305",
+      "count": 198,
+      "subjects": {
+        "biology": 19,
+        "chemistry": 93,
+        "physics": 86
+      }
+    },
+    "main": {
+      "sha256": "acdeeac8f622267f2cd727d7d474202ea08dec80f7d3c3593b3ef8644f19b8e3",
+      "count": 448,
+      "subjects": {
+        "biology": 78,
+        "chemistry": 183,
+        "physics": 187
+      }
+    },
+    "extended": {
+      "sha256": "0926ee24949d02ed6748eb75a2611546c34479e30ddc42efd01d6f1681aaa48a",
+      "count": 546,
+      "subjects": {
+        "biology": 105,
+        "chemistry": 214,
+        "physics": 227
+      }
+    }
+  }
+}

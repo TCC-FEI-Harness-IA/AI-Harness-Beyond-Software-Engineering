@@ -1,0 +1,55 @@
+{
+  "_id": "sess_ce816f0decef4a1ca9a61ca01df423f7",
+  "id": "sess_ce816f0decef4a1ca9a61ca01df423f7",
+  "user_question": "Me conte uma piada",
+  "flow": "DIRECT",
+  "model_name": "deepseek/deepseek-v4-flash-0731",
+  "max_tokens": 1000,
+  "temperature": 0.3,
+  "status": "completed",
+  "created_at": "2026-09-13T21:27:18.447888+00:00",
+  "updated_at": "2026-09-13T21:27:22.173419+00:00",
+  "final_answer": "Por que o computador foi ao médico?\n\nPorque ele estava com um vírus e precisava de um \"antivírus\"! 😄",
+  "totals": {
+    "total_messages": 2,
+    "total_llm_calls": 1,
+    "tokens_input": 88,
+    "tokens_output": 68,
+    "total_tokens": 156,
+    "inference_time_ms": 3723,
+    "wall_time_ms": 3726
+  },
+  "messages": [
+    {
+      "id": "de41b2f6e0c6480fba2004e9077e5ef2",
+      "order": 0,
+      "timestamp": "2026-09-13T21:27:18.448918+00:00",
+      "phase": "DIRECT",
+      "source": "user",
+      "content": "Me conte uma piada",
+      "task_id": null,
+      "context_id": null,
+      "tokens_input": 0,
+      "tokens_output": 0,
+      "total_tokens": 0,
+      "inference_time_ms": 0,
+      "model_name": null
+    },
+    {
+      "id": "74e0a1385c574e31a6b44748c72981ac",
+      "order": 1,
+      "timestamp": "2026-09-13T21:27:22.171603+00:00",
+      "phase": "DIRECT",
+      "source": "llm_agent",
+      "content": "Por que o computador foi ao médico?\n\nPorque ele estava com um vírus e precisava de um \"antivírus\"! 😄",
+      "task_id": null,
+      "context_id": null,
+      "tokens_input": 88,
+      "tokens_output": 68,
+      "total_tokens": 156,
+      "inference_time_ms": 3723,
+      "model_name": "deepseek/deepseek-v4-flash-0731"
+    }
+  ],
+  "degradations": []
+}

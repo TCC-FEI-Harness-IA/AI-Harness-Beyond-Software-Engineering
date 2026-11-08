@@ -1,0 +1,46 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-block: var(--space-2);
+  scrollbar-width: thin;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.nodeSlot {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.retrySlot {
+  position: absolute;
+  top: -2px;
+  right: -6px;
+}
+
+.replanSlot {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 767px) {
+  .row {
+    justify-content: flex-start;
+  }
+
+  .item {
+    flex: none;
+  }
+}

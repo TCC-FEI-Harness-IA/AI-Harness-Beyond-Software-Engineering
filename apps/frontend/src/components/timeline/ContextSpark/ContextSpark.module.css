@@ -1,0 +1,15 @@
+.spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 20px;
+}
+
+.bar {
+  flex: 1;
+  min-width: 2px;
+  max-width: 6px;
+  border-radius: 1px;
+  background: var(--color-text-tertiary);
+  opacity: 0.6;
+}

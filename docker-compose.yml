@@ -1,0 +1,55 @@
+# Ambiente de produção: front compilado e servido por Nginx, back sem reload.
+# Uso: docker compose up --build
+#
+# Pré-requisito: apps/backend/.env e apps/frontend/.env preenchidos
+# (cp apps/*/.env.example apps/*/.env).
+services:
+  backend:
+    build:
+      context: ./apps/backend
+      target: prod
+    env_file:
+      - ./apps/backend/.env
+    environment:
+      # Nome do serviço `mongo` nesta mesma rede, não `localhost` do .env local.
+      MONGODB_URI: mongodb://mongo:27017
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_data:/app/data
+    depends_on:
+      - mongo
+    networks:
+      - app
+    restart: unless-stopped
+
+  # Usado quando RALPH_SESSION_STORAGE_BACKEND=mongodb (ver apps/backend/.env). O volume
+  # nomeado `mongo_data` sobrevive a `docker compose up --build` e a `docker compose down`
+  # — só `docker compose down -v` apaga os dados.
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      target: prod
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - app
+    restart: unless-stopped
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  backend_data:
+  mongo_data:

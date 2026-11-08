@@ -1,0 +1,27 @@
+# QUESTÃO 130
+
+Uma cafeteria adotou copos fabricados a partir
+de uma composição de 50% de plástico reciclado não
+biodegradável e 50% de casca de café. O copo é reutilizável
+e retornável, pois o material, semelhante a uma cerâmica,
+suporta a lavagem. Embora ele seja comercializado por
+um preço considerado alto quando comparado ao de um
+copo de plástico descartável, essa cafeteria possibilita aos
+clientes retornarem o copo sujo e levarem o café quente
+servido em outro copo já limpo e higienizado. O material
+desse copo oferece também o conforto de não esquentar
+na parte externa.
+Cafeteria adota copo reutilizável feito com casca de café. Disponível em:
+www.gazetadopovo.com.br. Acesso em: 5 dez. 2019 (adaptado).
+Quais duas vantagens esse copo apresenta em
+comparação ao copo descartável?
+
+A) Ter a durabilidade de uma cerâmica e ser totalmente biodegradável.
+
+B) Ser tão durável quanto uma cerâmica e ter alta condutividade térmica.
+
+C) Ser um mau condutor térmico e aumentar o resíduo biodegradável na natureza.
+
+D) Ter baixa condutividade térmica e reduzir o resíduo não biodegradável na natureza.
+
+E) Ter alta condutividade térmica e possibilitar a degradação do material no meio ambiente.

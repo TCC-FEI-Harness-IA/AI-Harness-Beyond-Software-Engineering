@@ -1,0 +1,151 @@
+import { describe, expect, it } from 'vitest'
+import {
+  benchmarkSession,
+  completedBenchmarkSession,
+  questionRun,
+} from '@/test/fixtures/benchmarkSession'
+import { ContractError } from '../errors/ContractError'
+import {
+  parseBenchmarkDataset,
+  parseBenchmarkFrame,
+  parseBenchmarkSession,
+  parseBenchmarkSessionList,
+} from './benchmarkSession'
+
+function withQuestion(overrides: Record<string, unknown>): unknown {
+  return { ...benchmarkSession(), questions: [{ ...questionRun(), ...overrides }] }
+}
+
+describe('parseBenchmarkSession', () => {
+  it('aceita documentos anteriores ao alias e preserva títulos quando presentes', () => {
+    const legacy: Record<string, unknown> = { ...benchmarkSession() }
+    delete legacy.alias
+    expect(parseBenchmarkSession(legacy).alias).toBeNull()
+    expect(parseBenchmarkSession({ ...legacy, alias: 'Meu benchmark' }).alias).toBe('Meu benchmark')
+    expect(() => parseBenchmarkSession({ ...legacy, alias: 42 })).toThrow(ContractError)
+  })
+  it('lê baterias antigas como vestibulares', () => {
+    const legacy: Record<string, unknown> = { ...benchmarkSession() }
+    delete legacy.benchmark
+    expect(parseBenchmarkSession(legacy).benchmark.dataset).toBe('vestibular')
+  })
+
+  it('preserva protocolo e disciplina do MMLU', () => {
+    const session = benchmarkSession()
+    session.benchmark = {
+      dataset: 'mmlu', revision: 'revision', protocol: 'generative_5shot', split: 'test',
+      few_shot: 5, subjects: ['college_physics'], sample_seed: 123,
+    }
+    session.questions[0]!.subject = 'college_physics'
+    expect(parseBenchmarkSession(session)).toEqual(session)
+  })
+
+  it.each([
+    { dataset: 'gpqa', split: 'unknown' },
+    { dataset: 'gpqa', few_shot: 5, protocol: 'generative_5shot' },
+    { dataset: 'outro' }, { few_shot: 3 }, { protocol: 'generative_5shot' }, { sample_seed: '42' },
+  ])('recusa metadados de benchmark inválidos (%#)', (overrides) => {
+    const session = benchmarkSession()
+    expect(() => parseBenchmarkSession({ ...session, benchmark: { ...session.benchmark, ...overrides } }))
+      .toThrow(ContractError)
+  })
+
+  it('aceita o documento completo da API', () => {
+    const document = completedBenchmarkSession()
+
+    expect(parseBenchmarkSession(document)).toEqual(document)
+  })
+
+  it('aceita a questão em execução sem desfechos', () => {
+    const parsed = parseBenchmarkSession(withQuestion({ status: 'running', current_mode: 'ralph' }))
+
+    expect(parsed.questions[0]?.current_mode).toBe('ralph')
+    expect(parsed.questions[0]?.simple).toBeNull()
+  })
+
+  it('trata desfechos ausentes como nulos', () => {
+    const question: Record<string, unknown> = { ...questionRun() }
+    delete question.simple
+    delete question.ralph
+
+    expect(
+      parseBenchmarkSession({ ...benchmarkSession(), questions: [question] }).questions[0]?.ralph,
+    ).toBeNull()
+  })
+
+  it.each([
+    ['status da bateria', { ...benchmarkSession(), status: 'pausada' }, 'benchmark_session.status'],
+    ['provedor', { ...benchmarkSession(), provider: 'outro' }, 'benchmark_session.provider'],
+    ['progresso', { ...benchmarkSession(), progress: null }, 'benchmark_session.progress'],
+    ['status da questão', withQuestion({ status: 'parada' }), 'questions[0].status'],
+    ['fluxo em execução', withQuestion({ current_mode: 'outro' }), 'questions[0].current_mode'],
+    ['sessões', { ...benchmarkSession(), session_ids: [1] }, 'session_ids[0]'],
+    [
+      'acerto do desfecho',
+      withQuestion({
+        simple: { ...completedBenchmarkSession().questions[0]?.simple, is_correct: 'sim' },
+      }),
+      'simple.is_correct',
+    ],
+  ])('recusa %s inválido', (_, raw, path) => {
+    expect(() => parseBenchmarkSession(raw)).toThrow(ContractError)
+    expect(() => parseBenchmarkSession(raw)).toThrow(path)
+  })
+})
+
+describe('parseBenchmarkSessionList', () => {
+  it('lê o envelope da listagem', () => {
+    expect(parseBenchmarkSessionList({ benchmark_sessions: [benchmarkSession()] })).toHaveLength(1)
+  })
+
+  it('aponta o item inválido', () => {
+    expect(() => parseBenchmarkSessionList({ benchmark_sessions: [{}] })).toThrow(
+      'benchmark_sessions[0]',
+    )
+  })
+})
+
+describe('parseBenchmarkDataset', () => {
+  it('lê as disciplinas e a revisão da origem', () => {
+    const raw = {
+      question_ids: ['Q1'], max_parallel_limit: 10, max_tokens_limit: 32000,
+      benchmark: benchmarkSession().benchmark, subjects: [{ id: 'college_physics', question_count: 102 }],
+    }
+    expect(parseBenchmarkDataset(raw)).toEqual(raw)
+  })
+  it('lê as questões e os limites de paralelismo e de tokens', () => {
+    const raw = { question_ids: ['Q1'], max_parallel_limit: 10, max_tokens_limit: 32000 }
+
+    expect(parseBenchmarkDataset(raw)).toEqual(raw)
+  })
+
+  it.each([
+    [{ question_ids: [], max_tokens_limit: 32000 }, 'max_parallel_limit'],
+    [{ question_ids: [], max_parallel_limit: 10 }, 'max_tokens_limit'],
+  ])('recusa limite ausente (%#)', (raw, field) => {
+    expect(() => parseBenchmarkDataset(raw)).toThrow(ContractError)
+    expect(() => parseBenchmarkDataset(raw)).toThrow(field)
+  })
+})
+
+describe('parseBenchmarkFrame', () => {
+  it('lê frames de progresso e de resultado', () => {
+    expect(
+      parseBenchmarkFrame({ type: 'progress', benchmark_session: benchmarkSession() }).type,
+    ).toBe('progress')
+    expect(
+      parseBenchmarkFrame({ type: 'result', benchmark_session: completedBenchmarkSession() }).type,
+    ).toBe('result')
+  })
+
+  it('lê o frame de erro', () => {
+    expect(parseBenchmarkFrame({ type: 'error', content: 'recusado' })).toEqual({
+      type: 'error',
+      content: 'recusado',
+    })
+  })
+
+  it('recusa tipo desconhecido', () => {
+    expect(() => parseBenchmarkFrame({ type: 'thinking' })).toThrow('type')
+  })
+})

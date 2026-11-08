@@ -6,3 +6,4 @@ class MessageSourceEnum(StrEnum):
 
     USER = "user"
     LLM_AGENT = "llm_agent"
+    SYSTEM = "system"

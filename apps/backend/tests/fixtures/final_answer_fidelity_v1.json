@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "purpose": "Synthetic cases for the presentation stage C.3 (refinements 03, change 7): the approved determination and its identifiers must survive translation and formatting. stored_results and learnings are the material C.3 receives; reference_answer, invalid_presentation and review_checks belong only to a later semantic evaluation of a real model: they are never sent to the model nor read by production code. Scripted tests prove the material and the protocol, not the fidelity of a real generation. No benchmark question or answer key.",
+  "cases": [
+    {
+      "name": "marker_letter_matches_approved_item",
+      "kind": "identifier_in_marker_line",
+      "user_question": "Qual das amostras tem a maior densidade? A) alumínio B) cobre C) chumbo D) ferro. Termine com a linha FINAL_ANSWER: LETRA.",
+      "general_criteria": [
+        "AC1: Answer in Portuguese.",
+        "AC2: End with the line FINAL_ANSWER: LETTER."
+      ],
+      "stored_results": "## T1 — Comparação das densidades\n\nCom as massas e os volumes medidos, a amostra de cobre tem a maior densidade entre as amostras de alumínio, cobre e ferro analisadas na tabela; a de chumbo não foi medida e não pode ser comparada.\n\n**Conclusion:** A amostra de maior densidade entre as medidas é a de cobre, que corresponde à opção B.",
+      "learnings": [
+        {"content": "Alternativas: A) alumínio; B) cobre; C) chumbo; D) ferro.", "source": null},
+        {"content": "A amostra de cobre tem a maior densidade entre as amostras medidas (alumínio, cobre e ferro).", "source": "T1"}
+      ],
+      "reference_answer": "A amostra de maior densidade entre as medidas é a de cobre.\n\nFINAL_ANSWER: B",
+      "invalid_presentation": "A amostra de maior densidade é a de cobre.\n\nFINAL_ANSWER: C",
+      "review_checks": [
+        "The marker line carries the letter that labels copper (B), the item the results determined.",
+        "The text and the marker designate the same item."
+      ]
+    },
+    {
+      "name": "translation_keeps_branches_direction_and_condition",
+      "kind": "translation_fidelity",
+      "user_question": "Resuma em português o que aconteceu com os estoques das filiais em maio.",
+      "general_criteria": [
+        "AC1: Answer in Portuguese.",
+        "AC2: Report the change of each branch's stock in May."
+      ],
+      "stored_results": "## T1 — Stock changes in May\n\nExcluding customer returns, as stated in the inventory rules, the east branch's stock decreased by 12 units in May and the west branch's stock increased by 5 units.\n\n**Conclusion:** In May, excluding returns, the east branch lost 12 units of stock and the west branch gained 5.",
+      "learnings": [
+        {"content": "Regra de inventário: devoluções de clientes não entram na contagem.", "source": null}
+      ],
+      "reference_answer": "Em maio, desconsiderando as devoluções de clientes, o estoque da filial leste diminuiu 12 unidades e o da filial oeste aumentou 5 unidades.",
+      "invalid_presentation": "Em maio, o estoque da filial leste aumentou 12 unidades e o da oeste diminuiu 5.",
+      "review_checks": [
+        "East decreases and west increases, as in the results; the branches are not swapped.",
+        "The month, the quantities and the exclusion of returns are kept."
+      ]
+    },
+    {
+      "name": "code_paired_literally_with_approved_object",
+      "kind": "object_code_pairing",
+      "user_question": "Os itens testados foram SB-12 (suporte de aço) e AL-07 (suporte de alumínio). Informe o código do item reprovado no ensaio de carga.",
+      "general_criteria": [
+        "AC1: Answer in Portuguese.",
+        "AC2: Give the code of the item that failed."
+      ],
+      "stored_results": "## T1 — Load test outcome\n\nThe aluminium bracket deformed permanently under the test load, while the steel bracket stayed within the elastic limit.\n\n**Conclusion:** The aluminium bracket is the item that failed the load test.",
+      "learnings": [
+        {"content": "Itens: SB-12 — suporte de aço; AL-07 — suporte de alumínio.", "source": null}
+      ],
+      "reference_answer": "O item reprovado no ensaio de carga é o AL-07 (suporte de alumínio).",
+      "invalid_presentation": "O item reprovado no ensaio de carga é o SB-12 (suporte de alumínio).",
+      "review_checks": [
+        "The code is the one the question's notes attach to the aluminium bracket.",
+        "No code is taken from the position of the item in the list."
+      ]
+    },
+    {
+      "name": "approved_best_fit_presented_as_best_fit",
+      "kind": "best_fit_choice",
+      "user_question": "Qual é aproximadamente o volume de água no tanque? A) 20 L B) 25 L C) 30 L D) 40 L",
+      "general_criteria": [
+        "AC1: Answer in Portuguese.",
+        "AC2: Select one option."
+      ],
+      "stored_results": "## T1 — Water volume\n\nWith the measured dimensions, the volume is about 31 L. Comparing with the options, 30 L (C) is the closest and the measurement precision does not distinguish 31 L from 30 L; the other options differ by 6 L or more.\n\n**Conclusion:** The estimated volume is about 31 L; option C) 30 L is the best fit.",
+      "learnings": [
+        {"content": "Alternativas: A) 20 L; B) 25 L; C) 30 L; D) 40 L.", "source": null}
+      ],
+      "reference_answer": "C) 30 L — a melhor aproximação para o volume estimado de cerca de 31 L.",
+      "invalid_presentation": "O volume é exatamente 30 L (C).",
+      "review_checks": [
+        "Presents the choice as the best fit for the estimate, without a false equality.",
+        "Does not refuse the approved choice for lack of exactness."
+      ]
+    }
+  ]
+}

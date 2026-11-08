@@ -1,0 +1,39 @@
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-2) 0;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
+.symbol {
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
+.symbol[data-tone='context'] {
+  color: var(--color-context);
+}
+
+.symbol[data-tone='strong'] {
+  color: var(--color-text);
+}
+
+.symbol[data-tone='success'] {
+  color: var(--color-success);
+}
+
+.symbol[data-tone='warning'] {
+  color: var(--color-warning);
+}
+
+.symbol[data-tone='secondary'] {
+  color: var(--color-text-secondary);
+}

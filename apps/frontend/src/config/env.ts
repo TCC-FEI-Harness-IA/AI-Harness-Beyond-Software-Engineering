@@ -1,0 +1,197 @@
+// Espelho, no front, da classe Settings do backend: lê import.meta.env uma única vez,
+// converte, valida e expõe um objeto congelado e tipado. Nenhum outro módulo do projeto
+// pode ler import.meta.env — isso é verificado por lint (no-restricted-syntax) e por grep.
+
+import { MODEL_PROVIDER, type ModelProvider, isModelProvider } from '@/domain/enums/modelProvider'
+
+export interface AppEnv {
+  readonly apiBaseUrl: string
+  readonly wsBaseUrl: string
+  readonly requestTimeoutMs: number
+  readonly defaultProvider: ModelProvider
+  readonly availableProviders: readonly ModelProvider[]
+  readonly defaultModel: string
+  readonly defaultMaxTokens: number
+  readonly defaultTemperature: number
+  readonly historyFetchConcurrency: number
+  readonly historySummaryMaxChars: number
+  readonly historySidebarSummaryMaxChars: number
+  readonly wsOpenTimeoutMs: number
+  readonly enableDebugPanel: boolean
+}
+
+type EnvKey =
+  | 'VITE_API_BASE_URL'
+  | 'VITE_WS_BASE_URL'
+  | 'VITE_API_PREFIX'
+  | 'VITE_REQUEST_TIMEOUT_MS'
+  | 'VITE_WS_OPEN_TIMEOUT_MS'
+  | 'VITE_DEFAULT_PROVIDER'
+  | 'VITE_AVAILABLE_PROVIDERS'
+  | 'VITE_DEFAULT_MODEL'
+  | 'VITE_DEFAULT_MAX_TOKENS'
+  | 'VITE_DEFAULT_TEMPERATURE'
+  | 'VITE_HISTORY_FETCH_CONCURRENCY'
+  | 'VITE_HISTORY_SUMMARY_MAX_CHARS'
+  | 'VITE_HISTORY_SIDEBAR_SUMMARY_MAX_CHARS'
+  | 'VITE_ENABLE_DEBUG_PANEL'
+
+// Erro tipado que nomeia sempre a variável problemática — evita depurar em produção
+// qual configuração faltou.
+export class ConfigError extends Error {
+  public readonly variable: string
+
+  constructor(variable: string, reason: string) {
+    super(`Configuração inválida: ${variable} — ${reason}`)
+    this.name = 'ConfigError'
+    this.variable = variable
+  }
+}
+
+function readRaw(key: EnvKey): string | undefined {
+  const value = import.meta.env[key]
+  return value === undefined || value === '' ? undefined : value
+}
+
+function readString(key: EnvKey, defaultValue?: string): string {
+  const raw = readRaw(key)
+  if (raw !== undefined) return raw
+  if (defaultValue !== undefined) return defaultValue
+  throw new ConfigError(key, 'variável obrigatória ausente ou vazia')
+}
+
+function readNumber(key: EnvKey, defaultValue?: number): number {
+  const raw = readRaw(key)
+  if (raw === undefined) {
+    if (defaultValue !== undefined) return defaultValue
+    throw new ConfigError(key, 'variável obrigatória ausente ou vazia')
+  }
+  const parsed = Number(raw)
+  if (Number.isNaN(parsed)) throw new ConfigError(key, 'precisa ser numérico')
+  return parsed
+}
+
+function readFloat(key: EnvKey, defaultValue?: number): number {
+  return readNumber(key, defaultValue)
+}
+
+function readBoolean(key: EnvKey, defaultValue?: boolean): boolean {
+  const raw = readRaw(key)
+  if (raw === undefined) {
+    if (defaultValue !== undefined) return defaultValue
+    throw new ConfigError(key, 'variável obrigatória ausente ou vazia')
+  }
+  const normalized = raw.trim().toLowerCase()
+  if (normalized === 'true') return true
+  if (normalized === 'false') return false
+  throw new ConfigError(key, 'precisa ser "true" ou "false"')
+}
+
+function readList(key: EnvKey, defaultValue: readonly string[] = []): readonly string[] {
+  const raw = readRaw(key)
+  if (raw === undefined) return defaultValue
+  return raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+}
+
+// O provedor viaja no payload e o backend recusa qualquer valor fora do seu enum; validar
+// aqui troca um 422 por requisição por uma falha de boot que nomeia a variável errada.
+function readProviders(defaultProvider: ModelProvider): readonly ModelProvider[] {
+  const raw = readList('VITE_AVAILABLE_PROVIDERS')
+  if (raw.length === 0) return [defaultProvider]
+
+  const invalid = raw.filter((item) => !isModelProvider(item))
+  if (invalid.length > 0) {
+    throw new ConfigError(
+      'VITE_AVAILABLE_PROVIDERS',
+      `provedor desconhecido pelo backend: ${invalid.join(', ')}`,
+    )
+  }
+
+  return raw as readonly ModelProvider[]
+}
+
+function validateHttpUrl(key: EnvKey, value: string): void {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new ConfigError(key, 'precisa ser uma URL válida')
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new ConfigError(key, 'precisa usar http:// ou https://')
+  }
+}
+
+function validateWsUrl(key: EnvKey, value: string): void {
+  if (!/^wss?:\/\//.test(value)) {
+    throw new ConfigError(key, 'precisa começar com ws:// ou wss://')
+  }
+}
+
+// Concatena origem + prefixo normalizando barras duplicadas e barra final.
+function joinUrl(base: string, prefix: string): string {
+  const cleanBase = base.replace(/\/+$/, '')
+  const cleanPrefix = `/${prefix.replace(/^\/+|\/+$/g, '')}`
+  return `${cleanBase}${cleanPrefix}`
+}
+
+function loadEnv(): AppEnv {
+  const apiBaseUrlRaw = readString('VITE_API_BASE_URL', 'http://localhost:8000')
+  const wsBaseUrlRaw = readString('VITE_WS_BASE_URL', 'ws://localhost:8000')
+  const apiPrefix = readString('VITE_API_PREFIX', '/v1')
+
+  validateHttpUrl('VITE_API_BASE_URL', apiBaseUrlRaw)
+  validateWsUrl('VITE_WS_BASE_URL', wsBaseUrlRaw)
+
+  const defaultProvider = readString('VITE_DEFAULT_PROVIDER', MODEL_PROVIDER.OPEN_ROUTER)
+  if (!isModelProvider(defaultProvider)) {
+    throw new ConfigError('VITE_DEFAULT_PROVIDER', 'provedor desconhecido pelo backend')
+  }
+
+  const availableProviders = readProviders(defaultProvider)
+  if (!availableProviders.includes(defaultProvider)) {
+    throw new ConfigError(
+      'VITE_DEFAULT_PROVIDER',
+      `precisa pertencer a VITE_AVAILABLE_PROVIDERS (${availableProviders.join(', ')})`,
+    )
+  }
+
+  // A lista de modelos vem do catálogo do backend (`GET /v1/models`, cadastrado na tela "Modelos");
+  // aqui fica só o modelo pré-selecionado enquanto o catálogo não chega.
+  const defaultModel = readString('VITE_DEFAULT_MODEL')
+
+  // `max_tokens` é o limite de tokens (entrada + saída) da sessão inteira, e não de uma chamada:
+  // o Ralph soma muitas chamadas, e o backend ainda separa dele a reserva da resposta final
+  // (RALPH_FINAL_ANSWER_TOKEN_RESERVE, 4000 por padrão). O valor nunca passa do limite por sessão
+  // do backend: o RunConfigContext o rebaixa assim que `GET /v1/limits` responde.
+  const defaultMaxTokens = readNumber('VITE_DEFAULT_MAX_TOKENS', 50000)
+  if (!Number.isInteger(defaultMaxTokens) || defaultMaxTokens <= 0) {
+    throw new ConfigError('VITE_DEFAULT_MAX_TOKENS', 'precisa ser um número inteiro positivo')
+  }
+
+  const defaultTemperature = readFloat('VITE_DEFAULT_TEMPERATURE', 0.3)
+  if (defaultTemperature < 0 || defaultTemperature > 1) {
+    throw new ConfigError('VITE_DEFAULT_TEMPERATURE', 'precisa estar entre 0 e 1')
+  }
+
+  return Object.freeze({
+    apiBaseUrl: joinUrl(apiBaseUrlRaw, apiPrefix),
+    wsBaseUrl: joinUrl(wsBaseUrlRaw, apiPrefix),
+    requestTimeoutMs: readNumber('VITE_REQUEST_TIMEOUT_MS', 60000),
+    defaultProvider,
+    availableProviders,
+    defaultModel,
+    defaultMaxTokens,
+    defaultTemperature,
+    historyFetchConcurrency: readNumber('VITE_HISTORY_FETCH_CONCURRENCY', 6),
+    historySummaryMaxChars: readNumber('VITE_HISTORY_SUMMARY_MAX_CHARS', 120),
+    historySidebarSummaryMaxChars: readNumber('VITE_HISTORY_SIDEBAR_SUMMARY_MAX_CHARS', 48),
+    wsOpenTimeoutMs: readNumber('VITE_WS_OPEN_TIMEOUT_MS', 15000),
+    enableDebugPanel: readBoolean('VITE_ENABLE_DEBUG_PANEL', false),
+  })
+}
+
+export const env: AppEnv = loadEnv()
