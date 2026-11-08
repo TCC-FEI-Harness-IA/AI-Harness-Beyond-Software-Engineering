@@ -1,20 +1,18 @@
 from dataclasses import dataclass, field
 
 from src.domain.entities.thinking.acceptance_criterion import AcceptanceCriterion
+from src.domain.entities.thinking.harness_criteria import (
+    revision_criterion,
+    revision_criterion_id,
+    technical_criterion,
+    technical_criterion_id,
+)
 from src.domain.entities.thinking.review_request import ReviewRequest
 from src.domain.entities.thinking.task_attempt import TaskAttempt
 from src.domain.entities.thinking.task_result import TaskResult
 from src.domain.entities.thinking.verification_report import VerificationReport
 from src.domain.enums.task_status_enum import TaskStatusEnum
 from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
-
-_REVISION_CRITERION_SUFFIX = "-REV"
-_REVISION_CRITERION_DESCRIPTION = (
-    "The revision proposal gives, for each result under review, exactly one verdict (confirmed or superseded) "
-    "that the investigation in this result demonstrates: superseded only when it identifies the concrete error "
-    "in the reviewed claim, confirmed when the claim withstands the investigation. Recency, a different "
-    "hypothesis or a different wording is not evidence for either verdict."
-)
 
 
 @dataclass
@@ -25,7 +23,8 @@ class Task:
         id: Identificador único da tarefa.
         title: Título curto da tarefa.
         description: Descrição da responsabilidade única da tarefa.
-        acceptance_criteria: Critérios de aceite individuais da tarefa.
+        acceptance_criteria: Critérios de aceite de autoria do planejador (A.2 ou C.2). Os critérios que o
+            harness acrescenta na verificação (`<id>-TECH` e, numa revisora, `<id>-REV`) não entram aqui.
         status: Estado atual da tarefa no loop de execução.
         origin_phase: Fase que originou a tarefa (A.2 ou C.2).
         attempts: Tentativas de resolução já realizadas para a tarefa.
@@ -49,8 +48,13 @@ class Task:
         Raises:
             ValueError: Quando uma dependência se repete, está em branco, aponta a própria tarefa ou um
                 resultado que ela revisa; quando a tarefa revisa a si mesma; ou quando um critério
-                planejado usa o identificador reservado ao critério de revisão.
+                planejado usa o identificador reservado ao critério técnico (em qualquer tarefa) ou ao
+                critério de revisão (numa revisora).
         """
+        # Antes do retorno antecipado das tarefas comuns: o critério técnico é reservado em toda tarefa.
+        reserved_technical = technical_criterion_id(self.id)
+        if any(criterion.id == reserved_technical for criterion in self.acceptance_criteria):
+            raise ValueError(f"O critério '{reserved_technical}' é reservado ao critério técnico do harness.")
         if len(set(self.depends_on)) != len(self.depends_on):
             raise ValueError(f"A tarefa '{self.id}' repete uma dependência.")
         if any(not task_id.strip() for task_id in self.depends_on):
@@ -63,8 +67,20 @@ class Task:
             raise ValueError(f"A tarefa '{self.id}' não pode revisar a si mesma.")
         if set(self.depends_on) & set(self.review.task_ids):
             raise ValueError(f"A tarefa '{self.id}' não pode depender de um resultado que revisa.")
-        if any(criterion.id == self.__revision_criterion_id() for criterion in self.acceptance_criteria):
-            raise ValueError(f"O critério '{self.__revision_criterion_id()}' é reservado à revisão.")
+        if any(criterion.id == revision_criterion_id(self.id) for criterion in self.acceptance_criteria):
+            raise ValueError(f"O critério '{revision_criterion_id(self.id)}' é reservado à revisão.")
+
+    @property
+    def technical_criterion(self) -> AcceptanceCriterion:
+        """Critério técnico fixo com que B.2 avalia a validade da resolução desta tarefa.
+
+        É acrescentado pelo harness a toda tarefa, comum ou revisora, de A.2 ou de C.2; o planejador não o
+        cria, não o escolhe e não pode removê-lo.
+
+        Returns:
+            AcceptanceCriterion: Critério `<id>-TECH`.
+        """
+        return technical_criterion(self.id)
 
     @property
     def revision_criterion(self) -> AcceptanceCriterion | None:
@@ -78,16 +94,27 @@ class Task:
         """
         if self.review is None:
             return None
-        return AcceptanceCriterion(id=self.__revision_criterion_id(), description=_REVISION_CRITERION_DESCRIPTION)
+        return revision_criterion(self.id)
+
+    def harness_criteria(self) -> tuple[AcceptanceCriterion, ...]:
+        """Critérios acrescentados pelo harness, sem autoria do planejador.
+
+        Returns:
+            tuple[AcceptanceCriterion, ...]: `<id>-TECH` e, numa tarefa revisora, `<id>-REV`, nessa ordem.
+        """
+        revision = self.revision_criterion
+        return (self.technical_criterion,) if revision is None else (self.technical_criterion, revision)
 
     def verification_criteria(self) -> tuple[AcceptanceCriterion, ...]:
-        """Critérios que B.2 avalia: os planejados e, numa tarefa revisora, o critério de revisão.
+        """Conjunto efetivo de critérios que B.1 conhece e B.2 avalia, composto deterministicamente.
+
+        É o mesmo conjunto em toda tentativa: os planejados, o critério técnico e, numa tarefa revisora, o
+        critério de revisão, cada um uma única vez.
 
         Returns:
             tuple[AcceptanceCriterion, ...]: Critérios verificados, na ordem de avaliação.
         """
-        revision = self.revision_criterion
-        return self.acceptance_criteria if revision is None else (*self.acceptance_criteria, revision)
+        return (*self.acceptance_criteria, *self.harness_criteria())
 
     def approved_result(self) -> TaskResult:
         """Devolve o resultado aprovado da tarefa, a única coisa que B.3 pode armazenar.
@@ -129,7 +156,7 @@ class Task:
             str | None: Justificativa do critério `<id>-REV`, ou `None` quando não há esse veredito.
         """
         last_report = self.attempts[-1].report if self.attempts else None
-        criterion_id = self.__revision_criterion_id()
+        criterion_id = revision_criterion_id(self.id)
         for evaluation in last_report.evaluations if last_report is not None else ():
             if evaluation.criterion_id == criterion_id:
                 return evaluation.justification
@@ -142,11 +169,3 @@ class Task:
             tuple[tuple[TaskAttempt, VerificationReport], ...]: Tentativas com relatório, em ordem.
         """
         return tuple((attempt, attempt.report) for attempt in self.attempts if attempt.report is not None)
-
-    def __revision_criterion_id(self) -> str:
-        """Identificador reservado ao critério de revisão da tarefa.
-
-        Returns:
-            str: `<id>-REV`.
-        """
-        return f"{self.id}{_REVISION_CRITERION_SUFFIX}"

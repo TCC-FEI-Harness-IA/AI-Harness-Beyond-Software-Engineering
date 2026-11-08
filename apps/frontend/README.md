@@ -228,6 +228,14 @@ por `apps/backend/tests/doubles/frontend_parity_capture.py` e conferidas por
 `apps/backend/tests/infra/test_frontend_parity_fixtures.py`); `parity.test.ts` cobre sessões antigas com
 uma sequência sintética.
 
+**Critério técnico de B.2 (nova fase de validação — 02).** Os relatórios de B.2 passaram a trazer a linha
+do critério técnico fixo `<task_id>-TECH` (e, numa revisora, `<task_id>-REV`). O frontend não interpreta
+esses IDs: o relatório é mostrado como qualquer outro, a tentativa é aprovada ou reprovada pelo subtipo
+(`verify_pass`/`verify_fail`), e o passo `execute` continua mostrando só os critérios planejados. A captura
+`capture-v2-tech-retry.json` (reprovação só por TECH seguida de retentativa aprovada) entra na mesma
+paridade ao vivo × histórico. Nenhuma mudança de código foi necessária; sessões antigas, sem TECH, seguem
+iguais.
+
 ---
 
 ## Dependências

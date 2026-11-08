@@ -31,6 +31,12 @@ from src.main import create_app
 _MODELO = "vendor/modelo"
 _CRITERIO = {"criterion_id": "AC1", "met": True, "justification": "Atende"}
 _APROVADO = {"decision": "approved", "criteria_evaluation": [_CRITERIO], "unmet_criteria_ids": []}
+# B.2 avalia o conjunto efetivo da tarefa: o critério planejado e o técnico fixo `T1-TECH`.
+_APROVADO_LOCAL = {
+    "decision": "approved",
+    "criteria_evaluation": [_CRITERIO, {"criterion_id": "T1-TECH", "met": True, "justification": "Fundamentado"}],
+    "unmet_criteria_ids": [],
+}
 _TAREFA = {
     "id": "T1",
     "title": "Resolver",
@@ -46,7 +52,7 @@ def _roteiro_ralph(resposta: str) -> list[str]:
         json.dumps({"approved": True, "issues": []}),
         json.dumps({"learnings": []}),
         json.dumps({"task_id": "T1", "result": "resolvido", "conclusion": "resolvido"}),
-        json.dumps(_APROVADO),
+        json.dumps(_APROVADO_LOCAL),
         json.dumps({"learnings": []}),
         json.dumps(_APROVADO),
         json.dumps({"final_answer": resposta}),

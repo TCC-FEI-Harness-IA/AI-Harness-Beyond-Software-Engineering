@@ -55,11 +55,14 @@ def _result(task_id: str, text: str) -> str:
     return _json(task_id=task_id, result=text, conclusion=text)
 
 
-def _report(evaluations: list[tuple[str, bool]], justification: str, decision: str | None = None) -> str:
-    unmet = [criterion_id for criterion_id, met in evaluations if not met]
+def _report(evaluations: list[tuple[str, bool]] | list[tuple[str, bool, str]], justification: str,
+            decision: str | None = None) -> str:
+    """Relatório coerente; uma avaliação com três itens traz a própria justificativa."""
+    unmet = [evaluation[0] for evaluation in evaluations if not evaluation[1]]
     return _json(
-        criteria_evaluation=[{"criterion_id": criterion_id, "met": met, "justification": justification}
-                             for criterion_id, met in evaluations],
+        criteria_evaluation=[{"criterion_id": evaluation[0], "met": evaluation[1],
+                              "justification": evaluation[2] if len(evaluation) == 3 else justification}
+                             for evaluation in evaluations],
         unmet_criteria_ids=unmet, decision=decision or ("reproved" if unmet else "approved"),
     )
 
@@ -100,7 +103,8 @@ def _stored_tasks(case: dict) -> list[str]:
     responses = [_criteria(case), _plan(*tasks), plano_aprovado(), aprendizados(*case["learnings"])]
     for item in case["stored_results"]:
         responses.extend([_result(item["task_id"], item["content"]),
-                          relatorio((f"{item['task_id']}-AC1", True)), aprendizados()])
+                          relatorio((f"{item['task_id']}-AC1", True), (f"{item['task_id']}-TECH", True)),
+                          aprendizados()])
     return responses
 
 
@@ -148,7 +152,8 @@ async def test_lacuna_ou_contradicao_de_c1_vira_investigacao_especifica_antes_de
     final = f"Resposta corrigida: {case['name']}"
     scenario = _scenario([
         *_stored_tasks(case), _global(case, case["reference_unmet"], case["reference_justification"]),
-        _plan(corrective), _result(next_id, case["corrective_result"]), relatorio((f"{next_id}-AC1", True)),
+        _plan(corrective), _result(next_id, case["corrective_result"]),
+        relatorio((f"{next_id}-AC1", True), (f"{next_id}-TECH", True)),
         aprendizados(case["corrective_result"]), _global(case, [], "A investigação explicada resolve a pendência."),
         resposta_final(final),
     ])
@@ -187,12 +192,14 @@ async def test_b2_verifica_a_relacao_tecnica_e_so_reprova_com_defeito_nomeado(ca
     responses = [
         _criteria(general), _plan(_task("T1", "Tarefa", "Resolva o pedido, explicando.", criterion["description"])),
         plano_aprovado(), aprendizados(*case["learnings"]), _result("T1", case["result"]),
-        _report([("T1-AC1", case["reference_decision"] == "approved")], case["reference_justification"]),
+        # A matriz v1 julga a base técnica do resultado: o critério técnico acompanha o veredito de referência.
+        _report([("T1-AC1", case["reference_decision"] == "approved"),
+                 ("T1-TECH", case["reference_decision"] == "approved")], case["reference_justification"]),
     ]
     reproved = case["reference_decision"] == "reproved"
     if reproved:
         responses.extend([_result("T1", case["corrective_result"]),
-                          _report([("T1-AC1", True)], "A relação técnica está correta.")])
+                          _report([("T1-AC1", True), ("T1-TECH", True)], "A relação técnica está correta.")])
     responses.extend([aprendizados(), relatorio(("AC1", True), ("AC2", True)), resposta_final("ok")])
     scenario = _scenario(responses)
 
@@ -232,8 +239,10 @@ async def test_feedback_por_termo_implicito_nao_obriga_trocar_a_resposta_sustent
         _plan(_task("T1", "Interpretação", "Compare A e D com o texto, explicando.",
                     case["criteria"][0]["description"])),
         plano_aprovado(), aprendizados(*case["learnings"]),
-        _result("T1", case["result"]), _report([("T1-AC1", False)], literal_gap),
-        _result("T1", explicit), _report([("T1-AC1", True)], "D está sustentada pela interpretação do rito."),
+        _result("T1", case["result"]),
+        _report([("T1-AC1", False), ("T1-TECH", True, "A interpretação de D é sustentada.")], literal_gap),
+        _result("T1", explicit), _report([("T1-AC1", True), ("T1-TECH", True)],
+                                         "D está sustentada pela interpretação do rito."),
         aprendizados(), relatorio(("AC1", True), ("AC2", True)), resposta_final("D"),
     ])
 
@@ -262,9 +271,9 @@ async def test_a2_recuperada_so_com_tarefa_intermediaria_passa_por_c1_c2_b_c1_c3
     corrective = _task("T2", "Período de Marte", case["corrective_task"], "Período em meses explicado.")
     scenario = _scenario([
         _criteria(case), rejected, _plan(intermediate), plano_aprovado(), aprendizados(*case["learnings"]),
-        _result("T1", ratio["content"]), relatorio(("T1-AC1", True)), aprendizados(ratio["content"]),
+        _result("T1", ratio["content"]), relatorio(("T1-AC1", True), ("T1-TECH", True)), aprendizados(ratio["content"]),
         _global(case, case["reference_unmet"], case["reference_justification"]),
-        _plan(corrective), _result("T2", case["corrective_result"]), relatorio(("T2-AC1", True)),
+        _plan(corrective), _result("T2", case["corrective_result"]), relatorio(("T2-AC1", True), ("T2-TECH", True)),
         aprendizados(case["corrective_result"]), _global(case, [], "O período em meses foi determinado."),
         resposta_final("RESPOSTA_FINAL: C"),
     ])
@@ -303,7 +312,8 @@ async def test_c1_aprovado_com_criterio_nao_atendido_e_corrigido_e_reprovacao_co
     scenario = _scenario([
         *_stored_tasks(case), incoherent, _global(case, case["reference_unmet"], case["reference_justification"]),
         _plan(_task(next_id, "Investigação", case["corrective_task"])), _result(next_id, case["corrective_result"]),
-        relatorio((f"{next_id}-AC1", True)), aprendizados(), _global(case, [], "Contradição investigada."),
+        relatorio((f"{next_id}-AC1", True), (f"{next_id}-TECH", True)), aprendizados(),
+        _global(case, [], "Contradição investigada."),
         resposta_final("final"),
     ])
 

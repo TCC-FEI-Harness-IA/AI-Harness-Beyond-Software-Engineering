@@ -19,6 +19,7 @@ A explicação geral do fluxo está em [`RALPH_LOOP_ADAPTADO.md`](RALPH_LOOP_ADA
 | 7 | **Separação entre escopo, suficiência e apresentação** | A.1, A.2, B.2, C.1, C.2 e C.3 | Reforço dos prompts: restrições reais, limites sobre ações, suficiência de conteúdo antes da apresentação e tratamento de lacunas reais. |
 | 8 | **Diagnóstico estruturado das saídas do modelo** *(tratamento operacional)* | Todas as fases com saída estruturada | Cada saída avaliada pelo parser registra, na invocação que a produziu, sintaxe, contrato, código do problema, término original, corte por comprimento e recuperação. Não muda o raciocínio, as retentativas nem o orçamento. |
 | 9 | **Nova fase de validação — 01: planejamento aprovado antes da execução** (nova A.3 e renumeração da extração para A.4) | A. Planejamento | O plano de A.2 vira candidato; A.3 o julga por rubrica fixa e o devolve a A.2 quando reprovado (até 5 candidatos); só o plano aprovado entra na fila; a extração do enunciado passa a ser A.4. |
+| 10 | **Nova fase de validação — 02: validade técnica obrigatória das tarefas** (critério `<task_id>-TECH`) | B. Execução em Loop | B.2 recebe a descrição da tarefa e avalia, além dos critérios planejados (e de `REV`), o critério técnico fixo `<task_id>-TECH`, que B.1 conhece antes de resolver; uma resolução que cumpre todos os critérios planejados pode ser reprovada só por ele. |
 
 As alterações 2 e 3 vieram de uma segunda rodada de testes. A alteração 2 **substitui** a regra de escopo da alteração 1 (e do paper), segundo a qual os aprendizados ficavam restritos a B.1; os pontos afetados da seção 1 estão marcados com *(atualizado pela alteração 2)*. A alteração 4 muda apenas o que os templates A.2 e C.2 pedem de cada tarefa; não muda a ordem das etapas nem as expressões de entrada e saída. A alteração 5 **substitui** a regra do paper segundo a qual as tentativas de uma mesma tarefa compartilham o contexto e B.4 opera sobre o "contexto completo da tarefa": as tentativas passam a rodar em janelas novas, e B.4 recebe o histórico da tarefa como material delimitado. Os pontos afetados das seções 2 e 3 estão marcados com *(atualizado pela alteração 5)*. A alteração 6 reforça os resultados parciais extraídos em B.4, a alteração 7 separa escopo, suficiência e apresentação, e a alteração 8 acrescenta diagnósticos operacionais associados às invocações.
 
@@ -3504,7 +3505,7 @@ contradições residuais. O item 2 é garantia programática.
 > executada depois da aprovação do plano. Também **substitui**, em A.2, a revisão final extensa do plano
 > dentro da geração (melhoria do thinking 03, seção “Final plan review”), cuja auditoria passou para a nova
 > A.3. Nada muda em C.2, que continua sem validador. O critério técnico `TECH` de B.2 pertence à etapa
-> seguinte (frente 2) e **não** está implementado aqui.
+> seguinte (frente 2) e **não** está implementado aqui (ver a seção “Nova fase de validação — 02”, abaixo).
 
 ### Problema
 
@@ -3671,3 +3672,194 @@ enunciado” passa a se referir à quarta etapa, executada depois da aprovação
 
 Relatório de implementação, matriz de testes e resultados:
 [`feature/nova-fase-validacao/RELATORIO_IMPLEMENTACAO_01.md`](feature/nova-fase-validacao/RELATORIO_IMPLEMENTACAO_01.md).
+
+---
+
+## Nova fase de validação — 02: validade técnica obrigatória das tarefas
+
+> **Procedência:** extensão posterior ao paper, implementada na frente 2 da proposta em
+> [`feature/nova-fase-validacao/README.md`](feature/nova-fase-validacao/README.md), sobre a base da frente 1
+> (nova A.3/A.4 e `flow_version = 2`, preservadas sem nova renumeração). **Amplia** a regra do paper
+> segundo a qual B.2 avalia a resposta “contra todos os critérios de aceite individuais da tarefa”: o
+> conjunto avaliado passa a incluir um critério fixo do harness, e B.2 recebe a descrição da tarefa. A
+> política compartilhada de evidência (thinking 04), o critério de revisão `REV` (thinking 05), as cinco
+> tentativas por tarefa e os contratos de C.1/C.2/C.3 não mudam.
+
+### Problema
+
+B.2 recebia o resultado preliminar, os critérios locais, os aprendizados e a eventual proposta de
+revisão, sem a descrição da tarefa. O template já pedia conferência técnica, mas a condição estruturada de
+aprovação estava presa aos critérios escritos pelo planejador. Um resultado podia cumpri-los formalmente
+com uma premissa inventada, uma fórmula inaplicável, um referente errado ou uma inferência que não
+sustenta a conclusão. Foram observadas aprovações que recontavam a explicação de B.1 como se a existência
+dela comprovasse a correção, e escolhas da alternativa mais próxima de um cálculo errado.
+
+### Regra nova
+
+> *Tarefa (identificação, título e descrição)* + *Resultado preliminar* + *Critérios efetivos* + *Proposta de revisão (quando houver)* + *Aprendizados Pontuais* + *Template B.2* → *Relatório da verificação da tarefa*
+>
+> *Tarefa* + *Critérios efetivos* + *Aprendizados Pontuais* + *Resultados sob revisão* + *Tentativas anteriores* + *Template B.1* → *Resultado preliminar*
+
+**Composição dos critérios.** O conjunto efetivo é montado deterministicamente pelo domínio
+(`Task.verification_criteria()`), sempre na mesma ordem e com cada critério uma única vez:
+
+| Ordem | Critério | Autoria | Presente em |
+|---|---|---|---|
+| 1 | `<task_id>-AC1`, `<task_id>-AC2`, … | Planejador (A.2 ou C.2), guardados em `acceptance_criteria` | Toda tarefa |
+| 2 | `<task_id>-TECH` | Harness (definição única em `harness_criteria.py`) | Toda tarefa: comum, revisora, de A.2 ou de C.2 |
+| 3 | `<task_id>-REV` | Harness | Só numa tarefa revisora |
+
+B.1 recebe esse conjunto **antes** de resolver; B.2 o avalia; o parser exige exatamente esses
+identificadores (`ValidationContext.expected_criteria_ids`). É o mesmo conjunto em toda retentativa. O
+plano candidato que A.3 audita, o plano confirmado na fila e o passo `execute` mostram só os critérios
+planejados: TECH não é escrito no array de autoria de A.2.
+
+**Definição de TECH** (em inglês no código, igual para toda tarefa): o resultado resolve **o objetivo
+daquela tarefa** com fundamento compatível com dados, métodos e condições aplicáveis — premissas fornecidas
+pela tarefa ou pelos aprendizados, ou justificadas, sem hipótese apresentada como fato; referentes,
+unidades, condições e estágio temporal preservados; método aplicável às condições, com as contribuições e
+condições relevantes consideradas; encadeamento que efetivamente sustenta a conclusão, além da presença de
+explicação; cálculo, texto e conclusão consistentes; aproximação, hipótese ou melhor ajuste com suporte
+pertinente. Cobre só o objetivo da tarefa: não cobra análises de outras tarefas, formato final,
+justificativa externa não pedida ou exatidão incompatível com uma estimativa fundamentada. Não depende de
+palavra-chave, disciplina, formato de alternativas ou presença de cálculo.
+
+**Identificadores reservados.** `<task_id>-TECH` é reservado em toda tarefa; `<task_id>-REV`, numa
+revisora (regra anterior preservada). O planejador não pode fornecê-los, substituí-los ou duplicá-los: o
+domínio recusa a tarefa (inclusive a comum, cuja checagem acontece antes do retorno antecipado de
+`review is None`) e o parser recusa o lote de A.2/C.2 com `invalid_value`, campo
+`tasks[].acceptance_criteria[].id` e o ID afetado. A correção é a recuperação estrutural existente (mesma
+janela, temperatura `1`); nada é removido nem renomeado em silêncio, e a recusa não conta como candidato
+de A.3. Os templates A.2 e C.2 dizem que `-TECH` e `-REV` são reservados; A.3 não reprova um plano por não
+conter TECH, que só existe na execução.
+
+**Áreas de B.2.** A tarefa (identificação, título e descrição — explicam o escopo; não são o resultado nem
+um conjunto novo de critérios), o resultado preliminar, os critérios efetivos, a proposta de revisão e os
+aprendizados ficam em áreas separadas. B.2 roda em janela nova: não recebe a conversa de B.1 nem o
+histórico do planejamento. Avalia todos os critérios e a sustentação técnica; não produz a solução
+corrigida, não completa uma etapa ausente e não edita critérios. Um defeito concreto vira reprovação com
+feedback para B.1. Um critério planejado inviável que A.3 deixou passar é avaliado como recebido e o
+defeito de planejamento é registrado na justificativa; não há retorno de B.2 a A.2.
+
+**Fundamento antes da aproximação.** Nos templates B.1 e B.2, a seção de TECH vem antes da política
+compartilhada e da escolha por melhor ajuste. A justificativa de TECH aponta o dado ou trecho, a premissa
+decisiva e a relação conferida; dizer que a explicação está completa ou repetir a conclusão não basta.
+Quando simples e pertinente, confere-se por outro ângulo (direção de uma variação, caso limite,
+compatibilidade entre partes do texto, relação temporal, referente ou unidade, consequência de uma
+generalização) — exemplos, não lista obrigatória, e sem segunda solução completa. Distinções preservadas:
+
+- dado fornecido não é resultado inferido; ausência de informação não demonstra sua negação; hipótese
+  favorável não vira fato sem suporte;
+- coerência narrativa não comprova atribuição a uma fonte; não se inventa referência verificável, e não se
+  exige consulta externa ou citação bibliográfica (não há ferramentas de pesquisa);
+- escolher a opção mais próxima de um valor não prova que o valor veio de um modelo válido;
+- uma hipótese precisa ser compatível com o cenário e justificada; ser concebível ou não proibida não
+  basta, sobretudo se adotada só para o candidato favorecido; o mesmo padrão de suporte e de conteúdo
+  implícito vale para as hipóteses comparadas, preservando inferências contextuais pertinentes;
+- aproximações, estimativas, eliminação e melhor ajuste sustentados continuam aceitos, sem tolerância
+  percentual universal, proibição de aproximação em problemas discretos ou cálculo direto obrigatório;
+- restrições explícitas do usuário, inclusive precisão ou exatidão, continuam valendo; uma antecipação do
+  planejador não vira obrigação do usuário.
+
+**Aprovação, contrato e estado.** O schema de B.2 continua `criteria_evaluation`, `unmet_criteria_ids` e
+`decision` (`approved`/`reproved`) — distinto do relatório de A.3 (`approved` booleano e `issues`). O
+relatório só é aprovado com todos os critérios efetivos atendidos. TECH ausente, repetido, ID
+desconhecido, `approved` com TECH falso, `reproved` sem pendências ou pendências incompatíveis com os
+`met` são defeito de contrato, recuperado sem alterar vereditos; `TECH: false` num relatório coerente é
+reprovação semântica válida. O parser não corrige vereditos, não fabrica avaliações e não decide se a
+justificativa é verdadeira. Só resultado aprovado chega a B.3/B.4; uma reprovação por TECH não altera
+resultados vigentes nem memória; a revisão proposta só é aplicada com TECH e REV aprovados.
+
+**Tentativas.** Cinco por tarefa (inicial + quatro), contadas à parte das cinco do planejamento e das
+rodadas de C.2. A B.1 retentada usa temperatura `1`, em janela nova, com o relatório reprovado na área de
+tentativas anteriores; a B.2 seguinte volta à temperatura da sessão. A recuperação de JSON/contrato mantém
+janelas, temperaturas, diagnósticos e limites. Esgotadas as cinco, a sessão termina com `task_attempts`,
+sem armazenar nem sintetizar conteúdo reprovado. Nenhum teto foi aumentado.
+
+### Exemplo — critérios planejados atendidos e TECH reprovado
+
+Tarefa `T2`: “Misturam-se 200 g de água a 80 °C com 100 g de água a 20 °C. Determine a temperatura de
+equilíbrio, com o balanço de calor e a justificativa de cada termo.” B.1 escreve um balanço que inclui um
+recipiente de cobre com capacidade térmica de 50 cal/°C, dado que não existe na tarefa:
+
+```json
+{
+  "criteria_evaluation": [
+    {"criterion_id": "T2-AC1", "met": true, "justification": "The heat balance is written with substitution and units."},
+    {"criterion_id": "T2-AC2", "met": true, "justification": "Each term of the balance is explained."},
+    {"criterion_id": "T2-TECH", "met": false, "justification": "The container's material, heat capacity and initial temperature are not supplied; the result treats them as facts and they change the equilibrium temperature. Investigate the balance with the supplied data only, or state and justify an explicit assumption and its effect."}
+  ],
+  "unmet_criteria_ids": ["T2-TECH"],
+  "decision": "reproved"
+}
+```
+
+### Exemplo — retentativa que corrige o defeito
+
+A nova B.1 roda em janela nova, a temperatura `1`, e recebe em `<previous_attempts>` o resultado reprovado,
+o relatório inteiro e a instrução “Criteria not met: `T2-TECH`.” Ela refaz o balanço só com os dados
+fornecidos — 200·(80 − T) = 100·(T − 20), logo T = 60 °C —, mantendo o que não foi refutado (a forma do
+balanço). A B.2 seguinte, na temperatura da sessão, aprova `T2-AC1`, `T2-AC2` e `T2-TECH`; só então B.3
+armazena o resultado e B.4 extrai “A temperatura de equilíbrio sem perdas é 60 °C …”, sem registrar
+critérios, TECH ou vereditos.
+
+### Exemplo — TECH e REV coexistindo
+
+Uma revisora `T4` (planejada em C.2 para investigar `T3`) tem o conjunto `T4-AC1`, `T4-TECH`, `T4-REV`.
+Se a investigação demonstra o veredito `superseded`, mas usa uma relação fora das suas condições noutra
+parte da resposta, o relatório marca `T4-REV: true` e `T4-TECH: false` e reprova; a revisão **não** é
+aplicada. Se a resposta é tecnicamente correta mas não demonstra o erro concreto de `T3`, marca
+`T4-TECH: true`, `T4-REV: false` e também reprova. Só com os dois atendidos a substituição é aplicada,
+de forma auditada.
+
+### Controles positivos (não são soluções de produção)
+
+- **Tarefa intermediária:** “Com Ca = 40, C = 12, O = 16, determine a massa molar do CaCO₃.” O resultado
+  100 g/mol, com a soma mostrada, atende TECH, embora não responda à pergunta final (a massa de gás
+  liberada), que é de outra tarefa.
+- **Pergunta aberta:** uma estimativa do consumo mensal de água em banhos de uma família de quatro pessoas,
+  com hipóteses explícitas (duração, vazão, frequência) e seu efeito sobre a precisão, atende TECH sem
+  valor exato.
+- **Aproximação fundamentada:** T = 2π√(1,0/9,8) ≈ 2,01 s para um pêndulo de pequena amplitude, com a
+  alternativa 2,0 s escolhida por melhor ajuste e sem afirmar igualdade, atende TECH.
+
+Esses e outros casos, negativos (premissa não fornecida, método fora das condições, direção incompatível
+com uma tabela, causa de outra etapa temporal, proximidade sobre cálculo inválido) e positivos (hipótese
+justificada, inferência contextual, justificativa final não pedida), estão na matriz sintética
+`apps/backend/tests/fixtures/technical_validation_v1.json`. A referência fica fora das entradas do modelo e
+dos templates; os testes provam transporte e contrato, não acurácia.
+
+### O que muda no texto do paper
+
+Na Verificação dos critérios de aceitação da tarefa, a resposta preliminar passa a ser avaliada, em
+contexto novo, contra os critérios individuais da tarefa **e** contra o critério técnico fixo do harness,
+com a descrição da tarefa como entrada explícita. A condição de aprovação continua “todos os critérios
+atendidos”, agora sobre o conjunto efetivo.
+
+### O que permanece
+
+Parser: valida cobertura e coerência contra os IDs informados pela chamada, sem juízo factual. Persistência
+e histórico: os relatórios de B.2 são gravados como antes, agora com a linha de TECH; sessões antigas não
+são reescritas nem revalidadas, e o frontend trata `T<n>-TECH` como qualquer ID de critério. Memória: B.4
+continua com a mesma entrada e política. Custos: nenhuma chamada nova numa aprovação de primeira; cada
+reprovação por TECH custa uma B.1 e uma B.2 a mais, dentro dos mesmos tetos. Síntese: C.1 avalia só os
+critérios gerais; C.3 apresenta os resultados vigentes da última aprovação global.
+
+### Garantias e limites
+
+- **Garantia programática (testada):** composição única do conjunto efetivo em B.1/B.2/parser/retentativa;
+  TECH uma vez por tarefa comum, revisora ou de C.2, ao lado de REV; recusa do ID reservado no domínio e no
+  parser com recuperação estrutural; áreas separadas e janela nova em B.2; reprovação isolada por TECH com
+  retentativa a `1`; aprovação só com todos os critérios; revisão aplicada só com TECH e REV; cinco
+  tentativas independentes do planejamento; nada armazenado ou sintetizado a partir de conteúdo reprovado;
+  compatibilidade de histórico, exportação/importação e frontend.
+- **Contrato do prompt (verificado como texto):** definição de TECH, ordem “fundamento antes de
+  aproximação”, distinções sobre premissas, fontes, proximidade e hipóteses, limites de escopo e
+  justificativa exigida. A presença das instruções não prova obediência.
+- **Qualidade semântica (não medida):** que um modelo real reprove premissas inventadas, métodos
+  inaplicáveis e escolhas por proximidade sobre cálculo errado sem rejeitar aproximações, estimativas e
+  inferências legítimas. TECH não garante verdade factual por código; um validador que reprova tudo só
+  gasta tentativas. Testes roteirizados não demonstram ganho de acurácia.
+
+Relatório de implementação, matriz de testes e resultados:
+[`feature/nova-fase-validacao/RELATORIO_IMPLEMENTACAO_02.md`](feature/nova-fase-validacao/RELATORIO_IMPLEMENTACAO_02.md).

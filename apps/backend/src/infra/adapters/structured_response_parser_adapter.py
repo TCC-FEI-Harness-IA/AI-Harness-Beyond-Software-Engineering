@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from src.domain.entities.thinking.harness_criteria import revision_criterion_id, technical_criterion_id
 from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
 from src.domain.entities.thinking.output_problem import OutputProblem
 from src.domain.entities.thinking.parsed_output import ParsedOutput
@@ -43,7 +44,6 @@ _TRUNCATED_REASON = (
     "The output was cut off by the length limit before forming a complete JSON object."
 )
 _UNSUPPORTED_PHASE_REASON = "The phase does not produce structured output."
-_REVISION_CRITERION_SUFFIX = "-REV"
 _ABSENT_REVISIONS = (None, [])
 
 
@@ -501,9 +501,15 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
         Raises:
             _ContractViolation: Quando `depends_on` não é uma lista de identificadores únicos; quando
                 `review` não é um objeto com `task_ids` não vazio e sem repetição e `reason` preenchido;
-                ou quando um critério planejado usa o identificador reservado ao critério de revisão.
+                ou quando um critério planejado usa o identificador reservado ao critério técnico (em
+                qualquer tarefa) ou ao critério de revisão (numa revisora).
         """
         owner = task["id"]
+        # O critério técnico é acrescentado pelo harness a toda tarefa: conferido antes do retorno das comuns.
+        self.__reject_reserved_criterion(
+            task=task, reserved=technical_criterion_id(owner),
+            purpose="the fixed technical criterion that the harness adds to every task",
+        )
         if task.get("depends_on") is not None:
             self.__require_id_list(
                 source=task, key="depends_on", label="depends_on", allow_empty=True,
@@ -529,12 +535,24 @@ class StructuredResponseParserAdapter(IStructuredResponseParser):
             source=review, key="reason", label="review.reason", field=f"{review_field}{_FIELD_SEPARATOR}reason",
             owner_id=owner,
         )
-        reserved = f"{owner}{_REVISION_CRITERION_SUFFIX}"
+        self.__reject_reserved_criterion(
+            task=task, reserved=revision_criterion_id(owner), purpose="the revision verdict of a reviewing task"
+        )
+
+    def __reject_reserved_criterion(self, task: dict[str, Any], reserved: str, purpose: str) -> None:
+        """Recusa o lote quando o planejador usa um identificador de critério reservado ao harness.
+
+        Nada é removido nem renomeado: a saída inteira volta ao modelo pela recuperação estrutural.
+
+        Raises:
+            _ContractViolation: Quando algum critério planejado da tarefa usa o identificador reservado.
+        """
         if any(criterion["id"] == reserved for criterion in task["acceptance_criteria"]):
             raise _ContractViolation(
                 code=OutputProblemCodeEnum.INVALID_VALUE,
                 reason=(
-                    f"The criterion identifier '{reserved}' is reserved for the revision verdict of a reviewing task."
+                    f"The criterion identifier '{reserved}' is reserved for {purpose}; "
+                    "use another identifier for planned criteria."
                 ),
                 field=self.__item_field("tasks", "acceptance_criteria[].id"),
                 affected_ids=(reserved,),

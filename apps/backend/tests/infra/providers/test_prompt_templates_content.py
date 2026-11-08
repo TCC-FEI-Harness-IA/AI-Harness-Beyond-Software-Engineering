@@ -13,7 +13,7 @@ _PLACEHOLDERS_POR_FASE = {
         "task_description", "task_acceptance_criteria", "learnings", "previous_attempts", "results_under_review"
     },
     ThinkingPhaseEnum.B2_TASK_VERIFICATION: {
-        "preliminary_result", "task_acceptance_criteria", "learnings", "revision_proposal"
+        "task_description", "preliminary_result", "task_acceptance_criteria", "learnings", "revision_proposal"
     },
     ThinkingPhaseEnum.B4_LEARNINGS_EXTRACTION: {"task_description", "approved_result", "task_history", "learnings"},
     ThinkingPhaseEnum.C1_GLOBAL_VERIFICATION: {

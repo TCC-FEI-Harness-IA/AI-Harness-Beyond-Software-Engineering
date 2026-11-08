@@ -85,3 +85,24 @@ injetado no prompt e que o relatório de referência passa no parser. Isso verif
 não acurácia: o relatório de referência não é saída de um modelo. Uma avaliação posterior deve registrar a
 saída bruta do modelo e julgá-la pelos sete critérios da rubrica, observando também se planos válidos são
 aprovados — um validador que reprova tudo não representa melhora.
+
+# Matriz da validação técnica das tarefas — versão 1
+
+`technical_validation_v1.json` contém onze casos sintéticos e generalistas para o critério técnico fixo
+`<task_id>-TECH` de B.2 (nova fase de validação — 02), sem relação com questões de benchmark. São cinco
+negativos — premissa não fornecida tratada como fato, método fora das suas condições, direção incompatível
+com uma tabela, causa de outra etapa temporal e escolha por proximidade sobre cálculo inválido — e seis
+controles positivos — tarefa intermediária correta, estimativa de pergunta aberta, hipótese justificada,
+aproximação legítima, inferência contextual e ausência de justificativa final não pedida. Cada caso traz a
+tarefa (identificação, título e descrição), os critérios planejados, os aprendizados, o resultado preliminar,
+a referência (`reference`: decisão, veredito por critério efetivo e justificativa) e a rubrica
+`review_checks`. Nos negativos, os critérios planejados estão atendidos e só TECH falha.
+
+Os testes renderizam o template real de B.2 com essas entradas, roteirizam o fluxo completo (inclusive a
+retentativa dos negativos, com a justificativa de referência como feedback), conferem que a referência e a
+rubrica não chegam ao modelo nem aos templates e que o parser aceita relatórios coerentes nos dois sentidos.
+**A referência não é gabarito nem pontuação automática:** para avaliar um modelo real, envie o prompt de B.2
+de cada caso, preserve versão da matriz, commit dos templates, modelo, temperatura e saída bruta, compare a
+decisão e os vereditos com a referência e registre evidência textual para cada `review_check` — por exemplo,
+se a reprovação nomeia a premissa ou a relação que falha, e se os controles positivos são aprovados. Um
+validador que reprova tudo não representa melhora. Mudanças substanciais exigem nova versão.

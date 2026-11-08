@@ -70,7 +70,8 @@ async def test_colisoes_consumem_conclusoes_obtidas_pela_memoria_sem_embuti_las_
     for task, result, conclusion in zip(case["tasks"], details, [forces, energy, joint]):
         responses.extend([
             _result(task["id"], result + " " + conclusion, conclusion),
-            relatorio(*[(criterion["id"], True) for criterion in task["acceptance_criteria"]]),
+            relatorio(*[(criterion["id"], True) for criterion in task["acceptance_criteria"]],
+                      (f"{task['id']}-TECH", True)),
             aprendizados(conclusion),
         ])
     responses.extend([relatorio(("AC1", True), ("AC2", True)), resposta_final(joint)])
@@ -108,7 +109,8 @@ async def test_c2_recebe_motivo_concreto_de_c1_e_preserva_resultados_e_memoria_s
     for task_id in initial_ids:
         responses.extend([
             _result(task_id, "FULL_PRIOR_REASONING: " + case["stored_results"], case["stored_results"]),
-            relatorio((f"{task_id}-AC1", True)), aprendizados(case["learnings"]),
+            relatorio((f"{task_id}-AC1", True), (f"{task_id}-TECH", True)),
+            aprendizados(case["learnings"]),
         ])
     responses.extend([
         _json(criteria_evaluation=[{"criterion_id": "AC1", "met": False, "justification": case["gap"]}],
@@ -121,7 +123,8 @@ async def test_c2_recebe_motivo_concreto_de_c1_e_preserva_resultados_e_memoria_s
                      "A energia vem do vapor da camisa: o balanço distingue a energia cedida pelo vapor "
                      "ao esfriar e condensar da energia absorvida pelo produto ao aquecer e evaporar.")
     responses.extend([
-        _result(final_task["id"], determination, determination), relatorio((final_task["id"] + "-AC1", True)),
+        _result(final_task["id"], determination, determination),
+        relatorio((final_task["id"] + "-AC1", True), (final_task["id"] + "-TECH", True)),
         aprendizados(determination), relatorio(("AC1", True)), resposta_final(determination),
     ])
     scenario = _scenario(responses)

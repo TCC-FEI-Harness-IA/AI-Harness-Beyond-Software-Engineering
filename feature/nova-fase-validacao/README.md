@@ -14,9 +14,10 @@ O objetivo é reduzir a execução de tarefas que já carregam conclusões antec
 | Frente | Situação |
 |---|---|
 | 1 — Planejamento ([prompt 01](01_planejamento_com_validacao.md)) | **Implementada.** Nova A.3 (Task Decomposition Validator) com retorno a A.2, renumeração da extração para A.4, confirmação do plano na fila só depois da aprovação, `RALPH_MAX_PLANNING_ATTEMPTS = 5`, auditoria de candidatos e relatórios, `flow_version` (sessões novas = 2, antigas lidas como 1) no backend, nos pacotes de exportação e no frontend. Ver [`RELATORIO_IMPLEMENTACAO_01.md`](RELATORIO_IMPLEMENTACAO_01.md). |
-| 2 — Validação técnica das tarefas ([prompt 02](02_validacao_tecnica_das_tarefas.md)) | **Pendente.** A ampliação de B.2 (descrição da tarefa em B.2, critério `<task_id>-TECH` em B.1/B.2) ainda não foi implementada; B.1/B.2 seguem o comportamento anterior. |
+| 2 — Validação técnica das tarefas ([prompt 02](02_validacao_tecnica_das_tarefas.md)) | **Implementada.** B.2 recebe a tarefa (identificação, título e descrição) numa área própria e avalia o conjunto efetivo de critérios — planejados, o critério técnico fixo `<task_id>-TECH` e `<task_id>-REV` numa revisora —, o mesmo que B.1 recebe antes de resolver e que o parser exige; `<task_id>-TECH` é reservado no domínio e no parser de A.2/C.2; B.1/B.2 conferem o fundamento antes de aproximação ou melhor ajuste. Integração com a frente 1 verificada (A.3/A.4, versão do fluxo, histórico, exportação e frontend). Ver [`RELATORIO_IMPLEMENTACAO_02.md`](RELATORIO_IMPLEMENTACAO_02.md). |
+| Avaliação semântica das duas frentes | **Não executada.** Os testes usam saídas roteirizadas e provam o protocolo. Que A.3 reprove planos ruins sem rejeitar válidos e que B.2 reprove fundamentos inválidos sem rejeitar aproximações legítimas só pode ser afirmado após avaliação com modelo real (matrizes `decomposition_validation_v1.json` e `technical_validation_v1.json` preparadas para isso). Nenhum ganho de acurácia é declarado. |
 
-O limite de tentativas por tarefa (cinco, incluindo a inicial) já tinha sido elevado antes da frente 1 e foi preservado; é estado de partida da frente 2, não uma implementação dela. A especificação abaixo foi mantida como foi acordada; onde ela fala no futuro sobre a frente 1, o comportamento já está implementado conforme o relatório.
+O limite de tentativas por tarefa (cinco, incluindo a inicial) já tinha sido elevado antes da frente 1 e foi preservado; é estado de partida da frente 2, não uma implementação dela. A especificação abaixo foi mantida como foi acordada; onde ela fala no futuro sobre as frentes 1 e 2, o comportamento já está implementado conforme os relatórios.
 
 As mudanças continuam generalistas: aplicam-se a cálculos, interpretações, classificações, atribuições a fontes, investigações de causas e decisões abertas. IDs de questões, gabaritos, fórmulas de casos específicos e campos especializados do benchmark não devem orientar a implementação.
 
@@ -27,7 +28,9 @@ Execute os dois prompts abaixo **em sequência**, com a primeira implementação
 1. [01 — Planejamento com validação](01_planejamento_com_validacao.md): nova A.3, renumeração da extração para A.4, confirmação do plano, limite próprio de tentativas, auditoria, versionamento e compatibilidade de backend/frontend.
 2. [02 — Validação técnica das tarefas](02_validacao_tecnica_das_tarefas.md): descrição da tarefa em B.2, critério técnico obrigatório em B.1/B.2, tratamento de hipóteses/aproximações e verificação integrada das duas frentes.
 
-Esses dois prompts cobrem toda a implementação acordada. O segundo inclui a integração final; não há uma terceira etapa de desenvolvimento prevista. A criação dos prompts não altera o estado de implementação descrito acima.
+Após a entrega da primeira frente, foi acrescentado o [prompt de correção da validação da entrega](01_correcao_validacao_entrega.md). Execute-o antes do prompt 02: ele trata a classificação de auditorias em C.3, a prova independente de paridade entre stream e histórico e a atualização do relatório. Não implementa a segunda frente.
+
+Os dois prompts numerados definem as frentes funcionais acordadas; o segundo inclui a integração final. O prompt adicional é uma correção da entrega da primeira frente. A criação desses documentos não altera por si só o estado de implementação.
 
 ## Referências
 

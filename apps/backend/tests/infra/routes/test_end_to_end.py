@@ -62,20 +62,25 @@ def _resolucao(texto: str) -> str:
 
 
 def _reprovado(criterion_id: str = "T1-AC1") -> str:
+    """Verificação local reprovada pelo critério planejado; o técnico `T1-TECH` foi atendido."""
     return json.dumps(
         {
             "decision": "reproved",
-            "criteria_evaluation": [{"criterion_id": criterion_id, "met": False, "justification": "nao atende"}],
+            "criteria_evaluation": [{"criterion_id": criterion_id, "met": False, "justification": "nao atende"},
+                                    {"criterion_id": "T1-TECH", "met": True, "justification": "fundamentado"}],
             "unmet_criteria_ids": [criterion_id],
         }
     )
 
 
-def _aprovado(criterion_id: str = "T1-AC1") -> str:
+def _aprovado(*criterion_ids: str) -> str:
+    """Relatório aprovado; sem identificadores, é o de B.2 da tarefa T1 (planejado e técnico)."""
+    ids = criterion_ids or ("T1-AC1", "T1-TECH")
     return json.dumps(
         {
             "decision": "approved",
-            "criteria_evaluation": [{"criterion_id": criterion_id, "met": True, "justification": "atende"}],
+            "criteria_evaluation": [{"criterion_id": criterion_id, "met": True, "justification": "atende"}
+                                    for criterion_id in ids],
             "unmet_criteria_ids": [],
         }
     )

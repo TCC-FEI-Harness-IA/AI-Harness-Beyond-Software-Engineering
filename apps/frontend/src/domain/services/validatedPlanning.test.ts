@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest'
 import c3AuditCapture from '@/test/fixtures/capture-v2-plan-revision-c3-audit.json'
 import c3ExhaustedCapture from '@/test/fixtures/capture-v2-c3-exhausted.json'
 import exhaustedCapture from '@/test/fixtures/capture-v2-planning-exhausted.json'
+import techRetryCapture from '@/test/fixtures/capture-v2-tech-retry.json'
 import legacyWithA3Fixture from '@/test/fixtures/session-a1-completed-with-a3.json'
 import { parseReasoningFrame } from '@/api/parsers/reasoningFrame'
 import { parseSessionDocument } from '@/api/parsers/sessionDocument'
@@ -37,6 +38,7 @@ function load(name: string, raw: { events: unknown[]; session: unknown }): Captu
 const c3Audit = load('plano revisado e auditoria de C.3 seguida da resposta aceita', c3AuditCapture)
 const exhausted = load('planejamento esgotado antes de A.4', exhaustedCapture)
 const c3Exhausted = load('C.3 esgotada sem resposta', c3ExhaustedCapture)
+const techRetry = load('reprovação só pelo critério técnico seguida de retentativa aprovada', techRetryCapture)
 const revision = c3Audit
 const legacy = parseSessionDocument(legacyWithA3Fixture)
 
@@ -137,7 +139,7 @@ describe('fluxo versão 2 — ao vivo', () => {
   })
 })
 
-describe.each([c3Audit, exhausted, c3Exhausted])('paridade com eventos capturados: $name', (capture) => {
+describe.each([c3Audit, exhausted, c3Exhausted, techRetry])('paridade com eventos capturados: $name', (capture) => {
   it('o histórico reproduz os passos, as tarefas, as fases e os loops da execução ao vivo', () => {
     const live = liveRun(capture, persistedCounterpart(capture.events))
 
@@ -208,6 +210,37 @@ describe('histórico — o passo execute usa o plano confirmado, nunca um candid
     expect(history[0]).toContain('- `T1-AC2`: Explicar o teste de cada condição em 2, 4 e 6.')
     expect(history[1]).toContain('**Depends on:** `T1`')
     expect(history.join('\n')).not.toContain('Mostrar que o 4')
+  })
+})
+
+// Nova fase de validação — 02: B.2 avalia também o critério técnico fixo `<task_id>-TECH`. O frontend não
+// interpreta o identificador: o relatório é mostrado como qualquer outro, e o subtipo persistido decide a tentativa.
+describe('validação técnica — reprovação só por `T1-TECH` e retentativa aprovada', () => {
+  it('a tentativa reprovada por TECH e a aprovada são as mesmas ao vivo e no histórico', () => {
+    for (const run of [liveRun(techRetry), sessionToThinkingRun(techRetry.session)]) {
+      const [task] = run.tasks
+      expect(run.tasks).toHaveLength(1)
+      expect(task?.attempts.map((attempt) => [attempt.verification?.subtype, attempt.approved])).toEqual([
+        ['verify_fail', false],
+        ['verify_pass', true],
+      ])
+      const rejected = task?.attempts[0]?.verification?.content ?? ''
+      expect(rejected).toContain('- `T1-AC1` — met:')
+      expect(rejected).toContain("- `T1-TECH` — not met: A condição 'maior que 2' foi ignorada")
+      expect(task?.attempts[1]?.verification?.content).toContain('- `T1-TECH` — met:')
+      expect(run.finalAnswer).toBe('D) Nenhuma das anteriores')
+    }
+  })
+
+  it('o execute mostra só os critérios planejados; TECH aparece apenas nos relatórios de B.2', () => {
+    const history = sessionToThinkingRun(techRetry.session)
+    const execute = history.steps.filter((step) => step.subtype === 'execute').map((step) => step.content)
+    const live = techRetry.events.filter((event) => event.subtype === 'execute').map((event) => event.content)
+
+    expect(execute).toEqual(live)
+    expect(execute[0]).toContain('- `T1-AC1`: Explicar o teste de cada condição em 2, 4 e 6.')
+    expect(execute[0]).not.toContain('T1-TECH')
+    expect(describeTaskProgress(history)).toEqual({ done: 1, total: 1 })
   })
 })
 

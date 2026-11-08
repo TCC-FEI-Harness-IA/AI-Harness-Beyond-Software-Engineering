@@ -72,7 +72,8 @@ def test_tarefa_normal_nao_tem_criterio_de_revisao_e_mantem_os_criterios_planeja
     assert tarefa.review is None
     assert tarefa.depends_on == ()
     assert tarefa.revision_criterion is None
-    assert tarefa.verification_criteria() == (_CRITERIO,)
+    # Desde a nova fase de validação — 02, toda tarefa também recebe o critério técnico fixo.
+    assert tarefa.verification_criteria() == (_CRITERIO, tarefa.technical_criterion)
 
 
 def test_tarefa_revisora_acrescenta_criterio_de_revisao_sem_reescrever_os_planejados() -> None:
@@ -82,7 +83,7 @@ def test_tarefa_revisora_acrescenta_criterio_de_revisao_sem_reescrever_os_planej
     assert criterio is not None and criterio.id == "T4-REV"
     assert "confirmed or superseded" in criterio.description
     assert tarefa.acceptance_criteria == (_CRITERIO,)
-    assert tarefa.verification_criteria() == (_CRITERIO, criterio)
+    assert tarefa.verification_criteria() == (_CRITERIO, tarefa.technical_criterion, criterio)
 
 
 @pytest.mark.parametrize("extra", [

@@ -76,6 +76,7 @@ def _relatorio_revisao(task_id: str, aprovado: bool, justificativa: str = _APROV
     return _json(
         criteria_evaluation=[
             {"criterion_id": f"{task_id}-AC1", "met": True, "justification": "Resultado explicado."},
+            {"criterion_id": f"{task_id}-TECH", "met": True, "justification": "A força média segue de F = Δp/Δt."},
             {"criterion_id": f"{task_id}-REV", "met": aprovado, "justification": justificativa},
         ],
         unmet_criteria_ids=[] if aprovado else [f"{task_id}-REV"],
@@ -92,7 +93,8 @@ def _global(aprovado: bool, justificativa: str = _CONTRADICAO) -> str:
 
 
 def _tarefa_executada(task_id: str, texto: str, *fatos: str) -> list[str]:
-    return [_resolucao(task_id, texto), relatorio((f"{task_id}-AC1", True)), aprendizados(*fatos)]
+    return [_resolucao(task_id, texto), relatorio((f"{task_id}-AC1", True), (f"{task_id}-TECH", True)),
+            aprendizados(*fatos)]
 
 
 def _ate_a_contradicao() -> list[str]:
@@ -293,7 +295,7 @@ async def test_tarefa_normal_que_propoe_revisao_e_recusada_pelo_contrato_e_corri
         _plano(_tarefa("T4", "Investigue a força média, explicando.")),
         _resolucao("T4", _T4, ("T3", "superseded", "mais recente")),
         _resolucao("T4", _T4),
-        relatorio(("T4-AC1", True)), aprendizados(),
+        relatorio(("T4-AC1", True), ("T4-TECH", True)), aprendizados(),
         _global(True, "ok"), resposta_final("ok"),
     ])
 

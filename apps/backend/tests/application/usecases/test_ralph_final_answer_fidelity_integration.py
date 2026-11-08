@@ -66,7 +66,8 @@ def _result(task_id: str, text: str, *verdicts: tuple[str, str, str]) -> str:
 
 
 def _executed(task_id: str, text: str, *facts: str) -> list[str]:
-    return [_result(task_id, text), relatorio((f"{task_id}-AC1", True)), aprendizados(*facts)]
+    return [_result(task_id, text), relatorio((f"{task_id}-AC1", True), (f"{task_id}-TECH", True)),
+            aprendizados(*facts)]
 
 
 def _global(*evaluations: tuple[str, bool, str]) -> str:
@@ -290,6 +291,7 @@ async def test_apos_revisao_a_sintese_recebe_so_a_versao_vigente_e_a_memoria_vig
                     review={"task_ids": ["T2"], "reason": reason})),
         _result("T3", new, ("T2", "superseded", "O tempo de parada foi trocado em T2.")),
         _json(criteria_evaluation=[{"criterion_id": "T3-AC1", "met": True, "justification": "ok"},
+                                   {"criterion_id": "T3-TECH", "met": True, "justification": "fundamentado"},
                                    {"criterion_id": "T3-REV", "met": True, "justification": "sustentado"}],
               unmet_criteria_ids=[], decision="approved"),
         aprendizados("A força média é maior com pneus travados."),

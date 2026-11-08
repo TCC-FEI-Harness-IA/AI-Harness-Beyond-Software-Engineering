@@ -81,7 +81,8 @@ async def test_conteudo_explicado_sem_linha_final_segue_de_c1_a_c3(format_criter
     scenario = _scenario([
         _criteria("Identificar a alternativa sustentada pelo cálculo.", format_criterion),
         _task("T1", "Calcule 6 g / 2 e compare A) 1 g B) 2 g C) 3 g, explicando.", "Resultado explicado."),
-        plano_aprovado(), aprendizados(memory), _result("T1", content), relatorio(("T1-AC1", True)), aprendizados(),
+        plano_aprovado(), aprendizados(memory), _result("T1", content),
+        relatorio(("T1-AC1", True), ("T1-TECH", True)), aprendizados(),
         relatorio(("AC1", True), ("AC2", True)), resposta_final(final),
     ])
 
@@ -117,11 +118,12 @@ async def test_analise_conjunta_ausente_exige_c2_e_resultado_explicado_antes_de_
         _criteria("Responder apenas com a letra.", gap),
         _task("T1", "Verifique separadamente primalidade, paridade e >2 em [2,4,6], explicando.",
               "Listas com explicação."),
-        plano_aprovado(), aprendizados(memory), _result("T1", content), relatorio(("T1-AC1", True)), aprendizados(),
+        plano_aprovado(), aprendizados(memory), _result("T1", content),
+        relatorio(("T1-AC1", True), ("T1-TECH", True)), aprendizados(),
         relatorio(("AC1", True), ("AC2", False)),
         _task("T2", "Determine e explique a interseção de primos [2], pares [2,4,6] e >2 [4,6].",
               "Interseção correta e explicada.", "Não redigir a resposta final ao usuário."),
-        _result("T2", joint), relatorio(("T2-AC1", True), ("T2-AC2", True)), aprendizados(),
+        _result("T2", joint), relatorio(("T2-AC1", True), ("T2-AC2", True), ("T2-TECH", True)), aprendizados(),
         relatorio(("AC1", True), ("AC2", True)), resposta_final("D"),
     ])
 
@@ -187,10 +189,10 @@ async def test_resultado_sem_alternativa_sustentada_encaminha_ac2_a_investigacao
         _criteria("Terminar com RESPOSTA_FINAL: LETRA.", selection),
         _task("T1", "Determine a quantidade pedida com explicação.", "Cálculo explicado."),
         plano_aprovado(), aprendizados(question),
-        _result("T1", inconsistent), relatorio(("T1-AC1", True)), aprendizados(inconsistent),
+        _result("T1", inconsistent), relatorio(("T1-AC1", True), ("T1-TECH", True)), aprendizados(inconsistent),
         relatorio(("AC1", True), ("AC2", False)),
         _task("T2", investigation, "Investiga a incompatibilidade e explica a correção de T1."),
-        _result("T2", corrected), relatorio(("T2-AC1", True)), aprendizados(corrected),
+        _result("T2", corrected), relatorio(("T2-AC1", True), ("T2-TECH", True)), aprendizados(corrected),
         relatorio(("AC1", True), ("AC2", True)), resposta_final(final),
     ])
 
@@ -233,10 +235,10 @@ async def test_b2_distingue_mencao_contextual_de_calculo_fora_do_escopo(
               "Massa total correta e explicada.", scope_criterion),
         plano_aprovado(), aprendizados("Dado de contexto: duas colheres."),
         _result("T1", rejected if outside_scope else approved),
-        relatorio(("T1-AC1", True), ("T1-AC2", not outside_scope)),
+        relatorio(("T1-AC1", True), ("T1-AC2", not outside_scope), ("T1-TECH", True)),
     ]
     if outside_scope:
-        responses.extend([_result("T1", approved), relatorio(("T1-AC1", True), ("T1-AC2", True))])
+        responses.extend([_result("T1", approved), relatorio(("T1-AC1", True), ("T1-AC2", True), ("T1-TECH", True))])
     responses.extend([aprendizados(), relatorio(("AC1", True), ("AC2", True)), resposta_final("6 g")])
     scenario = _scenario(responses)
 

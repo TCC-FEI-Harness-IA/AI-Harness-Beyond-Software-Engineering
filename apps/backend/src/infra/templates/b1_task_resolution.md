@@ -8,6 +8,11 @@ Solve **only** the task described below.
 
 ## Acceptance criteria for this task
 
+The criteria by which the validator will evaluate this resolution, one by one: the criteria written
+in planning, the fixed technical criterion `<task id>-TECH`, which the harness adds to every task,
+and, when this task reviews stored results, the revision criterion `<task id>-REV`. The task is
+approved only when all of them are met.
+
 {{task_acceptance_criteria}}
 
 ## Key Learnings
@@ -92,6 +97,31 @@ that your investigation shows to remain valid. A `superseded` result stops being
 if the validator approves your investigation. When no result is under review, omit the `revision`
 field: an ordinary task does not revise stored results, even when its conclusion differs from one of
 them.
+
+## Technical validity (`<task id>-TECH`)
+
+Every task is also evaluated by the fixed criterion `<task id>-TECH`: the result must accomplish
+this task's objective on a basis compatible with the data, methods and conditions that apply.
+Meeting the planned criteria does not replace it, and following a planned method does not exempt
+you from checking that it applies. Before choosing an approximation, an estimate or a best-fit
+option, check the analytical basis:
+
+- Use supplied data as supplied and justify any premise you add. A hypothesis is stated as a
+  hypothesis, compatible with the scenario and justified, and never presented as a fact; the
+  absence of information does not demonstrate its negation.
+- Keep referents, units, conditions and temporal stage.
+- Confirm that the method applies under the stated conditions and take into account the
+  contributions and conditions relevant to the analysis.
+- Make the steps actually support the conclusion, and keep calculation, text and conclusion
+  consistent with each other.
+- Do not attribute a claim to a source on narrative coherence alone, and do not invent a verifiable
+  reference.
+- Apply the same standard of support and implicit content to every hypothesis or option compared.
+
+When simple and pertinent, cross-check the result from another angle — the direction of a variation,
+a limiting case, the compatibility between parts of the text, a temporal relation, a referent or
+unit. `<task id>-TECH` covers only this task's objective: it does not demand analyses of other
+tasks, the final answer format or an exactness incompatible with a supported estimate.
 
 ## Evidence and consistency policy
 

@@ -1235,14 +1235,13 @@ class RalphThinkingUseCase:
             task: Tarefa a resolver.
 
         Returns:
-            dict[str, str]: Descrição da tarefa (sem duplicar os critérios), seus critérios de
-            aceite, os resultados sob investigação (numa revisora), os aprendizados pontuais e o
-            feedback das tentativas anteriores.
+            dict[str, str]: Descrição da tarefa (sem duplicar os critérios), o conjunto efetivo de
+            critérios — planejados, técnico e, numa revisora, o de revisão — que B.2 avaliará, os
+            resultados sob investigação (numa revisora), os aprendizados pontuais e o feedback das
+            tentativas anteriores.
         """
         return {
-            "task_description": _TASK_HEADER_CONTENT.format(
-                task_id=task.id, title=task.title, description=task.description
-            ),
+            "task_description": self.__render_task_header(task=task),
             "task_acceptance_criteria": self.__render_criteria(criteria=task.verification_criteria()),
             "results_under_review": self.__render_results_under_review(task=task),
             "previous_attempts": self.__render_previous_attempts(task=task),
@@ -1260,10 +1259,13 @@ class RalphThinkingUseCase:
             revision_verdicts: Proposta de revisão de B.1, vazia numa tarefa normal.
 
         Returns:
-            dict[str, str]: Resultado preliminar, critérios verificados (com o de revisão, numa
-            revisora), a proposta explícita de revisão e aprendizados pontuais.
+            dict[str, str]: Cada entrada na sua área do template: a identificação, o título e a descrição
+            da tarefa (o escopo, sem os critérios), o resultado preliminar, o conjunto efetivo de critérios
+            (o mesmo que B.1 recebeu), a proposta explícita de revisão e os aprendizados pontuais. Nada da
+            conversa de B.1 nem do planejamento é encaminhado.
         """
         return {
+            "task_description": self.__render_task_header(task=task),
             "preliminary_result": preliminary,
             "task_acceptance_criteria": self.__render_criteria(criteria=task.verification_criteria()),
             "revision_proposal": self.__render_revision_proposal(task=task, revision_verdicts=revision_verdicts),
@@ -1282,9 +1284,7 @@ class RalphThinkingUseCase:
             sua área do template.
         """
         return {
-            "task_description": _TASK_HEADER_CONTENT.format(
-                task_id=task.id, title=task.title, description=task.description
-            ),
+            "task_description": self.__render_task_header(task=task),
             "approved_result": self.results_ledger.get(task_id=task.id).content,
             "task_history": self.__render_history(task=task),
             **self.__learnings_variables(),
@@ -1547,6 +1547,17 @@ class RalphThinkingUseCase:
             _CRITERION_ITEM.format(criterion_id=criterion.id, description=criterion.description)
             for criterion in criteria
         )
+
+    def __render_task_header(self, task: Task) -> str:
+        """Renderiza a identificação, o título e a descrição de uma tarefa, sem os critérios.
+
+        Args:
+            task: Tarefa a identificar.
+
+        Returns:
+            str: Cabeçalho `### <id> — <título>` seguido da descrição.
+        """
+        return _TASK_HEADER_CONTENT.format(task_id=task.id, title=task.title, description=task.description)
 
     def __render_task(self, task: Task) -> str:
         """Renderiza uma tarefa como bloco markdown.

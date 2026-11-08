@@ -60,7 +60,9 @@ merely because it contains:
 - a logical dependence on an earlier task, or a final integration task that performs a missing
   inference;
 - an approximation, estimate or best-fit choice that the task must justify;
-- a different but adequate number of tasks or wording.
+- a different but adequate number of tasks or wording;
+- the absence of a technical-validity criterion: the harness adds `<task id>-TECH` to every task at
+  execution, so the candidate does not need to contain it.
 
 For example, "determine which of the two samples has the higher concentration and justify it" keeps
 the result open; "show that the second sample has the higher concentration" anticipates it. "Check

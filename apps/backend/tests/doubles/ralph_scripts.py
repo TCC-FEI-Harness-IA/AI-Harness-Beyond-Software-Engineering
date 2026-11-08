@@ -1,7 +1,10 @@
 """Roteiros de respostas do modelo, reaproveitados pelos testes do fluxo Ralph.
 
 Cada função devolve a saída bruta (JSON) que o modelo produziria numa etapa. Os critérios
-gerais do roteiro são `AC1` e `AC2`; os critérios de cada tarefa são `<tarefa>-AC1`.
+gerais do roteiro são `AC1` e `AC2`; o critério planejado de cada tarefa é `<tarefa>-AC1`. Desde a
+nova fase de validação — 02, o conjunto efetivo de B.2 de uma tarefa comum é `<tarefa>-AC1` mais o
+critério técnico fixo `<tarefa>-TECH`: os relatórios locais abaixo avaliam os dois, cada um com o seu
+veredito, para que nenhum cenário de execução nova deixe de avaliar a validade técnica.
 """
 import json
 
@@ -49,14 +52,33 @@ def relatorio(*avaliacoes: tuple[str, bool]) -> str:
     )
 
 
+def tech(task_id: str = "T1") -> str:
+    """Identificador do critério técnico fixo que o harness acrescenta à tarefa."""
+    return f"{task_id}-TECH"
+
+
 def aprovado(task_id: str = "T1") -> str:
-    """Verificação local aprovada: avalia o único critério da tarefa."""
-    return relatorio((f"{task_id}-AC1", True))
+    """Verificação local aprovada: o critério planejado e o técnico foram atendidos."""
+    return relatorio((f"{task_id}-AC1", True), (tech(task_id), True))
 
 
 def reprovado(task_id: str = "T1") -> str:
-    """Verificação local reprovada: o único critério da tarefa não foi atendido."""
-    return relatorio((f"{task_id}-AC1", False))
+    """Verificação local reprovada pelo critério planejado; a validade técnica foi atendida."""
+    return relatorio((f"{task_id}-AC1", False), (tech(task_id), True))
+
+
+def reprovado_tecnico(task_id: str = "T1", justificativa: str = "A premissa decisiva nao foi fornecida.") -> str:
+    """Verificação local reprovada só pelo critério técnico: o planejado foi atendido."""
+    return json.dumps(
+        {
+            "criteria_evaluation": [
+                {"criterion_id": f"{task_id}-AC1", "met": True, "justification": "As etapas pedidas estao presentes."},
+                {"criterion_id": tech(task_id), "met": False, "justification": justificativa},
+            ],
+            "unmet_criteria_ids": [tech(task_id)],
+            "decision": "reproved",
+        }
+    )
 
 
 def global_aprovado() -> str:

@@ -47,7 +47,9 @@ analysis, rather than require that one named collision have the greater force.
    **complementary, never mutually exclusive**: one answer must be able to meet all of them at the
    same time. For example, "answer only the option" conflicts with a requirement to explain the
    internal result. Criteria specify what to determine and how to substantiate it, not which
-   as-yet unknown conclusion must be reached.
+   as-yet unknown conclusion must be reached. Identifiers ending in `-TECH` and `-REV` are reserved
+   for criteria the harness adds during execution: every task automatically receives `<task id>-TECH`,
+   which checks the technical validity of its result. Do not use these identifiers.
 4. Express scope in an **affirmative and delimiting** way, for example: "the analysis is restricted
    exclusively to the average force comparison and its justification." Restrict actions outside the
    objective, not contextual words: "do not calculate the mass per spoon" delimits an action;

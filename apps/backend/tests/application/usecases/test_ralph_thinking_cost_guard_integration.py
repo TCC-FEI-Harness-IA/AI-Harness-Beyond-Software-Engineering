@@ -318,7 +318,8 @@ async def test_tentativas_esgotadas_com_o_guardiao_real_nao_armazenam_nem_sintet
     reprovado = json.dumps(
         {
             "decision": "reproved",
-            "criteria_evaluation": [{"criterion_id": "T1-AC1", "met": False, "justification": "nao atende"}],
+            "criteria_evaluation": [{"criterion_id": "T1-AC1", "met": False, "justification": "nao atende"},
+                                    {"criterion_id": "T1-TECH", "met": True, "justification": "base tecnica valida"}],
             "unmet_criteria_ids": ["T1-AC1"],
         }
     )

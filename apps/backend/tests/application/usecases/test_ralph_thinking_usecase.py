@@ -2180,7 +2180,7 @@ async def test_a_correcao_de_saida_reaproveita_a_janela_sem_repetir_o_template()
     assert "## Key Learnings" not in correcao.text
 
 
-async def test_transicao_b1_para_b2_leva_so_o_resultado_preliminar_e_os_criterios() -> None:
+async def test_transicao_b1_para_b2_leva_a_tarefa_o_resultado_preliminar_e_os_criterios() -> None:
     cenario = _cenario_com_templates_reais(_roteiro_por_todas_as_transicoes())
 
     await cenario.run()
@@ -2188,8 +2188,12 @@ async def test_transicao_b1_para_b2_leva_so_o_resultado_preliminar_e_os_criterio
     verificacao = _prompt_unico(cenario, 8)
     assert "primeira tentativa incompleta" in verificacao
     assert "`T2-AC1`: criterio de T2" in verificacao
+    assert "`T2-TECH`:" in verificacao
     assert '"task_id"' not in verificacao
-    assert "descricao de T2" not in verificacao
+    # Desde a nova fase de validação — 02, a descrição chega a B.2, mas só na área da tarefa.
+    tarefa = verificacao.split("## Task\n", 1)[1].split("\n## ", 1)[0]
+    assert "### T2 — titulo de T2\n\ndescricao de T2" in tarefa
+    assert verificacao.count("descricao de T2") == 1
 
 
 async def test_transicao_b2_para_b1_abre_janela_nova_com_o_feedback_explicito() -> None:

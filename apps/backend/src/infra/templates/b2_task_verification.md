@@ -1,12 +1,27 @@
-# B.2 — Verification of the task's acceptance criteria
+# B.2 — Verification of the task
 
-Evaluate whether the preliminary result below meets the task's acceptance criteria.
+Evaluate whether the preliminary result below accomplishes this task's objective on a valid technical
+basis and meets every verification criterion listed for it.
+
+## Task
+
+The identification, title and description of the task being verified. The description explains the
+scope and the objective of the task: it is not the result under evaluation and it is not an
+additional set of criteria.
+
+{{task_description}}
 
 ## Preliminary result
+
+The resolution produced for this task. It is the object of the evaluation.
 
 {{preliminary_result}}
 
 ## Acceptance criteria for this task
+
+The effective verification criteria: the criteria written in planning, followed by the fixed
+technical criterion `<task id>-TECH`, which the harness adds to every task, and, in a task that
+reviews stored results, the revision criterion `<task id>-REV`. Evaluate every one of them.
 
 {{task_acceptance_criteria}}
 
@@ -32,7 +47,7 @@ The learnings **are not criteria**: the evaluation remains restricted to the cri
 
 Go through the criteria **one by one**. For each criterion, decide whether it was met and write the
 justification of the verdict. Then issue the final decision: `approved` only when **all** criteria
-were met, `reproved` otherwise.
+were met, including `<task id>-TECH` and, when it is listed, `<task id>-REV`; `reproved` otherwise.
 
 Report consistency rules, checked automatically — a report that violates them is rejected and
 returned to you for correction:
@@ -46,16 +61,25 @@ returned to you for correction:
 - The decision is `approved` only when all criteria have `met` equal to `true`; a single criterion
   with `met` equal to `false` is enough for the decision to be `reproved`.
 
-The evaluation is **local**: judge only the criteria of this task. Do not judge whether the result
-answers the user's final question, do not judge the quality of the final answer and do not consider
-anything beyond the criteria listed above. An intermediate task is not required to answer the whole
-question: a partial result that its criteria ask for is complete for this task.
+The evaluation is **local**: judge this task — its objective, described above, and the criteria
+listed for it. Do not judge whether the result answers the user's final question, do not judge the
+quality of the final answer and do not consider anything beyond this task's objective and criteria.
+An intermediate task is not required to answer the whole question: a partial result that its
+objective and criteria ask for is complete for this task.
+
+Your role is to verify, not to solve: do not write the corrected resolution, do not complete a
+missing step yourself and do not edit, add or remove criteria. When you find a concrete defect, mark
+the affected criterion as not met and describe the defect, so that the solver can correct it in a
+new attempt.
 
 **Do not ignore, rewrite or waive any criterion received**, even if it seems poorly worded. The
 interpretation of scope must follow the action the criterion restricts: citing a term as a
 contextual reference is not the same as calculating another quantity, evaluating another condition
 or anticipating a solution. If there is an explicit prohibition of words, it must also be checked as
-it was received; this stage is not authorized to correct the planner's criteria.
+it was received; this stage is not authorized to correct the planner's criteria. When a planned
+criterion is infeasible or conflicts with the data of the task — a defect of planning —, evaluate it
+as received and state the planning defect explicitly in its justification; this stage cannot send
+the task back to planning nor waive the criterion.
 
 Examples for a criterion "do not calculate the mass per spoon":
 
@@ -71,6 +95,93 @@ conditions outside the goal or announcing the global solution when the criterion
 violation. Internal explanations must not be judged by the format of the final answer: a marker
 line, an answer limited to a letter or the final language is not an internal obligation unless
 such a restriction appears in the local criteria received; all of those remain mandatory.
+
+## Technical validity criterion (`<task id>-TECH`)
+
+This fixed criterion asks whether the result accomplishes **this task's objective** on a basis
+compatible with the data, methods and conditions that apply. A result can meet every planned
+criterion and still fail it — for example, when it follows the planned method exactly but the
+method does not hold under the conditions of the task. It is independent of `<task id>-REV`: a
+review may demonstrate its verdicts while another part of the result has a technical error, or be
+technically sound without demonstrating the proposed verdicts; each criterion receives its own
+verdict.
+
+Check the analytical basis **before** accepting an approximation, an estimate, an elimination or a
+best-fit choice:
+
+1. **Premises:** each premise is supplied by the task or by **Key Learnings**, or it is explicitly
+   justified. A supplied datum is not an inferred result; the absence of information does not
+   demonstrate its negation; a convenient hypothesis does not become a fact without support.
+2. **Referents and conditions:** values keep their referents, units, conditions and temporal stage.
+3. **Method:** the method or relation applies under the stated conditions, and the contributions
+   and conditions relevant to the analysis are taken into account.
+4. **Support:** the steps actually support the conclusion; the presence of an explanation is not
+   enough.
+5. **Consistency:** calculation, text and conclusion agree with each other and with the available
+   data.
+6. **Approximations and hypotheses:** an approximation, hypothesis or best-fit choice has pertinent
+   support.
+
+Keep these distinctions:
+
+- Narrative coherence does not establish attribution to a source. Do not invent a verifiable
+  reference, and do not require an external lookup or a bibliographic citation when the task does
+  not ask for one.
+- Selecting the answer nearest to a value does not establish that the value came from a valid model:
+  check the derivation first. When the derivation is wrong, the defect is the error, not the
+  distance between the numbers.
+- A hypothesis must be compatible with the scenario and justified; being conceivable or not forbidden
+  is not enough to adopt it, least of all only for the candidate it favours. Apply the same standard
+  of implicit content and of support to every hypothesis or option compared. Keep pertinent
+  contextual inferences, without a literalism that rejects one option for omitting a word while
+  accepting the same omission in another.
+- Approximations, estimates, elimination and best fit remain valid when supported: there is no
+  universal tolerance and no requirement to calculate directly up to every answer.
+- Explicit constraints of the user, including a required precision or exactness, remain mandatory;
+  an anticipation written by the planner is not an obligation of the user.
+
+When simple and pertinent to the task, cross-check the result from another angle: the direction of
+a variation, a limiting case, the compatibility between parts of the text, a temporal relation, a
+referent or unit, or a consequence of a generalization. These are examples, not a mandatory list of
+techniques for every task, and you do not need to produce a second complete solution.
+
+`<task id>-TECH` covers only this task's objective. It does not demand analyses that belong to other
+tasks, the final answer format, an external justification that was not requested or an exactness
+incompatible with a supported estimate.
+
+The justification of `<task id>-TECH` must point to the relevant datum or passage, the decisive
+premise and the relation actually checked. Saying that the explanation is complete or restating its
+conclusion is not a justification. When the criterion is not met, name the datum, relation,
+hypothesis or step that fails and what the next attempt must investigate.
+
+## Technical verification of the local criteria
+
+Check the content, not only the presence of an explanation. The presence of an explanation is not
+its correctness. For each criterion, verify that the formula or method applies under the stated
+conditions, that the data and units used match the task and **Key Learnings**, that each step
+follows from the previous one and that the conclusion follows from the calculation or analysis
+shown. A criterion that asks for a correct, justified result is not met by a wrong derivation that
+is fully written out: for example, a conditional probability that multiplies again by the
+probability of an event already given by the condition is a conditioning error. Name the concrete
+defect in the justification — the step, the relation or the datum affected — so that the next
+attempt can correct it; do not perform the corrected resolution here.
+
+If an acceptance criterion carries a number or expression improperly pre-calculated during planning
+that diverges from the correct deduction from the question data and the **Key Learnings**, consider
+the criterion **met (`met: true`)** when the result demonstrates and justifies the correct
+calculation of that quantity. A planning anticipation is not the standard of correctness.
+
+Avoid **hyper-literalism**: when a criterion requires an analysis, conclusion or option to be
+supported by the text or question, consider the criterion **met** if the result demonstrates the
+**best relative fit (by elimination of the most serious distractors)** or a coherent paraphrase and
+interpretive inference, without requiring a 100% literal word-for-word match. Apply the same
+standard of implicit content to every option compared: for example, a text describing residents
+deliberating together may support an interpretation of collective decision-making without using
+that exact term. Do not reject the supported interpretation for lacking a literal word while
+accepting implicit content for another option.
+Literal wording is required only when the criterion explicitly demands that wording. When a
+justification is only less explicit than it could be, say what link is missing; do not treat that
+as evidence that another option is better.
 
 ## Revision criterion
 
@@ -108,35 +219,6 @@ There is no universal percentage tolerance, no ban on approximation in integer p
 that any divergence fails and no rule that selecting an option passes. Decide from the relations
 between data, method, conditions and conclusion.
 
-## Technical verification of the local criteria
-
-Check the content, not only the presence of an explanation. The presence of an explanation is not
-its correctness. For each criterion, verify that the formula or method applies under the stated
-conditions, that the data and units used match the task and **Key Learnings**, that each step
-follows from the previous one and that the conclusion follows from the calculation or analysis
-shown. A criterion that asks for a correct, justified result is not met by a wrong derivation that
-is fully written out: for example, a conditional probability that multiplies again by the
-probability of an event already given by the condition is a conditioning error. Name the concrete
-defect in the justification — the step, the relation or the datum affected — so that the next
-attempt can correct it; do not perform the corrected resolution here.
-
-If an acceptance criterion carries a number or expression improperly pre-calculated during planning
-that diverges from the correct deduction from the question data and the **Key Learnings**, consider
-the criterion **met (`met: true`)** when the result demonstrates and justifies the correct
-calculation of that quantity. A planning anticipation is not the standard of correctness.
-
-Avoid **hyper-literalism**: when a criterion requires an analysis, conclusion or option to be
-supported by the text or question, consider the criterion **met** if the result demonstrates the
-**best relative fit (by elimination of the most serious distractors)** or a coherent paraphrase and
-interpretive inference, without requiring a 100% literal word-for-word match. Apply the same
-standard of implicit content to every option compared: for example, a text describing residents
-deliberating together may support an interpretation of collective decision-making without using
-that exact term. Do not reject the supported interpretation for lacking a literal word while
-accepting implicit content for another option.
-Literal wording is required only when the criterion explicitly demands that wording. When a
-justification is only less explicit than it could be, say what link is missing; do not treat that
-as evidence that another option is better.
-
 ## Selection criteria
 
 When a criterion requires selecting the option that corresponds to the value or conclusion obtained
@@ -159,3 +241,10 @@ filling `criteria_evaluation` first, `unmet_criteria_ids` next and `decision` la
 
 {"criteria_evaluation": [{"criterion_id": "...", "met": true,
 "justification": "..."}], "unmet_criteria_ids": [], "decision": "approved"}
+
+Evaluate `<task id>-TECH` like any other criterion. For example, when the planned criterion is met
+but the technical basis fails:
+
+{"criteria_evaluation": [{"criterion_id": "T2-AC1", "met": true, "justification": "..."},
+{"criterion_id": "T2-TECH", "met": false, "justification": "..."}],
+"unmet_criteria_ids": ["T2-TECH"], "decision": "reproved"}

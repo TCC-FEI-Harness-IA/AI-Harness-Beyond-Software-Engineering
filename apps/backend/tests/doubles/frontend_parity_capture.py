@@ -28,6 +28,7 @@ from tests.doubles.ralph_scripts import (
     plano_reprovado,
     problema_do_plano,
     relatorio,
+    reprovado_tecnico,
     resolucao,
     resposta_final,
     tarefa_aprovada,
@@ -64,7 +65,7 @@ _REPROVACAO = plano_reprovado(problema_do_plano(
 ))
 _EXECUCAO = [
     resolucao("Nenhum número atende às três condições."),
-    relatorio(("T1-AC1", True), ("T1-AC2", True)),
+    relatorio(("T1-AC1", True), ("T1-AC2", True), ("T1-TECH", True)),
     aprendizados("Nenhum de 2, 4 e 6 é primo, par e maior que 2."),
     *tarefa_aprovada("T2", "D) NDA.", "A alternativa sustentada é D."),
     global_aprovado(),
@@ -80,6 +81,18 @@ CASES: dict[str, tuple[list[str], int]] = {
     ], 5),
     # Planejamento esgotado antes de A.4: nenhuma tarefa nem resposta.
     "v2-planning-exhausted": ([criterios(), _ANTECIPADA, _REPROVACAO, _ANTECIPADA, _REPROVACAO], 2),
+    # Nova fase de validação — 02: B.2 reprova a primeira resolução só pelo critério técnico `T1-TECH`;
+    # B.1 é retentada com o feedback e aprovada. O `execute` mostra só os critérios planejados.
+    "v2-tech-retry": ([
+        criterios(), json.dumps({"tasks": [_tarefa("T1", "Testar as condições em cada número", (
+            "Explicar o teste de cada condição em 2, 4 e 6.",))]}), plano_aprovado(), anotacoes_do_enunciado(),
+        resolucao("Como 2 é par e primo, a alternativa A atende."),
+        reprovado_tecnico("T1", "A condição 'maior que 2' foi ignorada: 2 não é maior que 2. Refaça o teste de 2."),
+        resolucao("Nenhum número atende às três condições: 2 não é maior que 2; 4 e 6 não são primos."),
+        relatorio(("T1-AC1", True), ("T1-TECH", True)),
+        aprendizados("Nenhum de 2, 4 e 6 é primo, par e maior que 2."),
+        global_aprovado(), resposta_final("D) Nenhuma das anteriores"),
+    ], 5),
     # C.3 esgota as correções: as saídas recusadas ficam auditadas e não há resposta final.
     "v2-c3-exhausted": ([
         criterios(), _APROVADO, plano_aprovado(), anotacoes_do_enunciado(), *_EXECUCAO,

@@ -106,6 +106,9 @@ an image at infinity.
    **complementary, never mutually exclusive**: one answer must be able to meet all of them at the
    same time. Check them in pairs: "answer only the option" conflicts with explaining the internal
    result. State which determination to establish and justify rather than fixing the new answer.
+   Identifiers ending in `-TECH` and `-REV` are reserved for criteria the harness adds during
+   execution: every task automatically receives `<task id>-TECH`, which checks the technical validity
+   of its result, and a reviewing task also receives `<task id>-REV`. Do not use these identifiers.
 4. Use **affirmative and delimiting** scope, for example: "the investigation is restricted
    exclusively to the conflicting energy-source accounts and their justification." Restrict
    analytical actions outside the objective; do not impose arbitrary word bans. "Do not calculate

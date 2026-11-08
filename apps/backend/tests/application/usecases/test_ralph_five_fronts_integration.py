@@ -88,8 +88,13 @@ def _resolucao(task_id: str, resultado: str, *vereditos: tuple[str, str, str]) -
     return _json(task_id=task_id, result=resultado, conclusion=resultado, **extra)
 
 
-def _local(task_id: str, aprovado: bool = True, justificativa: str = "Atende.", revisao: bool | None = None) -> str:
-    avaliacoes = [{"criterion_id": f"{task_id}-AC1", "met": aprovado, "justification": justificativa}]
+def _local(task_id: str, aprovado: bool = True, justificativa: str = "Atende.", revisao: bool | None = None,
+           tecnico: bool = True) -> str:
+    """Relatório de B.2 com o conjunto efetivo: o critério planejado, o técnico e, numa revisora, o de revisão."""
+    avaliacoes = [{"criterion_id": f"{task_id}-AC1", "met": aprovado, "justification": justificativa},
+                  {"criterion_id": f"{task_id}-TECH", "met": tecnico,
+                   "justification": "A base técnica sustenta o objetivo da tarefa." if tecnico else
+                   "A base técnica não sustenta a conclusão."}]
     if revisao is not None:
         avaliacoes.append({"criterion_id": f"{task_id}-REV", "met": revisao,
                            "justification": "A investigação demonstra o veredito." if revisao else

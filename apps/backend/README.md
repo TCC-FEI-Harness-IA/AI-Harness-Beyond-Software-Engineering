@@ -119,6 +119,7 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
   - [Planejamento e cobertura do pedido — etapa 03](#planejamento-e-cobertura-do-pedido--etapa-03)
   - [Integração das cinco frentes — etapa 07](#integração-das-cinco-frentes--etapa-07)
   - [Planejamento aprovado antes da execução — nova fase de validação 01](#planejamento-aprovado-antes-da-execução--nova-fase-de-validação-01)
+  - [Validade técnica obrigatória das tarefas — nova fase de validação 02](#validade-técnica-obrigatória-das-tarefas--nova-fase-de-validação-02)
 - [Contratos (DTOs)](#contratos-dtos)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Arquitetura em uma imagem](#arquitetura-em-uma-imagem)
@@ -695,7 +696,8 @@ persistida antes do evento `result`.
 | A.3 aprova | O plano aprovado é confirmado na fila uma única vez (evento `tasks` em A.3) e só então A.4 anota os pontos de atenção do enunciado (valores com unidades, alternativas, fórmulas, condições) numa janela própria; as anotações entram na memória de aprendizados antes de qualquer tarefa. Lista vazia é válida. |
 | Qualquer prompt de B.1, B.2, B.4, C.1, C.2 ou C.3 é montado | O template tem a área **Aprendizados Pontuais** (`## Key Learnings`), preenchida com todos os aprendizados acumulados até aquele momento (anotações de A.4 seguidas dos aprendizados de B.4), ou com o aviso de que ainda não há nenhum. Os aprendizados nunca entram nos resultados armazenados. |
 | Qualquer fase é executada | A execução abre uma janela nova, da própria fase: tarefa diferente e mudança de fase (inclusive B.1 → B.2, B.2 → B.1, B.1 → B.4 e C.1 → C.2/C.3) nunca herdam a conversa anterior. Só as correções de saída da própria execução reaproveitam a janela. Só os aprendizados atravessam fases como memória; as demais entradas chegam explicitamente pelo template. |
-| B.2 aprova | B.3 armazena só essa resposta; B.4 roda numa janela nova e recebe o histórico completo da tarefa (tarefa, tentativas, saídas descartadas e vereditos) como material delimitado `<task_history>`. |
+| B.1/B.2 de uma tarefa são montados | Os dois recebem o mesmo **conjunto efetivo** de critérios (`Task.verification_criteria()`): os planejados, o critério técnico fixo `<id>-TECH` e, numa revisora, `<id>-REV`; o parser recebe exatamente esses IDs. B.2 recebe ainda a tarefa (identificação, título e descrição) numa área própria, em janela nova, sem a conversa de B.1 nem o planejamento. |
+| B.2 aprova | Todos os critérios efetivos, inclusive `<id>-TECH` (e `<id>-REV`), foram atendidos. B.3 armazena só essa resposta; B.4 roda numa janela nova e recebe o histórico completo da tarefa (tarefa, tentativas, saídas descartadas e vereditos) como material delimitado `<task_history>`. |
 | B.2 reprova e há tentativas | B.1 repete numa janela nova, com temperatura `1`; as tentativas reprovadas e os vereditos chegam pela variável `previous_attempts` do Template B.1, delimitados por `<previous_attempts>`, seguidos da instrução de tratar o problema concreto apontado e manter as conclusões não refutadas. A verificação dessa tentativa e as fases seguintes voltam à temperatura do usuário. |
 | B.2 reprova e as tentativas acabam | Nada é armazenado, B.4 não roda, a execução é interrompida. |
 | B.2/C.1 devolve um relatório vazio, incompleto, duplicado, com ID desconhecido ou contraditório | O verificador é chamado de novo, na mesma janela e com temperatura `1`, para conferir e corrigir o próprio relatório (chamada contada); não consome tentativa de B.1. O veredito nunca é ajustado automaticamente. Sem correção, a fase falha. |
@@ -709,7 +711,8 @@ persistida antes do evento `result`.
 | Qualquer limite é atingido em qualquer fase ou retentativa | A execução é interrompida (`failure.reason = resource_limit`), sem nenhuma chamada depois do bloqueio. |
 
 **Verificações determinísticas.** Os relatórios de B.2 e C.1 são validados contra os critérios
-esperados da chamada, entregues ao parser como dados (`ValidationContext`), e não lidos do prompt:
+esperados da chamada (em B.2, o conjunto efetivo com `<id>-TECH`), entregues ao parser como dados
+(`ValidationContext`), e não lidos do prompt:
 uma avaliação para cada critério, sem omissões, repetições ou IDs extras; `unmet_criteria_ids`
 exatamente igual aos critérios com `met=false`; `approved` somente com todos `met=true`. Isso garante
 a consistência estrutural do relatório; não garante que o julgamento do modelo verificador esteja
@@ -958,6 +961,36 @@ provedor), [`test_structured_response_parser_plan_validation.py`](tests/infra/ad
 [`test_flow_version_persistence_round_trip.py`](tests/infra/services/test_flow_version_persistence_round_trip.py)
 (persistência, consulta e pacotes). As saídas são roteirizadas: provam o protocolo, não que um modelo real
 identificará todo plano ruim. Detalhes em **Nova fase de validação — 01** de
+[`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
+
+### Validade técnica obrigatória das tarefas — nova fase de validação 02
+
+B.2 passa a verificar a **tarefa inteira**: além dos critérios planejados (e de `<id>-REV` numa revisora),
+avalia o critério técnico fixo `<id>-TECH`, acrescentado pelo harness a toda tarefa e conhecido por B.1
+antes de resolver. O fluxo, a versão (`flow_version = 2`) e o significado de A.3/A.4 não mudam.
+
+| Peça | Implementação |
+|---|---|
+| Definição única | `src/domain/entities/thinking/harness_criteria.py`: sufixos `-TECH`/`-REV`, descrições em inglês e `technical_criterion(task_id)`/`revision_criterion(task_id)`. Domínio, caso de uso e parser usam só estas funções. |
+| Tarefa | `Task.acceptance_criteria` guarda só os critérios de autoria do planejador; `Task.technical_criterion`, `Task.harness_criteria()` (TECH e, numa revisora, REV) e `Task.verification_criteria()` (planejados + TECH + REV, cada um uma vez, determinístico). `__post_init__` recusa `<id>-TECH` em toda tarefa, antes do retorno antecipado de `review is None`; `<id>-REV` continua reservado numa revisora. |
+| B.1 | Variável `task_acceptance_criteria` com o conjunto efetivo. Template: área de critérios explica o conjunto, nova seção `Technical validity (<task id>-TECH)` antes da política compartilhada (fundamento antes de aproximação/melhor ajuste). |
+| B.2 | Nova variável `task_description` (`### <id> — <título>` + descrição), em área própria antes de `Preliminary result`. Template: áreas separadas (tarefa, resultado, critérios efetivos, proposta de revisão, aprendizados); papel de verificador (não resolve, não completa, não edita critérios; registra defeito de planejamento na justificativa); seção `Technical validity criterion (<task id>-TECH)` antes de `Evidence and consistency policy` e `Selection criteria`; exemplo de saída com `T2-TECH: false`. Schema do relatório inalterado. |
+| Parser | `__validate_task_links` recusa `<id>-TECH` em qualquer tarefa de A.2/C.2 (`invalid_value`, `tasks[].acceptance_criteria[].id`) com a recuperação estrutural existente; cobertura e coerência de B.2 seguem genéricas sobre `expected_criteria_ids`. Nenhum veredito é corrigido nem avaliação fabricada. |
+| Planejadores e A.3 | A.2 e C.2 dizem que `-TECH`/`-REV` são reservados; A.3 não reprova um candidato por não conter TECH. |
+| B.4, C.1, C.3 | Entradas e políticas inalteradas. B.4 recebe o histórico com os vereditos (inclusive TECH) e o template proíbe registrar critérios do harness como fatos; C.1 avalia só os critérios gerais; C.3 recebe os resultados vigentes. |
+| Tentativas e custos | `RALPH_MAX_TASK_ATTEMPTS = 5` (inicial + 4), independente de `RALPH_MAX_PLANNING_ATTEMPTS`; B.1 retentada a `1`, B.2 na temperatura da sessão. Aprovação de primeira não acrescenta chamada; cada reprovação por TECH custa uma B.1 e uma B.2. Nenhum teto mudou. |
+| Histórico | Relatórios novos gravam a linha de `<id>-TECH`; sessões antigas não são reescritas nem revalidadas (leitura, consulta, exportação e importação não usam o parser). O frontend trata o ID como qualquer outro. |
+
+Testes: [`test_ralph_technical_validation_integration.py`](tests/application/usecases/test_ralph_technical_validation_integration.py)
+(entradas reais, isolamento, falha técnica isolada, retentativa e temperaturas, cinco tentativas,
+relatórios inconsistentes, TECH × REV, colisão em A.2/C.2, C.1/C.3/B.4, integração das duas frentes,
+independência dos limites, matriz sintética pelo fluxo), [`test_task_technical_criterion.py`](tests/domain/entities/thinking/test_task_technical_criterion.py),
+[`test_structured_response_parser_technical_criterion.py`](tests/infra/adapters/test_structured_response_parser_technical_criterion.py),
+[`test_technical_validation_contracts.py`](tests/infra/providers/test_technical_validation_contracts.py) (templates e matriz
+[`technical_validation_v1.json`](tests/fixtures/technical_validation_v1.json)) e
+[`test_technical_criterion_history_round_trip.py`](tests/infra/services/test_technical_criterion_history_round_trip.py).
+As saídas são roteirizadas: provam o protocolo, não que um modelo real julga bem a validade técnica;
+TECH não garante verdade factual. Detalhes em **Nova fase de validação — 02** de
 [`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
 
 ### Limite de tokens por sessão

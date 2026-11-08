@@ -118,8 +118,9 @@ It is forbidden to record:
 - task instructions, mentions of the task itself, of its identifier (`T1`, `B.1`), of what it
   required or of its scope restrictions (for example, "Task T1 requires...", "The answer must not
   evaluate...");
-- acceptance criteria (`T1-AC1`) and their fulfillment, the validator and its verdicts, including
-  the approval (`approved`) or rejection (`reproved`) verdict;
+- acceptance criteria (`T1-AC1`), including the harness criteria (`T1-TECH`, `T1-REV`), and their
+  fulfillment, the validator and its verdicts, including the approval (`approved`) or rejection
+  (`reproved`) verdict;
 - reports of the execution process or of the attempts, and indirect phrasings such as "The approved
   answer concluded that..." or "In task T1 it was identified that..." — write the concluded fact
   directly;
