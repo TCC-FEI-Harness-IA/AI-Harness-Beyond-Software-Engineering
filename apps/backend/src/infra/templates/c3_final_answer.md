@@ -81,13 +81,17 @@ presentation, not a separate stage, and it does not reopen what C.1 approved.
    applied, and do not drop or replace it for lack of exactness.
 4. **Identifiers.** An identifier you write must label the very object the results determined:
    the letter and text of an option, the number of a test, the name of an entity, a product code, a
-   month or any other label. When the stored results themselves attach an identifier to the determined
-   content (for example, "which corresponds to option B"), copy that identifier. When the associations
-   between identifiers and items are in the notes from the question, use them for a literal check: find
-   the item the results determined and copy the identifier attached to it; the notes serve that literal
-   association and they never replace the results as the source of the analytic answer. Never take an
-   identifier from the position of an item in a list, from the item's own number or from memory when the
-   association does not establish it.
+   month or any other label. When the notes from the question explicitly associate an identifier with
+   the approved item or choice, use them for a literal check: find that item and use that literal pairing
+   even if a stored result attaches a different identifier to the same item. This corrects only the
+   presentation label, without changing the approved analytical determination or rewriting stored results;
+   the notes serve that literal association and they never replace the results as the source of the
+   analytic answer. If no question mapping is available, keep an identifier explicitly associated with
+   that item by the stored results, provided it is consistent with the approved content. Literal pairing
+   applies only when the approved item or choice is unambiguous and the association is explicit; it
+   does not authorize choosing between conflicting analytical conclusions or replacing an approved
+   best-fit choice. Never take an identifier from the position of an item in a list, from the item's own
+   number or from memory when the association does not establish it.
 5. **Literal pairing is not analytical selection.** Pairing an approved object with the identifier
    that literally labels it, translating and formatting are presentation. You must not choose the
    option closest to a value when the results did not make that comparison, complete a calculation,
@@ -103,8 +107,10 @@ presentation, not a separate stage, and it does not reopen what C.1 approved.
    in any line the request requires, such as a final marker line — with the item the results determined:
    the object, direction, sign, unit, period, conditions and qualifiers must be the approved ones. A
    marker line presents the approved conclusion; it is not a new choice, so it names the same item as
-   the text. If any part of the draft contradicts the results, correct the draft from the results:
-   translation and formatting change the wording, never the conclusion.
+   the text. If any part of the draft contradicts the approved analytical content, correct the draft
+   from the results. Follow the literal pairing rule above for identifiers, including when the stored
+   result attached a mismatched identifier to the determined item: translation and formatting change
+   the wording, never the analytical conclusion.
 
 The check is internal: do not describe it in the answer, and do not mention stages, tasks, criteria,
 learnings or other internal details of the process. Write only what the user asked for.
@@ -127,6 +133,11 @@ learnings or other internal details of the process. Write only what the user ask
 - Code pairing: the results determine that the pump failed the pressure test and the notes from the
   question record `P-1 — pump; V-3 — valve`. Valid: `P-1`. Invalid: `V-3`, or a text about the pump
   followed by the code of the valve.
+- Mismatched identifier in a result: the approved analysis determines that the pump failed but labels
+  it `V-3`; the question's notes explicitly pair `P-1` with the pump and `V-3` with the valve. Present
+  `P-1`, keeping the pump as the determined item. This is literal pairing, not a new diagnosis, and
+  does not rewrite the stored result. If the approved analysis itself does not determine whether the
+  pump or valve failed, the labels alone cannot decide that; do not choose an object here.
 - Marker line: the results conclude that the sample from site 2 has the highest concentration and that
   it corresponds to option A. Valid: a text about the sample from site 2 ending with `FINAL_ANSWER: A`.
   Invalid: the same text ending with `FINAL_ANSWER: C`, because the marker contradicts the approved item.

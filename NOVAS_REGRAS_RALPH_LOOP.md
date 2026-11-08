@@ -4150,26 +4150,51 @@ crescimento; (b) e (c) são verdadeiras, mas não explicam a diferença” (`bes
 num caso em que os resultados e C.1 associavam o par aprovado à alternativa A, a resposta manteve o par no
 texto e escreveu `FINAL_ANSWER: C`.
 
-**Regra.** Na conferência de C.3: quando os próprios resultados associam um identificador ao conteúdo
-determinado (“which corresponds to option B”), copiar esse identificador; as notas do enunciado servem à
-associação literal e nunca substituem os resultados como fonte da resposta analítica. Novo passo **Final
+**Regra.** Na conferência de C.3, identificar primeiro o objeto ou a escolha determinados pelos resultados.
+Quando as notas do enunciado associam explicitamente um identificador a esse item inequívoco, usar esse
+pareamento literal, inclusive se o resultado tiver anexado outro identificador ao mesmo item. Isso ajusta
+só o rótulo na apresentação: não altera a determinação analítica nem reescreve os resultados armazenados.
+Sem mapeamento nas notas do enunciado, pode-se usar o identificador explicitamente associado nos resultados,
+desde que consistente com o conteúdo aprovado. As notas nunca substituem os resultados como fonte da
+resposta analítica. O pareamento não autoriza escolher entre conclusões analíticas conflitantes nem trocar
+uma escolha aprovada por melhor ajuste. Novo passo **Final
 identifier check**: depois de redigir, comparar todo identificador escrito — no texto e em qualquer linha
 exigida, como a linha marcadora — com o item aprovado (objeto, direção, sinal, unidade, período, condições,
 qualificadores); a linha marcadora apresenta a conclusão aprovada, não é nova escolha; se o rascunho
-contradiz os resultados, corrigir o rascunho a partir deles. Exemplos novos: pareamento de código
+contradiz o conteúdo analítico aprovado, corrigir o rascunho a partir dele, aplicando aos identificadores a
+regra de pareamento literal acima. Exemplos novos: pareamento de código
 (`P-1 — pump; V-3 — valve`) e linha marcadora contraditória.
 
 **Exemplo (aberto).** Resultado: “o estoque diminuiu na filial leste e aumentou na oeste, excluídas as
 devoluções”. A tradução pode resumir, nunca trocar as filiais, o mês, as quantidades ou a exclusão
 (`translation_keeps_branches_direction_and_condition`).
 
+**Correção após a revisão da entrega.** A redação inicial dos refinamentos 03 mandava copiar o identificador
+que viesse nos resultados, criando uma precedência indevida quando esse código contradizia o pareamento
+literal do enunciado. Essa instrução foi substituída pela regra acima. Exemplo:
+
+```text
+Dados do enunciado: P-1 — bomba; V-3 — válvula.
+Resultado aprovado: a bomba foi reprovada; identificador V-3.
+
+Antes: a instrução de copiar o código favorecia V-3 e contradizia a conferência literal.
+Depois: apresentar P-1, preservando a determinação “bomba”. O resultado armazenado não é alterado.
+```
+
+Se a própria análise aprovada não determinar se falhou a bomba ou a válvula, conhecer os códigos não resolve
+essa lacuna: C.3 não escolhe o objeto. Um novo caso sintético está em `final_answer_fidelity_v2.json`, que
+estende os quatro casos da v1 sem alterá-los. Os testes de contrato verificam a regra e seus limites; o
+teste integrado confere que o objeto, o código conflitante e o pareamento original chegam a C.3, sem nova
+fase e sem resposta de referência como entrada. Essas evidências não provam a fidelidade de um modelo real.
+
 **Limites.** C.3 continua apresentação: sem C.4, chamada de conferência, correção automática de letras,
 comparação com gabarito, revalidação analítica ou consumo dos relatórios de C.1. As entradas de C.3 não
 mudaram (`stored_results`, critérios gerais e a área Key Learnings, agora com rótulos). Lacunas de vínculo
 continuam com C.1/C.2. A fidelidade de uma geração real não é provada pelos testes roteirizados.
 
-**Relação.** Esclarece a thinking 06; não duplica as instruções existentes, acrescenta o passo final e a
-precedência do identificador dado pelos resultados.
+**Relação.** Esclarece a thinking 06 e acrescenta o passo final de fidelidade. A regra vigente não dá
+precedência automática ao identificador anexado pelo solver: preserva o objeto aprovado e confere sua
+associação literal, sem transformar C.3 em validador analítico.
 
 ### Arquivos alterados
 
@@ -4195,15 +4220,25 @@ nos dois sentidos, parecer contraditório aceito, isolamento das referências) e
 `test_ralph_refinements_integration.py` (procedência até B/C sem virar critério, resultado ou conteúdo;
 feedback de B.1 e A.2; matrizes v2 pelo fluxo; material de C.3 sem fase nova). Testes existentes
 atualizados só onde o comportamento mudou por especificação (formato de `render()` e a temperatura da
-segunda A.2). Resultado em `apps/backend`: `flake8 src tests` sem erros; `pytest --cov=src
+segunda A.2). Resultado da entrega original, antes da correção do pareamento de C.3, em `apps/backend`:
+`flake8 src tests` sem erros; `pytest --cov=src
 --cov-report=term-missing --cov-fail-under=100` com **2987 testes aprovados e 100% de cobertura**; no
 frontend, `npm test` com **716 testes aprovados** depois da regravação das duas fixtures.
 
+**Verificação da correção de C.3.** Os dois testes de contrato do pareamento e de seus limites falharam
+com o prompt anterior e passaram após a correção. As suítes direcionadas de fidelidade, contratos,
+matrizes e integração passaram com **179 testes**. A suíte completa do backend passou com **2992 testes
+e 100% de cobertura**, e `flake8 src tests` terminou sem erros. A matriz de apresentação v1 permaneceu
+intacta; o novo caso da v2 foi exercitado no transporte, no parser e no fluxo até C.3, mantendo uma única
+chamada final. Não foi executada avaliação com modelo real nem foi acrescentada correção por código.
+
 **Matrizes semânticas (preparadas, não executadas).** `decomposition_validation_v2.json` (8 casos novos
 sobre os 7 da v1), `technical_validation_v2.json` (10 novos sobre os 11 da v1) e
-`final_answer_fidelity_v1.json` (4 casos de apresentação). As versões 1 ficaram intactas, e a v2 declara
-`extends`. Referências, rubricas e respostas de referência nunca são enviadas ao modelo nem lidas pela
-produção (testado). **Nenhuma avaliação com modelo real foi executada nesta entrega**, e nenhum ganho de
+`final_answer_fidelity_v1.json` (4 casos de apresentação). Após a revisão, `final_answer_fidelity_v2.json`
+acrescenta um conflito entre o identificador do resultado e o pareamento literal do enunciado. As versões 1
+ficaram intactas, e cada v2 declara `extends`. Referências, rubricas e respostas de referência nunca são
+enviadas ao modelo nem lidas pela produção (testado). **Nenhuma avaliação com modelo real foi executada
+nesta entrega**, e nenhum ganho de
 acurácia é declarado: testes roteirizados provam parâmetros, transporte, contratos e estado; a contagem de
 reprovações não mede melhora. Para avaliar, siga o roteiro de `apps/backend/tests/fixtures/README.md` e
 compare, nos mesmos IDs, os dois estados do harness e a inferência simples.

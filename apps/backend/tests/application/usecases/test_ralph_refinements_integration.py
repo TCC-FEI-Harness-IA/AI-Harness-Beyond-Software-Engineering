@@ -4,7 +4,7 @@ Usam os templates, o parser, a fila, a memória, o livro de resultados e o recor
 modelo roteirizadas. Provam o material entregue a cada fase, o transporte do feedback, a separação entre
 conteúdo e procedência e a ausência de fase ou chamada nova. Não provam que um modelo real identifica o
 defeito certo, corrige a objeção ou apresenta o identificador correto: isso é avaliação semântica, com as
-matrizes `decomposition_validation_v2.json`, `technical_validation_v2.json` e `final_answer_fidelity_v1.json`.
+matrizes `decomposition_validation_v2.json`, `technical_validation_v2.json` e `final_answer_fidelity_v2.json`.
 """
 import json
 import logging
@@ -35,6 +35,8 @@ _FIXTURES = Path(__file__).parents[2] / "fixtures"
 _TECH_V2 = json.loads((_FIXTURES / "technical_validation_v2.json").read_text(encoding="utf-8"))
 _PLAN_V2 = json.loads((_FIXTURES / "decomposition_validation_v2.json").read_text(encoding="utf-8"))
 _FINAL = json.loads((_FIXTURES / "final_answer_fidelity_v1.json").read_text(encoding="utf-8"))
+_FINAL_V2 = json.loads((_FIXTURES / "final_answer_fidelity_v2.json").read_text(encoding="utf-8"))
+_FINAL_CASES = [*_FINAL["cases"], *_FINAL_V2["cases"]]
 _SESSAO = 0.2
 
 
@@ -276,7 +278,7 @@ async def test_matriz_tecnica_v2_chega_a_b2_com_procedencia_real_e_feedback_sem_
 # ── Apresentação: C.3 recebe os resultados aprovados e as notas, nada mais ──
 
 
-@pytest.mark.parametrize("caso", _FINAL["cases"], ids=lambda caso: caso["name"])
+@pytest.mark.parametrize("caso", _FINAL_CASES, ids=lambda caso: caso["name"])
 async def test_c3_recebe_resultado_aprovado_e_notas_rotuladas_sem_fase_nova(caso: dict[str, Any]) -> None:
     corpo = caso["stored_results"].split("\n\n", 1)[1]
     t1 = _tarefa("T1", "Determinacao", "Determine o pedido.", [{"id": "T1-AC1", "description": "Determinar."}])

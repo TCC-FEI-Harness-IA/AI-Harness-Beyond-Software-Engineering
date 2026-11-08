@@ -332,12 +332,23 @@ def test_c3_confere_identificadores_inclusive_na_linha_marcadora_e_corrige_o_ras
     assert "correct the draft from the results" in check
 
 
-def test_c3_copia_o_identificador_que_os_resultados_ja_associam_e_usa_notas_so_para_conferir() -> None:
+def test_c3_confere_o_identificador_dos_resultados_com_o_pareamento_literal_do_enunciado() -> None:
     check = _section(Phase.C3_FINAL_ANSWER, "Fidelity check before answering")
 
-    assert "When the stored results themselves attach an identifier to the determined content" in check
+    assert "use that literal pairing even if a stored result attaches a different identifier to the same item" in check
+    assert "without changing the approved analytical determination or rewriting stored results" in check
+    assert "copy that identifier" not in check
     assert "they never replace the results as the source of the analytic answer" in check
     assert "periods" in check
+
+
+def test_c3_so_ajusta_o_rotulo_de_item_inequivoco_e_nao_resolve_conflitos_analiticos() -> None:
+    check = _section(Phase.C3_FINAL_ANSWER, "Fidelity check before answering")
+
+    assert "only when the approved item or choice is unambiguous and the association is explicit" in check
+    assert "If no question mapping is available, keep an identifier explicitly associated with that item" in check
+    assert "does not authorize choosing between conflicting analytical conclusions" in check
+    assert "Follow the literal pairing rule above for identifiers" in check
 
 
 def test_c3_tem_exemplos_de_codigo_e_de_linha_marcadora() -> None:

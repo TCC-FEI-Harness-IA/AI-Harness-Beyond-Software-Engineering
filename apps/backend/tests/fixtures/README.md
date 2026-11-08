@@ -129,6 +129,12 @@ novos: a matriz da versão 2 é a da versão 1, **inalterada** (um teste confere
   condição, código pareado literalmente com o objeto aprovado e melhor ajuste apresentado como tal. Cada
   caso traz o material que C.3 recebe (`stored_results`, notas) e, só para o avaliador, `reference_answer`,
   `invalid_presentation` e `review_checks`.
+- **C.3 v2 (1 caso novo sobre os 4 da v1):** `final_answer_fidelity_v2.json` declara `extends` e preserva
+  a v1. O resultado determina inequivocamente a bomba como equipamento reprovado, mas anexa o código da
+  válvula; a nota do enunciado associa explicitamente cada equipamento ao código correto. A apresentação
+  deve conservar a bomba e usar seu código literal, sem escolher outro objeto nem reescrever resultados.
+  O caso verifica o material entregue à fase e integra a avaliação semântica futura; uma resposta final
+  roteirizada não comprova que o modelo real obedece à regra.
 
 Os testes renderizam os templates reais, conferem que nenhum campo de referência chega ao modelo ou aos
 templates, que a produção não lê as matrizes e que o parser aceita relatórios coerentes nos dois sentidos.

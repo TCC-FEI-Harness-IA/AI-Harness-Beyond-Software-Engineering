@@ -1,7 +1,8 @@
 """Matrizes semânticas dos refinamentos 03: versionamento, transporte e contrato.
 
 `decomposition_validation_v2.json` e `technical_validation_v2.json` estendem as versões 1 sem alterá-las;
-`final_answer_fidelity_v1.json` é nova. Estes testes renderizam os templates reais com os casos, conferem
+`final_answer_fidelity_v2.json` estende a v1 com o conflito entre objeto aprovado e identificador. Os testes
+renderizam os templates reais com os casos, conferem
 que os campos de referência nunca chegam ao modelo e que o parser aceita relatórios coerentes nos dois
 sentidos — inclusive o parecer contraditório de A.3, o que mostra que só uma avaliação com modelo real
 mede a qualidade do julgamento. Nenhum caso é pontuado aqui.
@@ -35,9 +36,10 @@ def _load(name: str) -> dict:
 _PLAN_V1, _PLAN_V2 = _load("decomposition_validation_v1.json"), _load("decomposition_validation_v2.json")
 _TECH_V1, _TECH_V2 = _load("technical_validation_v1.json"), _load("technical_validation_v2.json")
 _FINAL = _load("final_answer_fidelity_v1.json")
+_FINAL_V2 = _load("final_answer_fidelity_v2.json")
 _PLAN_CASES = _PLAN_V2["cases"]
 _TECH_CASES = _TECH_V2["cases"]
-_FINAL_CASES = _FINAL["cases"]
+_FINAL_CASES = [*_FINAL["cases"], *_FINAL_V2["cases"]]
 _VALID_PLAN_KINDS = {"valid_supplied_condition", "valid_determine_whether", "valid_open_interpretation",
                      "valid_hypothesis_investigated"}
 
@@ -65,7 +67,8 @@ def _rendered_learnings(case: dict) -> str:
 # ── Versionamento ───────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize("v1, v2", [(_PLAN_V1, _PLAN_V2), (_TECH_V1, _TECH_V2)], ids=["A3", "TECH"])
+@pytest.mark.parametrize("v1, v2", [(_PLAN_V1, _PLAN_V2), (_TECH_V1, _TECH_V2), (_FINAL, _FINAL_V2)],
+                         ids=["A3", "TECH", "C3"])
 def test_versao_2_estende_a_versao_1_sem_alterar_os_casos_anteriores(v1: dict, v2: dict) -> None:
     assert v1["version"] == 1 and v2["version"] == 2
     assert _load(v2["extends"]) == v1
@@ -202,10 +205,11 @@ def test_parser_aceita_referencia_tecnica_e_o_oposto(case: dict) -> None:
 # ── C.3: apresentação fiel ─────────────────────────────────────────────────
 
 
-def test_matriz_de_apresentacao_cobre_marcador_traducao_codigo_e_melhor_ajuste() -> None:
+def test_matriz_de_apresentacao_cobre_marcador_traducao_codigo_melhor_ajuste_e_conflito() -> None:
     assert _FINAL["version"] == 1
     assert {case["kind"] for case in _FINAL_CASES} == {
-        "identifier_in_marker_line", "translation_fidelity", "object_code_pairing", "best_fit_choice"
+        "identifier_in_marker_line", "translation_fidelity", "object_code_pairing", "best_fit_choice",
+        "result_identifier_conflicts_with_question_pairing",
     }
     for case in _FINAL_CASES:
         assert case["reference_answer"] != case["invalid_presentation"]
@@ -255,7 +259,8 @@ def test_nenhum_template_contem_exemplos_ou_referencias_das_novas_matrizes(phase
 
 
 def test_codigo_de_producao_nao_le_as_matrizes() -> None:
-    names = ("decomposition_validation_v2", "technical_validation_v2", "final_answer_fidelity_v1", "tests/fixtures")
+    names = ("decomposition_validation_v2", "technical_validation_v2", "final_answer_fidelity_v1",
+             "final_answer_fidelity_v2", "tests/fixtures")
     for path in _SRC.rglob("*.py"):
         text = path.read_text(encoding="utf-8")
         assert not any(name in text for name in names), path

@@ -1006,7 +1006,7 @@ são programáticas; as demais refinam instruções dos templates existentes.
 | A.3 / A.2 / C.2 | Rubrica com objeto pedido, relações temporais, condições simultâneas, integração entre tarefas e **prioridades impostas**; seção *Supplied data, investigation and conclusion* com exemplos contrastivos; reprovação só com defeito bloqueante e ajuste real. A.2 (*Conditions in the integration*, *Priorities* e orientação do parecer) e a revisão final de C.2 harmonizadas. |
 | B.1 / B.2 / TECH | Parágrafo **Decisive relation** em B.2 (conferência proporcional; “plausível” não basta; reprovar sem entregar a resolução); premissas não ganham suporte por estarem na descrição ou na memória; seção idêntica **Comparison consistency** em B.1/B.2; B.2 avalia só o resultado atual. Descrição central de TECH alinhada. |
 | Retentativas | `_PLAN_REVISION_INSTRUCTION` e `_RETRY_INSTRUCTION_CONTENT` pedem enfrentar o defeito apontado, mostrar o que mudou e rever restrições assumidas pelo próprio solver, sem campo novo nem detector de estagnação. |
-| B.4 / C.1 / C.3 | Parágrafo idêntico **Origin labels** na área Key Learnings de B.1, B.2, B.4, C.1, C.2 e C.3. B.4 copia só o texto da nota e preserva hipóteses e qualificações. C.3 copia o identificador que os resultados associam ao conteúdo e faz o **Final identifier check** (inclusive na linha marcadora). |
+| B.4 / C.1 / C.3 | Parágrafo idêntico **Origin labels** na área Key Learnings de B.1, B.2, B.4, C.1, C.2 e C.3. B.4 copia só o texto da nota e preserva hipóteses e qualificações. C.3 preserva o item aprovado e confere seu identificador pelo pareamento literal explícito do enunciado, inclusive se o resultado anexou outro código ao mesmo item. Sem esse mapeamento, conserva o identificador dos resultados quando consistente. Faz o **Final identifier check** sem alterar resultados armazenados ou resolver conflitos analíticos. |
 
 Testes: [`test_base_thinking_phase_temperature.py`](tests/application/phases/test_base_thinking_phase_temperature.py),
 [`test_ralph_plan_revision_temperature_integration.py`](tests/application/usecases/test_ralph_plan_revision_temperature_integration.py),
@@ -1016,7 +1016,9 @@ Testes: [`test_base_thinking_phase_temperature.py`](tests/application/phases/tes
 [`test_ralph_refinements_integration.py`](tests/application/usecases/test_ralph_refinements_integration.py), com as
 matrizes [`decomposition_validation_v2.json`](tests/fixtures/decomposition_validation_v2.json),
 [`technical_validation_v2.json`](tests/fixtures/technical_validation_v2.json) (ambas estendem a v1, intacta) e
-[`final_answer_fidelity_v1.json`](tests/fixtures/final_answer_fidelity_v1.json). Os testes provam parâmetros,
+[`final_answer_fidelity_v1.json`](tests/fixtures/final_answer_fidelity_v1.json), estendida pela
+[`v2`](tests/fixtures/final_answer_fidelity_v2.json) com o conflito entre código do resultado e pareamento
+literal do enunciado. Os testes provam parâmetros,
 transporte, contratos e estado; a avaliação semântica com modelo real não foi executada. Detalhes em
 **Refinamentos 03** de [`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
 
