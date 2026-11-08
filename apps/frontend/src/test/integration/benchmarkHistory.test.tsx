@@ -92,6 +92,50 @@ afterEach(() => {
 })
 
 describe('Benchmark como funcionalidade da aplicação', () => {
+  it('seleciona várias questões da mesma bateria, acompanha o lote e recarrega os resultados', async () => {
+    const user = userEvent.setup()
+    const session = completedBenchmarkSession()
+    session.questions[0]!.ralph = outcome({ mode: 'ralph', is_correct: false, error: 'Falha no provedor' })
+    const backend = mockBackend([session])
+    renderApp('/benchmark/bench_1')
+
+    await user.click(await screen.findByRole('checkbox', { name: 'Selecionar todas as questões com erro ou falha' }))
+    await user.click(screen.getByRole('button', { name: 'Executar novamente selecionadas (2)' }))
+    const socket = FakeWebSocket.latest()
+    expect(socket.url).toBe('ws://localhost:8000/v1/benchmark/sessions/bench_1/questions/rerun')
+    act(() => socket.emitOpen())
+    expect(JSON.parse(socket.sentFrames[0]!)).toEqual({ question_ids: ['Q1', 'Q2'] })
+
+    const running = {
+      ...session,
+      questions: session.questions.map((question, index) => ({
+        ...question, current_mode: index === 0 ? 'ralph' as const : 'simple' as const,
+      })),
+    }
+    emit(socket, 'progress', running)
+    expect(await screen.findByText('Ao vivo')).toBeInTheDocument()
+    expect(screen.getAllByText('Executando')).toHaveLength(2)
+    await user.click(screen.getByRole('link', { name: '← BenchMark · Vestibulares' }))
+    const monitor = await screen.findByRole('article', { name: 'Bateria atual' })
+    expect(within(monitor).getByRole('heading', { name: 'Reexecução de 2 questões' })).toBeInTheDocument()
+    expect(within(monitor).getByText('Reexecutando')).toBeInTheDocument()
+    expect(within(monitor).getByRole('button', { name: 'Cancelar' })).toBeInTheDocument()
+
+    const finished = completedBenchmarkSession()
+    finished.questions[1]!.simple = outcome({ session_id: 'sess_q2_simple_nova' })
+    backend.batteries[0] = finished
+    emit(socket, 'result', finished)
+    act(() => socket.emitClose(1000))
+    expect(within(monitor).getByRole('button', { name: 'Fechar' })).toBeInTheDocument()
+    await user.click(within(monitor).getByRole('link', { name: 'Ver detalhes' }))
+    await screen.findByRole('heading', { name: /Bateria de/, level: 1 })
+    expect(screen.queryByText('Ao vivo')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Executar novamente selecionadas/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Abrir sessão Simples de Q2' })).toHaveAttribute(
+      'href', '/benchmark/bench_1/sessao/sess_q2_simple_nova',
+    )
+  })
+
   it('alterna para MMLU, configura o protocolo e persiste a identificação no histórico', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()

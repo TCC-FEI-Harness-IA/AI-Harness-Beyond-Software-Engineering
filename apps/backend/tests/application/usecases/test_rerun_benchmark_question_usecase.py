@@ -34,9 +34,10 @@ def _bateria_encerrada(
     simples_correto: bool = True,
     ralph_correto: bool = False,
     status: BenchmarkSessionStatusEnum = BenchmarkSessionStatusEnum.COMPLETED,
+    identificadores: tuple[str, ...] = ("Q1", "Q2"),
 ) -> BenchmarkSession:
-    sessao = bateria("Q1", "Q2")
-    for identificador in ("Q1", "Q2"):
+    sessao = bateria(*identificadores)
+    for identificador in identificadores:
         for modo, correto in ((_SIMPLES, simples_correto), (_RALPH, ralph_correto)):
             sessao.start_flow(question_id=identificador, mode=modo, at=sessao.created_at)
             sessao.record_outcome(
@@ -290,3 +291,119 @@ async def test_recusa_reexecutar_com_provider_de_outro_subconjunto() -> None:
     with pytest.raises(InvalidBenchmarkRequestError, match="Subconjunto"):
         await _coletar(caso)
     assert not runner.requests
+
+
+@pytest.mark.parametrize("max_parallel", [1, 2, 10])
+async def test_lote_respeita_paralelismo_e_preserva_ordem_dos_fluxos_por_questao(max_parallel: int) -> None:
+    ids = tuple(f"Q{index}" for index in range(1, 6))
+    sessao = _bateria_encerrada(simples_correto=False, identificadores=ids)
+    sessao.max_parallel = max_parallel
+    provider = FakeBenchmarkQuestionProvider([questao(identificador) for identificador in ids])
+    caso, runner, repositorio, definicoes = _caso_de_uso(_acerta, sessao, provider=provider)
+
+    estados = [item async for item in caso.execute_many("bench_1", list(ids))]
+
+    assert estados[-1].finished
+    assert len(definicoes) == 1
+    assert runner.max_active == min(max_parallel, len(ids))
+    assert repositorio.save_attempts == len(ids) * 2
+    for identificador in ids:
+        assert [item.mode for item in runner.requests if item.question.id == identificador] == [_SIMPLES, _RALPH]
+        assert repositorio.sessions["bench_1"].question(identificador).simple.is_correct
+        assert repositorio.sessions["bench_1"].question(identificador).ralph.is_correct
+    assert all(request.llm_config == sessao.llm_config for request in runner.requests)
+    assert all(
+        question.current_mode is None and question.current_tokens == 0
+        for snapshot in repositorio.saved for question in snapshot.questions
+    )
+
+
+async def test_lote_refaz_so_fluxos_errados_ou_com_falha_das_questoes_selecionadas() -> None:
+    sessao = _bateria_encerrada(identificadores=("Q1", "Q2", "Q3"))
+    sessao.question("Q2").simple = desfecho(mode=_SIMPLES, correto=False, erro="Falha no provedor")
+    sessao.question("Q2").ralph = desfecho(mode=_RALPH, correto=True)
+    provider = FakeBenchmarkQuestionProvider([questao(identificador) for identificador in ("Q1", "Q2", "Q3")])
+    caso, runner, repositorio, _ = _caso_de_uso(_acerta, sessao, provider=provider)
+
+    _ = [item async for item in caso.execute_many("bench_1", ["Q1", "Q2"])]
+
+    assert {(item.question.id, item.mode) for item in runner.requests} == {("Q1", _RALPH), ("Q2", _SIMPLES)}
+    gravada = repositorio.sessions["bench_1"]
+    assert gravada.question("Q3") == sessao.question("Q3")
+    assert gravada.question("Q1").simple == sessao.question("Q1").simple
+    assert gravada.question("Q2").ralph == sessao.question("Q2").ralph
+    assert gravada.summary(_RALPH).correct == 2
+
+
+@pytest.mark.parametrize("ids", [[], ["Q1", "Q1"], ["Q1", "Q9"]])
+async def test_lote_invalido_nao_executa_nenhuma_questao(ids: list[str]) -> None:
+    caso, runner, repositorio, _ = _caso_de_uso(_acerta, _bateria_encerrada())
+
+    with pytest.raises(InvalidBenchmarkRequestError):
+        _ = [item async for item in caso.execute_many("bench_1", ids)]
+
+    assert not runner.requests
+    assert repositorio.save_attempts == 0
+    await _coletar(caso)
+
+
+@pytest.mark.parametrize("removida", [False, True])
+async def test_lote_valida_todas_as_questoes_antes_de_iniciar_a_primeira(removida: bool) -> None:
+    sessao = _bateria_encerrada()
+    sessao.question("Q2").ralph = desfecho(mode=_RALPH, correto=True)
+    provider = FakeBenchmarkQuestionProvider([questao("Q1")] if removida else [questao("Q1"), questao("Q2")])
+    caso, runner, repositorio, _ = _caso_de_uso(_acerta, sessao, provider=provider)
+
+    with pytest.raises(InvalidBenchmarkRequestError if removida else BenchmarkQuestionNotRerunnableError):
+        _ = [item async for item in caso.execute_many("bench_1", ["Q1", "Q2"])]
+
+    assert not runner.requests
+    assert repositorio.save_attempts == 0
+
+
+async def test_cancelamento_do_lote_preserva_resultados_concluidos_sem_gravar_fluxos_ativos() -> None:
+    iniciou_segunda = asyncio.Event()
+
+    async def parcial(request: BenchmarkFlowRequest, on_tokens: Callable[[int], None]) -> BenchmarkFlowOutcome:
+        if request.question.id == "Q1":
+            await iniciou_segunda.wait()
+            return _novo_desfecho(request)
+        on_tokens(42)
+        iniciou_segunda.set()
+        await asyncio.Event().wait()
+        raise AssertionError("não deveria terminar")
+
+    caso, runner, repositorio, _ = _caso_de_uso(parcial, _bateria_encerrada())
+    geracao = caso.execute_many("bench_1", ["Q1", "Q2"])
+    async for item in geracao:
+        if item.benchmark_session.question("Q1").ralph.is_correct:
+            break
+    await geracao.aclose()
+
+    assert [request.question.id for request in runner.cancelled] == ["Q2"]
+    gravada = repositorio.sessions["bench_1"]
+    assert gravada.question("Q1").ralph.session_id == "Q1_ralph_nova"
+    assert gravada.question("Q2").ralph.session_id == "Q2_ralph_antiga"
+    assert gravada.question("Q2").current_mode is None
+    assert gravada.question("Q2").current_tokens == 0
+    await _coletar(_caso_de_uso(_acerta, gravada)[0], question_id="Q2")
+
+
+async def test_falha_inesperada_no_lote_cancela_outros_workers_e_libera_a_bateria() -> None:
+    iniciou_segunda = asyncio.Event()
+
+    async def falha(request: BenchmarkFlowRequest, on_tokens: Callable[[int], None]) -> BenchmarkFlowOutcome:
+        if request.question.id == "Q1":
+            await iniciou_segunda.wait()
+            raise RuntimeError("executor indisponível")
+        iniciou_segunda.set()
+        await asyncio.Event().wait()
+        raise AssertionError("não deveria terminar")
+
+    caso, runner, repositorio, _ = _caso_de_uso(falha, _bateria_encerrada())
+    with pytest.raises(RuntimeError, match="executor indisponível"):
+        _ = [item async for item in caso.execute_many("bench_1", ["Q1", "Q2"])]
+
+    assert [request.question.id for request in runner.cancelled] == ["Q2"]
+    assert repositorio.save_attempts == 0
+    await _coletar(_caso_de_uso(_acerta, repositorio.sessions["bench_1"])[0])

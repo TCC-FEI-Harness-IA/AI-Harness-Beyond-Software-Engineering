@@ -17,6 +17,7 @@ from src.infra.config.settings import Settings
 from src.infra.routes.v1.benchmark.dtos.benchmark_frame_dto import BenchmarkFrameDTO
 from src.infra.routes.v1.benchmark.dtos.benchmark_alias_input_dto import BenchmarkAliasInputDTO
 from src.infra.routes.v1.benchmark.dtos.benchmark_run_input_dto import BenchmarkRunInputDTO
+from src.infra.routes.v1.benchmark.dtos.benchmark_rerun_input_dto import BenchmarkRerunInputDTO
 from src.infra.services.benchmark_session_archive_codec import MAX_ARCHIVE_BYTES
 from src.infra.startups.benchmark_export_startup import BenchmarkExportStartup
 from src.infra.startups.benchmark_query_startup import BenchmarkQueryStartup
@@ -276,20 +277,38 @@ async def run_benchmark(websocket: WebSocket) -> None:
 
 @router.websocket("/sessions/{benchmark_session_id}/questions/{question_id}/rerun")
 async def rerun_benchmark_question(websocket: WebSocket, benchmark_session_id: str, question_id: str) -> None:
-    """Reexecuta os fluxos errados de uma questão de uma bateria encerrada, sem frame de abertura.
+    """Reexecuta uma questão sem frame de abertura, preservando o contrato individual."""
+    await _stream_benchmark_rerun(websocket, benchmark_session_id, question_id)
 
-    Emite o documento da bateria a cada mudança (`progress`) e termina com um `result`, fechando
-    com `1000`. Pedidos recusados (bateria inexistente ou em execução, questão sem erro) geram um
-    frame `error` e fecham com `1003`. Se o cliente desconecta, o fluxo em andamento é cancelado e
-    o desfecho anterior da questão permanece.
-    """
-    logger = Settings().logger(module_file=__file__)
+
+@router.websocket("/sessions/{benchmark_session_id}/questions/rerun")
+async def rerun_benchmark_questions(websocket: WebSocket, benchmark_session_id: str) -> None:
+    """Recebe `question_ids` na abertura e reexecuta o lote no paralelismo da bateria."""
+    await _stream_benchmark_rerun(websocket, benchmark_session_id)
+
+
+async def _stream_benchmark_rerun(
+    websocket: WebSocket, benchmark_session_id: str, question_id: str | None = None
+) -> None:
+    """Compartilha streaming, recusa de pedidos e cancelamento entre reexecução individual e em lote."""
+    settings = Settings()
+    logger = settings.logger(module_file=__file__)
 
     await websocket.accept()
 
     generator: AsyncGenerator[BenchmarkFrameDTO, None] | None = None
     try:
-        generator = BenchmarkRerunStartup().run(benchmark_session_id=benchmark_session_id, question_id=question_id)
+        if question_id is None:
+            raw = await websocket.receive_text()
+            if len(raw.encode("utf-8")) > settings.ralph_websocket_max_message_bytes:
+                await websocket.close(code=_CLOSE_MESSAGE_TOO_BIG)
+                return
+            payload = BenchmarkRerunInputDTO.model_validate_json(raw)
+            generator = BenchmarkRerunStartup().run_many(
+                benchmark_session_id=benchmark_session_id, question_ids=payload.question_ids
+            )
+        else:
+            generator = BenchmarkRerunStartup().run(benchmark_session_id=benchmark_session_id, question_id=question_id)
         async for frame in generator:
             await websocket.send_json(frame.model_dump())
         await websocket.close(code=_CLOSE_NORMAL)
@@ -298,16 +317,17 @@ async def rerun_benchmark_question(websocket: WebSocket, benchmark_session_id: s
         BenchmarkSessionNotFinishedError,
         BenchmarkQuestionNotRerunnableError,
         InvalidBenchmarkRequestError,
+        ValidationError,
     ) as error:
         await websocket.send_json({"type": _ERROR_FRAME_TYPE, "content": str(error)})
         await websocket.close(code=_CLOSE_UNSUPPORTED_DATA)
     except WebSocketDisconnect:
-        logger.info("Cliente desconectou durante a reexecução da questão '%s'", question_id)
+        logger.info("Cliente desconectou durante a reexecução da bateria '%s'", benchmark_session_id)
     except Exception as error:
         if websocket.client_state == WebSocketState.CONNECTED:
             await websocket.send_json({"type": _ERROR_FRAME_TYPE, "content": str(error)})
             await websocket.close(code=_CLOSE_INTERNAL_ERROR)
-        logger.exception("Erro ao reexecutar a questão '%s'", question_id)
+        logger.exception("Erro ao reexecutar questões da bateria '%s'", benchmark_session_id)
     finally:
         if generator is not None:
             await generator.aclose()

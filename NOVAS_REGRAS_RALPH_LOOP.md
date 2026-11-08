@@ -3739,7 +3739,15 @@ aprendizados ficam em áreas separadas. B.2 roda em janela nova: não recebe a c
 histórico do planejamento. Avalia todos os critérios e a sustentação técnica; não produz a solução
 corrigida, não completa uma etapa ausente e não edita critérios. Um defeito concreto vira reprovação com
 feedback para B.1. Um critério planejado inviável que A.3 deixou passar é avaliado como recebido e o
-defeito de planejamento é registrado na justificativa; não há retorno de B.2 a A.2.
+defeito de planejamento é registrado na justificativa; não há retorno de B.2 a A.2. Se ele impõe um número,
+expressão ou outra conclusão incompatível com os dados da tarefa e os aprendizados, recebe `met: false`:
+uma resolução tecnicamente correta pode atender a TECH sem atender a esse critério, mantendo a tarefa
+`reproved`. B.2 não troca a conclusão exigida por outra nem exige que B.1 produza um cálculo incorreto.
+Por exemplo, se o critério impõe `10` mas os dados sustentam `8`, demonstrar `8` não atende ao critério
+que impôs `10`; atender a TECH não dispensa essa pendência. Um critério que pede aproximação ou melhor
+ajuste fundamentado continua sujeito à política de evidência, sem exigência universal de coincidência
+exata. Essa distinção substitui a antiga autorização de marcar como atendido um critério com resultado
+pré-calculado incorreto apenas porque a resolução apresentou o cálculo correto.
 
 **Fundamento antes da aproximação.** Nos templates B.1 e B.2, a seção de TECH vem antes da política
 compartilhada e da escolha por melhor ajuste. A justificativa de TECH aponta o dado ou trecho, a premissa

@@ -1289,7 +1289,32 @@ com o documento inteiro da bateria; enquanto o fluxo roda, `questions[].current_
 Pedidos recusados (bateria inexistente, ainda em execução ou já em reexecução, questão que não
 pertence à bateria, não existe mais no dataset ou não tem fluxo errado) geram um frame
 `{ "type": "error", "content": "..." }` e fecham com `1003`. Se o cliente desconecta, o fluxo em
-andamento é cancelado e o desfecho anterior permanece. Só uma reexecução por bateria roda por vez.
+andamento é cancelado e o desfecho anterior permanece. Só um pedido de reexecução por bateria roda
+por vez dentro do processo, podendo conter várias questões no endpoint de lote abaixo.
+
+### `WS /v1/benchmark/sessions/{benchmark_session_id}/questions/rerun`
+
+Reexecuta várias questões da mesma bateria em um único pedido. Envie um frame de abertura:
+
+```json
+{ "question_ids": ["QUESTAO_1", "QUESTAO_2"] }
+```
+
+O lote inteiro é validado antes de chamar o modelo: a lista deve ser não vazia, sem IDs repetidos,
+e cada questão deve pertencer à bateria e ao dataset e ter ao menos um fluxo errado ou com falha.
+As questões executam com até `max_parallel` workers, conforme a configuração original da bateria;
+em cada questão, os fluxos elegíveis continuam em sequência (`simple` e depois `ralph`).
+A configuração do modelo, os frames `progress`/`result` e os códigos `1000`/`1003`/`1011` seguem a
+reexecução individual. Um frame de abertura acima de `RALPH_WEBSOCKET_MAX_MESSAGE_BYTES` fecha com `1009`.
+
+As gravações dos desfechos são serializadas para preservar os resultados de todos os workers. Se
+o cliente cancela ou desconecta, os fluxos ativos são cancelados; resultados já gravados permanecem,
+e fluxos interrompidos ou ainda na fila mantêm o desfecho anterior. O progresso transitório dos outros
+workers não é persistido junto aos resultados concluídos.
+
+No frontend, marque as questões e use **Executar novamente selecionadas**. O checkbox do cabeçalho
+seleciona todas as questões elegíveis da bateria, inclusive em outras páginas. A seleção individual
+e o botão **Executar novamente** de cada questão continuam disponíveis.
 
 ### `GET /v1/benchmark/questions`
 

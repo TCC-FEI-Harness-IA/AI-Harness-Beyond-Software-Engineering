@@ -13,6 +13,44 @@
   font-size: var(--text-sm);
 }
 
+.selectionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-separator);
+}
+
+.selectionCount {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.selectionHint {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.selectionCell {
+  width: 1%;
+  text-align: center !important;
+}
+
+.selectionCell input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.selectionCell input:disabled {
+  cursor: default;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

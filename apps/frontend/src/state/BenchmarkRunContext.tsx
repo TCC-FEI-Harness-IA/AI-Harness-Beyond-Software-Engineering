@@ -27,8 +27,8 @@ export interface BenchmarkRunState {
   error: AppError | null
   /** Recusa do servidor (frame `error`) ou falha da conexão, já em texto para o usuário. */
   rejection: string | null
-  /** Questão cuja reexecução está em andamento (ou terminou há pouco); `null` numa bateria nova. */
-  rerunQuestionId: string | null
+  /** Questões da reexecução atual (ou encerrada há pouco); vazio numa bateria nova. */
+  rerunQuestionIds: string[]
   /** Incrementa a cada bateria que termina — sinaliza às listas que precisam recarregar. */
   finishedCount: number
 }
@@ -36,8 +36,8 @@ export interface BenchmarkRunState {
 interface BenchmarkRunContextValue extends BenchmarkRunState {
   isActive: boolean
   start: (params: BenchmarkRunParams) => void
-  /** Reexecuta os fluxos errados de uma questão de uma bateria já encerrada. */
-  rerun: (benchmarkSessionId: string, questionId: string, benchmark: BenchmarkDatasetId) => void
+  /** Reexecuta os fluxos errados de uma ou mais questões da mesma bateria já encerrada. */
+  rerun: (benchmarkSessionId: string, questionIds: string | string[], benchmark: BenchmarkDatasetId) => void
   cancel: () => void
   dismiss: () => void
 }
@@ -48,7 +48,7 @@ const INITIAL_STATE: BenchmarkRunState = {
   benchmark: null,
   error: null,
   rejection: null,
-  rerunQuestionId: null,
+  rerunQuestionIds: [],
   finishedCount: 0,
 }
 
@@ -68,7 +68,7 @@ export function BenchmarkRunProvider({ children }: { children: ReactNode }): JSX
     (
       open: (handlers: BenchmarkStreamHandlers) => BenchmarkStreamHandle,
       benchmark: BenchmarkDatasetId,
-      rerunQuestionId: string | null,
+      rerunQuestionIds: string[],
     ) => {
       setState((prev) => ({
         ...prev,
@@ -77,7 +77,7 @@ export function BenchmarkRunProvider({ children }: { children: ReactNode }): JSX
         benchmark,
         error: null,
         rejection: null,
-        rerunQuestionId,
+        rerunQuestionIds,
       }))
       handleRef.current = open({
         onSession: (session, isFinal) => {
@@ -130,7 +130,7 @@ export function BenchmarkRunProvider({ children }: { children: ReactNode }): JSX
           benchmark: params.benchmark ?? 'vestibular',
           error: appError,
           rejection: appError.userMessage,
-          rerunQuestionId: null,
+          rerunQuestionIds: [],
         }))
         return
       }
@@ -138,19 +138,20 @@ export function BenchmarkRunProvider({ children }: { children: ReactNode }): JSX
       connect(
         (handlers) => openBenchmarkStream(payload, handlers),
         params.benchmark ?? 'vestibular',
-        null,
+        [],
       )
     },
     [connect],
   )
 
   const rerun = useCallback(
-    (benchmarkSessionId: string, questionId: string, benchmark: BenchmarkDatasetId) => {
+    (benchmarkSessionId: string, questionIds: string | string[], benchmark: BenchmarkDatasetId) => {
       if (handleRef.current) return
+      if (Array.isArray(questionIds) && questionIds.length === 0) return
       connect(
-        (handlers) => openBenchmarkRerunStream(benchmarkSessionId, questionId, handlers),
+        (handlers) => openBenchmarkRerunStream(benchmarkSessionId, questionIds, handlers),
         benchmark,
-        questionId,
+        typeof questionIds === 'string' ? [questionIds] : [...questionIds],
       )
     },
     [connect],

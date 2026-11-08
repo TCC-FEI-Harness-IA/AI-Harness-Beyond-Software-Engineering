@@ -5,7 +5,7 @@ from src.domain.entities.benchmark.benchmark_session import BenchmarkSession
 
 @dataclass(frozen=True)
 class RerunBenchmarkQuestionOutputDTO:
-    """Estado da bateria durante a reexecução de uma questão.
+    """Estado da bateria durante a reexecução de uma ou mais questões.
 
     Attributes:
         benchmark_session: Estado atual da bateria.

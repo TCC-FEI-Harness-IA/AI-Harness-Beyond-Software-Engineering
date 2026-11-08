@@ -4,6 +4,7 @@
 //
 // `WS /v1/benchmark/sessions/{id}/questions/{question_id}/rerun` fala o mesmo protocolo de frames,
 // mas sem frame de abertura: a configuração do modelo vem da própria bateria persistida.
+// Para um lote, `.../questions/rerun` recebe `{ question_ids: [...] }` na abertura.
 
 import { env } from '../config/env'
 import type { BenchmarkRunInput, BenchmarkSessionDocument } from '../domain/types/benchmarkSession'
@@ -39,19 +40,22 @@ export function openBenchmarkStream(
   return openStream(BENCHMARK_RUN_PATH, payload, handlers)
 }
 
-/** Reexecuta os fluxos errados de uma questão de uma bateria encerrada. */
+/** Reexecuta os fluxos errados de uma questão ou de um lote da mesma bateria encerrada. */
 export function openBenchmarkRerunStream(
   benchmarkSessionId: string,
-  questionId: string,
+  questionIds: string | string[],
   handlers: BenchmarkStreamHandlers,
 ): BenchmarkStreamHandle {
-  const path = `${BENCHMARK_SESSIONS_PATH}/${encodeURIComponent(benchmarkSessionId)}/questions/${encodeURIComponent(questionId)}/rerun`
-  return openStream(path, null, handlers)
+  const questionsPath = `${BENCHMARK_SESSIONS_PATH}/${encodeURIComponent(benchmarkSessionId)}/questions`
+  if (Array.isArray(questionIds)) {
+    return openStream(`${questionsPath}/rerun`, { question_ids: questionIds }, handlers)
+  }
+  return openStream(`${questionsPath}/${encodeURIComponent(questionIds)}/rerun`, null, handlers)
 }
 
 function openStream(
   path: string,
-  payload: BenchmarkRunInput | null,
+  payload: BenchmarkRunInput | { question_ids: string[] } | null,
   handlers: BenchmarkStreamHandlers,
 ): BenchmarkStreamHandle {
   const socket = new WebSocket(`${env.wsBaseUrl}${path}`)

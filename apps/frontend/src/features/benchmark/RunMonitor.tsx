@@ -20,26 +20,26 @@ import styles from './RunMonitor.module.css'
  * `BenchmarkRunContext`. Continua visível depois do fim, até ser dispensado, com o desfecho.
  */
 export function RunMonitor(): JSX.Element | null {
-  const { phase, session, rejection, rerunQuestionId, isActive, rerun, cancel, dismiss } =
+  const { phase, session, rejection, rerunQuestionIds, isActive, rerun, cancel, dismiss } =
     useBenchmarkRun()
   if (phase === 'idle') return null
+  const rerunCount = rerunQuestionIds.length
+  const title = rerunCount === 1
+    ? `Reexecução de ${rerunQuestionIds[0]}`
+    : rerunCount > 1 ? `Reexecução de ${rerunCount} questões` : 'Bateria atual'
+  const statusTone = phase === 'cancelled' ? 'warning'
+    : isActive && rerunCount > 0 ? 'accent'
+      : session ? BENCHMARK_SESSION_STATUS_TONE[session.status] : 'neutral'
+  const statusLabel = phase === 'cancelled' ? 'Cancelada'
+    : isActive && rerunCount > 0 ? 'Reexecutando'
+      : session ? BENCHMARK_SESSION_STATUS_LABEL[session.status] : ''
 
   return (
     <Card as="article" padding="lg" className={styles.card} aria-label="Bateria atual">
       <header className={styles.header}>
         <div className={styles.titleRow}>
-          <h2 className={styles.title}>
-            {rerunQuestionId ? `Reexecução de ${rerunQuestionId}` : 'Bateria atual'}
-          </h2>
-          {session ? (
-            <Badge
-              tone={
-                phase === 'cancelled' ? 'warning' : BENCHMARK_SESSION_STATUS_TONE[session.status]
-              }
-            >
-              {phase === 'cancelled' ? 'Cancelada' : BENCHMARK_SESSION_STATUS_LABEL[session.status]}
-            </Badge>
-          ) : null}
+          <h2 className={styles.title}>{title}</h2>
+          {session ? <Badge tone={statusTone}>{statusLabel}</Badge> : null}
         </div>
         <div className={styles.actions}>
           {session ? (
@@ -61,7 +61,8 @@ export function RunMonitor(): JSX.Element | null {
 
       {phase === 'connecting' ? (
         <p className={styles.notice} role="status">
-          <Spinner size="sm" label="Conectando" /> Iniciando a bateria…
+          <Spinner size="sm" label="Conectando" />{' '}
+          {rerunCount > 0 ? 'Iniciando a reexecução…' : 'Iniciando a bateria…'}
         </p>
       ) : null}
       {rejection ? (
@@ -88,6 +89,7 @@ export function RunMonitor(): JSX.Element | null {
           <BenchmarkQuestionsTable
             session={session}
             onRerun={(questionId) => rerun(session.id, questionId, session.benchmark.dataset)}
+            onRerunMany={(questionIds) => rerun(session.id, questionIds, session.benchmark.dataset)}
             rerunDisabled={isActive}
           />
         </>

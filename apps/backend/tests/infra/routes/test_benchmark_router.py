@@ -472,6 +472,7 @@ class _FakeRerunStartup:
     error: BaseException | None = None
     construction_error: Exception | None = None
     requested: list[tuple[str, str]] = []
+    requested_many: list[tuple[str, list[str]]] = []
     closed = 0
 
     def __init__(self) -> None:
@@ -488,6 +489,18 @@ class _FakeRerunStartup:
         finally:
             _FakeRerunStartup.closed += 1
 
+    async def run_many(
+        self, benchmark_session_id: str, question_ids: list[str]
+    ) -> AsyncGenerator[BenchmarkFrameDTO, None]:
+        _FakeRerunStartup.requested_many.append((benchmark_session_id, question_ids))
+        try:
+            for frame in _FakeRerunStartup.frames:
+                yield frame
+            if _FakeRerunStartup.error is not None:
+                raise _FakeRerunStartup.error
+        finally:
+            _FakeRerunStartup.closed += 1
+
 
 @pytest.fixture
 def reexecucao(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> TestClient:
@@ -495,6 +508,7 @@ def reexecucao(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> TestClien
     _FakeRerunStartup.error = None
     _FakeRerunStartup.construction_error = None
     _FakeRerunStartup.requested = []
+    _FakeRerunStartup.requested_many = []
     _FakeRerunStartup.closed = 0
     monkeypatch.setattr(benchmark_router_module, "BenchmarkRerunStartup", _FakeRerunStartup)
     return client
@@ -509,6 +523,68 @@ def test_reexecucao_envia_os_frames_sem_abertura_e_fecha_com_1000(reexecucao: Te
     assert [frame["type"] for frame in frames] == ["progress", "result"]
     assert codigo == 1000
     assert _FakeRerunStartup.requested == [("bench_1", "Q1")]
+    assert _FakeRerunStartup.closed == 1
+
+
+_RERUN_MANY_PATH = "/v1/benchmark/sessions/bench_1/questions/rerun"
+
+
+def test_reexecucao_em_lote_recebe_ids_e_envia_progresso_e_resultado(reexecucao: TestClient) -> None:
+    _FakeRerunStartup.frames = [_frame("progress", "completed"), _frame("result", "completed")]
+
+    with reexecucao.websocket_connect(_RERUN_MANY_PATH) as ws:
+        ws.send_json({"question_ids": ["Q1", "Q2"]})
+        frames, codigo = _coletar(ws)
+
+    assert [frame["type"] for frame in frames] == ["progress", "result"]
+    assert codigo == 1000
+    assert _FakeRerunStartup.requested_many == [("bench_1", ["Q1", "Q2"])]
+    assert _FakeRerunStartup.closed == 1
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["{", "{}", '{"question_ids": []}', '{"question_ids": "Q1"}', '{"question_ids": [1]}',
+     '{"question_ids": [""]}', '{"question_ids": ["   "]}', '{"question_ids": ["Q1"], "max_parallel": 2}'],
+)
+def test_abertura_invalida_do_lote_e_recusada_sem_iniciar_execucao(reexecucao: TestClient, raw: str) -> None:
+    with reexecucao.websocket_connect(_RERUN_MANY_PATH) as ws:
+        ws.send_text(raw)
+        frames, codigo = _coletar(ws)
+
+    assert frames[0]["type"] == "error"
+    assert codigo == 1003
+    assert _FakeRerunStartup.requested_many == []
+
+
+def test_abertura_do_lote_acima_do_limite_fecha_com_1009(
+    reexecucao: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("RALPH_WEBSOCKET_MAX_MESSAGE_BYTES", "10")
+    with reexecucao.websocket_connect(_RERUN_MANY_PATH) as ws:
+        ws.send_json({"question_ids": ["Q1", "Q2"]})
+        frames, codigo = _coletar(ws)
+
+    assert frames == []
+    assert codigo == 1009
+    assert _FakeRerunStartup.requested_many == []
+
+
+@pytest.mark.parametrize("erro", [
+    BenchmarkSessionNotFoundError("bench_1"),
+    BenchmarkSessionNotFinishedError("bench_1"),
+    BenchmarkQuestionNotRerunnableError("bench_1", "Q2"),
+    InvalidBenchmarkRequestError("Questões repetidas."),
+    RuntimeError("persistência indisponível"),
+])
+def test_recusas_e_falhas_do_lote_chegam_ao_cliente(reexecucao: TestClient, erro: Exception) -> None:
+    _FakeRerunStartup.error = erro
+    with reexecucao.websocket_connect(_RERUN_MANY_PATH) as ws:
+        ws.send_json({"question_ids": ["Q1", "Q2"]})
+        frames, codigo = _coletar(ws)
+
+    assert frames == [{"type": "error", "content": str(erro)}]
+    assert codigo == (1011 if isinstance(erro, RuntimeError) else 1003)
     assert _FakeRerunStartup.closed == 1
 
 

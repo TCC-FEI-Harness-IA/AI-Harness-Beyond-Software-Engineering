@@ -1,3 +1,4 @@
+from contextlib import aclosing
 from inspect import getfile
 from typing import AsyncGenerator
 
@@ -19,7 +20,7 @@ _RESULT_FRAME_TYPE = "result"
 
 
 class BenchmarkRerunStartup:
-    """Composition root da reexecução de uma questão de uma bateria de benchmark.
+    """Composition root da reexecução de questões de uma bateria de benchmark.
 
     É instanciado uma vez por conexão WebSocket, como o da execução da bateria.
     """
@@ -56,19 +57,18 @@ class BenchmarkRerunStartup:
         return self.provider_factory.for_definition(definition)
 
     async def run(self, benchmark_session_id: str, question_id: str) -> AsyncGenerator[BenchmarkFrameDTO, None]:
-        """Reexecuta os fluxos errados da questão.
+        """Preserva o endpoint de reexecução individual."""
+        async with aclosing(self.run_many(benchmark_session_id, [question_id])) as frames:
+            async for frame in frames:
+                yield frame
 
-        Args:
-            benchmark_session_id: Bateria que contém a questão.
-            question_id: Questão reexecutada.
-
-        Yields:
-            BenchmarkFrameDTO: Um frame `progress` por mudança de estado e um `result` final.
-        """
-        async for update in self.rerun_use_case.execute(
-            benchmark_session_id=benchmark_session_id, question_id=question_id
-        ):
-            yield BenchmarkFrameDTO(
-                type=_RESULT_FRAME_TYPE if update.finished else _PROGRESS_FRAME_TYPE,
-                benchmark_session=self.document_mapper.to_document(benchmark_session=update.benchmark_session),
-            )
+    async def run_many(
+        self, benchmark_session_id: str, question_ids: list[str]
+    ) -> AsyncGenerator[BenchmarkFrameDTO, None]:
+        """Reexecuta o lote emitindo `progress` e um `result` final; fechar cancela todos os workers."""
+        async with aclosing(self.rerun_use_case.execute_many(benchmark_session_id, question_ids)) as updates:
+            async for update in updates:
+                yield BenchmarkFrameDTO(
+                    type=_RESULT_FRAME_TYPE if update.finished else _PROGRESS_FRAME_TYPE,
+                    benchmark_session=self.document_mapper.to_document(benchmark_session=update.benchmark_session),
+                )

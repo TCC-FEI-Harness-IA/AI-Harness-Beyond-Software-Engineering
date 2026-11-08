@@ -1,10 +1,14 @@
 import asyncio
+import copy
 import logging
+from collections import deque
 from collections.abc import Callable
+from contextlib import aclosing
 from typing import AsyncGenerator, ClassVar
 
 from src.application.dtos.rerun_benchmark_question_output_dto import RerunBenchmarkQuestionOutputDTO
 from src.domain.entities.benchmark.benchmark_definition import BenchmarkDefinition
+from src.domain.entities.benchmark.benchmark_flow_outcome import BenchmarkFlowOutcome
 from src.domain.entities.benchmark.benchmark_flow_request import BenchmarkFlowRequest
 from src.domain.entities.benchmark.benchmark_question import BenchmarkQuestion
 from src.domain.entities.benchmark.benchmark_session import BenchmarkSession
@@ -22,7 +26,7 @@ from src.domain.interfaces.settings_interface import ISettings
 
 
 class RerunBenchmarkQuestionUseCase:
-    """Reexecuta os fluxos errados (ou com falha) de uma questão de uma bateria já encerrada.
+    """Reexecuta os fluxos errados (ou com falha) de questões de uma bateria já encerrada.
 
     Serve para conferir se uma correção no código resolveu uma questão que antes quebrava: o fluxo
     errado roda de novo com a mesma configuração de modelo da bateria, numa sessão nova, e o novo
@@ -30,7 +34,8 @@ class RerunBenchmarkQuestionUseCase:
 
     A bateria é persistida a cada desfecho substituído, nunca no meio de um fluxo; se o consumidor
     para de ler (cliente desconectado), o fluxo em andamento é cancelado e o desfecho anterior
-    permanece. Só uma reexecução por bateria roda por vez dentro do processo.
+    permanece. Só um lote por bateria roda por vez dentro do processo; as questões do lote
+    respeitam o paralelismo da bateria e os fluxos de cada questão continuam em sequência.
     """
 
     _active_sessions: ClassVar[set[str]] = set()
@@ -65,47 +70,39 @@ class RerunBenchmarkQuestionUseCase:
     async def execute(
         self, benchmark_session_id: str, question_id: str
     ) -> AsyncGenerator[RerunBenchmarkQuestionOutputDTO, None]:
-        """Reexecuta a questão, emitindo o estado da bateria a cada mudança.
+        """Reexecuta uma questão pelo mesmo executor de lotes."""
+        async with aclosing(self.execute_many(benchmark_session_id, [question_id])) as updates:
+            async for update in updates:
+                yield update
 
-        Args:
-            benchmark_session_id: Bateria que contém a questão.
-            question_id: Questão reexecutada.
+    async def execute_many(
+        self, benchmark_session_id: str, question_ids: list[str]
+    ) -> AsyncGenerator[RerunBenchmarkQuestionOutputDTO, None]:
+        """Valida todo o lote antes de executar e emite o estado até o último `finished`.
 
-        Yields:
-            RerunBenchmarkQuestionOutputDTO: Estado da bateria; o último emitido tem `finished`.
-
-        Raises:
-            BenchmarkSessionNotFoundError: Quando a bateria não existe.
-            BenchmarkSessionNotFinishedError: Quando a bateria, ou uma reexecução dela, ainda está em execução.
-            InvalidBenchmarkRequestError: Quando a questão não pertence à bateria ou ao dataset.
-            BenchmarkQuestionNotRerunnableError: Quando a questão não tem fluxo errado para refazer.
+        Recusa baterias inexistentes ou ainda em execução, listas vazias ou repetidas e questões
+        que não pertencem à bateria/dataset ou não têm fluxos errados para refazer.
         """
+        if not question_ids or len(set(question_ids)) != len(question_ids):
+            raise InvalidBenchmarkRequestError("Selecione ao menos uma questão, sem identificadores repetidos.")
         if benchmark_session_id in self._active_sessions:
             raise BenchmarkSessionNotFinishedError(benchmark_session_id=benchmark_session_id)
         self._active_sessions.add(benchmark_session_id)
         try:
             benchmark_session = await self.__load(benchmark_session_id=benchmark_session_id)
-            provider, question = self.__find_question(benchmark_session=benchmark_session, question_id=question_id)
-            rerunnable = benchmark_session.question(question_id).rerunnable_modes
-            modes = [mode for mode in self._FLOW_ORDER if mode in rerunnable]
-            if not modes:
-                raise BenchmarkQuestionNotRerunnableError(
-                    benchmark_session_id=benchmark_session_id, question_id=question_id
-                )
+            provider, queue = self.__prepare(benchmark_session=benchmark_session, question_ids=question_ids)
             self.logger.info(
-                "Reexecutando a questão '%s' da bateria '%s' nos fluxos %s",
-                question_id,
+                "Reexecutando %s questões da bateria '%s'",
+                len(question_ids),
                 benchmark_session_id,
-                [mode.value for mode in modes],
             )
 
             changed = asyncio.Event()
             task = asyncio.create_task(
-                self.__rerun(
+                self.__run_workers(
                     benchmark_session=benchmark_session,
                     provider=provider,
-                    question=question,
-                    modes=modes,
+                    queue=queue,
                     changed=changed,
                 )
             )
@@ -118,7 +115,8 @@ class RerunBenchmarkQuestionUseCase:
                 task.result()
             finally:
                 await self.__stop(task=task)
-                benchmark_session.question(question_id).abort_rerun()
+                for question_id in question_ids:
+                    benchmark_session.question(question_id).abort_rerun()
             yield RerunBenchmarkQuestionOutputDTO(benchmark_session=benchmark_session, finished=True)
         finally:
             self._active_sessions.discard(benchmark_session_id)
@@ -134,14 +132,16 @@ class RerunBenchmarkQuestionUseCase:
             raise BenchmarkSessionNotFinishedError(benchmark_session_id=benchmark_session_id)
         return benchmark_session
 
-    def __find_question(
-        self, benchmark_session: BenchmarkSession, question_id: str
-    ) -> tuple[IBenchmarkQuestionProvider, BenchmarkQuestion]:
-        """Localiza a questão no dataset da bateria, depois de conferir que ela pertence à bateria."""
-        try:
-            benchmark_session.question(question_id)
-        except ValueError as error:
-            raise InvalidBenchmarkRequestError(str(error)) from error
+    def __prepare(
+        self, benchmark_session: BenchmarkSession, question_ids: list[str]
+    ) -> tuple[IBenchmarkQuestionProvider, deque[tuple[BenchmarkQuestion, list[BenchmarkInferenceModeEnum]]]]:
+        """Resolve o dataset uma vez e valida todas as questões antes de iniciar qualquer fluxo."""
+        runs = {question.question_id: question for question in benchmark_session.questions}
+        for question_id in question_ids:
+            if question_id not in runs:
+                raise InvalidBenchmarkRequestError(
+                    f"A questão '{question_id}' não pertence à bateria '{benchmark_session.id}'."
+                )
         provider = self.question_provider_for(benchmark_session.benchmark)
         if provider.definition().revision != benchmark_session.benchmark.revision:
             raise InvalidBenchmarkRequestError(
@@ -150,12 +150,41 @@ class RerunBenchmarkQuestionUseCase:
             )
         if provider.definition().split != benchmark_session.benchmark.split:
             raise InvalidBenchmarkRequestError("Subconjunto da bateria indisponível para reexecução.")
-        for question in provider.list_questions():
-            if question.id == question_id:
-                return provider, question
-        raise InvalidBenchmarkRequestError(f"A questão '{question_id}' não existe mais no dataset da bateria.")
+        questions = {question.id: question for question in provider.list_questions()}
+        queue = deque()
+        for question_id in question_ids:
+            if question_id not in questions:
+                raise InvalidBenchmarkRequestError(f"A questão '{question_id}' não existe mais no dataset da bateria.")
+            modes = [mode for mode in self._FLOW_ORDER if mode in runs[question_id].rerunnable_modes]
+            if not modes:
+                raise BenchmarkQuestionNotRerunnableError(benchmark_session.id, question_id)
+            queue.append((questions[question_id], modes))
+        return provider, queue
 
     # ── Execução ─────────────────────────────────────────────────────────────
+
+    async def __run_workers(
+        self,
+        benchmark_session: BenchmarkSession,
+        provider: IBenchmarkQuestionProvider,
+        queue: deque[tuple[BenchmarkQuestion, list[BenchmarkInferenceModeEnum]]],
+        changed: asyncio.Event,
+    ) -> None:
+        """Consome a fila com paralelismo limitado e cancela todos os workers se um deles falhar."""
+        save_lock = asyncio.Lock()
+
+        async def work() -> None:
+            while queue:
+                question, modes = queue.popleft()
+                await self.__rerun(benchmark_session, provider, question, modes, changed, save_lock)
+
+        workers = [asyncio.create_task(work()) for _ in range(min(benchmark_session.max_parallel, len(queue)))]
+        try:
+            await asyncio.gather(*workers)
+        finally:
+            for worker in workers:
+                worker.cancel()
+            await asyncio.gather(*workers, return_exceptions=True)
 
     async def __rerun(
         self,
@@ -164,6 +193,7 @@ class RerunBenchmarkQuestionUseCase:
         question: BenchmarkQuestion,
         modes: list[BenchmarkInferenceModeEnum],
         changed: asyncio.Event,
+        save_lock: asyncio.Lock,
     ) -> None:
         """Refaz cada fluxo errado, em sequência, persistindo a bateria a cada desfecho."""
         prompt = provider.build_prompt(question=question, instruction=provider.answer_instruction().strip())
@@ -185,9 +215,25 @@ class RerunBenchmarkQuestionUseCase:
                 ),
                 on_tokens=on_tokens,
             )
-            benchmark_session.record_rerun_outcome(question_id=question.id, outcome=outcome, at=self.clock.now())
-            await self.repository.save(benchmark_session=benchmark_session)
+            await self.__record_outcome(benchmark_session, question.id, outcome, save_lock)
             changed.set()
+
+    async def __record_outcome(
+        self,
+        benchmark_session: BenchmarkSession,
+        question_id: str,
+        outcome: BenchmarkFlowOutcome,
+        save_lock: asyncio.Lock,
+    ) -> None:
+        """Serializa gravações e persiste só desfechos, sem o progresso transitório dos outros workers."""
+        async with save_lock:
+            at = self.clock.now()
+            snapshot = copy.deepcopy(benchmark_session)
+            snapshot.record_rerun_outcome(question_id=question_id, outcome=outcome, at=at)
+            for question in snapshot.questions:
+                question.abort_rerun()
+            await self.repository.save(benchmark_session=snapshot)
+            benchmark_session.record_rerun_outcome(question_id=question_id, outcome=outcome, at=at)
 
     async def __wait_for_change(self, changed: asyncio.Event, task: asyncio.Future) -> None:
         """Espera uma mudança, o fim da reexecução ou o intervalo de progresso, o que vier primeiro."""

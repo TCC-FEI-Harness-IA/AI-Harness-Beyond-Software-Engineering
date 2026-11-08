@@ -129,6 +129,7 @@ function BenchmarkSessionView({
       <BenchmarkQuestionsTable
         session={session}
         onRerun={(questionId) => rerun(session.id, questionId, session.benchmark.dataset)}
+        onRerunMany={(questionIds) => rerun(session.id, questionIds, session.benchmark.dataset)}
         rerunDisabled={isActive}
       />
     </>

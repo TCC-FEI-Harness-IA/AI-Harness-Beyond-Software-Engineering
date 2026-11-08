@@ -129,6 +129,22 @@ describe('openBenchmarkStream', () => {
 })
 
 describe('openBenchmarkRerunStream', () => {
+  it('abre uma conexão para o lote, envia todos os IDs uma vez e recebe o resultado', () => {
+    const spy = handlers()
+    openBenchmarkRerunStream('bench/1', ['Q1', 'Q2'], spy)
+    const socket = FakeWebSocket.latest()
+
+    socket.emitOpen()
+    socket.emitOpen()
+    expect(socket.url).toBe('ws://localhost:8000/v1/benchmark/sessions/bench%2F1/questions/rerun')
+    expect(socket.sentFrames).toEqual([JSON.stringify({ question_ids: ['Q1', 'Q2'] })])
+    socket.emitMessage({ type: 'result', benchmark_session: benchmarkSession({ status: 'completed' }) })
+    socket.emitClose(1000)
+    expect(spy.onSession).toHaveBeenCalledTimes(1)
+    expect(spy.onSession.mock.calls[0]?.[1]).toBe(true)
+    expect(spy.onFailure).not.toHaveBeenCalled()
+  })
+
   it('conecta na rota da questão, não envia abertura e entrega os frames', () => {
     const spy = handlers()
     openBenchmarkRerunStream('bench/1', 'MMLU_x_test_0001', spy)

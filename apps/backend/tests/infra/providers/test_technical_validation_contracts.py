@@ -109,6 +109,28 @@ def test_b2_registra_defeito_de_planejamento_sem_retornar_ao_planejamento_nem_di
     assert "cannot send the task back to planning" in instructions
 
 
+def test_b2_nao_aprova_criterio_com_resultado_imposto_invalido_mesmo_com_tech_atendido() -> None:
+    technical = _section(Phase.B2_TASK_VERIFICATION, "Technical verification of the local criteria")
+
+    assert "consider the criterion **met (`met: true`)**" not in technical
+    assert "mark that planned criterion **not met (`met: false`)**" in technical
+    assert "state the planning defect in its justification" in technical
+    assert "`<task id>-TECH` may be met by the technically correct result" in technical
+    assert "the task remains `reproved` while any planned criterion is not met" in technical
+    assert "Do not force an incorrect calculation to satisfy an invalid planned requirement" in technical
+
+
+def test_b2_distingue_resultado_imposto_invalido_de_aproximacao_ou_melhor_ajuste_fundamentados() -> None:
+    technical = _section(Phase.B2_TASK_VERIFICATION, "Technical verification of the local criteria")
+    selection = _section(Phase.B2_TASK_VERIFICATION, "Selection criteria")
+
+    assert "A criterion asking for a supported approximation or best-fit selection" in technical
+    assert "does not mandate a particular unsupported result" in technical
+    assert "do not introduce a universal exact-match requirement" in technical
+    assert "lack of an exact match is not, by itself, a reason for rejection" in selection
+    assert "closest option to a value obtained through an identifiable error does not meet it" in selection
+
+
 # ── B.2: critério técnico ───────────────────────────────────────────────────
 
 

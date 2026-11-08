@@ -52,23 +52,69 @@ function FlowCell({
  * Com `onRerun`, as questões encerradas com fluxo errado ou com falha ganham o botão
  * "Executar novamente", que refaz só esses fluxos. Fica desabilitado enquanto `rerunDisabled`
  * (outra bateria ou reexecução em andamento) e ausente enquanto a própria bateria executa.
+ * `onRerunMany` habilita seleção múltipla, preservada entre páginas da mesma bateria.
  */
 export function BenchmarkQuestionsTable({
   session,
   onRerun,
+  onRerunMany,
   rerunDisabled = false,
 }: {
   session: BenchmarkSessionDocument
   onRerun?: (questionId: string) => void
+  onRerunMany?: (questionIds: string[]) => void
   rerunDisabled?: boolean
 }): JSX.Element {
   const [page, setPage] = useState(0)
+  const [selection, setSelection] = useState<{ sessionId: string; questionIds: string[] }>({
+    sessionId: session.id,
+    questionIds: [],
+  })
   const canRerun = onRerun !== undefined && session.status !== BENCHMARK_SESSION_STATUS.RUNNING
+  const canSelect = onRerunMany !== undefined && session.status !== BENCHMARK_SESSION_STATUS.RUNNING
+  const rerunnableIds = canSelect
+    ? session.questions.filter(isQuestionRerunnable).map((question) => question.question_id)
+    : []
+  const selected = new Set(selection.sessionId === session.id ? selection.questionIds : [])
+  const selectedIds = rerunnableIds.filter((id) => selected.has(id))
+  const allSelected = rerunnableIds.length > 0 && selectedIds.length === rerunnableIds.length
+
+  function toggleQuestion(questionId: string): void {
+    setSelection({
+      sessionId: session.id,
+      questionIds: selectedIds.includes(questionId)
+        ? selectedIds.filter((id) => id !== questionId)
+        : [...selectedIds, questionId],
+    })
+  }
+
   const pageCount = Math.max(1, Math.ceil(session.questions.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount - 1)
   const questions = session.questions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
   return (
     <div className={styles.wrapper}>
+      {canSelect && rerunnableIds.length > 0 ? (
+        <div className={styles.selectionBar}>
+          <div>
+            <p className={styles.selectionCount} aria-live="polite">
+              {selectedIds.length} de {rerunnableIds.length} questões selecionadas
+            </p>
+            <p className={styles.selectionHint}>
+              Selecione questões com erro ou falha. A seleção inclui todas as páginas.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            disabled={rerunDisabled || selectedIds.length === 0}
+            onClick={() => {
+              onRerunMany(selectedIds)
+              setSelection({ sessionId: session.id, questionIds: [] })
+            }}
+          >
+            Executar novamente selecionadas ({selectedIds.length})
+          </Button>
+        </div>
+      ) : null}
       {pageCount > 1 ? (
         <nav className={styles.pagination} aria-label="Páginas de questões">
           <Button
@@ -95,6 +141,23 @@ export function BenchmarkQuestionsTable({
       <table className={styles.table} aria-label="Questões da bateria">
         <thead>
           <tr>
+            {canSelect ? (
+              <th scope="col" className={styles.selectionCell}>
+                <input
+                  type="checkbox"
+                  aria-label="Selecionar todas as questões com erro ou falha"
+                  checked={allSelected}
+                  ref={(input) => {
+                    if (input) input.indeterminate = selectedIds.length > 0 && !allSelected
+                  }}
+                  disabled={rerunDisabled || rerunnableIds.length === 0}
+                  onChange={() => setSelection({
+                    sessionId: session.id,
+                    questionIds: allSelected ? [] : rerunnableIds,
+                  })}
+                />
+              </th>
+            ) : null}
             <th scope="col">Questão</th>
             <th scope="col">Gabarito</th>
             {MODES.map((mode) => (
@@ -115,6 +178,19 @@ export function BenchmarkQuestionsTable({
         <tbody>
           {questions.map((question) => (
             <tr key={question.question_id}>
+              {canSelect ? (
+                <td className={styles.selectionCell}>
+                  {isQuestionRerunnable(question) ? (
+                    <input
+                      type="checkbox"
+                      aria-label={`Selecionar ${question.question_id} para reexecução`}
+                      checked={selected.has(question.question_id)}
+                      disabled={rerunDisabled}
+                      onChange={() => toggleQuestion(question.question_id)}
+                    />
+                  ) : null}
+                </td>
+              ) : null}
               <th scope="row" className={styles.questionName}>
                 {question.question_id}
               </th>

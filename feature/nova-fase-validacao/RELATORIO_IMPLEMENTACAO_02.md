@@ -4,8 +4,8 @@ Implementação da frente 2 de [`README.md`](README.md), conforme o prompt
 [`02_validacao_tecnica_das_tarefas.md`](02_validacao_tecnica_das_tarefas.md), sobre a base da frente 1
 (commit `6c37126`) e da sua correção (commit `a25950f`). Os pré-requisitos foram conferidos no código antes de
 começar: A.3 (Task Decomposition Validator) com retorno a A.2, A.4 de extração, confirmação do plano só depois
-da aprovação, `RALPH_MAX_PLANNING_ATTEMPTS = 5` e `flow_version` estavam integrados e verdes. Esta etapa **não
-foi commitada**; as alterações estão no workspace.
+da aprovação, `RALPH_MAX_PLANNING_ATTEMPTS = 5` e `flow_version` estavam integrados e verdes. A entrega desta
+etapa está no commit local `3fc64f3`; os ajustes posteriores da revisão estão registrados na seção 11.
 
 ## 1. Resultado
 
@@ -191,3 +191,34 @@ npm run typecheck && npm run lint && npm run test:coverage && npm run build
 - Não implementados, conforme o prompt: novas verificações de C.1, recuperação de contrato por campo,
   apresentação da proveniência dos aprendizados, mudanças funcionais de dependências, validação de lotes de C.2
   por A.3, fallback simples, votação, revisor depois de C.3 e resolução especializada por domínio.
+
+## 11. Complemento — ajustes da revisão da entrega
+
+A revisão do commit `3fc64f3` apontou uma ambiguidade no template de B.2 e a informação desatualizada sobre
+o estado da entrega neste relatório. Foram feitos os dois ajustes:
+
+1. **Critério planejado inviável.** Foi removida a autorização antiga de considerar atendido um critério
+   com resultado pré-calculado incorreto apenas porque a resolução demonstrou o cálculo correto. Se o
+   critério impõe um número, expressão ou outra conclusão incompatível com os dados e aprendizados, B.2
+   marca esse critério com `met: false` e registra o defeito de planejamento. TECH é avaliado separadamente:
+   pode ser atendido pela resolução correta, mas a tarefa continua `reproved` enquanto houver um critério
+   planejado não atendido. B.2 não substitui a conclusão exigida nem pede um cálculo incorreto para
+   satisfazê-la. A regra distingue esse defeito de um critério que pede aproximação ou melhor ajuste
+   fundamentado, que continua sujeito à política de evidência, sem coincidência exata universal. O parser,
+   os ciclos, as entradas e os limites permanecem os mesmos. `RALPH_LOOP_ADAPTADO.md` e
+   `NOVAS_REGRAS_RALPH_LOOP.md` registram a distinção, preservando a transcrição literal do paper.
+2. **Identificação da entrega.** A abertura deste relatório identifica o commit local `3fc64f3`, em vez
+   de afirmar que a implementação está somente no workspace.
+
+**TDD e alcance.** Dois testes novos em `test_technical_validation_contracts.py` falharam antes da correção:
+um detectou a autorização antiga de aprovação e o outro a ausência da distinção para aproximações. Depois
+do ajuste, os 120 testes focados dos contratos técnicos, da política de validação e dos limites generalistas
+passaram. Esses testes verificam as instruções efetivamente entregues ao modelo; não medem sua obediência
+semântica nem ganho de acurácia.
+
+**Validação final:** 138 testes focados, incluindo a integração das cinco frentes, e **2.798 testes na suíte
+completa**, com cobertura de **100,00%**; `flake8 src tests` e `git diff --check` aprovados. A suíte completa
+rodou em cópia temporária com as alterações atuais. Como o MongoDB local estava indisponível, uma fixture
+temporária usou `AsyncMongoMockClient` nos testes de rota para evitar os timeouts das consultas ao catálogo
+de modelos; essa fixture ficou fora do workspace. Os cenários continuam com completions roteirizadas,
+sem inferências pagas ou medição de acurácia.

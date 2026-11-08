@@ -166,10 +166,17 @@ probability of an event already given by the condition is a conditioning error. 
 defect in the justification — the step, the relation or the datum affected — so that the next
 attempt can correct it; do not perform the corrected resolution here.
 
-If an acceptance criterion carries a number or expression improperly pre-calculated during planning
-that diverges from the correct deduction from the question data and the **Key Learnings**, consider
-the criterion **met (`met: true`)** when the result demonstrates and justifies the correct
-calculation of that quantity. A planning anticipation is not the standard of correctness.
+If a planned criterion mandates a specific number, expression or other result that conflicts with
+the task data and **Key Learnings**, mark that planned criterion **not met (`met: false`)** and
+state the planning defect in its justification. Do not replace the required result with another
+result or count the criterion as met just because the analysis is otherwise correct.
+`<task id>-TECH` may be met by the technically correct result, but the task remains `reproved` while
+any planned criterion is not met. Do not force an incorrect calculation to satisfy an invalid
+planned requirement. A planning anticipation is not the standard of correctness.
+
+A criterion asking for a supported approximation or best-fit selection does not mandate a
+particular unsupported result. Evaluate it under the evidence and consistency policy and the
+selection rules below; do not introduce a universal exact-match requirement.
 
 Avoid **hyper-literalism**: when a criterion requires an analysis, conclusion or option to be
 supported by the text or question, consider the criterion **met** if the result demonstrates the

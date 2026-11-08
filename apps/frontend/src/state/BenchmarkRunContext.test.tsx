@@ -129,7 +129,7 @@ describe('BenchmarkRunProvider', () => {
 
     expect(socket.url).toBe('ws://localhost:8000/v1/benchmark/sessions/bench_1/questions/Q2/rerun')
     expect(current.phase).toBe('connecting')
-    expect(current.rerunQuestionId).toBe('Q2')
+    expect(current.rerunQuestionIds).toEqual(['Q2'])
     expect(current.benchmark).toBe('mmlu')
     expect(current.isActive).toBe(true)
     act(() => socket.emitOpen())
@@ -151,9 +151,9 @@ describe('BenchmarkRunProvider', () => {
 
     expect(current.phase).toBe('finished')
     expect(current.finishedCount).toBe(1)
-    expect(current.rerunQuestionId).toBe('Q2')
+    expect(current.rerunQuestionIds).toEqual(['Q2'])
     act(() => current.dismiss())
-    expect(current.rerunQuestionId).toBeNull()
+    expect(current.rerunQuestionIds).toEqual([])
     expect(current.benchmark).toBeNull()
   })
 
@@ -164,7 +164,7 @@ describe('BenchmarkRunProvider', () => {
     act(() => current.rerun('bench_1', 'Q1', 'vestibular'))
 
     expect(FakeWebSocket.instances).toHaveLength(1)
-    expect(current.rerunQuestionId).toBeNull()
+    expect(current.rerunQuestionIds).toEqual([])
   })
 
   it('reexecução recusada pelo servidor vira erro com a mensagem do servidor', () => {
@@ -186,5 +186,47 @@ describe('BenchmarkRunProvider', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
     expect(() => render(<Probe />)).toThrow('BenchmarkRunProvider')
+  })
+
+  it('reexecuta um lote numa única conexão e atualiza as consultas uma vez ao concluir', () => {
+    renderProvider()
+    act(() => current.rerun('bench_1', ['Q1', 'Q2'], 'mmlu'))
+    const socket = FakeWebSocket.latest()
+
+    expect(socket.url).toBe('ws://localhost:8000/v1/benchmark/sessions/bench_1/questions/rerun')
+    expect(current.rerunQuestionIds).toEqual(['Q1', 'Q2'])
+    expect(current.benchmark).toBe('mmlu')
+    act(() => socket.emitOpen())
+    expect(socket.sentFrames).toEqual([JSON.stringify({ question_ids: ['Q1', 'Q2'] })])
+    act(() => current.rerun('bench_1', ['Q3'], 'mmlu'))
+    expect(FakeWebSocket.instances).toHaveLength(1)
+
+    act(() => socket.emitMessage({ type: 'result', benchmark_session: benchmarkSession({ status: 'completed' }) }))
+    act(() => socket.emitClose(1000))
+    expect(current.phase).toBe('finished')
+    expect(current.finishedCount).toBe(1)
+    expect(current.session?.id).toBe('bench_1')
+    act(() => current.dismiss())
+    expect(current.rerunQuestionIds).toEqual([])
+  })
+
+  it('cancelar o lote fecha a conexão e permite reexecutar uma nova seleção', () => {
+    renderProvider()
+    act(() => current.rerun('bench_1', ['Q1', 'Q2'], 'vestibular'))
+    const socket = FakeWebSocket.latest()
+    act(() => current.cancel())
+    expect(socket.closeCalls).toEqual([1000])
+    expect(current.phase).toBe('cancelled')
+    expect(current.finishedCount).toBe(1)
+    act(() => current.rerun('bench_1', ['Q2'], 'vestibular'))
+    expect(FakeWebSocket.instances).toHaveLength(2)
+    expect(current.rerunQuestionIds).toEqual(['Q2'])
+  })
+
+  it('ignora lotes vazios sem abrir conexão', () => {
+    renderProvider()
+    act(() => current.rerun('bench_1', [], 'vestibular'))
+    expect(current.phase).toBe('idle')
+    expect(FakeWebSocket.instances).toHaveLength(0)
   })
 })

@@ -227,6 +227,26 @@ async def test_startup_de_reexecucao_monta_o_grafo_e_emite_progress_ate_o_result
     assert gravada == documento
 
 
+async def test_startup_reexecuta_lote_e_persiste_resultados_no_mesmo_json(armazenamento: Path) -> None:
+    execucao = BenchmarkRunStartup()
+    execucao.run_benchmark_use_case.flow_runner = _RunnerQueErraNoRalph()
+    originais = [frame async for frame in execucao.run(payload=_abertura(question_count=2))]
+    original = originais[-1].benchmark_session
+    ids = [question["question_id"] for question in original["questions"]]
+    startup = BenchmarkRerunStartup()
+    startup.rerun_use_case.flow_runner = _RunnerImediato()
+
+    frames = [frame async for frame in startup.run_many(original["id"], ids)]
+
+    assert frames[-1].type == "result"
+    documento = frames[-1].benchmark_session
+    assert documento["id"] == original["id"]
+    assert documento["summary"]["ralph"]["correct"] == 2
+    assert all(question["current_mode"] is None for question in documento["questions"])
+    gravada = json.loads((armazenamento / "benchmark-sessions" / f"{original['id']}.json").read_text("utf-8"))
+    assert gravada == documento
+
+
 async def test_cotas_da_abertura_chegam_a_selecao_e_sao_persistidas(armazenamento: Path) -> None:
     startup = BenchmarkRunStartup()
     startup.run_benchmark_use_case.flow_runner = _RunnerImediato()
