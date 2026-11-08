@@ -34,6 +34,17 @@ learnings already recorded. Record the new facts discovered in this task; do not
 fact that this task merely used or cited. The only recorded facts written again are those this
 task re-established independently, as described in the instructions below.
 
+**Origin labels.** Each note starts with a label that states where it came from: `[Question]` for a
+point of attention taken from the user's request, `[Task T1]` or `[Tasks T1, T3]` for a note recorded
+from the approved result of the current tasks named, and both when a task re-established a note from
+the question. The label states origin, not truth: a task note may restate supplied data, record a
+conclusion or carry a hypothesis, and it keeps the scope, conditions and qualifiers written in it. A
+claim does not become supported because it appears in these notes or in a task description. The label
+is not part of the note.
+
+When you copy a recorded fact that this task re-established, copy only the text of the note after its
+origin label, never the label.
+
 {{learnings}}
 
 ## Instructions
@@ -58,6 +69,9 @@ and supported reason, rather than the calculation trace.
 - **Classifications:** identify the statement, option or item classified, its classification (true
   or false, correct or incorrect, satisfies or does not satisfy the condition) and a brief reason.
 - **Relations:** preserve the formula or relation and the hypotheses needed for it to hold.
+- **Hypotheses and qualifiers:** a result that holds under a hypothesis, condition or approximation
+  keeps it in the note, with its compact reason: an estimate under an assumption stays an estimate under
+  that assumption, not a guarantee. Do not add a qualifier that the approved result does not state.
 
 For every fact, retain every condition needed for it to hold: name the object, the quantity and
 its unit, the sign and reference frame, the spatial reference (distance measured from which object)
@@ -91,7 +105,7 @@ corrected conclusions as facts about the problem, never as a report about the re
 it, and it leaves Key Learnings only when none of them remains current. When the Approved result
 establishes, by its own derivation, verification or evidence, a fact that is already in **Key
 Learnings**, include that fact in your list **copied exactly, character for character**, as it
-appears there: the repetition records this task as an additional source and is not stored twice.
+appears there after its origin label: the repetition records this task as an additional source and is not stored twice.
 This also applies to a recorded fact that this task confirmed in a review. Do not write again a
 fact that this task only took from Key Learnings as an input or quoted without establishing it, nor
 a point of attention supplied by the question. If your conclusion differs from the recorded one in
@@ -101,7 +115,9 @@ new learning instead of copying the recorded one.
 **Prioritize the finally approved conclusion.** Values, classifications or relations that appear in
 the rejected attempts and were refuted, corrected or replaced in the approved attempt **are not
 current learnings**: do not record them. From the history, use only facts that remain valid and that
-the approved result does not contradict.
+the approved result does not contradict. The history of corrections — what an earlier attempt got wrong
+and how it was fixed — is not a fact about the problem: record the valid findings of the approved
+result, not the path that led to them.
 
 Before answering, go through the Approved result conclusion by conclusion and check, for each one,
 whether it is already in **Key Learnings**. Every conclusion not yet there must be in your list; a
@@ -121,6 +137,7 @@ It is forbidden to record:
 - acceptance criteria (`T1-AC1`), including the harness criteria (`T1-TECH`, `T1-REV`), and their
   fulfillment, the validator and its verdicts, including the approval (`approved`) or rejection
   (`reproved`) verdict;
+- origin labels (`[Question]`, `[Task T1]`) or mentions of where a note came from;
 - reports of the execution process or of the attempts, and indirect phrasings such as "The approved
   answer concluded that..." or "In task T1 it was identified that..." — write the concluded fact
   directly;

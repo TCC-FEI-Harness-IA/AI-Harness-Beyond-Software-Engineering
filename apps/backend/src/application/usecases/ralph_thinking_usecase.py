@@ -50,6 +50,13 @@ _SYNTHESIS_TASK_LABEL = "synthesis"
 _NO_INFERENCE_TIME_MS = 0
 _FIRST_TASK_NUMBER = 1
 _FIRST_ATTEMPT = 1
+# Escala das revisões semânticas de A.2 (refinamentos 03): o primeiro candidato usa a temperatura da sessão;
+# a primeira revisão depois de uma reprovação válida de A.3 usa um valor intermediário, que explora sem
+# abandonar o candidato; as seguintes, a temperatura de retentativa. Valores exatos, nunca somados à da
+# sessão. As correções de saída inválida ou vazia não passam por aqui: seguem a fase base, a 1.
+_FIRST_PLAN_REVISION_ATTEMPT = 2
+_FIRST_PLAN_REVISION_TEMPERATURE = 0.5
+_LATER_PLAN_REVISION_TEMPERATURE = 1.0
 
 _CRITERIA_HEADING = "## General acceptance criteria"
 _TASKS_HEADING = "## Planned tasks"
@@ -72,11 +79,13 @@ _PLAN_REVISION_CONTENT = (
 )
 _PLAN_REVISION_INSTRUCTION = (
     "The validation stage rejected the previous candidate plan above. Produce a complete revised plan that "
-    "resolves every issue in the report. Change the number, content, order, identifiers or dependencies of "
-    "the tasks when an issue requires it; preserve the parts the report did not question and keep the plan "
-    "covering the whole request. Each adjustment describes what to investigate or verify: keep the unknown "
-    "results open instead of replacing one anticipated conclusion with another. Your complete output "
-    "replaces the previous candidate."
+    "removes the concrete defect named by each issue. The original question remains the reference: an issue says "
+    "what to change in the plan, and it does not turn a conclusion or a requirement absent from the question into "
+    "user data. Change the number, content, order, identifiers or dependencies of the tasks when an issue requires "
+    "it; preserve the parts the report did not question and keep the plan covering the whole request, including the "
+    "conditions that must survive when tasks are joined. Each adjustment describes what to investigate or verify: "
+    "keep the unknown results open instead of replacing one anticipated conclusion with another. Your complete "
+    "output replaces the previous candidate."
 )
 _LEARNINGS_HEADING = "## Extracted learnings"
 _DISCARDED_LEARNINGS_HEADING = "## Repeated learnings already recorded (not stored again)"
@@ -149,8 +158,13 @@ _PREVIOUS_ATTEMPT_CONTENT = (
 _RETRY_INSTRUCTION_CONTENT = (
     "The previous attempt was rejected. Criteria not met: {unmet}.\n\n"
     "Redo the resolution of the task. Address the concrete problem that each verdict identifies in "
-    "these criteria. Keep the conclusions that the verdict did not refute; correct those it shows to "
-    "rest on an error in data, conditions or calculation."
+    "these criteria. Confront each objection: correct the premise, relation, calculation or interpretation "
+    "it targets, or show concretely why it does not invalidate the earlier conclusion; rewording the same "
+    "reasoning or switching to another candidate without a new basis does not resolve it. Keep the "
+    "conclusions that the verdict did not refute; correct those it shows to rest on an error in data, "
+    "conditions or calculation. Let the resolution show what changed and why the defect no longer occurs. "
+    "Before concluding that no candidate fits, re-examine the restrictions you assumed yourself that the task "
+    "does not state; do not relax explicit data or tolerances to keep a preferred candidate."
 )
 _DISCARDED_RESOLUTION_CONTENT = (
     "#### Discarded resolution output ({defect})\n\n"
@@ -375,8 +389,10 @@ class RalphThinkingUseCase:
     async def __generate_candidate(self, attempt: int, plan_revision: str) -> tuple[list[Task], ThinkingEvent]:
         """Executa A.2 numa janela nova e registra o plano candidato, sem tocar a fila.
 
-        A primeira geração usa a temperatura da sessão; uma geração depois de uma reprovação repete o
-        pedido e usa a temperatura de retentativa. O teto e os identificadores conhecidos vêm só das
+        A primeira geração usa a temperatura da sessão; a primeira revisão depois de uma reprovação de A.3,
+        `0.5`; as revisões seguintes, `1` (ver `__plan_revision_temperature`). A escala vale só para a
+        primeira chamada de cada geração: as correções de saída inválida dessa mesma execução seguem a fase
+        base, sem criar candidato nem avançar a escala. O teto e os identificadores conhecidos vêm só das
         tarefas confirmadas: candidatos anteriores não contam.
 
         Args:
@@ -397,7 +413,7 @@ class RalphThinkingUseCase:
                 **self.__planning_limits(),
             },
             validation=self.__planning_validation(),
-            is_retry=attempt > _FIRST_ATTEMPT,
+            temperature=self.__plan_revision_temperature(attempt=attempt),
         )
         candidate = self.__to_tasks(parsed=outcome.parsed, origin_phase=ThinkingPhaseEnum.A2_TASK_DECOMPOSITION)
         event = await self.__record_and_build(
@@ -410,6 +426,25 @@ class RalphThinkingUseCase:
             task_id=None,
         )
         return candidate, event
+
+    def __plan_revision_temperature(self, attempt: int) -> float | None:
+        """Temperatura da primeira chamada de A.2 para o candidato informado.
+
+        O número do candidato vem do guardião de custo da sessão: só uma reprovação semântica válida de A.3
+        o avança, e cada sessão tem o seu guardião, de modo que a escala nunca atravessa sessões.
+
+        Args:
+            attempt: Número do candidato, a partir de um.
+
+        Returns:
+            float | None: `None` (temperatura da sessão) no primeiro candidato, `0.5` no segundo e `1` nos
+            demais.
+        """
+        if attempt <= _FIRST_ATTEMPT:
+            return None
+        if attempt == _FIRST_PLAN_REVISION_ATTEMPT:
+            return _FIRST_PLAN_REVISION_TEMPERATURE
+        return _LATER_PLAN_REVISION_TEMPERATURE
 
     async def __validate_candidate(self, candidate: Sequence[Task]) -> tuple[PlanValidationReport, ThinkingEvent]:
         """Executa A.3 numa janela nova sobre um único plano candidato.
@@ -1046,6 +1081,7 @@ class RalphThinkingUseCase:
         variables: dict[str, str],
         validation: ValidationContext | None = None,
         is_retry: bool = False,
+        temperature: float | None = None,
     ) -> PhaseOutcome:
         """Executa uma fase registrando qual fase e qual janela estão em andamento.
 
@@ -1058,13 +1094,16 @@ class RalphThinkingUseCase:
             variables: Placeholders do template da fase.
             validation: Dados esperados pela chamada, repassados ao parser.
             is_retry: Indica que a execução repete um pedido reprovado, e usa a temperatura de retentativa.
+            temperature: Temperatura da primeira chamada da execução; `None` usa a da sessão.
 
         Returns:
             PhaseOutcome: Resultado da execução da fase.
         """
         self.__context = context
         self.__running_phase = runner.phase
-        return await runner.execute(context=context, variables=variables, validation=validation, is_retry=is_retry)
+        return await runner.execute(
+            context=context, variables=variables, validation=validation, is_retry=is_retry, temperature=temperature
+        )
 
     def __configure_phases(self, input_dto: RalphThinkingInputDTO) -> None:
         """Fixa modelo, teto de tokens e temperatura em todas as fases.

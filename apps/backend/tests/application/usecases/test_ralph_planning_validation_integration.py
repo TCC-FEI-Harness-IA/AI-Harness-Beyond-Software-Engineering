@@ -378,7 +378,8 @@ async def test_recuperacao_estrutural_nao_e_reprovacao_semantica_e_temperaturas_
         (Phase.A1_GENERAL_CRITERIA, _TEMPERATURA),
         (Phase.A2_TASK_DECOMPOSITION, _TEMPERATURA), (Phase.A2_TASK_DECOMPOSITION, 1.0),
         (Phase.A3_DECOMPOSITION_VALIDATION, _TEMPERATURA), (Phase.A3_DECOMPOSITION_VALIDATION, 1.0),
-        (Phase.A2_TASK_DECOMPOSITION, 1.0),
+        # Primeira revisão semântica: 0.5 (refinamentos 03); as correções estruturais acima não a avançam.
+        (Phase.A2_TASK_DECOMPOSITION, 0.5),
         (Phase.A3_DECOMPOSITION_VALIDATION, _TEMPERATURA),
         (Phase.A4_PLANNING_LEARNINGS, _TEMPERATURA),
     ]

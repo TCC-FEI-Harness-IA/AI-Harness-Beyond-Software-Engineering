@@ -120,6 +120,7 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
   - [Integração das cinco frentes — etapa 07](#integração-das-cinco-frentes--etapa-07)
   - [Planejamento aprovado antes da execução — nova fase de validação 01](#planejamento-aprovado-antes-da-execução--nova-fase-de-validação-01)
   - [Validade técnica obrigatória das tarefas — nova fase de validação 02](#validade-técnica-obrigatória-das-tarefas--nova-fase-de-validação-02)
+  - [Refinamentos do planejamento, da validação e da apresentação — refinamentos 03](#refinamentos-do-planejamento-da-validação-e-da-apresentação--refinamentos-03)
 - [Contratos (DTOs)](#contratos-dtos)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Arquitetura em uma imagem](#arquitetura-em-uma-imagem)
@@ -691,10 +692,10 @@ persistida antes do evento `result`.
 | Situação | Comportamento |
 |---|---|
 | A.2 gera um plano candidato | O candidato não entra na fila nem consome espaços de tarefa: A.3 o julga numa janela nova, com o pedido original, os critérios gerais de A.1 e só esse candidato, pela rubrica fixa do template. |
-| A.3 reprova e ainda há candidatos (`RALPH_MAX_PLANNING_ATTEMPTS`) | A.2 roda numa janela nova, com temperatura `1`, recebendo só o último candidato e o relatório dele (`<previous_candidate>` e `<validation_report>`); a A.3 seguinte volta à temperatura da sessão e não vê candidatos nem relatórios anteriores. |
+| A.3 reprova e ainda há candidatos (`RALPH_MAX_PLANNING_ATTEMPTS`) | A.2 roda numa janela nova, com temperatura `0.5` no candidato 2 e `1` nos candidatos 3–5 (refinamentos 03; correções de saída continuam a `1` e não avançam a escala), recebendo só o último candidato e o relatório dele (`<previous_candidate>` e `<validation_report>`); a A.3 seguinte volta à temperatura da sessão e não vê candidatos nem relatórios anteriores. |
 | A.3 reprova o último candidato permitido | A execução é interrompida (`failure.limit = planning_attempts`, fase `A3`), sem confirmar plano, sem A.4, tarefas ou síntese. |
 | A.3 aprova | O plano aprovado é confirmado na fila uma única vez (evento `tasks` em A.3) e só então A.4 anota os pontos de atenção do enunciado (valores com unidades, alternativas, fórmulas, condições) numa janela própria; as anotações entram na memória de aprendizados antes de qualquer tarefa. Lista vazia é válida. |
-| Qualquer prompt de B.1, B.2, B.4, C.1, C.2 ou C.3 é montado | O template tem a área **Aprendizados Pontuais** (`## Key Learnings`), preenchida com todos os aprendizados acumulados até aquele momento (anotações de A.4 seguidas dos aprendizados de B.4), ou com o aviso de que ainda não há nenhum. Os aprendizados nunca entram nos resultados armazenados. |
+| Qualquer prompt de B.1, B.2, B.4, C.1, C.2 ou C.3 é montado | O template tem a área **Aprendizados Pontuais** (`## Key Learnings`), preenchida com todos os aprendizados acumulados até aquele momento (anotações de A.4 seguidas dos aprendizados de B.4), cada um com o rótulo de procedência das fontes vigentes (`[Question]`, `[Task T1]`, `[Tasks T1, T3]`), ou com o aviso de que ainda não há nenhum. Os aprendizados nunca entram nos resultados armazenados. |
 | Qualquer fase é executada | A execução abre uma janela nova, da própria fase: tarefa diferente e mudança de fase (inclusive B.1 → B.2, B.2 → B.1, B.1 → B.4 e C.1 → C.2/C.3) nunca herdam a conversa anterior. Só as correções de saída da própria execução reaproveitam a janela. Só os aprendizados atravessam fases como memória; as demais entradas chegam explicitamente pelo template. |
 | B.1/B.2 de uma tarefa são montados | Os dois recebem o mesmo **conjunto efetivo** de critérios (`Task.verification_criteria()`): os planejados, o critério técnico fixo `<id>-TECH` e, numa revisora, `<id>-REV`; o parser recebe exatamente esses IDs. B.2 recebe ainda a tarefa (identificação, título e descrição) numa área própria, em janela nova, sem a conversa de B.1 nem o planejamento. |
 | B.2 aprova | Todos os critérios efetivos, inclusive `<id>-TECH` (e `<id>-REV`), foram atendidos. B.3 armazena só essa resposta; B.4 roda numa janela nova e recebe o histórico completo da tarefa (tarefa, tentativas, saídas descartadas e vereditos) como material delimitado `<task_history>`. |
@@ -766,7 +767,7 @@ completude ou verdade semântica. `RalphThinkingUseCase` converte as strings sem
 `Learning(content, source_task_id)`: origem `None` para A.3 e ID da tarefa para B.4.
 `LearningsMemory.append` descarta brancos e repetidos comparando apenas espaços; conserva o
 primeiro conteúdo e origem, sem unificar caixa, unidades ou condições. `render()` entrega todos
-os textos na ordem, sem resumo, para `## Key Learnings` de B.1/B.2/B.4/C.1/C.2/C.3, inclusive
+os textos na ordem, sem resumo (desde os refinamentos 03, com o rótulo de procedência das fontes vigentes), para `## Key Learnings` de B.1/B.2/B.4/C.1/C.2/C.3, inclusive
 nas tarefas adicionais. B.4 vê a memória anterior à própria extração. Os eventos `learn` e as
 mensagens da sessão auditam o que entrou e as repetições descartadas.
 
@@ -992,6 +993,32 @@ independência dos limites, matriz sintética pelo fluxo), [`test_task_technical
 As saídas são roteirizadas: provam o protocolo, não que um modelo real julga bem a validade técnica;
 TECH não garante verdade factual. Detalhes em **Nova fase de validação — 02** de
 [`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
+
+### Refinamentos do planejamento, da validação e da apresentação — refinamentos 03
+
+Nenhuma fase, chamada, schema de saída, variável de template, limite ou versão de fluxo nova. Duas mudanças
+são programáticas; as demais refinam instruções dos templates existentes.
+
+| Peça | Implementação |
+|---|---|
+| Temperatura de A.2 | `IThinkingPhase.execute(..., temperature=None)`: temperatura da primeira chamada da execução, sem sobrescrever a configurada; as correções de saída continuam a `1`; combinar com `is_retry` levanta `ValueError` antes de chamar. `RalphThinkingUseCase.__plan_revision_temperature`: candidato 1 → sessão, 2 → `0.5`, 3–5 → `1.0` (valores exatos). O número do candidato vem do guardião de custo da sessão e só avança depois de uma A.3 válida. A.3, A.4, B.2, B.4 e C mantêm a política; B.1 retentada continua a `1`. |
+| Procedência | `LearningsMemory.render()` prefixa cada item com as fontes vigentes: `- [Question] …`, `- [Task T1] …`, `- [Tasks T1, T3] …`, `- [Question; Task T2] …`. Fonte retirada não aparece; conteúdo, deduplicação, ordem, `withdraw`/`restore` e `all()` inalterados. |
+| A.3 / A.2 / C.2 | Rubrica com objeto pedido, relações temporais, condições simultâneas, integração entre tarefas e **prioridades impostas**; seção *Supplied data, investigation and conclusion* com exemplos contrastivos; reprovação só com defeito bloqueante e ajuste real. A.2 (*Conditions in the integration*, *Priorities* e orientação do parecer) e a revisão final de C.2 harmonizadas. |
+| B.1 / B.2 / TECH | Parágrafo **Decisive relation** em B.2 (conferência proporcional; “plausível” não basta; reprovar sem entregar a resolução); premissas não ganham suporte por estarem na descrição ou na memória; seção idêntica **Comparison consistency** em B.1/B.2; B.2 avalia só o resultado atual. Descrição central de TECH alinhada. |
+| Retentativas | `_PLAN_REVISION_INSTRUCTION` e `_RETRY_INSTRUCTION_CONTENT` pedem enfrentar o defeito apontado, mostrar o que mudou e rever restrições assumidas pelo próprio solver, sem campo novo nem detector de estagnação. |
+| B.4 / C.1 / C.3 | Parágrafo idêntico **Origin labels** na área Key Learnings de B.1, B.2, B.4, C.1, C.2 e C.3. B.4 copia só o texto da nota e preserva hipóteses e qualificações. C.3 copia o identificador que os resultados associam ao conteúdo e faz o **Final identifier check** (inclusive na linha marcadora). |
+
+Testes: [`test_base_thinking_phase_temperature.py`](tests/application/phases/test_base_thinking_phase_temperature.py),
+[`test_ralph_plan_revision_temperature_integration.py`](tests/application/usecases/test_ralph_plan_revision_temperature_integration.py),
+[`test_learnings_memory_render_provenance.py`](tests/domain/services/test_learnings_memory_render_provenance.py),
+[`test_refinements_prompt_contracts.py`](tests/infra/providers/test_refinements_prompt_contracts.py),
+[`test_refinements_semantic_matrices.py`](tests/infra/providers/test_refinements_semantic_matrices.py) e
+[`test_ralph_refinements_integration.py`](tests/application/usecases/test_ralph_refinements_integration.py), com as
+matrizes [`decomposition_validation_v2.json`](tests/fixtures/decomposition_validation_v2.json),
+[`technical_validation_v2.json`](tests/fixtures/technical_validation_v2.json) (ambas estendem a v1, intacta) e
+[`final_answer_fidelity_v1.json`](tests/fixtures/final_answer_fidelity_v1.json). Os testes provam parâmetros,
+transporte, contratos e estado; a avaliação semântica com modelo real não foi executada. Detalhes em
+**Refinamentos 03** de [`NOVAS_REGRAS_RALPH_LOOP.md`](../../NOVAS_REGRAS_RALPH_LOOP.md).
 
 ### Limite de tokens por sessão
 

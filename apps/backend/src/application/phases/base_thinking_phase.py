@@ -221,6 +221,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
         variables: dict[str, str],
         validation: ValidationContext | None = None,
         is_retry: bool = False,
+        temperature: float | None = None,
     ) -> PhaseOutcome:
         """Executa a fase sobre a janela de contexto informada.
 
@@ -258,24 +259,31 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
 
         Toda chamada de retentativa sai com a temperatura de retentativa (1), e não com a do usuário:
         tanto as correções de saída inválida ou vazia quanto, quando `is_retry` é verdadeiro, todas as
-        chamadas da execução. A temperatura configurada não muda; a próxima execução volta a usá-la.
+        chamadas da execução. Uma `temperature` explícita vale só para a primeira chamada da execução
+        (a revisão de A.2 depois de uma reprovação de A.3 usa a escala do orquestrador); as correções
+        seguintes continuam com a de retentativa. A temperatura configurada não muda; a próxima execução
+        volta a usá-la. A temperatura de cada chamada é a mesma enviada ao provedor e registrada na
+        invocação.
 
         Args:
             context: Janela de contexto em que a fase é executada.
             variables: Placeholders a substituir no template da fase.
             validation: Dados esperados pela chamada, repassados ao parser.
             is_retry: Indica que a execução inteira repete um pedido reprovado.
+            temperature: Temperatura da primeira chamada desta execução; `None` usa a configurada.
 
         Returns:
             PhaseOutcome: Resultado da execução da fase.
 
         Raises:
-            ValueError: Quando a janela não é nova ou pertence a outra fase, antes de qualquer chamada.
+            ValueError: Quando a janela não é nova ou pertence a outra fase, ou quando `temperature` e
+                `is_retry` são informados juntos, antes de qualquer chamada.
             BudgetExceededError: Quando o guardião de custo nega a chamada.
             PhaseParsingError: Quando o limite de retentativas de parsing se esgota.
             EmptyCompletionError: Quando o provedor insiste em responder sem conteúdo.
         """
         self.__ensure_fresh_window(context=context)
+        first_call_temperature = self.__first_call_temperature(is_retry=is_retry, temperature=temperature)
         context.append(
             message=Message(
                 creation_timestamp=self.clock.now(),
@@ -291,7 +299,7 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
             accepted = await self.__run_until_accepted(
                 context=context,
                 validation=validation,
-                temperature=_RETRY_TEMPERATURE if is_retry else self.temperature,
+                temperature=first_call_temperature,
                 accounting=accounting,
                 invalid_outputs=invalid_outputs,
                 chain=chain,
@@ -418,6 +426,30 @@ class BaseThinkingPhase(IThinkingPhase, ABC):
                 parsed_output=parsed_output,
                 prompt_input=prompt_input,
             )
+
+    def __first_call_temperature(self, is_retry: bool, temperature: float | None) -> float | None:
+        """Temperatura da primeira chamada da execução, sem alterar a configurada.
+
+        Args:
+            is_retry: Indica que a execução inteira repete um pedido reprovado.
+            temperature: Temperatura explícita da execução, ou `None`.
+
+        Returns:
+            float | None: A de retentativa, a explícita ou a configurada, nessa ordem.
+
+        Raises:
+            ValueError: Quando as duas formas de escolher a temperatura são informadas juntas.
+        """
+        if is_retry and temperature is not None:
+            raise ValueError(
+                f"A fase '{self.phase.value}' recebeu uma temperatura explícita e a marcação de retentativa: "
+                "a temperatura da execução seria ambígua."
+            )
+        if is_retry:
+            return _RETRY_TEMPERATURE
+        if temperature is not None:
+            return temperature
+        return self.temperature
 
     def __ensure_fresh_window(self, context: ContextWindow) -> None:
         """Exige uma janela nova, criada para esta fase.

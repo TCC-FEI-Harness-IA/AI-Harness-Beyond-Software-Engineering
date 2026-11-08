@@ -23,7 +23,8 @@ def test_diferencas_de_significado_nao_sao_deduplicadas(contents: tuple[str, str
                                     derived, derived, Learning(content=" \t\n")]) == (derived,)
     assert memory.append(learnings=[]) == ()
     assert memory.all() == (given, derived)  # A primeira origem permanece após duplicatas.
-    assert memory.render() == f"- {contents[0]}\n- {contents[1]}"
+    # Procedência visível (refinamentos 03): o enunciado e a tarefa que repetiu o dado; o conteúdo não muda.
+    assert memory.render() == f"- [Question; Task T1] {contents[0]}\n- [Task T1] {contents[1]}"
 
 
 def test_conteudo_multilinha_preserva_associacoes_e_apenas_compara_espacos() -> None:
@@ -34,4 +35,4 @@ def test_conteudo_multilinha_preserva_associacoes_e_apenas_compara_espacos() -> 
     assert memory.append(learnings=[note]) == (note,)
     assert memory.append(learnings=[Learning(content=" ".join(literal.split()), source_task_id="T1")]) == ()
     assert memory.all() == (note,)
-    assert memory.render() == f"- {literal}"
+    assert memory.render() == f"- [Question; Task T1] {literal}"

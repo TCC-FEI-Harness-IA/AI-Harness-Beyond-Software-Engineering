@@ -20,8 +20,9 @@ A explicação geral do fluxo está em [`RALPH_LOOP_ADAPTADO.md`](RALPH_LOOP_ADA
 | 8 | **Diagnóstico estruturado das saídas do modelo** *(tratamento operacional)* | Todas as fases com saída estruturada | Cada saída avaliada pelo parser registra, na invocação que a produziu, sintaxe, contrato, código do problema, término original, corte por comprimento e recuperação. Não muda o raciocínio, as retentativas nem o orçamento. |
 | 9 | **Nova fase de validação — 01: planejamento aprovado antes da execução** (nova A.3 e renumeração da extração para A.4) | A. Planejamento | O plano de A.2 vira candidato; A.3 o julga por rubrica fixa e o devolve a A.2 quando reprovado (até 5 candidatos); só o plano aprovado entra na fila; a extração do enunciado passa a ser A.4. |
 | 10 | **Nova fase de validação — 02: validade técnica obrigatória das tarefas** (critério `<task_id>-TECH`) | B. Execução em Loop | B.2 recebe a descrição da tarefa e avalia, além dos critérios planejados (e de `REV`), o critério técnico fixo `<task_id>-TECH`, que B.1 conhece antes de resolver; uma resolução que cumpre todos os critérios planejados pode ser reprovada só por ele. |
+| 11 | **Refinamentos 03 — planejamento, validação, retentativas e apresentação** | A.2, A.3, B.1, B.2, B.4, C.1–C.3 | A.3 confere condições, integração e prioridades impostas e reprova só defeito bloqueante; TECH confere a relação decisiva; a área Key Learnings mostra a procedência (`[Question]`, `[Task T1]`) pelas fontes vigentes; retentativas enfrentam a objeção; a primeira revisão de A.2 usa `0.5` (as seguintes, `1`); comparações usam as mesmas condições; C.3 confere o identificador da conclusão aprovada. |
 
-As alterações 2 e 3 vieram de uma segunda rodada de testes. A alteração 2 **substitui** a regra de escopo da alteração 1 (e do paper), segundo a qual os aprendizados ficavam restritos a B.1; os pontos afetados da seção 1 estão marcados com *(atualizado pela alteração 2)*. A alteração 4 muda apenas o que os templates A.2 e C.2 pedem de cada tarefa; não muda a ordem das etapas nem as expressões de entrada e saída. A alteração 5 **substitui** a regra do paper segundo a qual as tentativas de uma mesma tarefa compartilham o contexto e B.4 opera sobre o "contexto completo da tarefa": as tentativas passam a rodar em janelas novas, e B.4 recebe o histórico da tarefa como material delimitado. Os pontos afetados das seções 2 e 3 estão marcados com *(atualizado pela alteração 5)*. A alteração 6 reforça os resultados parciais extraídos em B.4, a alteração 7 separa escopo, suficiência e apresentação, e a alteração 8 acrescenta diagnósticos operacionais associados às invocações.
+As alterações 2 e 3 vieram de uma segunda rodada de testes. A alteração 2 **substitui** a regra de escopo da alteração 1 (e do paper), segundo a qual os aprendizados ficavam restritos a B.1; os pontos afetados da seção 1 estão marcados com *(atualizado pela alteração 2)*. A alteração 4 muda apenas o que os templates A.2 e C.2 pedem de cada tarefa; não muda a ordem das etapas nem as expressões de entrada e saída. A alteração 5 **substitui** a regra do paper segundo a qual as tentativas de uma mesma tarefa compartilham o contexto e B.4 opera sobre o "contexto completo da tarefa": as tentativas passam a rodar em janelas novas, e B.4 recebe o histórico da tarefa como material delimitado. Os pontos afetados das seções 2 e 3 estão marcados com *(atualizado pela alteração 5)*. A alteração 6 reforça os resultados parciais extraídos em B.4, a alteração 7 separa escopo, suficiência e apresentação, e a alteração 8 acrescenta diagnósticos operacionais associados às invocações. A alteração 11 refina as alterações 9 e 10 sem nova fase e **substitui** a temperatura 1 da alteração 3 apenas na primeira revisão de A.2 depois de uma reprovação de A.3 (agora 0,5); está na seção **Refinamentos 03**, ao final.
 
 ---
 
@@ -397,6 +398,7 @@ Regras:
 | B.2 que verifica a nova tentativa | Não: é a primeira verificação daquela tentativa | Usuário |
 | Correção de relatório inválido de B.2 ou C.1 | **Sim** | **1** |
 | Correção de JSON inválido em A.1, A.2, A.3, B.4 ou C.3 | **Sim** | **1** |
+| Nova geração de A.2 depois de uma reprovação válida de A.3 *(nova fase de validação — 01; escala dos refinamentos 03)* | Revisão semântica | Candidato 2: **0,5**; candidatos 3–5: **1** |
 | Repetição depois de resposta vazia do provedor | **Sim** | **1** |
 | C.2 depois de C.1 reprovar | Não: cria tarefas novas, não repete um pedido | Usuário |
 | Tarefas criadas por C.2 e a nova rodada de C.1 | Não: trabalho novo sobre um conjunto maior de resultados | Usuário |
@@ -3529,7 +3531,7 @@ A.1 — Critérios gerais
 
 > *Pergunta do usuário* + *Template A.2* → *Plano candidato* (primeira geração)
 >
-> *Pergunta do usuário* + *Template A.2* + *Último candidato reprovado* + *Relatório de A.3* → *Plano candidato* (revisão, temperatura 1)
+> *Pergunta do usuário* + *Template A.2* + *Último candidato reprovado* + *Relatório de A.3* → *Plano candidato* (revisão, temperatura 1 — *substituído pelos refinamentos 03: primeira revisão a 0,5, seguintes a 1*)
 >
 > *Pergunta do usuário* + *Critérios gerais (A.1)* + *Plano candidato atual* + *Template A.3* → *Relatório da validação*
 >
@@ -3537,7 +3539,7 @@ A.1 — Critérios gerais
 
 | Etapa | Responsabilidade | Entradas | Janela e temperatura |
 |---|---|---|---|
-| A.2 | Gerar o plano candidato com as regras de geração. | Pedido, template, teto de tarefas; nas revisões, só o último candidato e o relatório dele. | Nova a cada geração; sessão na primeira, `1` nas revisões. |
+| A.2 | Gerar o plano candidato com as regras de geração. | Pedido, template, teto de tarefas; nas revisões, só o último candidato e o relatório dele. | Nova a cada geração; sessão na primeira, `1` nas revisões *(substituído pelos refinamentos 03: `0.5` na primeira revisão, `1` nas seguintes)*. |
 | A.3 | Aprovar ou reprovar o candidato por rubrica fixa. | Pedido (referência principal), critérios gerais de A.1, só o candidato atual (descrições, critérios e dependências). | Nova a cada avaliação; sempre a temperatura da sessão. |
 | A.4 | Extrair do enunciado os dados que não podem se perder. | Só o pedido. | Nova; uma única vez, depois da confirmação. |
 
@@ -3871,3 +3873,337 @@ critérios gerais; C.3 apresenta os resultados vigentes da última aprovação g
 
 Relatório de implementação, matriz de testes e resultados:
 [`feature/nova-fase-validacao/RELATORIO_IMPLEMENTACAO_02.md`](feature/nova-fase-validacao/RELATORIO_IMPLEMENTACAO_02.md).
+
+---
+
+## Refinamentos 03 — planejamento, validação, retentativas e apresentação
+
+> **Procedência:** extensão posterior ao paper, especificada em
+> [`feature/nova-fase-validacao/03_refinamentos_planejamento_validacao_e_retentativas.md`](feature/nova-fase-validacao/03_refinamentos_planejamento_validacao_e_retentativas.md)
+> a partir dos casos de [`RELATORIO_ANALISE_BENCHMARKS_POS_NOVA_VALIDACAO.md`](RELATORIO_ANALISE_BENCHMARKS_POS_NOVA_VALIDACAO.md)
+> (seção 9). **Complementa** as frentes 01 e 02 da nova fase de validação, a memória com proveniência
+> (thinking 05) e a fidelidade de C.3 (thinking 06). **Substitui** um único ponto: a regra “toda revisão de
+> A.2 usa temperatura 1” (alteração 3 e nova fase de validação — 01) passa a ter a exceção da primeira
+> revisão, a `0.5`. Nenhuma fase, chamada, votação, schema de saída, campo obrigatório, limite ou versão de
+> fluxo foi criado ou alterado: o fluxo continua na versão 2, e as sessões antigas são lidas como antes.
+
+### Resumo
+
+| # | Mudança | Fases | Tipo de garantia |
+|---|---|---|---|
+| 1 | A.3 confere condições, referentes, integração e prioridades impostas | A.3 (A.2 e C.2 harmonizadas) | Instrução ao modelo |
+| 2 | A.3 distingue investigação de conclusão e reprova só defeito bloqueante | A.3 | Instrução ao modelo |
+| 3 | TECH confere a relação decisiva, não a plausibilidade | B.1, B.2, descrição central de TECH | Instrução ao modelo |
+| 4 | Procedência visível na área Key Learnings e hipóteses preservadas | `LearningsMemory.render()`; B.1, B.2, B.4, C.1, C.2, C.3 | **Programática** (rótulos) + instrução |
+| 5.1 | Retentativas enfrentam a objeção | A.2, B.1, B.2 (mensagens do orquestrador e templates) | Instrução ao modelo |
+| 5.2 | Escala de temperatura das revisões de A.2: sessão → `0.5` → `1.0` | A.2 (fase base e orquestrador) | **Programática** |
+| 6 | Comparações sob as mesmas condições e preferência justificada | B.1, B.2 | Instrução ao modelo |
+| 7 | C.3 preserva a conclusão aprovada e seus identificadores | C.3 | Instrução ao modelo |
+
+Nas mudanças marcadas como “instrução ao modelo”, o código garante só que o texto chega à fase certa,
+com as mesmas variáveis e sem material de referência; se o modelo real passa a julgar melhor é uma
+questão de **avaliação semântica**, que não foi executada (ver “Evidências”, abaixo).
+
+### 1. A.3 — condições, referentes e prioridades impostas
+
+**Estado anterior e defeito.** A rubrica de A.3 já tinha fidelidade e neutralidade, mas os registros
+mostraram aprovações de planos que ignoravam uma condição fornecida (paradas obrigatórias de um só
+veículo), trocavam o objeto pedido (receita no lugar de contribuição ao lucro), perdiam na junção uma
+condição verificada em duas tarefas separadas e definiam “principal” como “mais geral” sem que o pedido
+o dissesse.
+
+**Regra.** A rubrica de `a3_decomposition_validation.md` passa a: (a) confrontar o objetivo e as
+condições do pedido com o que o plano vai investigar — referentes, unidades, relações temporais,
+condições simultâneas e restrições —, exigindo que cada tarefa investigue o objeto pedido; (b) conferir
+a cobertura também na **integração** entre tarefas; (c) tratar como defeito de neutralidade as
+**prioridades impostas** (“the most general”, “the simplest”, “the most specific”, “the most complete”)
+que decidam a resposta sem estarem no pedido nem serem investigadas. A seção nova *Supplied data,
+investigation and conclusion* diz que copiar um dado ou condição do usuário é obrigatório quando
+pertinente (não é antecipação), que uma tarefa não precisa repetir o enunciado inteiro e que as notas de
+A.4 não justificam um plano que mande ignorar uma condição. O `problem` nomeia a condição ou o referente
+perdido; o `adjustment` diz qual investigação deve preservá-lo, sem calcular a resposta. A.2 ganhou as
+regras correspondentes de geração (*Conditions in the integration* e *Priorities*); C.2 ganhou uma frase
+na revisão final do plano, sem passar a usar A.3.
+
+**Exemplo (aberto).**
+
+```text
+Pedido: a van percorre 360 km a 90 km/h; o caminhão, 360 km a 80 km/h com duas paradas obrigatórias de
+20 min. Quanto tempo antes um chega em relação ao outro?
+
+Antes: T1 calcula 360/90 e 360/80; T2 subtrai os tempos → A.3 podia aprovar.
+Depois: A.3 reprova — "Fidelity and coverage: the two 20-minute stops apply only to the truck and are
+lost when T1 and T2 are joined" — e pede que a condição entre no tempo do caminhão e na comparação,
+sem informar a diferença resultante.
+```
+
+**Limites.** O julgamento continua sendo do modelo: não há lista de palavras proibidas, detector de
+prioridade ou comparação com o enunciado por código. O parser continua validando só o contrato.
+
+**Relação.** Esclarece e complementa a rubrica da nova fase de validação — 01; não muda entradas,
+isolamento nem contrato de A.3.
+
+### 2. A.3 — investigação × conclusão; só defeitos bloqueantes
+
+**Estado anterior e defeito.** A rubrica já proibia antecipação, mas o modelo às vezes tratava o pedido
+de interpretar ou classificar como se já impusesse o resultado, e produziu `approved: false` com
+justificativas que diziam não haver problema real.
+
+**Regra.** A.3 aprova investigações abertas — interpretar, comparar, classificar, formular uma oposição
+conceitual, verificar uma hipótese, decidir se uma correção é necessária — e reprova quando título,
+descrição ou critério fixam o resultado. Reprova só com um defeito concreto que torne a especificação
+**errada, incompleta ou inviável**; preferências de estilo, número de tarefas sem prejuízo e redação
+alternativa não são problemas. Cada problema identifica a exigência, a regra violada e o ajuste; se a
+própria análise conclui que nada precisa mudar, o ponto não é problema, e uma reprovação cujos problemas
+dizem não haver defeito é contraditória. O relatório não resolve o pedido nem fornece a “resposta certa”.
+O template traz a tabela contrastiva:
+
+| Plano | Julgamento esperado |
+|---|---|
+| “Identify the divergence between the two statements and justify the interpretation.” | Investigação aberta. |
+| “Show that the first statement represents category X.”, sem X no pedido | Conclusão imposta. |
+| “Check whether the procedure needs to be corrected.” | Investigar a necessidade é legítimo. |
+| “The procedure must be considered incorrect.”, antes da investigação | Resultado antecipado. |
+
+**Exemplo (aberto, par da matriz).** “Determine whether the occupancy exceeds the limit…” → aprovar;
+“Demonstrate that the room is over capacity” → reprovar, pedindo que se determine *se* excede.
+
+**Limites.** O schema e as validações estruturais de A.3 não mudaram. O parser **não** entende a
+contradição “reprovar, mas não há defeito”: o caso `check_whether_procedure_needs_correction` da matriz
+traz um `contradictory_report` que o parser aceita e que o fluxo trata como reprovação — o teste
+`test_parecer_contraditorio_e_aceito_pelo_protocolo_e_so_a_avaliacao_semantica_o_detecta` documenta isso.
+Não há conversão programática de reprovação em aprovação nem segunda chamada para julgar o parecer.
+
+**Relação.** Esclarece a regra “Approve… / Reject only with a concrete, blocking issue” da frente 01.
+
+### 3. TECH — relação decisiva em vez de plausibilidade
+
+**Estado anterior e defeito.** B.2 já pedia que a justificativa de TECH apontasse dado, premissa e
+relação, mas houve aprovações que repetiam a explicação de B.1 ou chamavam um valor de “plausível”
+(raiz de equilíbrio que, substituída, não satisfazia a equação).
+
+**Regra.** B.2 ganhou o parágrafo **Decisive relation**: a relação que sustenta o veredito é conferida
+com uma verificação proporcional — substituir uma solução na equação, conferir o vínculo entre grandezas
+ou com uma tabela fornecida, uma condição de aplicação, a direção de uma comparação, a correspondência
+entre característica e definição. Explicação longa, menção a método numérico, “plausível” ou repetição
+da conclusão não substituem a conferência. Ao reprovar, B.2 aponta o passo, dado ou relação que falha e
+o que investigar, **sem escrever a resolução corrigida nem completar a análise**. Aproximações e
+inferências fundamentadas continuam válidas: não há tolerância universal, igualdade exata ou segunda
+solução completa obrigatória. B.1 conhece a mesma exigência na sua seção de TECH, e a descrição central
+(`harness_criteria.py`) passou a dizer “the reasoning actually supports the conclusion and the decisive
+relation is actually checked … beyond the mere presence of an explanation or a claim of plausibility”.
+
+**Exemplo (sintético da matriz).** Tarefa: uma solução de `x² = 9`. Resultado: “pela iteração …, a
+solução exata é x = 2”. Antes: aprovável por “método descrito”. Depois: `T2-TECH: false` — “Substituting
+the claimed solution gives 2² = 4, not 9” —, deixando a correção para B.1. Controle positivo: `x ≈ 1,414`
+para `x² = 2`, conferido por `1,414² = 1,999396` e `1,415² = 2,002225`, é aprovado sem exatidão.
+
+**Limites.** Os identificadores reservados, o conjunto efetivo (`Task.verification_criteria()`) e o
+parser não mudaram. B.2 continua sem dispensar critério planejado inválido. Se a conferência é feita de
+fato é julgamento do modelo.
+
+**Relação.** Esclarece a frente 02 (“fundamento antes da aproximação”).
+
+### 4. Procedência visível e hipóteses preservadas
+
+**Estado anterior e defeito.** `Learning` guardava `source_task_id` e a memória mantinha todas as fontes
+dos fatos deduplicados, mas `render()` entregava só os textos. A redação de TECH (“premise supplied by the
+task or the Key Learnings”) podia ser lida como se tudo o que está na descrição ou na memória já estivesse
+justificado, e conclusões condicionadas viravam garantias em tarefas posteriores.
+
+**Regra programática.** `LearningsMemory.render()` prefixa cada item com a procedência montada a partir
+das **fontes vigentes** já registradas:
+
+| Fontes vigentes | Item renderizado |
+|---|---|
+| Enunciado | `- [Question] Prazo máximo: 10 dias.` |
+| Uma tarefa | `- [Task T1] Duração estimada de 8 dias, supondo disponibilidade integral da equipe.` |
+| Várias tarefas | `- [Tasks T1, T3] …` (ordem de registro) |
+| Enunciado e tarefa | `- [Question; Task T2] …` |
+
+O enunciado vem primeiro; tarefas retiradas não aparecem, mesmo que sejam a fonte do primeiro registro
+(o objeto `Learning` conserva o `source_task_id` inicial, mas o rótulo usa só as fontes vigentes). A
+deduplicação (espaços normalizados), a ordem, `withdraw`/`restore` e `all()` não mudaram; o rótulo **não**
+entra em `Learning.content`, na chave de deduplicação nem nos eventos `learn`. “Question” evita depender
+da renumeração A.3/A.4; sessões antigas não são migradas (o rótulo só existe nos prompts novos).
+
+**Regra de instrução.** Um parágrafo idêntico, **Origin labels**, entra na área Key Learnings de B.1, B.2,
+B.4, C.1, C.2 e C.3: o rótulo indica origem, não veracidade; uma nota de tarefa pode repetir um dado,
+registrar uma conclusão ou carregar uma hipótese e conserva escopo e condições; uma afirmação não ganha
+suporte por estar nas notas ou na descrição da tarefa; o rótulo não faz parte da nota. B.1/B.2 dizem que
+premissas geradas no planejamento precisam de justificativa, que resultados herdados conservam escopo e
+condições (“a conditional estimate does not become a guarantee”), que não é preciso refazer tarefas
+anteriores e que a origem em outra tarefa não invalida uma nota. B.4 copia só o texto após o rótulo ao
+reestabelecer um fato, preserva hipóteses e qualificações (**Hypotheses and qualifiers**) sem inventar
+qualificação ausente, e não converte o histórico das correções em fato.
+
+**Exemplo (antes/depois).**
+
+```text
+Antes:  - Duração de 8 dias.            → a tarefa seguinte promete entrega garantida.
+Depois: - [Question] Prazo máximo: 10 dias.
+        - [Task T1] Duração estimada de 8 dias, supondo disponibilidade integral da equipe.
+```
+
+Se o pedido admite estimativa condicionada, ela pode ser usada assim; se a conclusão promete garantia,
+a condição da equipe precisa estar sustentada (casos `conditional_estimate_turned_into_guarantee` e
+`conditional_estimate_kept_conditional` da matriz técnica v2).
+
+**Limites.** O rótulo não classifica a nota como hipótese nem como fato demonstrado; não há nova etapa,
+tela, campo de resposta, consulta externa obrigatória ou nova política de invalidação. Se B.4 copiar o
+rótulo apesar da instrução, o texto rotulado vira um fato distinto (a memória não remove prefixos): isso
+é documentado em `test_deduplicacao_continua_textual_e_independente_dos_rotulos`.
+
+**Relação.** Complementa a proveniência da thinking 05 (que só existia nos metadados) e substitui, na
+descrição de TECH, a redação “supplied by the task or the Key Learnings”.
+
+### 5. Retentativas: corrigir a objeção e graduar a temperatura da revisão do plano
+
+#### 5.1 Uso efetivo do feedback
+
+**Estado anterior e defeito.** A.2 já recebia o último candidato e o parecer; B.1, as tentativas e os
+vereditos. Ainda assim, houve respostas reformuladas que mantinham o defeito e buscas que declaravam
+impossibilidade depois de excluir candidatos por uma restrição inventada pelo próprio solver.
+
+**Regra.** Pelos canais existentes:
+
+- `_PLAN_REVISION_INSTRUCTION` (A.2): remover o defeito concreto de cada problema; o pedido original
+  continua a referência e um ajuste não transforma em dado do usuário uma conclusão ou exigência ausente do
+  pedido; preservar as condições que precisam sobreviver à junção das tarefas. A área do parecer em A.2
+  repete essa orientação.
+- `_RETRY_INSTRUCTION_CONTENT` e a área *Previous attempts* de B.1: enfrentar cada objeção — corrigir a
+  premissa, relação, cálculo ou interpretação apontada, ou mostrar concretamente por que ela não invalida
+  a conclusão —; reformular ou trocar de candidato sem novo fundamento não basta; a resolução deve deixar
+  ver o que mudou e por que o defeito deixou de ocorrer (sem campo JSON ou *changelog*); antes de declarar
+  impossibilidade, revisar as restrições assumidas pelo próprio solver, sem relaxar dados ou tolerâncias
+  explícitos e sem exigir busca exaustiva ilimitada.
+- B.2: avalia só o resultado atual (não recebe e não precisa dos pareceres anteriores); uma explicação
+  reformulada que mantém a premissa, a relação ou o cálculo defeituoso continua reprovada.
+
+**Exemplo (aberto).** Uma busca exclui candidatos por não serem “usuais”, restrição que o pedido não faz,
+e conclui que os dados são inconsistentes. A nova tentativa deve rever essa restrição em vez de relaxar a
+tolerância fornecida. Nenhuma regra de domínio (por exemplo, sobre isótopos) foi acrescentada ao harness.
+
+**Limites.** Sem detector de estagnação, aprovação forçada, tentativa extra, retorno de B.2 a A.2 ou
+chamada de diagnóstico. B.4 e C.3 continuam sem expor o processo de correção.
+
+#### 5.2 Escala de temperatura das revisões de A.2
+
+**Estado anterior.** A primeira geração de A.2 usava a temperatura da sessão e toda revisão depois de
+uma reprovação de A.3 usava `1.0`.
+
+**Regra.** Revisão semântica é a **nova geração de A.2 depois de um relatório estruturalmente válido de
+A.3 com `approved: false`**. Só ela segue a escala; a correção de saída inválida ou vazia dentro de uma
+execução continua a `1.0`, na mesma janela, e não cria candidato nem avança a escala.
+
+| Geração de A.2 | Situação | Temperatura da primeira chamada |
+|---|---|---:|
+| Candidato 1 | Geração inicial | Temperatura da sessão |
+| Candidato 2 | Primeira revisão | `0.5` |
+| Candidatos 3, 4 e 5 | Revisões seguintes | `1.0` |
+
+- Valores exatos: não se soma `0.5` à temperatura da sessão nem se usa `max(sessão, 0.5)`.
+- A.3 usa sempre a temperatura da sessão; A.4, B.2, B.4 e as fases C mantêm a política atual; B.1 depois
+  de reprovação de B.2 continua a `1.0`; C.2 não usa a escala.
+- Uma recuperação do parecer inválido de A.3 acontece antes de qualquer revisão de A.2.
+- Exemplo da especificação, coberto por teste: candidato 1 em `0.2` → correção de JSON em `1.0` → A.3 em
+  `0.2` reprova → candidato 2 em `0.5` → correção em `1.0` → A.3 em `0.2` reprova → candidato 3 em `1.0`.
+
+**Implementação.** `IThinkingPhase.execute`/`BaseThinkingPhase.execute` ganharam o parâmetro opcional
+`temperature` (temperatura da primeira chamada da execução; `None` usa a configurada; combinar com
+`is_retry` é recusado com `ValueError` antes de qualquer chamada). A temperatura configurada da sessão
+nunca é sobrescrita. `RalphThinkingUseCase.__plan_revision_temperature` mapeia o número do candidato,
+vindo do guardião de custo da sessão (`register_planning_attempt`), que só avança depois de uma A.3 válida;
+cada sessão tem o seu guardião, logo a escala não vaza entre sessões. A temperatura enviada ao provedor é
+a registrada na invocação, inclusive nas recuperações. Auditoria, contabilidade e limites não mudaram;
+o esgotamento no quinto candidato preserva a falha `planning_attempts`.
+
+**Relação.** **Substitui** “revisão de A.2 a temperatura 1” (alteração 3, tabela 3.3, e nova fase de
+validação — 01) apenas para o candidato 2; o restante da alteração 3 continua valendo.
+
+### 6. Comparações consistentes e preferência justificada
+
+**Estado anterior e defeito.** Comparações rejeitavam um candidato por uma omissão aceita no candidato
+preferido, ou preferiam a explicação “mais geral” sem mostrar por que isso decidia o pedido; houve
+oposição indevida entre “linear” e “polinomial”.
+
+**Regra.** Seção idêntica **Comparison consistency** em B.1 e B.2: mesmas condições relevantes e mesmo
+padrão de suporte para todos os candidatos, inclusive conteúdo implícito; candidatos de natureza diferente
+recebem só as exigências que se aplicam a eles; característica compartilhada não distingue; a preferência
+precisa de uma diferença pertinente ao objetivo e de por que ela importa, sem trocar o objetivo por outra
+prioridade; “melhor explicação para o aspecto pedido” ≠ “as demais são falsas”; não inventar critérios
+para forçar unicidade nem exclusões entre categorias (dependência linear é polinomial de grau um). Melhor
+ajuste, eliminação e aproximação continuam válidos.
+
+**Exemplo (aberto).** Menor custo com entrega em até 5 dias: X custa R$ 100 e entrega em 3; Y custa R$ 80
+e entrega em 5. Preferir X “por ser mais rápido” troca o objetivo; se o pedido priorizasse rapidez, a
+análise seria outra (`faster_service_chosen_under_cost_objective`). Positivo: “(a) explica melhor o
+crescimento; (b) e (c) são verdadeiras, mas não explicam a diferença” (`best_explanation_with_true_content_elsewhere`).
+
+**Limites.** Sem schema de alternativas, ranking programático ou desempate de múltipla escolha.
+
+**Relação.** Complementa a regra “mesmo padrão de suporte para as hipóteses comparadas” da frente 02.
+
+### 7. C.3 — conclusão aprovada e identificadores
+
+**Estado anterior e defeito.** C.3 já tinha a conferência de fidelidade na própria chamada. Ainda assim,
+num caso em que os resultados e C.1 associavam o par aprovado à alternativa A, a resposta manteve o par no
+texto e escreveu `FINAL_ANSWER: C`.
+
+**Regra.** Na conferência de C.3: quando os próprios resultados associam um identificador ao conteúdo
+determinado (“which corresponds to option B”), copiar esse identificador; as notas do enunciado servem à
+associação literal e nunca substituem os resultados como fonte da resposta analítica. Novo passo **Final
+identifier check**: depois de redigir, comparar todo identificador escrito — no texto e em qualquer linha
+exigida, como a linha marcadora — com o item aprovado (objeto, direção, sinal, unidade, período, condições,
+qualificadores); a linha marcadora apresenta a conclusão aprovada, não é nova escolha; se o rascunho
+contradiz os resultados, corrigir o rascunho a partir deles. Exemplos novos: pareamento de código
+(`P-1 — pump; V-3 — valve`) e linha marcadora contraditória.
+
+**Exemplo (aberto).** Resultado: “o estoque diminuiu na filial leste e aumentou na oeste, excluídas as
+devoluções”. A tradução pode resumir, nunca trocar as filiais, o mês, as quantidades ou a exclusão
+(`translation_keeps_branches_direction_and_condition`).
+
+**Limites.** C.3 continua apresentação: sem C.4, chamada de conferência, correção automática de letras,
+comparação com gabarito, revalidação analítica ou consumo dos relatórios de C.1. As entradas de C.3 não
+mudaram (`stored_results`, critérios gerais e a área Key Learnings, agora com rótulos). Lacunas de vínculo
+continuam com C.1/C.2. A fidelidade de uma geração real não é provada pelos testes roteirizados.
+
+**Relação.** Esclarece a thinking 06; não duplica as instruções existentes, acrescenta o passo final e a
+precedência do identificador dado pelos resultados.
+
+### Arquivos alterados
+
+| Área | Arquivos |
+|---|---|
+| Temperatura | `domain/interfaces/thinking_phase_interface.py`, `application/phases/base_thinking_phase.py`, `application/usecases/ralph_thinking_usecase.py` |
+| Procedência | `domain/services/learnings_memory.py` |
+| Prompts | `infra/templates/a2_…`, `a3_…`, `b1_…`, `b2_…`, `b4_…`, `c1_…` (só o parágrafo de procedência), `c2_…` (procedência e uma frase da revisão final), `c3_…`; `domain/entities/thinking/harness_criteria.py`; `_PLAN_REVISION_INSTRUCTION` e `_RETRY_INSTRUCTION_CONTENT` |
+| Fixtures do frontend | `capture-v2-plan-revision-c3-audit.json` e `capture-v2-planning-exhausted.json`, regravadas pelo comando documentado: só a temperatura da segunda A.2 mudou (`1.0 → 0.5`) |
+
+### Evidências
+
+**Testes determinísticos (executados).** Novos: `test_base_thinking_phase_temperature.py` (temperatura
+por execução, recuperação a 1, configurada intacta, combinação ambígua recusada),
+`test_ralph_plan_revision_temperature_integration.py` (primeiro candidato aprovado, `[sessão, 0.5, 1, 1, 1]`,
+A.3 na sessão, esgotamento sem sexto candidato, exemplo da especificação, recuperação de A.3 antes da
+revisão, resposta vazia, B.1/B.2/C, sessões independentes, enviada = registrada),
+`test_learnings_memory_render_provenance.py` (rótulos, múltiplas fontes, retirada/restauração, enunciado
+preservado, deduplicação, hipóteses), `test_refinements_prompt_contracts.py` (instruções e variáveis dos
+templates, parágrafo idêntico de procedência, seção idêntica de comparação, mensagens do orquestrador,
+ausência de casos do benchmark), `test_refinements_semantic_matrices.py` (versionamento, transporte, parser
+nos dois sentidos, parecer contraditório aceito, isolamento das referências) e
+`test_ralph_refinements_integration.py` (procedência até B/C sem virar critério, resultado ou conteúdo;
+feedback de B.1 e A.2; matrizes v2 pelo fluxo; material de C.3 sem fase nova). Testes existentes
+atualizados só onde o comportamento mudou por especificação (formato de `render()` e a temperatura da
+segunda A.2). Resultado em `apps/backend`: `flake8 src tests` sem erros; `pytest --cov=src
+--cov-report=term-missing --cov-fail-under=100` com **2987 testes aprovados e 100% de cobertura**; no
+frontend, `npm test` com **716 testes aprovados** depois da regravação das duas fixtures.
+
+**Matrizes semânticas (preparadas, não executadas).** `decomposition_validation_v2.json` (8 casos novos
+sobre os 7 da v1), `technical_validation_v2.json` (10 novos sobre os 11 da v1) e
+`final_answer_fidelity_v1.json` (4 casos de apresentação). As versões 1 ficaram intactas, e a v2 declara
+`extends`. Referências, rubricas e respostas de referência nunca são enviadas ao modelo nem lidas pela
+produção (testado). **Nenhuma avaliação com modelo real foi executada nesta entrega**, e nenhum ganho de
+acurácia é declarado: testes roteirizados provam parâmetros, transporte, contratos e estado; a contagem de
+reprovações não mede melhora. Para avaliar, siga o roteiro de `apps/backend/tests/fixtures/README.md` e
+compare, nos mesmos IDs, os dois estados do harness e a inferência simples.

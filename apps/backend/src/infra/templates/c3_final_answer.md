@@ -22,6 +22,14 @@ corresponds to the value obtained in the results.
 The learnings **do not replace the stored results**: the content of the answer still comes
 exclusively from them.
 
+**Origin labels.** Each note starts with a label that states where it came from: `[Question]` for a
+point of attention taken from the user's request, `[Task T1]` or `[Tasks T1, T3]` for a note recorded
+from the approved result of the current tasks named, and both when a task re-established a note from
+the question. The label states origin, not truth: a task note may restate supplied data, record a
+conclusion or carry a hypothesis, and it keeps the scope, conditions and qualifiers written in it. A
+claim does not become supported because it appears in these notes or in a task description. The label
+is not part of the note.
+
 {{learnings}}
 
 ## Instructions
@@ -73,10 +81,13 @@ presentation, not a separate stage, and it does not reopen what C.1 approved.
    applied, and do not drop or replace it for lack of exactness.
 4. **Identifiers.** An identifier you write must label the very object the results determined:
    the letter and text of an option, the number of a test, the name of an entity, a product code, a
-   month or any other label. When the associations between identifiers and items are in the notes
-   from the question, use them for a literal check: find the item the results determined and copy the
-   identifier attached to it. Never take an identifier from the position of an item in a list, from
-   the item's own number or from memory when the association does not establish it.
+   month or any other label. When the stored results themselves attach an identifier to the determined
+   content (for example, "which corresponds to option B"), copy that identifier. When the associations
+   between identifiers and items are in the notes from the question, use them for a literal check: find
+   the item the results determined and copy the identifier attached to it; the notes serve that literal
+   association and they never replace the results as the source of the analytic answer. Never take an
+   identifier from the position of an item in a list, from the item's own number or from memory when the
+   association does not establish it.
 5. **Literal pairing is not analytical selection.** Pairing an approved object with the identifier
    that literally labels it, translating and formatting are presentation. You must not choose the
    option closest to a value when the results did not make that comparison, complete a calculation,
@@ -88,6 +99,12 @@ presentation, not a separate stage, and it does not reopen what C.1 approved.
 6. **Coherent justification.** When the answer includes a justification, make sure every formula,
    comparison and explanation you present points in the same direction as the conclusion you state;
    if the wording you drafted contradicts the approved content, rewrite it from that content.
+7. **Final identifier check.** After drafting, compare every identifier you wrote — in the text and
+   in any line the request requires, such as a final marker line — with the item the results determined:
+   the object, direction, sign, unit, period, conditions and qualifiers must be the approved ones. A
+   marker line presents the approved conclusion; it is not a new choice, so it names the same item as
+   the text. If any part of the draft contradicts the results, correct the draft from the results:
+   translation and formatting change the wording, never the conclusion.
 
 The check is internal: do not describe it in the answer, and do not mention stages, tasks, criteria,
 learnings or other internal details of the process. Write only what the user asked for.
@@ -107,6 +124,12 @@ learnings or other internal details of the process. Write only what the user ask
 - Literal pairing: the results determine "sample 2 — iron" and the notes record the options
   `A) 1, B) 2, C) 3`. Valid: `B`, because the option whose text is "2" is B. Invalid: `A (2 — iron)`,
   which joins a letter to an object it does not label.
+- Code pairing: the results determine that the pump failed the pressure test and the notes from the
+  question record `P-1 — pump; V-3 — valve`. Valid: `P-1`. Invalid: `V-3`, or a text about the pump
+  followed by the code of the valve.
+- Marker line: the results conclude that the sample from site 2 has the highest concentration and that
+  it corresponds to option A. Valid: a text about the sample from site 2 ending with `FINAL_ANSWER: A`.
+  Invalid: the same text ending with `FINAL_ANSWER: C`, because the marker contradicts the approved item.
 - Approved best fit: the results estimate about 8.4 cm and select `B) 8 cm` as the best fit,
   comparing it with the other options. Valid: "B) 8 cm, the best fit for the estimated 8.4 cm".
   Invalid: "8.4 cm is exactly 8 cm", and also invalid: refusing to present B because 8.4 differs

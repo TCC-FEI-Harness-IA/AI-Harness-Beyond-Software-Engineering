@@ -4,9 +4,17 @@ from typing import Iterable, Sequence
 from src.domain.entities.thinking.learning import Learning
 from src.domain.interfaces.learnings_memory_interface import ILearningsMemory
 
-_ITEM_PREFIX = "- "
+_ITEM_TEMPLATE = "- [{origin}] {content}"
 _ITEM_SEPARATOR = "\n"
 _NO_LEARNINGS_CONTENT = "No key learnings recorded so far."
+# Rótulos de procedência (refinamentos 03). Indicam só a origem da nota — o enunciado ou as tarefas vigentes
+# que a registraram —, nunca a sua veracidade. "Question" evita depender do número da fase de extração,
+# que é A.3 no fluxo versão 1 e A.4 no fluxo versão 2.
+_QUESTION_ORIGIN = "Question"
+_TASK_ORIGIN = "Task {ids}"
+_TASKS_ORIGIN = "Tasks {ids}"
+_ORIGIN_SEPARATOR = "; "
+_TASK_IDS_SEPARATOR = ", "
 
 
 @dataclass
@@ -112,17 +120,44 @@ class LearningsMemory(ILearningsMemory):
     def render(self) -> str:
         """Renderiza o conteúdo da área "Aprendizados Pontuais" dos templates das fases B e C.
 
-        O título da área pertence a cada template; aqui só se monta o que vai dentro dela.
+        O título da área pertence a cada template; aqui só se monta o que vai dentro dela. Cada item
+        começa pelo rótulo de procedência, montado a partir das fontes vigentes do fato: `[Question]`
+        para o enunciado, `[Task T1]` ou `[Tasks T1, T3]` para as tarefas, e `[Question; Task T2]` quando
+        há as duas origens. Uma fonte retirada não aparece, mesmo que seja a do primeiro registro. O
+        rótulo é só apresentação: não entra no conteúdo armazenado nem na chave de deduplicação.
 
         Returns:
-            str: Lista markdown com um item por aprendizado vigente, na ordem de extração, ou o aviso
-            de que ainda não há aprendizados — a área existe em todo prompt, mesmo vazia.
+            str: Lista markdown com um item rotulado por aprendizado vigente, na ordem de extração, ou o
+            aviso de que ainda não há aprendizados — a área existe em todo prompt, mesmo vazia.
         """
-        current = self.all()
-        if not current:
+        visible = [entry for entry in self.__entries if self.__is_visible(entry=entry)]
+        if not visible:
             return _NO_LEARNINGS_CONTENT
 
-        return _ITEM_SEPARATOR.join(f"{_ITEM_PREFIX}{learning.content}" for learning in current)
+        return _ITEM_SEPARATOR.join(
+            _ITEM_TEMPLATE.format(origin=self.__render_origin(entry=entry), content=entry.learning.content)
+            for entry in visible
+        )
+
+    def __render_origin(self, entry: _Entry) -> str:
+        """Monta o rótulo de procedência de um fato com as suas fontes vigentes.
+
+        Args:
+            entry: Fato registrado, com todas as fontes que o registraram.
+
+        Returns:
+            str: O enunciado primeiro, quando é fonte, seguido das tarefas vigentes na ordem de registro.
+        """
+        origins: list[str] = []
+        if None in entry.sources:
+            origins.append(_QUESTION_ORIGIN)
+        task_ids = [
+            source for source in entry.sources if source is not None and source not in self.__withdrawn_sources
+        ]
+        if task_ids:
+            template = _TASK_ORIGIN if len(task_ids) == 1 else _TASKS_ORIGIN
+            origins.append(template.format(ids=_TASK_IDS_SEPARATOR.join(task_ids)))
+        return _ORIGIN_SEPARATOR.join(origins)
 
     def __is_visible(self, entry: _Entry) -> bool:
         """Informa se o fato tem ao menos uma fonte vigente.

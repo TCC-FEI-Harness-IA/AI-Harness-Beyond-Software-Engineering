@@ -22,6 +22,14 @@ facts recorded by the tasks already completed, in the order in which they appear
 supporting context — for example, to check options, values and units of measurement —, without
 widening the scope of this task.
 
+**Origin labels.** Each note starts with a label that states where it came from: `[Question]` for a
+point of attention taken from the user's request, `[Task T1]` or `[Tasks T1, T3]` for a note recorded
+from the approved result of the current tasks named, and both when a task re-established a note from
+the question. The label states origin, not truth: a task note may restate supplied data, record a
+conclusion or carry a hypothesis, and it keeps the scope, conditions and qualifiers written in it. A
+claim does not become supported because it appears in these notes or in a task description. The label
+is not part of the note.
+
 {{learnings}}
 
 ## Results under review
@@ -42,6 +50,14 @@ when a verdict only notes that a term is implicit or worded differently, make th
 explicit instead of switching to another conclusion. When a verdict demonstrates an error in data,
 conditions or calculation, correct it. This is a new and complete resolution of the task, not the
 continuation of a previous conversation.
+
+Confront each objection: correct the premise, relation, calculation or interpretation it targets, or
+show concretely why it does not invalidate the earlier conclusion. Rewording the same reasoning, or
+switching to another candidate without a new basis, does not resolve it. Let the new resolution
+show what changed and why the defect no longer occurs; no separate field or change log is needed. If no
+candidate seemed to fit, re-examine the restrictions you assumed yourself that the task does not state
+before declaring that no answer exists; do not relax explicit data or tolerances to keep a preferred
+candidate, and an unlimited exhaustive search is not required.
 
 {{previous_attempts}}
 
@@ -109,6 +125,15 @@ option, check the analytical basis:
 - Use supplied data as supplied and justify any premise you add. A hypothesis is stated as a
   hypothesis, compatible with the scenario and justified, and never presented as a fact; the
   absence of information does not demonstrate its negation.
+- A premise written by planning in the task description, or a note in Key Learnings, is not
+  supported merely by being there: a planning-generated premise needs pertinent justification, and an
+  inherited result keeps its scope, conditions and qualifiers — a conditional estimate does not become
+  a guarantee. You do not need to redo earlier tasks; point out a concrete contradiction that you can
+  see in the available material.
+- Check the decisive relation in proportion to the task before presenting the result: substitute a
+  solution into its equation, check the link between quantities, an applicability condition, the
+  direction of a comparison or the match between a feature and a definition. Describing a method or
+  calling a value plausible is not a check.
 - Keep referents, units, conditions and temporal stage.
 - Confirm that the method applies under the stated conditions and take into account the
   contributions and conditions relevant to the analysis.
@@ -122,6 +147,22 @@ When simple and pertinent, cross-check the result from another angle — the dir
 a limiting case, the compatibility between parts of the text, a temporal relation, a referent or
 unit. `<task id>-TECH` covers only this task's objective: it does not demand analyses of other
 tasks, the final answer format or an exactness incompatible with a supported estimate.
+
+## Comparison consistency
+
+When the task compares hypotheses, actions, explanations or options:
+
+- Evaluate every candidate under the same relevant conditions and the same standard of support,
+  including implicit content. When candidates differ in nature, state which requirements actually
+  apply to each; consistency does not mean demanding irrelevant features from all of them.
+- A feature shared by the candidates does not distinguish them. A preference needs a difference
+  pertinent to the objective of the request and an explanation of why that difference matters there;
+  do not replace the requested objective with another priority.
+- Keep "the best account of the aspect asked" separate from "the other statements are false": other
+  candidates may contain true content while one of them remains the supported preference.
+- Do not invent criteria to force a unique answer, and do not create exclusions between categories
+  that do not exist: a linear dependence is a polynomial dependence of degree one, not its negation.
+  Best fit, elimination and approximation remain valid when supported.
 
 ## Evidence and consistency policy
 

@@ -32,6 +32,14 @@ The learnings **are not criteria** and **do not count as coverage**: a general c
 when the stored results cover it. Question data they copy literally, such as the identifiers of
 options or items, may only show which label belongs to an item the results already determined.
 
+**Origin labels.** Each note starts with a label that states where it came from: `[Question]` for a
+point of attention taken from the user's request, `[Task T1]` or `[Tasks T1, T3]` for a note recorded
+from the approved result of the current tasks named, and both when a task re-established a note from
+the question. The label states origin, not truth: a task note may restate supplied data, record a
+conclusion or carry a hypothesis, and it keeps the scope, conditions and qualifiers written in it. A
+claim does not become supported because it appears in these notes or in a task description. The label
+is not part of the note.
+
 {{learnings}}
 
 ## Instructions

@@ -214,9 +214,10 @@ async def test_invariante_i2_as_tarefas_seguintes_recebem_os_aprendizados_pelo_t
     await cenario.run()
 
     por_resolucao = [v["learnings"] for v in cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)]
-    assert por_resolucao[1] == "- Um numero primo so e divisivel por 1 e por ele mesmo."
+    assert por_resolucao[1] == "- [Task T1] Um numero primo so e divisivel por 1 e por ele mesmo."
     assert por_resolucao[2] == (
-        "- Um numero primo so e divisivel por 1 e por ele mesmo.\n- Todo numero par e divisivel por 2."
+        "- [Task T1] Um numero primo so e divisivel por 1 e por ele mesmo.\n"
+        "- [Task T2] Todo numero par e divisivel por 2."
     )
 
 
@@ -1393,7 +1394,7 @@ async def test_a_tarefa_seguinte_recebe_so_os_aprendizados_e_nao_o_historico_amp
     primeira_conversa_da_t2 = " ".join(cenario.llm.texts_of(7))
     assert "Veredito do validador" not in primeira_conversa_da_t2
     aprendizados_da_t2 = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[1]["learnings"]
-    assert aprendizados_da_t2 == "- Um numero primo so e divisivel por 1 e por ele mesmo."
+    assert aprendizados_da_t2 == "- [Task T1] Um numero primo so e divisivel por 1 e por ele mesmo."
 
 
 async def test_a_fase_c_nao_enxerga_vereditos_locais_nem_historico_de_tentativas() -> None:
@@ -1692,7 +1693,7 @@ async def test_a4_a_primeira_tarefa_ja_recebe_as_anotacoes_do_enunciado() -> Non
     await cenario.run()
 
     aprendizados = cenario.template_provider.variables_of(_FASE.B1_TASK_RESOLUTION)[0]["learnings"]
-    assert aprendizados == "\n".join(f"- {anotacao}" for anotacao in _ANOTACOES_DO_PAPER)
+    assert aprendizados == "\n".join(f"- [Question] {anotacao}" for anotacao in _ANOTACOES_DO_PAPER)
 
 
 async def test_a4_toda_tarefa_seguinte_continua_recebendo_as_anotacoes_do_enunciado() -> None:
@@ -1704,7 +1705,7 @@ async def test_a4_toda_tarefa_seguinte_continua_recebendo_as_anotacoes_do_enunci
     for indice, aprendizado_anterior in ((1, "Um numero primo"), (2, "Todo numero par")):
         aprendizados = resolucoes[indice]["learnings"]
         for anotacao in _ANOTACOES_DO_PAPER:
-            assert f"- {anotacao}" in aprendizados
+            assert f"- [Question] {anotacao}" in aprendizados
         assert aprendizado_anterior in aprendizados
 
 
@@ -1875,9 +1876,9 @@ async def test_as_fases_c_recebem_todos_os_aprendizados_do_fluxo_na_ordem_de_ext
 
     await cenario.run()
 
-    anotacoes = [f"- {anotacao}" for anotacao in _ANOTACOES_DO_PAPER]
-    ate_t1 = "\n".join([*anotacoes, "- Um numero primo so e divisivel por 1 e por ele mesmo."])
-    tudo = f"{ate_t1}\n- Todo numero par e divisivel por 2."
+    anotacoes = [f"- [Question] {anotacao}" for anotacao in _ANOTACOES_DO_PAPER]
+    ate_t1 = "\n".join([*anotacoes, "- [Task T1] Um numero primo so e divisivel por 1 e por ele mesmo."])
+    tudo = f"{ate_t1}\n- [Task T4] Todo numero par e divisivel por 2."  # tarefa adicional de C.2
     primeira_c1, segunda_c1 = cenario.template_provider.variables_of(_FASE.C1_GLOBAL_VERIFICATION)
     assert primeira_c1["learnings"] == ate_t1
     assert cenario.template_provider.variables_of(_FASE.C2_ADDITIONAL_PLANNING)[0]["learnings"] == ate_t1

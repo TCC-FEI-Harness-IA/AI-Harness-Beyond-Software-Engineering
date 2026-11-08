@@ -355,7 +355,7 @@
     "temperature": 0.3,
     "status": "completed",
     "created_at": "2026-08-31T12:00:00+00:00",
-    "updated_at": "2026-11-08T18:11:57.940445+00:00",
+    "updated_at": "2026-11-08T22:46:01.993853+00:00",
     "final_answer": "D) Nenhuma das anteriores",
     "provider": "open_router",
     "failure": null,
@@ -1016,7 +1016,7 @@
         "tokens_output": 5,
         "finish_reason": "stop",
         "provider_response_id": null,
-        "temperature": 1.0,
+        "temperature": 0.5,
         "recovers_invocation_id": null,
         "content_accepted": true,
         "output_diagnostic": {

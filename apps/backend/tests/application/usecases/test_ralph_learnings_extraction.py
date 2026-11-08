@@ -151,7 +151,7 @@ async def test_o_prompt_de_b4_traz_tarefa_resultado_aprovado_historico_e_memoria
     assert "`reproved`" in historico and "`approved`" in historico
 
     memoria = prompt[prompt.index("## Key Learnings"):prompt.index("## Instructions")]
-    assert all(f"- {anotacao}" in memoria for anotacao in _ANOTACOES_Q037)
+    assert all(f"- [Question] {anotacao}" in memoria for anotacao in _ANOTACOES_Q037)
     assert _TENTATIVA_REFUTADA_T1 not in memoria
 
 
@@ -198,7 +198,7 @@ async def test_a_classificacao_aprovada_e_persistida_e_chega_a_proxima_tarefa_se
 
     conversa_da_t2 = _conversa(cenario, _FASE.B1_TASK_RESOLUTION, "T2")
     assert len(conversa_da_t2) == 1
-    assert f"- {_APRENDIZADO_T1}" in conversa_da_t2[0]
+    assert f"- [Task T1] {_APRENDIZADO_T1}" in conversa_da_t2[0]
     for vazamento in (
         _TENTATIVA_REFUTADA_T1,
         _RESULTADO_APROVADO_T1,
@@ -216,7 +216,7 @@ async def test_a_extracao_da_tarefa_seguinte_ve_a_classificacao_ja_registrada_e_
 
     prompt_da_t2 = _conversa(cenario, _FASE.B4_LEARNINGS_EXTRACTION, "T2")[0]
     memoria = prompt_da_t2[prompt_da_t2.index("## Key Learnings"):prompt_da_t2.index("## Instructions")]
-    assert f"- {_APRENDIZADO_T1}" in memoria
+    assert f"- [Task T1] {_APRENDIZADO_T1}" in memoria
     assert _TENTATIVA_REFUTADA_T1 not in prompt_da_t2
     assert _RESULTADO_APROVADO_T1 not in prompt_da_t2
     assert f"<approved_result>\n{_RESULTADO_APROVADO_T2}\n</approved_result>" in prompt_da_t2
@@ -269,7 +269,7 @@ async def test_a_conclusao_numerica_chega_a_proxima_tarefa_com_grandeza_valor_un
 
     assert cenario.learnings_memory.all()[-1] == Learning(content=_APRENDIZADO_NUMERICO, source_task_id="T1")
     conversa_da_t2 = _conversa(cenario, _FASE.B1_TASK_RESOLUTION, "T2")
-    assert f"- {_APRENDIZADO_NUMERICO}" in conversa_da_t2[0]
+    assert f"- [Task T1] {_APRENDIZADO_NUMERICO}" in conversa_da_t2[0]
     assert _RESULTADO_NUMERICO not in conversa_da_t2[0]
 
 
@@ -305,7 +305,9 @@ async def test_quando_todos_os_aprendizados_ja_constam_a_tarefa_registra_que_nad
     assert f"## Repeated learnings already recorded (not stored again)\n\n- {_APRENDIZADO_T1}" in conteudo
     assert [a.content for a in cenario.learnings_memory.all()].count(_APRENDIZADO_T1) == 1
     prompt_de_c3 = cenario.llm.texts_of(_chamadas(cenario, _FASE.C3_FINAL_ANSWER)[0])[0]
-    assert prompt_de_c3.count(f"- {_APRENDIZADO_T1}") == 1
+    # O fato reestabelecido por T2 fica com as duas fontes vigentes (refinamentos 03), uma única vez.
+    assert prompt_de_c3.count(f"- [Tasks T1, T2] {_APRENDIZADO_T1}") == 1
+    assert prompt_de_c3.count(_APRENDIZADO_T1) == 1
 
 
 # ── Ausência legítima de fatos novos ────────────────────────────────────────

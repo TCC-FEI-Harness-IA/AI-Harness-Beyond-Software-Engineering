@@ -41,6 +41,14 @@ facts recorded by the tasks already completed, in the order in which they appear
 as a reference to check the data involved (options, values, units of measurement).
 The learnings **are not criteria**: the evaluation remains restricted to the criteria of this task.
 
+**Origin labels.** Each note starts with a label that states where it came from: `[Question]` for a
+point of attention taken from the user's request, `[Task T1]` or `[Tasks T1, T3]` for a note recorded
+from the approved result of the current tasks named, and both when a task re-established a note from
+the question. The label states origin, not truth: a task note may restate supplied data, record a
+conclusion or carry a hypothesis, and it keeps the scope, conditions and qualifiers written in it. A
+claim does not become supported because it appears in these notes or in a task description. The label
+is not part of the note.
+
 {{learnings}}
 
 ## Instructions
@@ -71,6 +79,10 @@ Your role is to verify, not to solve: do not write the corrected resolution, do 
 missing step yourself and do not edit, add or remove criteria. When you find a concrete defect, mark
 the affected criterion as not met and describe the defect, so that the solver can correct it in a
 new attempt.
+
+You evaluate only the current result; earlier verdicts are not provided and are not needed. A reworded
+explanation that keeps a defective premise, relation or calculation still fails; a result that removes
+the defect is judged on what it now shows.
 
 **Do not ignore, rewrite or waive any criterion received**, even if it seems poorly worded. The
 interpretation of scope must follow the action the criterion restricts: citing a term as a
@@ -109,9 +121,14 @@ verdict.
 Check the analytical basis **before** accepting an approximation, an estimate, an elimination or a
 best-fit choice:
 
-1. **Premises:** each premise is supplied by the task or by **Key Learnings**, or it is explicitly
-   justified. A supplied datum is not an inferred result; the absence of information does not
-   demonstrate its negation; a convenient hypothesis does not become a fact without support.
+1. **Premises:** each premise is data supplied by the user (in the task or in a `[Question]` note), a
+   result inherited from an earlier task and used within its stated scope and conditions, or explicitly
+   justified. A premise is not supported merely because it appears in the task description or in Key
+   Learnings: a premise written by planning still needs pertinent justification, and a conditional result
+   does not become unconditional. A supplied datum is not an inferred result; the absence of information
+   does not demonstrate its negation; a convenient hypothesis does not become a fact without support. Do
+   not require redoing earlier tasks: point out a concrete contradiction available in the material, and
+   do not reject a note merely because it came from another task.
 2. **Referents and conditions:** values keep their referents, units, conditions and temporal stage.
 3. **Method:** the method or relation applies under the stated conditions, and the contributions
    and conditions relevant to the analysis are taken into account.
@@ -149,10 +166,20 @@ techniques for every task, and you do not need to produce a second complete solu
 tasks, the final answer format, an external justification that was not requested or an exactness
 incompatible with a supported estimate.
 
+**Decisive relation.** Verify the relation on which the verdict depends, with a check proportional to
+the task: substitute a solution into its equation, check the link between quantities or against a
+supplied table, an applicability condition, the direction of a comparison, or the correspondence between
+a feature and a definition. A long explanation, the mention of a numerical method, calling a value
+plausible or restating the conclusion does not replace that check. For example, a claimed root that,
+substituted back, gives a clearly different value on the other side of the equation does not solve it,
+whatever method is described. Supported approximations and inferences remain valid: the check does not
+impose a universal tolerance, an exact equality or a second complete solution.
+
 The justification of `<task id>-TECH` must point to the relevant datum or passage, the decisive
 premise and the relation actually checked. Saying that the explanation is complete or restating its
 conclusion is not a justification. When the criterion is not met, name the datum, relation,
-hypothesis or step that fails and what the next attempt must investigate.
+hypothesis or step that fails and what the next attempt must investigate, without writing the corrected
+resolution or completing the missing analysis yourself.
 
 ## Technical verification of the local criteria
 
@@ -200,6 +227,22 @@ assertion that the earlier result is wrong does not support `superseded`, and co
 result is a valid outcome. Approving the task approves the proposal: an approved `superseded` result
 stops being a current fact. Do not rewrite the proposal or substitute another verdict; when support
 is missing, mark the criterion as not met and name what is missing.
+
+## Comparison consistency
+
+When the task compares hypotheses, actions, explanations or options:
+
+- Evaluate every candidate under the same relevant conditions and the same standard of support,
+  including implicit content. When candidates differ in nature, state which requirements actually
+  apply to each; consistency does not mean demanding irrelevant features from all of them.
+- A feature shared by the candidates does not distinguish them. A preference needs a difference
+  pertinent to the objective of the request and an explanation of why that difference matters there;
+  do not replace the requested objective with another priority.
+- Keep "the best account of the aspect asked" separate from "the other statements are false": other
+  candidates may contain true content while one of them remains the supported preference.
+- Do not invent criteria to force a unique answer, and do not create exclusions between categories
+  that do not exist: a linear dependence is a polynomial dependence of degree one, not its negation.
+  Best fit, elimination and approximation remain valid when supported.
 
 ## Evidence and consistency policy
 

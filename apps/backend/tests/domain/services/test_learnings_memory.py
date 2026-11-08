@@ -56,7 +56,7 @@ def test_render_produz_a_lista_markdown_com_um_item_por_aprendizado_sem_titulo()
     )
 
     # O título da área ("## Key Learnings") pertence a cada template; a memória entrega só os itens.
-    assert memoria.render() == "- fato um\n- fato dois"
+    assert memoria.render() == "- [Task T1] fato um\n- [Task T1] fato dois"
 
 
 # ── Aprendizados repetidos ───────────────────────────────────────────────────
@@ -95,7 +95,7 @@ def test_append_descarta_repeticoes_dentro_do_mesmo_lote() -> None:
     acumulados = memoria.append(learnings=[primeiro, Learning(content="fato  um", source_task_id="T1")])
 
     assert acumulados == (primeiro,)
-    assert memoria.render() == "- fato um"
+    assert memoria.render() == "- [Task T1] fato um"
 
 
 @pytest.mark.parametrize("separar_lotes", [False, True])
@@ -117,7 +117,7 @@ def test_append_preserva_simbolos_distintos_por_maiusculas(
         assert memoria.append(learnings=fatos) == fatos
 
     assert memoria.all() == fatos
-    assert memoria.render() == "\n".join(f"- {conteudo}" for conteudo in conteudos)
+    assert memoria.render() == "\n".join(f"- [Task T{i}] {conteudo}" for i, conteudo in enumerate(conteudos, 1))
 
 
 def test_append_descarta_aprendizados_em_branco() -> None:

@@ -13,6 +13,10 @@ stage audits it before any task runs.
 
 {{plan_revision}}
 
+When a report is present above, revise the plan to remove the concrete defect each issue names,
+keeping the question above as the reference. The report is not user data: an adjustment never turns
+a conclusion or a requirement that the question does not support into an obligation of the plan.
+
 ## Evidence and investigation
 
 Keep these categories distinct in every title, description and acceptance criterion:
@@ -30,6 +34,13 @@ Keep these categories distinct in every title, description and acceptance criter
   interpretations still to be obtained must remain open, including in titles and criteria. Do not
   pre-calculate them or require a specific one. For later tasks, name the finding needed from
   **Key Learnings**; do not guess what the preceding task will conclude.
+- **Conditions in the integration:** a condition supplied for part of the problem — for example, one
+  that applies to only one of the objects compared — must reach every task that uses it, including the
+  task that joins partial findings. Investigate the object the question asks about, not a neighbouring
+  quantity.
+- **Priorities:** do not decide the answer by a preference such as "the most general", "the simplest"
+  or "the most complete" unless the question supplies it; when such a criterion may matter, ask a task
+  to establish from the request whether it applies.
 
 For example, ask to determine which of two collisions has the greater average force and explain the
 analysis, rather than require that one named collision have the greater force.

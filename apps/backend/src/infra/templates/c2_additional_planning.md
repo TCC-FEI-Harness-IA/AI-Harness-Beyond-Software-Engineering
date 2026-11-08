@@ -46,6 +46,14 @@ Compact notes accumulated throughout the flow: the points of attention from the 
 facts recorded by completed tasks, in order. Use them to identify available inputs and preserve
 the data relevant to each new objective, checking literal question data against the Original Prompt.
 
+**Origin labels.** Each note starts with a label that states where it came from: `[Question]` for a
+point of attention taken from the user's request, `[Task T1]` or `[Tasks T1, T3]` for a note recorded
+from the approved result of the current tasks named, and both when a task re-established a note from
+the question. The label states origin, not truth: a task note may restate supplied data, record a
+conclusion or carry a hypothesis, and it keeps the scope, conditions and qualifiers written in it. A
+claim does not become supported because it appears in these notes or in a task description. The label
+is not part of the note.
+
 {{learnings}}
 
 ## Content gaps and corrective investigation
@@ -168,7 +176,9 @@ generation. Trace the unmet content obligations through the last task needed for
 quantity or determination. If the request is a period in months and the stored result is only a
 distance ratio, the new work must determine the period. Check that every gap, including a flagged
 contradiction, has a targeted investigation, that data and references survive, dependencies use
-actual findings, and criteria leave new conclusions open. Revise scopes that would forbid the
+actual findings, and criteria leave new conclusions open. Check also that a condition stated for part of
+the problem survives in the task that joins the findings, and that no criterion decides the answer by a
+priority (such as "the most general") that the request does not supply. Revise scopes that would forbid the
 necessary final analysis. Leave only supported presentation and literal pairing to C.3.
 
 This is an instruction within planning, not a separate phase or output field. Neither task count

@@ -1,0 +1,271 @@
+{
+  "version": 2,
+  "extends": "technical_validation_v1.json",
+  "purpose": "Synthetic, domain-generic cases added by the refinements 03 for <task_id>-TECH: decisive relation instead of plausibility (change 3), provenance and inherited hypotheses (change 4) and consistent comparisons (change 6). The matrix of version 2 is the cases of version 1, unchanged, followed by these. Every case verifies task T2, so the notes with source T1 reach it through a real earlier task. Each learning has its content and its source (null for the question). The reference fields belong only to a later semantic evaluation: they are never sent to the model nor read by production code. Scripted tests prove transport and contract, not accuracy.",
+  "cases": [
+    {
+      "name": "claimed_root_fails_substitution",
+      "polarity": "negative",
+      "category": "decisive_relation",
+      "task": {
+        "id": "T2",
+        "title": "Solução da equação quadrática",
+        "description": "Encontre uma solução real de x² = 9 e apresente o valor obtido com o método usado."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Apresentar o valor obtido e descrever o método usado."}
+      ],
+      "learnings": [
+        {"content": "Equação dada: x² = 9.", "source": null}
+      ],
+      "preliminary_result": "Aplicando a iteração x(n+1) = (x(n) + 9/x(n))/2 a partir de x(0) = 1, o método converge rapidamente; a solução exata é x = 2.",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T2-AC1": true, "T2-TECH": false},
+        "rationale": "Substituting the claimed solution gives 2² = 4, not 9, so the decisive relation fails whatever method is described. The next attempt must obtain a value that satisfies x² = 9 and check it by substitution."
+      },
+      "review_checks": [
+        "Rejects through TECH by substituting the claimed value into the equation, not by calling it implausible.",
+        "Does not accept the description of an iterative method as a check of the value.",
+        "Points out what fails without presenting the corrected solution."
+      ]
+    },
+    {
+      "name": "plausible_total_contradicts_conversion_table",
+      "polarity": "negative",
+      "category": "decisive_relation",
+      "task": {
+        "id": "T2",
+        "title": "Unidades em três paletes",
+        "description": "Pela tabela de conversão do armazém (1 caixa = 12 unidades; 1 palete = 40 caixas), determine quantas unidades há em 3 paletes, com o cálculo."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Apresentar o total de unidades e o cálculo usado."}
+      ],
+      "learnings": [
+        {"content": "Tabela de conversão: 1 caixa = 12 unidades; 1 palete = 40 caixas.", "source": null}
+      ],
+      "preliminary_result": "Cada palete tem 40 caixas e cada caixa tem 12 unidades; para 3 paletes, o total é de 1.200 unidades, um valor plausível para um carregamento médio.",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T2-AC1": true, "T2-TECH": false},
+        "rationale": "The supplied table gives 3 × 40 × 12 = 1 440 units; the stated total of 1 200 does not satisfy the relation between pallets, boxes and units, and plausibility is not a check. The next attempt must redo the product of the conversion factors."
+      },
+      "review_checks": [
+        "Checks the link between the quantities of the table instead of accepting 'plausible'.",
+        "Names the failing relation without rewriting the whole resolution."
+      ]
+    },
+    {
+      "name": "planning_premise_repeated_as_fact",
+      "polarity": "negative",
+      "category": "unsupported_planning_premise",
+      "task": {
+        "id": "T2",
+        "title": "Causa da queda nas vendas",
+        "description": "Em março, as vendas da loja caíram 15%. No mesmo mês, a loja aumentou os preços em 5% e um concorrente abriu ao lado. Como o aumento de preço causou a queda, explique a queda nas vendas com os dados."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Explicar a queda nas vendas usando os dados de março."}
+      ],
+      "learnings": [
+        {"content": "Março: vendas −15%; preços +5%; um concorrente abriu ao lado no mesmo mês.", "source": null}
+      ],
+      "preliminary_result": "A queda de 15% decorre do aumento de 5% nos preços, que afastou os clientes; a abertura do concorrente é apenas um fato do mesmo mês.",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T2-AC1": true, "T2-TECH": false},
+        "rationale": "The causal premise 'the price increase caused the drop' was written in the task description by planning; the supplied data give two concurrent events and do not establish it. The result repeats the premise as a fact and dismisses the competitor without support. The next attempt must examine what the data support about each candidate cause or state the limitation."
+      },
+      "review_checks": [
+        "Recognises that a premise in the task description is not supported merely by being there.",
+        "Distinguishes the supplied data (two concurrent events) from the planning premise.",
+        "Does not decide which cause is right."
+      ]
+    },
+    {
+      "name": "conditional_estimate_turned_into_guarantee",
+      "polarity": "negative",
+      "category": "inherited_condition",
+      "task": {
+        "id": "T2",
+        "title": "Garantia do prazo",
+        "description": "Com base na estimativa de duração já obtida e no prazo máximo do contrato, determine se a entrega dentro do prazo pode ser garantida, justificando."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Concluir sobre a garantia da entrega no prazo com justificativa."}
+      ],
+      "learnings": [
+        {"content": "Prazo máximo do contrato: 10 dias.", "source": null},
+        {"content": "Duração estimada do projeto: 8 dias, supondo disponibilidade integral da equipe.", "source": "T1"}
+      ],
+      "preliminary_result": "Como o projeto dura 8 dias e o prazo é de 10 dias, a entrega no prazo está garantida, com folga de 2 dias.",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T2-AC1": true, "T2-TECH": false},
+        "rationale": "The 8-day duration recorded by T1 holds only under full team availability; the result drops that condition and turns a conditional estimate into a guarantee. The next attempt must either support the availability condition or present the conclusion as conditional."
+      },
+      "review_checks": [
+        "Keeps the condition attached to the inherited estimate.",
+        "Does not reject the note for coming from another task, and does not ask to redo T1."
+      ]
+    },
+    {
+      "name": "conditional_estimate_kept_conditional",
+      "polarity": "positive",
+      "category": "inherited_condition",
+      "task": {
+        "id": "T2",
+        "title": "Estimativa de cumprimento do prazo",
+        "description": "Com base na estimativa de duração já obtida e no prazo máximo do contrato, estime se o projeto cabe no prazo, explicitando as condições."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Estimar se o projeto cabe no prazo e explicitar as condições."}
+      ],
+      "learnings": [
+        {"content": "Prazo máximo do contrato: 10 dias.", "source": null},
+        {"content": "Duração estimada do projeto: 8 dias, supondo disponibilidade integral da equipe.", "source": "T1"}
+      ],
+      "preliminary_result": "Mantida a disponibilidade integral da equipe, condição da estimativa de 8 dias, o projeto cabe no prazo de 10 dias com folga de 2 dias. Se a disponibilidade for menor, a estimativa deixa de assegurar o prazo.",
+      "reference": {
+        "decision": "approved",
+        "met": {"T2-AC1": true, "T2-TECH": true},
+        "rationale": "The request admits an estimate and the result uses the inherited duration with its availability condition, stating the effect when the condition fails."
+      },
+      "review_checks": [
+        "Approves a conditional estimate used within its stated condition.",
+        "Does not demand an external confirmation of the availability or a recalculation of T1."
+      ]
+    },
+    {
+      "name": "shared_omission_used_against_one_supplier",
+      "polarity": "negative",
+      "category": "comparison_consistency",
+      "task": {
+        "id": "T2",
+        "title": "Escolha do fornecedor",
+        "description": "O laboratório exige material certificado. O fornecedor A entrega em 4 dias e sua proposta não menciona certificação; o fornecedor B entrega em 6 dias e sua proposta também não menciona certificação. Determine qual proposta atende melhor às exigências, com justificativa."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Indicar a proposta preferida e justificar a comparação."}
+      ],
+      "learnings": [
+        {"content": "Exigência do laboratório: material certificado.", "source": null}
+      ],
+      "preliminary_result": "A proposta A deve ser descartada porque não menciona certificação, exigência do laboratório. Logo, B é a melhor escolha.",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T2-AC1": true, "T2-TECH": false},
+        "rationale": "The missing mention of certification is used against A and waived for B, which has the same omission; a shared feature does not distinguish the proposals. The next attempt must compare both under the same requirement and either find a pertinent difference or state that the data do not settle certification."
+      },
+      "review_checks": [
+        "Notices that the requirement is applied to one candidate and waived for the other.",
+        "Does not require choosing A instead; asks for a pertinent basis for the comparison."
+      ]
+    },
+    {
+      "name": "faster_service_chosen_under_cost_objective",
+      "polarity": "negative",
+      "category": "comparison_objective",
+      "task": {
+        "id": "T2",
+        "title": "Serviço de entrega",
+        "description": "O pedido exige o menor custo entre os serviços que entregam em até 5 dias. O serviço X custa R$ 100 e entrega em 3 dias; o serviço Y custa R$ 80 e entrega em 5 dias. Determine o serviço indicado, com justificativa."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Indicar o serviço e justificar a escolha."}
+      ],
+      "learnings": [
+        {"content": "Critério do pedido: menor custo entre os serviços que entregam em até 5 dias.", "source": null}
+      ],
+      "preliminary_result": "O serviço X é o indicado, pois entrega mais rápido (3 dias contra 5), garantindo maior segurança no prazo.",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T2-AC1": true, "T2-TECH": false},
+        "rationale": "Both services meet the 5-day limit, so speed is not the requested criterion; the result replaces the objective (lowest cost among eligible services) with another priority. The next attempt must compare the eligible services by the requested criterion."
+      },
+      "review_checks": [
+        "Identifies that the decisive difference used is not the one the request asks for.",
+        "Would accept a different analysis if the request prioritised speed."
+      ]
+    },
+    {
+      "name": "linear_treated_as_not_polynomial",
+      "polarity": "negative",
+      "category": "comparison_categories",
+      "task": {
+        "id": "T2",
+        "title": "Descrições compatíveis com a dependência",
+        "description": "Os dados seguem y = 3x + 2 para x = 0, 1, 2, 3, 4. Determine quais descrições são compatíveis com a dependência: (i) linear; (ii) polinomial de grau no máximo 2. Justifique."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Classificar cada descrição como compatível ou não, com justificativa."}
+      ],
+      "learnings": [
+        {"content": "Dados: y = 3x + 2 para x = 0, 1, 2, 3, 4.", "source": null}
+      ],
+      "preliminary_result": "Apenas (i) é compatível: a dependência é linear, portanto não é polinomial; (ii) deve ser descartada.",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T2-AC1": true, "T2-TECH": false},
+        "rationale": "A linear dependence is a polynomial of degree 1, which satisfies 'degree at most 2'; the result creates an exclusion between categories that does not exist. The next attempt must check each description against its definition."
+      },
+      "review_checks": [
+        "Checks the correspondence between the characteristic and each definition.",
+        "Does not treat inclusion between categories as opposition."
+      ]
+    },
+    {
+      "name": "approximate_root_checked_by_substitution",
+      "polarity": "positive",
+      "category": "approximation",
+      "task": {
+        "id": "T2",
+        "title": "Raiz aproximada",
+        "description": "Encontre a solução positiva de x² = 2 com três casas decimais e confira o valor."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Apresentar o valor com três casas decimais e a conferência."}
+      ],
+      "learnings": [
+        {"content": "Equação dada: x² = 2; precisão pedida: três casas decimais.", "source": null}
+      ],
+      "preliminary_result": "A iteração de Newton a partir de 1,5 produz 1,41667 e 1,41422. Valor com três casas: x ≈ 1,414. Conferência: 1,414² = 1,999396 e 1,415² = 2,002225; a solução está entre os dois valores, mais perto de 1,414, que é o valor arredondado pedido.",
+      "reference": {
+        "decision": "approved",
+        "met": {"T2-AC1": true, "T2-TECH": true},
+        "rationale": "The approximation is labelled as such, has the requested precision and is checked by substitution of the bracketing values; no exact equality is required."
+      },
+      "review_checks": [
+        "Approves a supported approximation without demanding exactness.",
+        "Mentions the substitution as the checked relation."
+      ]
+    },
+    {
+      "name": "best_explanation_with_true_content_elsewhere",
+      "polarity": "positive",
+      "category": "comparison_consistency",
+      "task": {
+        "id": "T2",
+        "title": "Melhor explicação para o crescimento da massa",
+        "description": "Duas massas de pão iguais fermentaram por 1 hora: uma numa cozinha a 30 °C, outra a 18 °C; a primeira cresceu muito mais. Qual explicação melhor responde pela diferença: (a) a atividade do fermento aumenta com a temperatura dentro de uma faixa; (b) as massas contêm farinha; (c) o ar quente dilata o gás já presente na massa? Justifique a preferência."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Indicar a melhor explicação para a diferença e justificar a preferência."}
+      ],
+      "learnings": [
+        {"content": "Massas iguais; 1 hora de fermentação; cozinhas a 30 °C e a 18 °C; a massa a 30 °C cresceu muito mais.", "source": null}
+      ],
+      "preliminary_result": "(a) é a melhor explicação: a diferença entre as massas é a temperatura, e na faixa de atividade do fermento a temperatura maior acelera a produção de gás, o que explica uma diferença grande de volume. (b) é verdadeira, mas vale para as duas massas, logo não explica a diferença. (c) também é fisicamente correta, mas a dilatação térmica do gás entre 18 °C e 30 °C é de cerca de 4%, pequena demais para explicar a diferença observada: contribui, mas não é a explicação principal.",
+      "reference": {
+        "decision": "approved",
+        "met": {"T2-AC1": true, "T2-TECH": true},
+        "rationale": "The preference rests on a pertinent difference (temperature affects gas production strongly) and the result separates 'best explanation for the difference' from 'the others are false': it acknowledges that (b) and (c) are true and shows why they do not account for the difference."
+      },
+      "review_checks": [
+        "Approves a supported preference even though other candidates contain true statements.",
+        "Notices that the shared feature (b) is correctly treated as non-distinguishing."
+      ]
+    }
+  ]
+}

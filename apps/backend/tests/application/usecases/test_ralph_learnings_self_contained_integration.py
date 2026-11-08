@@ -156,7 +156,7 @@ async def test_notas_autossuficientes_chegam_a_todos_os_destinos_inclusive_taref
             destinations.add(invocation.phase)
             memory = _area(prompt, "Key Learnings")
             facts = given if invocation.task_id == "T1" else (*given, *derived)
-            offsets = [memory.index(f"- {fact}") for fact in facts]
+            offsets = [memory.index(f"] {fact}") for fact in facts]  # item rotulado com a procedência
             assert offsets == sorted(offsets)
             assert approved not in memory and additional_result not in memory
             if refuted:

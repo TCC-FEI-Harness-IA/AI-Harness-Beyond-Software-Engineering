@@ -45,6 +45,7 @@ class IThinkingPhase(ABC):
         variables: dict[str, str],
         validation: ValidationContext | None = None,
         is_retry: bool = False,
+        temperature: float | None = None,
     ) -> PhaseOutcome:
         """Executa a fase sobre a janela de contexto informada.
 
@@ -58,11 +59,16 @@ class IThinkingPhase(ABC):
                 É obrigatório nas fases de verificação.
             is_retry: Indica que a execução repete um pedido reprovado (a nova tentativa de B.1
                 depois de B.2 reprovar): todas as suas chamadas usam a temperatura de retentativa.
+            temperature: Temperatura da primeira chamada desta execução, quando difere da configurada
+                (a revisão de A.2 depois de uma reprovação de A.3). Não altera a temperatura configurada;
+                as correções de saída inválida ou vazia continuam com a temperatura de retentativa.
+                `None` usa a temperatura configurada. Não se combina com `is_retry`.
 
         Returns:
             PhaseOutcome: Resultado da execução da fase.
 
         Raises:
-            ValueError: Quando a janela já foi usada ou pertence a outra fase.
+            ValueError: Quando a janela já foi usada ou pertence a outra fase, ou quando `temperature` e
+                `is_retry` são informados juntos.
         """
         raise NotImplementedError

@@ -106,3 +106,35 @@ de cada caso, preserve versão da matriz, commit dos templates, modelo, temperat
 decisão e os vereditos com a referência e registre evidência textual para cada `review_check` — por exemplo,
 se a reprovação nomeia a premissa ou a relação que falha, e se os controles positivos são aprovados. Um
 validador que reprova tudo não representa melhora. Mudanças substanciais exigem nova versão.
+
+# Matrizes dos refinamentos 03 — validação da decomposição v2, validação técnica v2 e apresentação v1
+
+`decomposition_validation_v2.json` e `technical_validation_v2.json` declaram `"extends"` e trazem só os casos
+novos: a matriz da versão 2 é a da versão 1, **inalterada** (um teste confere a igualdade), seguida deles.
+`final_answer_fidelity_v1.json` é nova. Nenhum caso vem do benchmark ou de um gabarito.
+
+- **A.3 v2 (8 casos):** condição perdida na junção de tarefas, referente trocado (receita × contribuição),
+  prioridade imposta (“mais geral”), condição do usuário copiada (válido), o par “determinar se” (válido) ×
+  “demonstrar que” (antecipação), interpretação aberta (válido) e verificação de necessidade de correção
+  (válido). Este último traz também um `contradictory_report` — reprovação cujo problema diz não haver
+  defeito —, que o parser aceita: só a avaliação semântica detecta essa contradição.
+- **TECH v2 (10 casos, todos sobre `T2`):** raiz que falha na substituição, total que contradiz a tabela,
+  premissa do planejamento repetida como fato, estimativa condicionada transformada em garantia (e o
+  controle positivo que a mantém condicionada), omissão compartilhada usada contra um só candidato, troca
+  do objetivo (rapidez × custo), linear tratado como não polinomial, aproximação conferida por substituição
+  e preferência justificada com conteúdo verdadeiro nos demais candidatos. Cada nota tem `content` e `source`
+  (`null` = enunciado, `"T1"` = tarefa anterior); os testes de fluxo fazem `T1` registrar essas notas, para
+  que cheguem a B.2 com o rótulo real (`[Question]`, `[Task T1]`).
+- **C.3 v1 (4 casos):** letra da linha marcadora × item aprovado, tradução que preserva filiais, direção e
+  condição, código pareado literalmente com o objeto aprovado e melhor ajuste apresentado como tal. Cada
+  caso traz o material que C.3 recebe (`stored_results`, notas) e, só para o avaliador, `reference_answer`,
+  `invalid_presentation` e `review_checks`.
+
+Os testes renderizam os templates reais, conferem que nenhum campo de referência chega ao modelo ou aos
+templates, que a produção não lê as matrizes e que o parser aceita relatórios coerentes nos dois sentidos.
+**Isso não mede acurácia.** Para avaliar um modelo real, envie o prompt renderizado (ou a pergunta pelo
+fluxo completo, no caso de C.3), preserve versão da matriz, commit, modelo, temperatura e saída bruta,
+compare com a referência e registre evidência textual para cada `review_check` — por exemplo, se A.3 nomeia
+a condição perdida sem calcular a resposta, se aprova os planos válidos, se B.2 cita a substituição e não a
+“plausibilidade”, e se C.3 mantém a letra do item aprovado. Um validador que reprova tudo não representa
+melhora. Mudanças substanciais exigem nova versão.
