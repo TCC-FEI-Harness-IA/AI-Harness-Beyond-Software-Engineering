@@ -44,6 +44,7 @@ O front fala com o backend por dois transportes:
 | BenchMark — baterias e dataset | HTTP `GET` | `/v1/benchmark/sessions`, `/v1/benchmark/sessions/{id}`, `/v1/benchmark/questions` |
 | BenchMark — reexecutar uma questão errada | WebSocket | `/v1/benchmark/sessions/{id}/questions/{question_id}/rerun` |
 | BenchMark — exportar erros do Ralph Loop | HTTP `GET` | `/v1/benchmark/sessions/{id}/ralph-loop-errors/export` |
+| Análise de resultados | HTTP `GET` | `/v1/benchmark/sessions` e, sob demanda, `/v1/sessions/{id}` das sessões Ralph |
 
 A página **BenchMark** (`/benchmark`) inicia uma bateria (quantidade de questões, questões em paralelo e a
 configuração de modelo da home), acompanha o progresso pelos frames do WebSocket e lista as baterias; o
@@ -68,6 +69,28 @@ O detalhe também traz o botão **Exportar erros do Ralph Loop**, que baixa um Z
 Ralph Loop; fica desabilitado enquanto a bateria executa ou quando nenhuma questão errou nesse fluxo.
 A conexão vive em `BenchmarkRunContext`, acima das rotas: navegar pelo app não interrompe a bateria; cancelar,
 fechar ou recarregar a aba fecha o WebSocket e o backend a encerra como `interrupted`.
+
+A página **Análise** (`/analise`) monta um dashboard para o relatório técnico a partir de uma ou mais baterias,
+inclusive de benchmarks diferentes. A seleção fica na URL (`/analise?execucoes=id1,id2`), então a análise pode
+ser compartilhada. Só entram questões em que os dois fluxos terminaram, e cada questão de cada bateria é uma
+observação pareada. A página mostra:
+
+- **Resumo executivo**: acurácia de cada fluxo (IC de Wilson a 95%), Δ em pontos percentuais e teste exato de
+  McNemar; **recuperação** (dos erros da simples, quantos o Ralph acerta) e **regressão** (dos acertos da
+  simples, quantos o Ralph erra); matriz 2×2; tokens e tempo relativos; e os destaques por matéria e por área
+  (grupos com pelo menos 5 pares).
+- **Quebras**: por execução, por benchmark (com mais de um), por matéria, por área do conhecimento (categorias
+  do MMLU, aplicadas também aos vestibulares e ao GPQA), por nível/origem da questão (ENEM → ITA, nível do MMLU
+  pelo prefixo da disciplina, variante do GPQA) e por quartis de tokens de cada fluxo dentro da bateria
+  (dificuldade empírica).
+- **Complexidade pelo processo do Ralph**, carregada sob demanda: lê a sessão Ralph de cada questão e agrupa
+  por nº de tarefas do plano, verificações B.2 reprovadas e planos A.3 reprovados.
+- **Questões para análise qualitativa**: lista o que o Ralph corrige, o que piora e o que os dois erram, com
+  links para as sessões.
+- **Exportações**: CSV com uma linha por questão pareada e relatório em Markdown com todas as tabelas.
+
+Os cálculos ficam em `src/domain/services/benchmarkAnalysis.ts`, `benchmarkAnalysisReport.ts` e
+`ralphProcessMetrics.ts`, como funções puras.
 
 Toda comunicação passa por `src/api/` — um único cliente HTTP (`httpClient.ts`) e um único
 cliente WebSocket (`websocketClient.ts`) — e toda resposta entra como `unknown` até passar por um

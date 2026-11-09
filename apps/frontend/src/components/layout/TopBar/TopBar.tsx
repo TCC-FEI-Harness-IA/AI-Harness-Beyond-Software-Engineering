@@ -14,8 +14,8 @@ export interface TopBarProps {
 /**
  * Barra superior fixa e translúcida, presente em todas as telas. À esquerda, o nome do
  * app (ícone do projeto + nome) leva à home (com o botão de abrir a barra lateral, quando existe, logo antes); ao
- * centro fica o slot do interruptor de modo (FASE 05); à direita, os links de histórico, BenchMark e
- * modelos e o alternador de tema.
+ * centro fica o slot do interruptor de modo (FASE 05); à direita, os links de histórico, BenchMark,
+ * análise de resultados e modelos e o alternador de tema.
  */
 export function TopBar({ onToggleSidebar }: TopBarProps): JSX.Element {
   return (
@@ -45,6 +45,9 @@ export function TopBar({ onToggleSidebar }: TopBarProps): JSX.Element {
         </Link>
         <Link to={ROUTES.benchmark} className={styles.historyLink}>
           BenchMark
+        </Link>
+        <Link to={ROUTES.benchmarkAnalysis} className={styles.historyLink}>
+          Análise
         </Link>
         <Link to={ROUTES.models} className={styles.historyLink}>
           Modelos
