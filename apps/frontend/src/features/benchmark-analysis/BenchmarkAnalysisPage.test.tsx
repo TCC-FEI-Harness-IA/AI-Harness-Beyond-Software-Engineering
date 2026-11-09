@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -88,6 +88,16 @@ function renderPage(search = ''): void {
   )
 }
 
+/** A dica aberta dentro da moldura de um gráfico. */
+function tooltipOf(chart: HTMLElement): HTMLElement {
+  return within(chart.closest('figure') as HTMLElement).getByRole('tooltip')
+}
+
+/** Cada gráfico tem a própria dica; a mais recente é a do último gráfico tocado. */
+function lastTooltip(): HTMLElement {
+  return screen.getAllByRole('tooltip').at(-1) as HTMLElement
+}
+
 afterEach(() => {
   clearRalphProcessMetricsCache()
   vi.clearAllMocks()
@@ -164,6 +174,47 @@ describe('BenchmarkAnalysisPage', () => {
       'analise-benchmark-questoes.csv',
       'analise-benchmark.md',
     ])
+  })
+
+  it('desenha os gráficos de cada quebra, troca a leitura e mostra a dica no mouse e no foco', async () => {
+    listMock.mockResolvedValue([vestibular, mmlu])
+    const user = userEvent.setup()
+    renderPage('?execucoes=bench_v,bench_m')
+
+    // Visão geral e custo.
+    expect(await screen.findByRole('img', { name: 'Fluxo dos desfechos da inferência simples para o Ralph Loop' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Tokens médios do Ralph por desfecho' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Tokens médios da simples por desfecho' })).toBeInTheDocument()
+    const scatter = screen.getByRole('img', { name: 'Custo em tokens versus ganho de acurácia por execução' })
+    expect(within(scatter).getByText('Vestibular A')).toBeInTheDocument()
+
+    const band = screen.getByLabelText('Ralph corrige: 2')
+    fireEvent.focus(band)
+    expect(within(lastTooltip()).getByText('Questões')).toBeInTheDocument()
+    fireEvent.blur(band)
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+
+    // Quebra nominal: Δ por padrão; acurácia e corrige × piora a um clique.
+    const subjectChart = screen.getByRole('img', { name: 'Δ acurácia — Por matéria: gráfico' })
+    fireEvent.mouseMove(within(subjectChart).getByLabelText(/^Matemática: Δ/))
+    expect(within(lastTooltip()).getByText('Ralph corrige')).toBeInTheDocument()
+    const views = screen.getByRole('radiogroup', { name: 'Gráfico de Por matéria' })
+    await user.click(within(views).getByRole('radio', { name: 'Acurácia' }))
+    expect(screen.getByRole('img', { name: 'Acurácia — Por matéria: gráfico' })).toBeInTheDocument()
+    await user.click(within(views).getByRole('radio', { name: 'Corrige × piora' }))
+    expect(within(screen.getByRole('img', { name: 'Corrige × piora — Por matéria: gráfico' })).getAllByText(/líquido/).length).toBeGreaterThan(0)
+
+    // Quebra ordenada: tendência por padrão, com o n de cada faixa.
+    const trend = screen.getByRole('img', { name: 'Acurácia — Por nível / origem da questão: gráfico de linhas' })
+    expect(within(trend).getByText('n=5')).toBeInTheDocument()
+    fireEvent.focus(within(trend).getAllByLabelText(/simples .* Ralph/)[0] as Element)
+    expect(lastTooltip()).toBeInTheDocument()
+
+    fireEvent.mouseMove(within(scatter).getByLabelText(/^MMLU B:/))
+    expect(within(tooltipOf(scatter)).getByText('Tokens Ralph / simples')).toBeInTheDocument()
+    const ralphTokens = screen.getByRole('img', { name: 'Tokens médios do Ralph por desfecho' })
+    fireEvent.mouseMove(within(ralphTokens).getByLabelText(/^Ralph piora:/))
+    expect(within(tooltipOf(ralphTokens)).getByText('Tempo médio')).toBeInTheDocument()
   })
 
   it('carrega as métricas do processo Ralph sob demanda', async () => {

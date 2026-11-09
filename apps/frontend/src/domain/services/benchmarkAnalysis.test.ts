@@ -4,6 +4,7 @@ import type { BenchmarkQuestionRun, BenchmarkSessionDocument } from '@/domain/ty
 import {
   type AnalysisRecord,
   buildAnalysisRecords,
+  costByOutcome,
   executionLabel,
   formatMultiplier,
   formatPp,
@@ -200,6 +201,15 @@ describe('summarizePairs', () => {
       extraTokensPerNetGain: null,
       mcnemarPValue: 1,
     })
+  })
+})
+
+describe('costByOutcome', () => {
+  it('calcula a média por desfecho, na ordem fixa, com zero nos desfechos vazios', () => {
+    const costs = costByOutcome(records(session([finished('Q1', false, true), finished('Q2', false, true, { ralph: outcome({ mode: 'ralph', total_tokens: 300, duration_seconds: 30 }) })])))
+    expect(costs.map((cost) => cost.outcome)).toEqual(['both_correct', 'ralph_recovers', 'ralph_regresses', 'both_wrong'])
+    expect(costs[1]).toEqual({ outcome: 'ralph_recovers', count: 2, simpleMeanTokens: 10, ralphMeanTokens: 200, ralphMeanSeconds: 20 })
+    expect(costs[0]).toMatchObject({ count: 0, ralphMeanTokens: 0 })
   })
 })
 

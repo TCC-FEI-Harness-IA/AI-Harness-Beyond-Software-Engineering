@@ -442,3 +442,10 @@
   cursor: pointer;
   user-select: none;
 }
+
+.chartPanel {
+  padding: var(--space-4);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}

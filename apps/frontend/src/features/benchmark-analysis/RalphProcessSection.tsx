@@ -63,6 +63,7 @@ export function RalphProcessSection({ records, process }: RalphProcessSectionPro
               title={PROCESS_DIMENSION_LABEL[dimension]}
               hint={hint}
               groups={groupByProcess(records, dimension, process.metrics)}
+              ordinal
             />
           ))
         : null}

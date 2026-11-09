@@ -23,6 +23,7 @@ import { useRalphProcessMetrics } from '@/hooks/useRalphProcessMetrics'
 import { saveBlob } from '@/hooks/saveBlob'
 import { AnalysisOverview } from './AnalysisOverview'
 import { BreakdownTable, LOW_N } from './BreakdownTable'
+import { CostSection } from './CostSection'
 import { DivergentQuestions } from './DivergentQuestions'
 import { ExecutionPicker } from './ExecutionPicker'
 import { RalphProcessSection } from './RalphProcessSection'
@@ -38,7 +39,7 @@ const CHART_ICON = (
   </svg>
 )
 
-const BREAKDOWNS: ReadonlyArray<{ dimension: AnalysisDimension; hint: string; multiOnly?: boolean }> = [
+const BREAKDOWNS: ReadonlyArray<{ dimension: AnalysisDimension; hint: string; multiOnly?: boolean; ordinal?: boolean }> = [
   {
     dimension: 'execution',
     hint: 'Análise executiva de cada bateria selecionada — mesmo modelo e configuração dentro de cada linha.',
@@ -54,14 +55,17 @@ const BREAKDOWNS: ReadonlyArray<{ dimension: AnalysisDimension; hint: string; mu
   },
   {
     dimension: 'level',
+    ordinal: true,
     hint: 'Complexidade intrínseca da questão: vestibular de origem (ENEM → ITA), nível do MMLU pela disciplina e variante do GPQA.',
   },
   {
     dimension: 'simpleEffort',
+    ordinal: true,
     hint: 'Dificuldade empírica: quartis, dentro de cada bateria, dos tokens que a inferência simples gastou. Q4 = questões em que o modelo mais "pensou".',
   },
   {
     dimension: 'ralphEffort',
+    ordinal: true,
     hint: 'Quartis dos tokens do Ralph Loop dentro de cada bateria: o loop acerta mais quando trabalha mais?',
   },
 ]
@@ -146,7 +150,9 @@ function AnalysisDashboard({ sessions }: { sessions: readonly BenchmarkSessionDo
         />
       </Card>
 
-      {BREAKDOWNS.filter((breakdown) => !breakdown.multiOnly || multiDataset).map(({ dimension, hint }) => (
+      <CostSection records={records} executions={groups.get('execution') ?? []} />
+
+      {BREAKDOWNS.filter((breakdown) => !breakdown.multiOnly || multiDataset).map(({ dimension, hint, ordinal }) => (
         <BreakdownTable
           key={dimension}
           id={`analysis-${dimension}`}
@@ -154,6 +160,7 @@ function AnalysisDashboard({ sessions }: { sessions: readonly BenchmarkSessionDo
           hint={hint}
           groups={groups.get(dimension) ?? []}
           showDataset={multiDataset && dimension === 'subject'}
+          ordinal={ordinal === true}
         />
       ))}
 

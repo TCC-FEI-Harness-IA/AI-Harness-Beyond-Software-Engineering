@@ -88,9 +88,15 @@ observação pareada. A página mostra:
 - **Questões para análise qualitativa**: lista o que o Ralph corrige, o que piora e o que os dois erram, com
   links para as sessões.
 - **Exportações**: CSV com uma linha por questão pareada e relatório em Markdown com todas as tabelas.
+- **Gráficos** (SVG próprio, sem biblioteca, com dica ao passar o mouse ou focar pelo teclado): fluxo
+  Simples → Ralph (as faixas que cruzam são as questões corrigidas e as pioradas); tokens médios de cada fluxo
+  por desfecho; custo × benefício por execução (tokens Ralph ÷ simples × Δ). Cada quebra tem um gráfico
+  acima da tabela, com três leituras: Δ de acurácia (barras divergentes), acurácia dos dois fluxos (halteres
+  com eixo ampliado) e corrige × piora (borboleta). Nas dimensões ordenadas (nível, quartis, faixas do
+  processo Ralph), a leitura padrão é a tendência em linhas.
 
 Os cálculos ficam em `src/domain/services/benchmarkAnalysis.ts`, `benchmarkAnalysisReport.ts` e
-`ralphProcessMetrics.ts`, como funções puras.
+`ralphProcessMetrics.ts`, como funções puras; os gráficos, em `src/features/benchmark-analysis/charts/`.
 
 Toda comunicação passa por `src/api/` — um único cliente HTTP (`httpClient.ts`) e um único
 cliente WebSocket (`websocketClient.ts`) — e toda resposta entra como `unknown` até passar por um

@@ -9,7 +9,21 @@ import {
 } from '@/domain/services/benchmarkAnalysis'
 import { benchmarkDatasetLabel } from '@/domain/services/benchmarkDefinition'
 import { formatPercent } from '@/domain/services/formatters'
+import { GroupBarsChart, type GroupChartMode } from './charts/GroupBarsChart'
+import { TrendChart } from './charts/TrendChart'
 import styles from './BenchmarkAnalysis.module.css'
+
+type ChartView = GroupChartMode | 'trend'
+
+const CHART_LABEL: Record<ChartView, string> = {
+  trend: 'Tendência',
+  delta: 'Δ acurácia',
+  accuracy: 'Acurácia',
+  counts: 'Corrige × piora',
+}
+
+const NOMINAL_VIEWS: readonly ChartView[] = ['delta', 'accuracy', 'counts']
+const ORDINAL_VIEWS: readonly ChartView[] = ['trend', 'delta', 'counts']
 
 type SortKey = 'natural' | 'delta' | 'n'
 
@@ -77,13 +91,24 @@ export interface BreakdownTableProps {
   groups: readonly AnalysisGroup[]
   /** Mostra o benchmark de cada grupo — útil quando a seleção mistura benchmarks. */
   showDataset?: boolean
+  /** Grupos com ordem natural (nível, quartil, faixa): o gráfico padrão vira linhas de tendência. */
+  ordinal?: boolean
 }
 
 /**
  * Uma quebra da análise pareada: acurácia dos dois fluxos no mesmo eixo, o que o Ralph corrige e
  * o que piora, a significância (McNemar exato) e o custo relativo em tokens.
  */
-export function BreakdownTable({ id, title, hint, groups, showDataset = false }: BreakdownTableProps): JSX.Element {
+export function BreakdownTable({
+  id,
+  title,
+  hint,
+  groups,
+  showDataset = false,
+  ordinal = false,
+}: BreakdownTableProps): JSX.Element {
+  const views = ordinal ? ORDINAL_VIEWS : NOMINAL_VIEWS
+  const [view, setView] = useState<ChartView>(views[0] as ChartView)
   const [sort, setSort] = useState<SortKey>('natural')
   const sorted = useMemo(() => {
     if (sort === 'natural') return groups
@@ -101,10 +126,31 @@ export function BreakdownTable({ id, title, hint, groups, showDataset = false }:
           {hint ? <p className={styles.sectionHint}>{hint}</p> : null}
         </div>
         <div className={styles.toolbar}>
-          <FlowLegend />
+          <SegmentedControl
+            ariaLabel={`Gráfico de ${title}`}
+            size="sm"
+            options={views.map((value) => ({ value, label: CHART_LABEL[value] }))}
+            value={view}
+            onChange={setView}
+          />
           <SegmentedControl ariaLabel={`Ordenar ${title}`} size="sm" options={SORT_OPTIONS} value={sort} onChange={setSort} />
         </div>
       </div>
+      {groups.length > 0 ? (
+        <div className={styles.chartPanel}>
+          {view === 'trend' ? (
+            <TrendChart
+              title={`Acurácia — ${title}`}
+              description="Os dois fluxos ao longo das faixas, na ordem natural; o n de cada faixa fica sob o rótulo."
+              groups={groups}
+              lowN={LOW_N}
+            />
+          ) : (
+            <GroupBarsChart title={`${CHART_LABEL[view]} — ${title}`} groups={sorted} mode={view} lowN={LOW_N} />
+          )}
+        </div>
+      ) : null}
+      <FlowLegend />
       <div className={styles.tableWrapper}>
         <table className={styles.table} aria-label={title}>
           <thead>

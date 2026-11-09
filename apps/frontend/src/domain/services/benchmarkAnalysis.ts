@@ -275,6 +275,32 @@ export function summarizePairs(records: readonly AnalysisRecord[]): PairedSummar
   }
 }
 
+export interface OutcomeCost {
+  outcome: PairOutcome
+  count: number
+  simpleMeanTokens: number
+  ralphMeanTokens: number
+  ralphMeanSeconds: number
+}
+
+const OUTCOME_ORDER: readonly PairOutcome[] = ['both_correct', 'ralph_recovers', 'ralph_regresses', 'both_wrong']
+
+/** Custo médio de cada fluxo por desfecho do par: o Ralph gasta mais onde corrige? */
+export function costByOutcome(records: readonly AnalysisRecord[]): OutcomeCost[] {
+  return OUTCOME_ORDER.map((outcome) => {
+    const matching = records.filter((record) => record.outcome === outcome)
+    const mean = (accessor: (record: AnalysisRecord) => number): number =>
+      matching.length === 0 ? 0 : matching.reduce((sum, record) => sum + accessor(record), 0) / matching.length
+    return {
+      outcome,
+      count: matching.length,
+      simpleMeanTokens: mean((record) => record.simple.total_tokens),
+      ralphMeanTokens: mean((record) => record.ralph.total_tokens),
+      ralphMeanSeconds: mean((record) => record.ralph.duration_seconds),
+    }
+  })
+}
+
 // ─── Dimensões de quebra ──────────────────────────────────────────────────────
 
 export type AnalysisDimension =

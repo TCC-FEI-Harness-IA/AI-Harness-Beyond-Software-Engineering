@@ -5,12 +5,11 @@ import {
   formatMultiplier,
   formatPp,
   formatPValue,
-  PAIR_OUTCOME_LABEL,
   type PairedSummary,
-  type PairOutcome,
   verdict,
 } from '@/domain/services/benchmarkAnalysis'
 import { formatDuration, formatPercent, formatTokens } from '@/domain/services/formatters'
+import { OutcomeFlowChart } from './charts/OutcomeFlowChart'
 import styles from './BenchmarkAnalysis.module.css'
 
 const rate = (value: number | null): string => (value === null ? '—' : formatPercent(value))
@@ -89,58 +88,6 @@ function ExecutiveSummary({
         </li>
       ) : null}
     </ul>
-  )
-}
-
-const SEGMENTS: ReadonlyArray<{ outcome: PairOutcome; className: string | undefined; color: string }> = [
-  { outcome: 'both_correct', className: styles.segBothCorrect, color: 'var(--outcome-both-correct)' },
-  { outcome: 'ralph_recovers', className: styles.segRecovers, color: 'var(--outcome-recovers)' },
-  { outcome: 'ralph_regresses', className: styles.segRegresses, color: 'var(--outcome-regresses)' },
-  { outcome: 'both_wrong', className: styles.segBothWrong, color: 'var(--outcome-both-wrong)' },
-]
-
-function outcomeCount(s: PairedSummary, outcome: PairOutcome): number {
-  switch (outcome) {
-    case 'both_correct':
-      return s.bothCorrect
-    case 'ralph_recovers':
-      return s.recoveries
-    case 'ralph_regresses':
-      return s.regressions
-    case 'both_wrong':
-      return s.bothWrong
-  }
-}
-
-function OutcomeBar({ summary }: { summary: PairedSummary }): JSX.Element {
-  return (
-    <div className={styles.section}>
-      <div className={styles.outcomeBar} role="img" aria-label="Distribuição dos desfechos pareados">
-        {SEGMENTS.map(({ outcome, className }) => {
-          const count = outcomeCount(summary, outcome)
-          if (count === 0) return null
-          return (
-            <span
-              key={outcome}
-              className={`${styles.segment} ${className ?? ''}`}
-              style={{ flexGrow: count }}
-              title={`${PAIR_OUTCOME_LABEL[outcome]}: ${count} (${formatPercent(count / summary.n)})`}
-            />
-          )
-        })}
-      </div>
-      <ul className={styles.legend} aria-label="Legenda dos desfechos">
-        {SEGMENTS.map(({ outcome, color }) => {
-          const count = outcomeCount(summary, outcome)
-          return (
-            <li key={outcome}>
-              <span className={styles.swatch} style={{ background: color }} />
-              {PAIR_OUTCOME_LABEL[outcome]}: {count} ({formatPercent(summary.n === 0 ? 0 : count / summary.n)})
-            </li>
-          )
-        })}
-      </ul>
-    </div>
   )
 }
 
@@ -248,7 +195,7 @@ export function AnalysisOverview({ summary: s, highlights, exclusions }: Analysi
 
       <div className={styles.overviewGrid}>
         <ContingencyMatrix summary={s} />
-        <OutcomeBar summary={s} />
+        <OutcomeFlowChart summary={s} />
       </div>
     </section>
   )
