@@ -9,6 +9,7 @@ from src.domain.entities.session.session import Session
 from src.domain.interfaces.session_document_mapper_interface import ISessionDocumentMapper
 from src.domain.interfaces.session_repository_interface import ISessionRepository
 from src.domain.interfaces.settings_interface import ISettings
+from src.infra.repositories.owner_scope import OWNER_KEY, validate_owner_id
 
 _SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 _DOCUMENT_SUFFIX = ".json"
@@ -18,25 +19,34 @@ _FILE_ENCODING = "utf-8"
 
 
 class JsonFileSessionRepository(ISessionRepository):
-    """Repositório de sessões apoiado em arquivos JSON locais.
+    """Repositório de sessões apoiado em arquivos JSON locais, escopado a um proprietário.
 
+    Cada conta tem o seu diretório (`<base>/owners/<owner_id>/`): o mesmo identificador em contas
+    diferentes nunca colide, e arquivos legados na raiz (sem dono) ficam fora de qualquer consulta.
     Grava um arquivo por sessão, de forma atômica: o documento vai primeiro para
     um arquivo temporário e só então substitui o destino, de modo que uma queda
     no meio da escrita nunca corrompe o conteúdo anterior. Todo o I/O é executado
     fora do event loop.
     """
 
-    def __init__(self, mapper: ISessionDocumentMapper, settings: ISettings, logger: logging.Logger) -> None:
+    def __init__(
+        self, mapper: ISessionDocumentMapper, settings: ISettings, logger: logging.Logger, owner_id: str
+    ) -> None:
         """Inicializa o repositório.
 
         Args:
             mapper: Conversor entre `Session` e o documento persistido.
             settings: Configurações da aplicação, fonte do diretório de sessões.
             logger: Logger do módulo.
+            owner_id: Conta dona de todas as sessões lidas e gravadas por esta instância.
+
+        Raises:
+            ValueError: Quando o proprietário é inválido.
         """
         self.mapper: ISessionDocumentMapper = mapper
         self.settings: ISettings = settings
         self.logger = logger
+        self.owner_id = validate_owner_id(owner_id)
 
     async def save(self, session: Session) -> None:
         """Persiste (insere ou substitui) a sessão inteira.
@@ -49,7 +59,7 @@ class JsonFileSessionRepository(ISessionRepository):
         """
         self.__validate_session_id(session_id=session.id)
         payload = json.dumps(
-            self.mapper.to_document(session=session),
+            {**self.mapper.to_document(session=session), OWNER_KEY: self.owner_id},
             ensure_ascii=False,
             indent=_DOCUMENT_INDENT,
         )
@@ -144,8 +154,8 @@ class JsonFileSessionRepository(ISessionRepository):
     # ── Apoio ────────────────────────────────────────────────────────────────
 
     def __storage_directory(self) -> Path:
-        """Devolve o diretório configurado para os documentos de sessão."""
-        return Path(self.settings.ralph_sessions_storage_path)
+        """Devolve o diretório das sessões do proprietário."""
+        return Path(self.settings.ralph_sessions_storage_path) / "owners" / self.owner_id
 
     def __document_path(self, session_id: str) -> Path:
         """Devolve o caminho do documento de uma sessão já validada."""

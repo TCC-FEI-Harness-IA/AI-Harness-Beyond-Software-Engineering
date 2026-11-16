@@ -12,6 +12,7 @@ from src.domain.interfaces.llm_completions_interface import ILLMCompletions
 from src.domain.interfaces.session_recorder_interface import ISessionRecorder
 from src.infra.routes.v1.message.dtos.default_input_dto import DefaultInputDTO
 from src.infra.startups.default_message_startup import DefaultMessageStartup
+from tests.doubles.security_doubles import authorization_for
 
 _SAIDA_DE_APLICACAO = DefaultMessageOutputDTO(
     message="pergunta do usuario",
@@ -53,7 +54,7 @@ def _build_payload(temperature: float | None = 0.3) -> DefaultInputDTO:
 
 
 def _build_startup_com_spy() -> tuple[DefaultMessageStartup, _SpyUseCase]:
-    startup = DefaultMessageStartup()
+    startup = DefaultMessageStartup(owner_id="usr_teste", authorization=authorization_for())
     spy = _SpyUseCase(output=_SAIDA_DE_APLICACAO)
     startup.default_message_use_case = spy  # type: ignore[assignment]
     return startup, spy
@@ -63,28 +64,27 @@ def _build_startup_com_spy() -> tuple[DefaultMessageStartup, _SpyUseCase]:
 def ambiente_de_modelo(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Garante configuração suficiente para o grafo do startup ser construído."""
     monkeypatch.setenv("LLM_MODEL", "vendor/modelo")
-    monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", "vendor/modelo")
     monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router,openai")
     monkeypatch.setenv("RALPH_SESSIONS_STORAGE_PATH", str(tmp_path / "sessions"))
 
 
 def test_constroi_todo_o_grafo_sem_deixar_atributo_nulo() -> None:
-    startup = DefaultMessageStartup()
+    startup = DefaultMessageStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert vars(startup)
     assert all(valor is not None for valor in vars(startup).values())
 
 
 def test_injeta_a_porta_de_completions_no_caso_de_uso() -> None:
-    startup = DefaultMessageStartup()
+    startup = DefaultMessageStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert isinstance(startup.default_message_use_case, DefaultMessageUseCase)
     assert isinstance(startup.default_message_use_case.llm_completions, ILLMCompletions)
 
 
 def test_injeta_o_recorder_e_o_relogio_no_caso_de_uso() -> None:
-    startup = DefaultMessageStartup()
+    startup = DefaultMessageStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert isinstance(startup.default_message_use_case.session_recorder, ISessionRecorder)
     assert isinstance(startup.default_message_use_case.clock, IClock)

@@ -11,8 +11,12 @@ from src.infra.repositories.session_repository_factory import SessionRepositoryF
 class SessionQueryStartup:
     """Composition root da consulta de sessões persistidas."""
 
-    def __init__(self) -> None:
-        """Instancia e injeta todas as dependências da consulta de sessões."""
+    def __init__(self, owner_id: str) -> None:
+        """Instancia e injeta todas as dependências da consulta de sessões.
+
+        Args:
+            owner_id: Conta autenticada; só as sessões dela são consultadas.
+        """
         self.settings: ISettings = Settings()
         self.logger = self.settings.logger(module_file=__file__)
 
@@ -20,7 +24,7 @@ class SessionQueryStartup:
         self.session_repository = SessionRepositoryFactory(
             settings=self.settings,
             mapper=self.session_document_mapper,
-        ).create()
+        ).create(owner_id=owner_id)
         self.get_session_use_case = GetSessionUseCase(
             repository=self.session_repository,
             logger=self.settings.logger(module_file=getfile(GetSessionUseCase)),

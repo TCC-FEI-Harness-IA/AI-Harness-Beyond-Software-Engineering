@@ -6,6 +6,7 @@ from src.application.usecases.rerun_benchmark_question_usecase import RerunBench
 from src.domain.entities.benchmark.benchmark_definition import BenchmarkDefinition
 from src.domain.interfaces.benchmark_question_provider_interface import IBenchmarkQuestionProvider
 from src.domain.interfaces.settings_interface import ISettings
+from src.domain.services.execution_authorization import ExecutionAuthorization
 from src.domain.services.benchmark_answer_evaluator import BenchmarkAnswerEvaluator
 from src.infra.adapters.benchmark_flow_runner_adapter import BenchmarkFlowRunnerAdapter
 from src.infra.adapters.clock_adapter import ClockAdapter
@@ -25,8 +26,13 @@ class BenchmarkRerunStartup:
     É instanciado uma vez por conexão WebSocket, como o da execução da bateria.
     """
 
-    def __init__(self) -> None:
-        """Instancia e injeta todas as dependências da reexecução."""
+    def __init__(self, owner_id: str, authorization: ExecutionAuthorization) -> None:
+        """Instancia e injeta todas as dependências da reexecução.
+
+        Args:
+            owner_id: Conta autenticada; só as baterias dela podem ser reexecutadas.
+            authorization: Autorização da execução, com a credencial do usuário.
+        """
         self.settings: ISettings = Settings()
         self.logger = self.settings.logger(module_file=__file__)
 
@@ -35,14 +41,17 @@ class BenchmarkRerunStartup:
         self.repository = BenchmarkSessionRepositoryFactory(
             settings=self.settings,
             mapper=self.document_mapper,
-        ).create()
+        ).create(owner_id=owner_id)
         self.provider_factory = BenchmarkQuestionProviderFactory(self.settings, self.logger)
         self.flow_runner = BenchmarkFlowRunnerAdapter(
             evaluator=BenchmarkAnswerEvaluator(),
             clock=self.clock,
             logger=self.settings.logger(module_file=getfile(BenchmarkFlowRunnerAdapter)),
+            owner_id=owner_id,
+            authorization=authorization,
         )
         self.rerun_use_case = RerunBenchmarkQuestionUseCase(
+            owner_id=owner_id,
             question_provider_for=self.__provider_for,
             flow_runner=self.flow_runner,
             repository=self.repository,

@@ -13,6 +13,7 @@ import { SidebarSlotProvider, useSidebarSlotValue } from '@/state/SidebarSlotCon
 import { ThemeProvider } from '@/state/ThemeContext'
 import { ViewModeProvider } from '@/state/ViewModeContext'
 import { HistoryDetailPage } from './HistoryDetailPage'
+import { TestAuth } from '@/test/TestAuth'
 
 vi.mock('@/api/sessionApi', async () => {
   const actual = await vi.importActual<typeof SessionApiModule>('@/api/sessionApi')
@@ -148,7 +149,7 @@ function SlotBridge({ children }: { children: React.ReactNode }): JSX.Element {
 function renderDetail(sessionId: string): void {
   render(
     <MemoryRouter initialEntries={[`/historico/${sessionId}`]}>
-      <ThemeProvider>
+      <ThemeProvider><TestAuth>
         <ViewModeProvider>
           <BenchmarkRunProvider>
           <SidebarSlotProvider>
@@ -160,7 +161,7 @@ function renderDetail(sessionId: string): void {
           </SidebarSlotProvider>
           </BenchmarkRunProvider>
         </ViewModeProvider>
-      </ThemeProvider>
+      </TestAuth></ThemeProvider>
     </MemoryRouter>,
   )
 }

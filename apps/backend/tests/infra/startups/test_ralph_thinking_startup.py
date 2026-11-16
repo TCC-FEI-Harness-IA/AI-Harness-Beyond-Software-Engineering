@@ -27,6 +27,7 @@ from src.infra.adapters.structured_response_parser_adapter import StructuredResp
 from src.infra.routes.v1.message.dtos.reasoning_event_dto import ReasoningEventDTO
 from src.infra.routes.v1.message.dtos.reasoning_input_dto import ReasoningInputDTO
 from src.infra.startups.ralph_thinking_startup import RalphThinkingStartup
+from tests.doubles.security_doubles import authorization_for
 
 _PHASE_ATTRIBUTES = (
     "general_criteria_phase",
@@ -45,7 +46,6 @@ _PHASE_ATTRIBUTES = (
 def ambiente_de_modelo(monkeypatch: pytest.MonkeyPatch) -> None:
     """Garante configuração suficiente para o grafo do startup ser construído."""
     monkeypatch.setenv("LLM_MODEL", "vendor/modelo")
-    monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", "vendor/modelo")
     monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router,openai")
     monkeypatch.setenv("LLM_MAX_TOKENS", "120000")
@@ -53,21 +53,21 @@ def ambiente_de_modelo(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_constroi_todo_o_grafo_sem_deixar_atributo_nulo() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert vars(startup)
     assert all(valor is not None for valor in vars(startup).values())
 
 
 def test_injeta_as_nove_fases_pela_interface() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
 
     for atributo in _PHASE_ATTRIBUTES:
         assert isinstance(getattr(startup, atributo), IThinkingPhase)
 
 
 def test_injeta_os_adapters_de_infraestrutura_pela_interface() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert isinstance(startup.clock, IClock)
     assert isinstance(startup.id_generator, IIdGenerator)
@@ -85,7 +85,7 @@ def test_injeta_os_adapters_de_infraestrutura_pela_interface() -> None:
 
 
 def test_injeta_o_caso_de_uso_do_fluxo_harness() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert isinstance(startup.ralph_thinking_use_case, RalphThinkingUseCase)
 
@@ -105,7 +105,7 @@ def test_monta_o_budget_com_os_valores_do_settings(monkeypatch: pytest.MonkeyPat
     for variavel, valor in _LIMITES_DE_AMBIENTE.items():
         monkeypatch.setenv(variavel, valor)
 
-    budget = RalphThinkingStartup().cost_budget
+    budget = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for()).cost_budget
 
     assert budget.max_task_attempts == 7
     assert budget.max_additional_planning_rounds == 4
@@ -118,17 +118,17 @@ def test_monta_o_budget_com_os_valores_do_settings(monkeypatch: pytest.MonkeyPat
 
 def test_alterar_variavel_de_ambiente_altera_o_budget(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RALPH_MAX_TASK_ATTEMPTS", "3")
-    antes = RalphThinkingStartup().cost_budget
+    antes = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for()).cost_budget
 
     monkeypatch.setenv("RALPH_MAX_TASK_ATTEMPTS", "8")
-    depois = RalphThinkingStartup().cost_budget
+    depois = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for()).cost_budget
 
     assert antes.max_task_attempts == 3
     assert depois.max_task_attempts == 8
 
 
 def test_injeta_o_mesmo_guardiao_de_custo_em_todos_os_consumidores() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert startup.ralph_thinking_use_case.cost_guard is startup.cost_guard
     for atributo in _PHASE_ATTRIBUTES:
@@ -137,7 +137,7 @@ def test_injeta_o_mesmo_guardiao_de_custo_em_todos_os_consumidores() -> None:
 
 def test_injeta_o_mesmo_registro_de_sessao_em_todas_as_fases_e_no_caso_de_uso() -> None:
     """As fases gravam cada invocação na mesma sessão que o caso de uso acompanha."""
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert startup.ralph_thinking_use_case.session_recorder is startup.session_recorder
     for atributo in _PHASE_ATTRIBUTES:
@@ -145,13 +145,13 @@ def test_injeta_o_mesmo_registro_de_sessao_em_todas_as_fases_e_no_caso_de_uso() 
 
 
 def test_o_guardiao_de_custo_usa_o_budget_montado_pelo_startup() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert startup.cost_guard.budget is startup.cost_budget
 
 
 def test_injeta_a_mesma_porta_de_completions_em_todas_as_fases() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
 
     for atributo in _PHASE_ATTRIBUTES:
         assert getattr(startup, atributo).llm_completions is startup.llm_completions
@@ -159,7 +159,7 @@ def test_injeta_a_mesma_porta_de_completions_em_todas_as_fases() -> None:
 
 def test_injeta_o_mesmo_parser_com_reparo_automatico_em_todas_as_fases() -> None:
     """Toda fase que espera JSON interpreta a saída pelo mesmo parser, que repara fechamentos ausentes."""
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert isinstance(startup.parser, StructuredResponseParserAdapter)
     for atributo in _PHASE_ATTRIBUTES:
@@ -167,7 +167,7 @@ def test_injeta_o_mesmo_parser_com_reparo_automatico_em_todas_as_fases() -> None
 
 
 def test_injeta_as_pecas_de_estado_da_sessao_no_caso_de_uso() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert startup.ralph_thinking_use_case.task_queue is startup.task_queue
     assert startup.ralph_thinking_use_case.learnings_memory is startup.learnings_memory
@@ -176,8 +176,8 @@ def test_injeta_as_pecas_de_estado_da_sessao_no_caso_de_uso() -> None:
 
 
 def test_cada_instanciacao_produz_estado_de_sessao_proprio() -> None:
-    primeiro = RalphThinkingStartup()
-    segundo = RalphThinkingStartup()
+    primeiro = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
+    segundo = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert primeiro.task_queue is not segundo.task_queue
     assert primeiro.learnings_memory is not segundo.learnings_memory
@@ -231,7 +231,7 @@ async def _collect(generator: AsyncGenerator[Any, None]) -> list[Any]:
 
 
 async def test_run_traduz_o_payload_de_transporte_para_o_dto_de_aplicacao() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
     fake_use_case = _FakeUseCase(events=[_EVENT])
     startup.ralph_thinking_use_case = fake_use_case
 
@@ -247,7 +247,7 @@ async def test_run_traduz_o_payload_de_transporte_para_o_dto_de_aplicacao() -> N
 
 
 async def test_run_aplica_o_max_tokens_do_payload_como_limite_de_tokens_da_sessao() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
     startup.ralph_thinking_use_case = _FakeUseCase(events=[_EVENT])
 
     await _collect(startup.run(payload=_REASONING_PAYLOAD))
@@ -258,7 +258,7 @@ async def test_run_aplica_o_max_tokens_do_payload_como_limite_de_tokens_da_sessa
 
 async def test_run_recusa_um_limite_de_sessao_acima_do_teto_do_backend(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LLM_MAX_TOKENS", "10000")
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
     fake_use_case = _FakeUseCase(events=[_EVENT])
     startup.ralph_thinking_use_case = fake_use_case
 
@@ -269,7 +269,7 @@ async def test_run_recusa_um_limite_de_sessao_acima_do_teto_do_backend(monkeypat
 
 
 async def test_run_converte_cada_thinking_event_em_reasoning_event_dto() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
     startup.ralph_thinking_use_case = _FakeUseCase(events=[_EVENT])
 
     eventos = await _collect(startup.run(payload=_REASONING_PAYLOAD))
@@ -291,7 +291,7 @@ async def test_run_converte_cada_thinking_event_em_reasoning_event_dto() -> None
 
 
 async def test_run_devolve_um_evento_por_evento_emitido_pelo_caso_de_uso() -> None:
-    startup = RalphThinkingStartup()
+    startup = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
     outro_evento = ThinkingEvent(
         type=ThinkingEventTypeEnum.RESULT,
         subtype=ThinkingEventSubtypeEnum.COMPILE,

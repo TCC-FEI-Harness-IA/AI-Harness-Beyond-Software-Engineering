@@ -72,3 +72,15 @@ def test_timeout_de_selecao_de_servidor_e_repassado_ao_driver() -> None:
 
 def test_sem_timeout_vale_o_padrao_do_driver() -> None:
     assert _build_adapter().client.options.server_selection_timeout == 30
+
+
+def test_expoe_as_colecoes_dos_catalogos_pessoais_e_das_publicacoes_oficiais() -> None:
+    from src.infra.adapters.mongo_client_adapter import MongoClientAdapter
+    from tests.doubles.fake_settings import FakeSettings
+
+    adapter = MongoClientAdapter(settings=FakeSettings(mongodb_database="banco"))
+
+    assert adapter.user_models_collection.name == "user_models"
+    assert adapter.official_publications_collection.name == "official_publications"
+    assert adapter.official_sessions_collection.name == "official_sessions"
+    assert adapter.official_sessions_collection.database.name == "banco"

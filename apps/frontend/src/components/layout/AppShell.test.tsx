@@ -4,13 +4,14 @@ import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { ThemeProvider } from '@/state/ThemeContext'
+import { TestAuth } from '@/test/TestAuth'
 
 function renderShell(children: ReactNode, sidebar?: ReactNode): void {
   render(
     <MemoryRouter>
-      <ThemeProvider>
+      <ThemeProvider><TestAuth>
         <AppShell sidebar={sidebar}>{children}</AppShell>
-      </ThemeProvider>
+      </TestAuth></ThemeProvider>
     </MemoryRouter>,
   )
 }

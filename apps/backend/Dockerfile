@@ -27,7 +27,7 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY . .
 
 EXPOSE 8000
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "src.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # ─── prod ───────────────────────────────────────────────────────────────────
 # Imagem final enxuta: só o runtime e o código da aplicação, sem ferramentas de dev.
@@ -41,4 +41,4 @@ RUN useradd --create-home --shell /bin/bash appuser \
 USER appuser
 
 EXPOSE 8000
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-server-header"]

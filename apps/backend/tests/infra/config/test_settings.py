@@ -19,7 +19,6 @@ _ENV_VARS = (
     "LLM_TIMEOUT_SECONDS",
     "LLM_REASONING_EFFORT",
     "OPENROUTER_API_URL",
-    "OPENROUTER_API_KEY",
     "OPENROUTER_HTTP_REFERER",
     "OPENROUTER_X_TITLE",
     "OPENAI_API_URL",
@@ -87,7 +86,11 @@ def test_aplica_os_defaults_documentados_quando_a_variavel_esta_ausente() -> Non
     assert settings.llm_timeout_seconds == 30.0
     assert settings.llm_reasoning_effort == ""
     assert settings.openrouter_api_url == "https://openrouter.ai/api/v1/chat/completions"
-    assert settings.openrouter_api_key == ""
+    assert not hasattr(settings, "openrouter_api_key")
+    assert settings.mongodb_user_models_collection == "user_models"
+    assert settings.ralph_official_storage_path == "./data/official"
+    assert settings.mongodb_official_publications_collection == "official_publications"
+    assert settings.mongodb_official_sessions_collection == "official_sessions"
     assert settings.openrouter_http_referer == ""
     assert settings.openrouter_x_title == ""
     assert settings.openai_api_url == "https://api.openai.com/v1/chat/completions"
@@ -172,14 +175,12 @@ def test_esforco_de_raciocinio_desconhecido_levanta_erro_citando_a_variavel(
 
 def test_le_do_ambiente_as_variaveis_de_openrouter(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENROUTER_API_URL", "https://exemplo.test/chat")
-    monkeypatch.setenv("OPENROUTER_API_KEY", "  chave-secreta  ")
     monkeypatch.setenv("OPENROUTER_HTTP_REFERER", "  https://referer.test  ")
     monkeypatch.setenv("OPENROUTER_X_TITLE", "  Titulo  ")
 
     settings = Settings()
 
     assert settings.openrouter_api_url == "https://exemplo.test/chat"
-    assert settings.openrouter_api_key == "chave-secreta"
     assert settings.openrouter_http_referer == "https://referer.test"
     assert settings.openrouter_x_title == "Titulo"
 
@@ -460,3 +461,19 @@ def test_limite_de_planejamento_e_independente_das_tentativas_por_tarefa(monkeyp
     assert settings.ralph_max_task_attempts == 5
     assert settings.ralph_max_additional_planning_rounds == 2
     assert settings.ralph_json_parse_max_retries == 2
+
+
+def test_logger_redige_chaves_cookies_e_tokens(caplog: pytest.LogCaptureFixture) -> None:
+    logger = Settings().logger(module_file=__file__)
+
+    with caplog.at_level("INFO"):
+        logger.info(
+            "Authorization: Bearer %s | Cookie: ralph_session=abc123; __Secure-ralph_llm_credential=eyJ.x.y.z.w",
+            "sk-or-v1-segredo-do-usuario",
+        )
+        logger.info("chave solta sk-or-v1-outra-chave no texto")
+
+    assert "sk-or-v1-segredo-do-usuario" not in caplog.text
+    assert "sk-or-v1-outra-chave" not in caplog.text
+    assert "abc123" not in caplog.text and "eyJ.x.y.z.w" not in caplog.text
+    assert "[REDACTED]" in caplog.text

@@ -26,7 +26,7 @@ from src.domain.services.benchmark_question_selector import select_mmlu_question
 from src.infra.providers.gpqa_benchmark_question_provider import GPQABenchmarkQuestionProvider, GPQA_REVISION
 from src.infra.services.llm_service_factory import LLMServiceFactory
 from src.infra.services.openrouter_service import OpenRouterService
-from src.main import create_app
+from tests.doubles.security_doubles import authenticated_client
 
 _MODELO = "vendor/modelo"
 _CRITERIO = {"criterion_id": "AC1", "met": True, "justification": "Atende"}
@@ -88,7 +88,6 @@ def ambiente(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("RALPH_BENCHMARK_SESSIONS_STORAGE_PATH", str(tmp_path / "benchmark-sessions"))
     monkeypatch.setenv("RALPH_BENCHMARK_PROGRESS_INTERVAL_SECONDS", "0.05")
     monkeypatch.setenv("LLM_MODEL", _MODELO)
-    monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", _MODELO)
     monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router")
     monkeypatch.setenv("LLM_MAX_TOKENS", "120000")
@@ -97,17 +96,18 @@ def ambiente(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _cliente(monkeypatch: pytest.MonkeyPatch, provedor: _Provedor) -> TestClient:
-    def _servicos(factory: LLMServiceFactory) -> list[OpenRouterService]:
+    def _servicos(factory: LLMServiceFactory, authorization: Any) -> list[OpenRouterService]:
         return [
             OpenRouterService(
                 logger=factory.settings.logger(__file__),
                 settings=factory.settings,
+                authorization=authorization,
                 transport=httpx.MockTransport(provedor),
             )
         ]
 
     monkeypatch.setattr(LLMServiceFactory, "create_all", _servicos)
-    return TestClient(create_app())
+    return authenticated_client(user_id="usr_teste")
 
 
 def _abertura(**sobrescritas: Any) -> dict[str, Any]:
@@ -176,7 +176,7 @@ def test_mmlu_executa_os_dois_fluxos_preserva_protocolo_e_exporta_a_origem_corre
     assert session["summary"]["simple"]["accuracy"] == 1
     assert session["summary"]["ralph"]["accuracy"] == 0
     assert client.get(f"/v1/benchmark/sessions/{session['id']}").json() == session
-    children = _sessoes_gravadas(ambiente / "sessions")
+    children = _sessoes_gravadas(ambiente / "sessions" / "owners" / "usr_teste")
     assert len(children) == 2
     prompts = {child["user_question"] for child in children}
     assert len(prompts) == 1
@@ -226,7 +226,7 @@ def test_gpqa_executa_os_dois_fluxos_preserva_protocolo_e_exporta_a_origem_corre
     assert session["summary"]["simple"]["accuracy"] == 1
     assert session["summary"]["ralph"]["accuracy"] == 0
     assert client.get(f"/v1/benchmark/sessions/{session['id']}").json() == session
-    children = _sessoes_gravadas(ambiente / "sessions")
+    children = _sessoes_gravadas(ambiente / "sessions" / "owners" / "usr_teste")
     assert len(children) == 2
     prompts = {child["user_question"] for child in children}
     assert len(prompts) == 1
@@ -318,15 +318,17 @@ def test_bateria_executa_as_primeiras_questoes_e_grava_a_benchmark_session(
     assert bateria["total_tokens"] == 20 * 15  # 2 inferências simples + 2 Ralph de 9 chamadas (com A.3)
     assert len(bateria["session_ids"]) == 4
 
-    sessoes = _sessoes_gravadas(ambiente / "sessions")
+    sessoes = _sessoes_gravadas(ambiente / "sessions" / "owners" / "usr_teste")
     assert {sessao["id"] for sessao in sessoes} == set(bateria["session_ids"])
     assert all(sessao["benchmark_details"]["run_id"] == bateria["id"] for sessao in sessoes)
     assert all(sessao["benchmark_details"]["is_banchmark"] is True for sessao in sessoes)
     assert all("alternativa_correta" not in sessao["user_question"] for sessao in sessoes)
     assert all("RESPOSTA_FINAL: LETRA" in sessao["user_question"] for sessao in sessoes)
 
-    gravada = json.loads((ambiente / "benchmark-sessions" / f"{bateria['id']}.json").read_text(encoding="utf-8"))
-    assert gravada == bateria
+    gravada = json.loads(
+        (ambiente / "benchmark-sessions" / "owners" / "usr_teste" / f"{bateria['id']}.json").read_text(encoding="utf-8")
+    )
+    assert gravada == {**bateria, "owner_id": "usr_teste"}
 
 
 def test_falha_do_provedor_vira_erro_avaliado_sem_derrubar_a_bateria(
@@ -343,7 +345,7 @@ def test_falha_do_provedor_vira_erro_avaliado_sem_derrubar_a_bateria(
     assert bateria["summary"]["ralph"]["failures"] == 1
     questao = bateria["questions"][0]
     assert questao["simple"]["error"] and questao["ralph"]["error"]
-    sessoes = _sessoes_gravadas(ambiente / "sessions")
+    sessoes = _sessoes_gravadas(ambiente / "sessions" / "owners" / "usr_teste")
     assert {sessao["status"] for sessao in sessoes} == {"failed"}
     assert all(sessao["benchmark_details"]["is_correct"] is False for sessao in sessoes)
 

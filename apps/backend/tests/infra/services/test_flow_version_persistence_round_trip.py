@@ -84,11 +84,13 @@ def _repositorio(caminho: Path) -> JsonFileSessionRepository:
     return JsonFileSessionRepository(
         mapper=SessionDocumentMapper(), settings=FakeSettings(ralph_sessions_storage_path=str(caminho)),
         logger=logging.getLogger("teste.versao"),
+        owner_id="usr_teste",
     )
 
 
 async def test_leitura_de_sessao_antiga_nao_reescreve_o_arquivo_e_mantem_a3_como_extracao(tmp_path: Path) -> None:
-    arquivo = tmp_path / "ralph_antiga.json"
+    (tmp_path / "owners" / "usr_teste").mkdir(parents=True)
+    arquivo = tmp_path / "owners" / "usr_teste" / "ralph_antiga.json"
     arquivo.write_text(json.dumps(_documento_antigo(), ensure_ascii=False), encoding="utf-8")
     original = arquivo.read_bytes()
 
@@ -105,7 +107,8 @@ async def test_sessao_nova_e_gravada_e_lida_com_versao_fases_e_subtipos(tmp_path
     repositorio = _repositorio(tmp_path)
     await repositorio.save(session=_sessao_nova())
 
-    gravado = json.loads((tmp_path / "ralph_nova.json").read_text(encoding="utf-8"))
+    gravado = json.loads((tmp_path / "owners" / "usr_teste" / "ralph_nova.json").read_text(encoding="utf-8"))
+    assert gravado.pop("owner_id") == "usr_teste"
     lido = await repositorio.find_by_id(session_id="ralph_nova")
 
     assert gravado["flow_version"] == 2

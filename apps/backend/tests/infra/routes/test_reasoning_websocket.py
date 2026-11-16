@@ -12,8 +12,9 @@ from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.infra.routes.v1.message import router as message_router_module
 from src.infra.routes.v1.message.dtos.context_window_dto import ContextWindowDTO
 from src.infra.routes.v1.message.dtos.reasoning_event_dto import ReasoningEventDTO
-from src.infra.routes.v1.message.router import reasoning
+from src.infra.routes.v1.message.router import _stream_reasoning
 from src.main import create_app
+from tests.doubles.security_doubles import FakeIdentityProvider, authenticated_client, build_security, sign_in
 
 _CONTRATO_CAMPOS = {
     "type",
@@ -71,14 +72,18 @@ class _FakeStartup:
     events: list[ReasoningEventDTO] = []
     error: Exception | None = None
     instances: list["_FakeStartup"] = []
+    hang_after_events = False
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs: Any) -> None:
+        self.kwargs = kwargs
         self.session_recorder = _FakeSessionRecorder()
         _FakeStartup.instances.append(self)
 
     async def run(self, payload: Any) -> AsyncGenerator[ReasoningEventDTO, None]:
         for event in _FakeStartup.events:
             yield event
+        if _FakeStartup.hang_after_events:
+            await asyncio.sleep(30)
         if _FakeStartup.error is not None:
             raise _FakeStartup.error
 
@@ -113,9 +118,10 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     _FakeStartup.events = []
     _FakeStartup.error = None
     _FakeStartup.instances = []
+    _FakeStartup.hang_after_events = False
     _FakeSessionRecorder.status = SessionStatusEnum.RUNNING
     monkeypatch.setattr(message_router_module, "RalphThinkingStartup", _FakeStartup)
-    return TestClient(create_app())
+    return authenticated_client(user_id="usr_ana")
 
 
 def test_fluxo_completo_recebe_a_sequencia_de_eventos_e_termina_em_result(client: TestClient) -> None:
@@ -297,6 +303,17 @@ def test_duas_conexoes_simultaneas_tem_sessoes_e_estados_independentes(client: T
     assert _FakeStartup.instances[0] is not _FakeStartup.instances[1]
 
 
+class _ExecucaoDireta:
+    """Execução já autorizada, que só roda o trabalho (sem vigilância), para o teste de baixo nível."""
+
+    owner_id = "usr_ana"
+    authorization = None
+
+    async def run(self, work: Any) -> bool:
+        await work
+        return True
+
+
 class _FakeDisconnectedWebSocket:
     """Dublê de baixo nível, usado só para provar que a rota não tenta enviar
     num socket que a camada ASGI já marcou como desconectado."""
@@ -328,7 +345,145 @@ def test_erro_generico_nao_envia_frame_quando_o_socket_ja_esta_desconectado(
     monkeypatch.setattr(message_router_module, "RalphThinkingStartup", _FakeStartup)
     websocket = _FakeDisconnectedWebSocket(raw_text=json.dumps(_build_payload()))
 
-    asyncio.run(reasoning(websocket))
+    asyncio.run(_stream_reasoning(websocket, _ExecucaoDireta()))
 
     assert websocket.sent == []
     assert websocket.closed_with == 1011
+
+
+# ── Autenticação, origem, credencial e ciclo de vida ─────────────────────────
+
+
+def _token(client: TestClient) -> str:
+    return client.cookies.get("ralph_session")
+
+
+def _provider(client: TestClient) -> FakeIdentityProvider:
+    provider = client.security.identity_provider  # type: ignore[attr-defined]
+    assert isinstance(provider, FakeIdentityProvider)
+    return provider
+
+
+def test_startup_recebe_o_dono_e_a_autorizacao(client: TestClient) -> None:
+    _FakeStartup.events = [_event()]
+
+    with client.websocket_connect("/v1/message/reasoning") as ws:
+        ws.send_json(_build_payload())
+        _collect_frames(ws)
+
+    assert _FakeStartup.instances[0].kwargs["owner_id"] == "usr_ana"
+    assert _FakeStartup.instances[0].kwargs["authorization"].owner_id == "usr_ana"
+
+
+def test_visitante_e_recusado_antes_de_qualquer_trabalho(monkeypatch: pytest.MonkeyPatch) -> None:
+    _FakeStartup.instances = []
+    monkeypatch.setattr(message_router_module, "RalphThinkingStartup", _FakeStartup)
+    client = TestClient(create_app(security=build_security()))
+
+    with client.websocket_connect("/v1/message/reasoning", headers={"Origin": "http://localhost:5173"}) as ws:
+        frames, close_code = _collect_frames(ws)
+
+    assert close_code == 4401
+    assert frames[0]["type"] == "error"
+    assert _FakeStartup.instances == []
+
+
+def test_origem_nao_permitida_nem_abre_a_conexao(client: TestClient) -> None:
+    with pytest.raises(WebSocketDisconnect) as erro:
+        with client.websocket_connect("/v1/message/reasoning", headers={"Origin": "https://mal.exemplo"}):
+            pass
+
+    assert erro.value.code == 1008
+    assert _FakeStartup.instances == []
+
+
+def test_sem_origem_a_conexao_e_recusada(client: TestClient) -> None:
+    del client.headers["Origin"]
+
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect("/v1/message/reasoning"):
+            pass
+
+
+def test_sem_credencial_fecha_com_4428(monkeypatch: pytest.MonkeyPatch) -> None:
+    _FakeStartup.instances = []
+    monkeypatch.setattr(message_router_module, "RalphThinkingStartup", _FakeStartup)
+    client = authenticated_client(with_credential=False)
+
+    with client.websocket_connect("/v1/message/reasoning") as ws:
+        frames, close_code = _collect_frames(ws)
+
+    assert close_code == 4428
+    assert "chave OpenRouter" in frames[0]["content"]
+    assert _FakeStartup.instances == []
+
+
+def test_autenticacao_indisponivel_fecha_com_4503(client: TestClient) -> None:
+    _provider(client).unavailable = True
+
+    with client.websocket_connect("/v1/message/reasoning") as ws:
+        _, close_code = _collect_frames(ws)
+
+    assert close_code == 4503
+
+
+def test_limite_de_execucoes_simultaneas(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(message_router_module, "RalphThinkingStartup", _FakeStartup)
+    client = authenticated_client(security=build_security(max_concurrent_runs_per_user=1))
+    _FakeStartup.events = [_event()]
+    _FakeStartup.hang_after_events = True
+    _FakeStartup.error = None
+
+    with client.websocket_connect("/v1/message/reasoning") as primeira:
+        primeira.send_json(_build_payload())
+        primeira.receive_json()
+        with client.websocket_connect("/v1/message/reasoning") as segunda:
+            _, close_code = _collect_frames(segunda)
+
+    assert close_code == 4429
+    _FakeStartup.hang_after_events = False
+
+
+@pytest.mark.parametrize("causa", ["logout", "expiracao", "indisponivel"])
+def test_sessao_que_deixa_de_valer_interrompe_a_execucao(client: TestClient, causa: str) -> None:
+    _FakeStartup.events = [_event()]
+    _FakeStartup.hang_after_events = True
+    provider = _provider(client)
+
+    with client.websocket_connect("/v1/message/reasoning") as ws:
+        ws.send_json(_build_payload())
+        assert ws.receive_json()["type"] == "thinking"
+        if causa == "logout":
+            provider.revoke(_token(client))
+        elif causa == "expiracao":
+            provider.clock.advance(hours=24)
+        else:
+            provider.unavailable = True
+        frames, close_code = _collect_frames(ws)
+
+    assert close_code == 4401
+    assert frames[-1]["type"] == "error"
+    startup = _FakeStartup.instances[0]
+    assert startup.session_recorder.finished_with is SessionStatusEnum.FAILED
+    assert startup.kwargs["authorization"].is_active is False
+
+
+def test_troca_de_usuario_nao_reaproveita_a_execucao_antiga(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(message_router_module, "RalphThinkingStartup", _FakeStartup)
+    _FakeStartup.instances = []
+    _FakeStartup.events = [_event()]
+    _FakeStartup.hang_after_events = True
+    seguranca = build_security()
+    client = authenticated_client(user_id="usr_ana", security=seguranca)
+    token_da_ana = _token(client)
+
+    with client.websocket_connect("/v1/message/reasoning") as ws:
+        ws.send_json(_build_payload())
+        ws.receive_json()
+        seguranca.identity_provider.revoke(token_da_ana)  # type: ignore[attr-defined]
+        client.headers.update(sign_in(client, seguranca, user_id="usr_bia"))
+        _, close_code = _collect_frames(ws)
+
+    assert close_code == 4401
+    assert _FakeStartup.instances[0].kwargs["authorization"].is_active is False
+    _FakeStartup.hang_after_events = False

@@ -17,7 +17,6 @@ _DEFAULTS: dict[str, Any] = {
     "llm_timeout_seconds": 30.0,
     "llm_reasoning_effort": "",
     "openrouter_api_url": "https://openrouter.test/chat/completions",
-    "openrouter_api_key": "chave-de-teste",
     "openrouter_http_referer": "",
     "openrouter_x_title": "",
     "openai_api_url": "https://openai.test/v1/chat/completions",
@@ -35,6 +34,11 @@ _DEFAULTS: dict[str, Any] = {
     "mongodb_database": "tcc",
     "mongodb_sessions_collection": "sessions",
     "mongodb_models_collection": "models",
+    "mongodb_user_models_collection": "user_models",
+    "ralph_official_storage_path": "./data/official",
+    "mongodb_official_publications_collection": "official_publications",
+    "mongodb_official_sessions_collection": "official_sessions",
+    "ralph_public_redacted_datasets": ["gpqa"],
     "ralph_session_flush_every_message": True,
     "ralph_session_id_prefix": "sess",
     "ralph_max_task_attempts": 3,
@@ -115,10 +119,6 @@ class FakeSettings(ISettings):
     @property
     def openrouter_api_url(self) -> str:
         return self.values["openrouter_api_url"]
-
-    @property
-    def openrouter_api_key(self) -> str:
-        return self.values["openrouter_api_key"]
 
     @property
     def openrouter_http_referer(self) -> str:
@@ -243,6 +243,26 @@ class FakeSettings(ISettings):
     @property
     def mongodb_models_collection(self) -> str:
         return self.values["mongodb_models_collection"]
+
+    @property
+    def mongodb_user_models_collection(self) -> str:
+        return self.values["mongodb_user_models_collection"]
+
+    @property
+    def ralph_official_storage_path(self) -> str:
+        return self.values["ralph_official_storage_path"]
+
+    @property
+    def mongodb_official_publications_collection(self) -> str:
+        return self.values["mongodb_official_publications_collection"]
+
+    @property
+    def mongodb_official_sessions_collection(self) -> str:
+        return self.values["mongodb_official_sessions_collection"]
+
+    @property
+    def ralph_public_redacted_datasets(self) -> list[str]:
+        return self.values["ralph_public_redacted_datasets"]
 
     @property
     def ralph_benchmark_questions_path(self) -> str:

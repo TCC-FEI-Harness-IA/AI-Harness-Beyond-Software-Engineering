@@ -180,3 +180,22 @@ describe('openBenchmarkRerunStream', () => {
     expect(spy.onFailure).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('fim da sessão de autenticação durante a bateria', () => {
+  it('fechamento 4401 avisa a expiração e falha com a mensagem de login', async () => {
+    const { onUnauthorized } = await import('./authEvents')
+    const ouvinte = vi.fn()
+    const cancelar = onUnauthorized(ouvinte)
+    const spy = handlers()
+    openBenchmarkStream(PAYLOAD, spy)
+    const socket = FakeWebSocket.latest()
+
+    socket.emitOpen()
+    socket.emitClose(4401)
+
+    expect(ouvinte).toHaveBeenCalledTimes(1)
+    expect(spy.onFailure.mock.calls[0]?.[0]).toBeInstanceOf(WebSocketError)
+    expect(spy.onFailure.mock.calls[0]?.[0].userMessage).toMatch(/login/i)
+    cancelar()
+  })
+})

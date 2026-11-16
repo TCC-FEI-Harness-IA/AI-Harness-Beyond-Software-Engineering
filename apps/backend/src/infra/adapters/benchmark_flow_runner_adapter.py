@@ -13,6 +13,7 @@ from src.domain.enums.session_status_enum import SessionStatusEnum
 from src.domain.interfaces.benchmark_flow_runner_interface import IBenchmarkFlowRunner
 from src.domain.interfaces.clock_interface import IClock
 from src.domain.services.benchmark_answer_evaluator import BenchmarkAnswerEvaluator
+from src.domain.services.execution_authorization import ExecutionAuthorization
 from src.infra.adapters.session_recorder_adapter import SessionRecorderAdapter
 from src.infra.routes.v1.message.dtos.default_input_dto import DefaultInputDTO
 from src.infra.routes.v1.message.dtos.reasoning_input_dto import ReasoningInputDTO
@@ -41,6 +42,8 @@ class BenchmarkFlowRunnerAdapter(IBenchmarkFlowRunner):
         evaluator: BenchmarkAnswerEvaluator,
         clock: IClock,
         logger: logging.Logger,
+        owner_id: str,
+        authorization: ExecutionAuthorization,
         simple_startup_factory: Callable[..., Any] = DefaultMessageStartup,
         ralph_startup_factory: Callable[..., Any] = RalphThinkingStartup,
     ) -> None:
@@ -50,12 +53,16 @@ class BenchmarkFlowRunnerAdapter(IBenchmarkFlowRunner):
             evaluator: Avaliação determinística das respostas.
             clock: Fonte de tempo, usada para medir a duração dos fluxos.
             logger: Logger do módulo.
+            owner_id: Conta dona das sessões criadas pelos fluxos.
+            authorization: Autorização da bateria, repassada a cada fluxo (uma única credencial em memória).
             simple_startup_factory: Fábrica do composition root da inferência simples.
             ralph_startup_factory: Fábrica do composition root do Ralph Loop.
         """
         self.evaluator = evaluator
         self.clock: IClock = clock
         self.logger = logger
+        self.owner_id = owner_id
+        self.authorization = authorization
         self.simple_startup_factory = simple_startup_factory
         self.ralph_startup_factory = ralph_startup_factory
 
@@ -72,11 +79,15 @@ class BenchmarkFlowRunnerAdapter(IBenchmarkFlowRunner):
         details = self.__initial_details(request=request)
         started_at_ms = self.clock.monotonic_ms()
         if request.mode is BenchmarkInferenceModeEnum.SIMPLE:
-            startup = self.simple_startup_factory(benchmark_details=details)
+            startup = self.simple_startup_factory(
+                owner_id=self.owner_id, authorization=self.authorization, benchmark_details=details
+            )
             recorder: SessionRecorderAdapter = startup.default_message_use_case.session_recorder
             response, error = await self.__guard(recorder, self.__run_simple(startup=startup, request=request))
         else:
-            startup = self.ralph_startup_factory(benchmark_details=details)
+            startup = self.ralph_startup_factory(
+                owner_id=self.owner_id, authorization=self.authorization, benchmark_details=details
+            )
             recorder = startup.session_recorder
             response, error = await self.__guard(
                 recorder, self.__run_ralph(startup=startup, request=request, on_tokens=on_tokens)

@@ -17,6 +17,7 @@ from src.infra.services.base_chat_completions_service import BaseChatCompletions
 from src.infra.services.openai_service import OpenAIService
 from src.infra.services.openrouter_service import OpenRouterService
 from tests.doubles.fake_settings import FakeSettings
+from tests.doubles.security_doubles import authorization_for
 
 RESPOSTA_COMPLETA: dict[str, Any] = {
     "choices": [{"message": {"content": "resposta do modelo"}, "finish_reason": "stop"}],
@@ -50,7 +51,7 @@ PROVIDER_SPECS = (
         service_class=OpenRouterService,
         provider=ModelProviderEnum.OPEN_ROUTER,
         api_key_setting="openrouter_api_key",
-        api_key_variable="OPENROUTER_API_KEY",
+        api_key_variable="user OpenRouter API key",
     ),
     ProviderSpec(
         service_class=OpenAIService,
@@ -96,8 +97,14 @@ def build_service(
             raise erro
         return httpx.Response(status_code=status_code, json=body if body is not None else RESPOSTA_COMPLETA)
 
+    extras: dict[str, Any] = {}
+    if service_class is OpenRouterService:
+        # A chave da OpenRouter não vem mais da configuração do servidor: chega na autorização da execução.
+        api_key = settings_overrides.pop("openrouter_api_key", "chave-de-teste")
+        extras["authorization"] = authorization_for(api_key=api_key) if api_key else None
     return service_class(
         logger=logging.getLogger("teste"),
         settings=FakeSettings(**settings_overrides),
         transport=httpx.MockTransport(handler),
+        **extras,
     )

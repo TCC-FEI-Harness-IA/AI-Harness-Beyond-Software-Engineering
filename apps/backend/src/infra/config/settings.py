@@ -6,6 +6,7 @@ from pathlib import Path
 from src.domain.enums.model_provider_enum import ModelProviderEnum
 from src.domain.enums.session_storage_backend_enum import SessionStorageBackendEnum
 from src.domain.interfaces.settings_interface import ISettings
+from src.infra.config.redacting_filter import RedactingFilter
 
 _TRUTHY_VALUES = frozenset({"true", "1", "yes", "y", "on"})
 _FALSY_VALUES = frozenset({"false", "0", "no", "n", "off"})
@@ -52,7 +53,6 @@ class Settings(ISettings):
                 "OPENROUTER_API_URL",
                 "https://openrouter.ai/api/v1/chat/completions",
             ),
-            "OPENROUTER_API_KEY": os.getenv("OPENROUTER_API_KEY", ""),
             "OPENROUTER_HTTP_REFERER": os.getenv("OPENROUTER_HTTP_REFERER", ""),
             "OPENROUTER_X_TITLE": os.getenv("OPENROUTER_X_TITLE", ""),
             "OPENAI_API_URL": os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions"),
@@ -72,6 +72,15 @@ class Settings(ISettings):
             "MONGODB_DATABASE": os.getenv("MONGODB_DATABASE", "tcc"),
             "MONGODB_SESSIONS_COLLECTION": os.getenv("MONGODB_SESSIONS_COLLECTION", "sessions"),
             "MONGODB_MODELS_COLLECTION": os.getenv("MONGODB_MODELS_COLLECTION", "models"),
+            "MONGODB_USER_MODELS_COLLECTION": os.getenv("MONGODB_USER_MODELS_COLLECTION", "user_models"),
+            "RALPH_OFFICIAL_STORAGE_PATH": os.getenv("RALPH_OFFICIAL_STORAGE_PATH", "./data/official"),
+            "MONGODB_OFFICIAL_PUBLICATIONS_COLLECTION": os.getenv(
+                "MONGODB_OFFICIAL_PUBLICATIONS_COLLECTION", "official_publications"
+            ),
+            "MONGODB_OFFICIAL_SESSIONS_COLLECTION": os.getenv(
+                "MONGODB_OFFICIAL_SESSIONS_COLLECTION", "official_sessions"
+            ),
+            "RALPH_PUBLIC_REDACTED_DATASETS": os.getenv("RALPH_PUBLIC_REDACTED_DATASETS", "gpqa"),
             "RALPH_SESSION_FLUSH_EVERY_MESSAGE": os.getenv("RALPH_SESSION_FLUSH_EVERY_MESSAGE", "true"),
             "RALPH_SESSION_ID_PREFIX": os.getenv("RALPH_SESSION_ID_PREFIX", "sess"),
             "RALPH_MAX_TASK_ATTEMPTS": os.getenv("RALPH_MAX_TASK_ATTEMPTS", "5"),
@@ -263,11 +272,6 @@ class Settings(ISettings):
         return self.__get_str("OPENROUTER_API_URL")
 
     @property
-    def openrouter_api_key(self) -> str:
-        """Chave de API da OpenRouter."""
-        return self.__get_str("OPENROUTER_API_KEY").strip()
-
-    @property
     def openrouter_http_referer(self) -> str:
         """Valor do header `HTTP-Referer`. Vazio quando não configurado."""
         return self.__get_str("OPENROUTER_HTTP_REFERER").strip()
@@ -375,6 +379,32 @@ class Settings(ISettings):
     def mongodb_models_collection(self) -> str:
         """Nome da coleção que guarda o catálogo de modelos no MongoDB."""
         return self.__get_str("MONGODB_MODELS_COLLECTION").strip()
+
+    @property
+    def mongodb_user_models_collection(self) -> str:
+        """Nome da coleção dos catálogos pessoais de modelos."""
+        return self.__get_str("MONGODB_USER_MODELS_COLLECTION").strip()
+
+    @property
+    def ralph_official_storage_path(self) -> str:
+        """Diretório das publicações oficiais no armazenamento `json_file`."""
+        return self.__get_str("RALPH_OFFICIAL_STORAGE_PATH")
+
+    @property
+    def mongodb_official_publications_collection(self) -> str:
+        """Coleção das publicações oficiais no MongoDB."""
+        return self.__get_str("MONGODB_OFFICIAL_PUBLICATIONS_COLLECTION").strip()
+
+    @property
+    def mongodb_official_sessions_collection(self) -> str:
+        """Coleção das cópias das sessões filhas das publicações oficiais."""
+        return self.__get_str("MONGODB_OFFICIAL_SESSIONS_COLLECTION").strip()
+
+    @property
+    def ralph_public_redacted_datasets(self) -> list[str]:
+        """Datasets cujas sessões públicas omitem enunciados, prompts e respostas (padrão: `gpqa`)."""
+        raw = self.__get_str("RALPH_PUBLIC_REDACTED_DATASETS")
+        return [item.strip().lower() for item in raw.split(",") if item.strip()]
 
     @property
     def ralph_session_flush_every_message(self) -> bool:
@@ -492,7 +522,11 @@ class Settings(ISettings):
             )
             self.__logs_configured = True
 
-        return logging.getLogger(self.__get_relative_module_path(module_file=module_file))
+        logger = logging.getLogger(self.__get_relative_module_path(module_file=module_file))
+        if not any(isinstance(item, RedactingFilter) for item in logger.filters):
+            # Chaves de API, cookies e tokens nunca chegam aos logs, mesmo dentro de mensagens de erro.
+            logger.addFilter(RedactingFilter())
+        return logger
 
     def __get_relative_module_path(self, module_file: str) -> str:
         """Converte o caminho de um módulo no seu caminho relativo a partir de `src/`."""

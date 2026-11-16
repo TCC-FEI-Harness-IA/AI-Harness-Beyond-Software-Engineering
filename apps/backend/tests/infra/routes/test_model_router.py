@@ -8,12 +8,17 @@ from src.domain.errors.model_not_found_error import ModelNotFoundError
 from src.infra.routes.v1.model import router as model_router_module
 from src.infra.routes.v1.model.dtos.model_info_dto import ModelInfoFieldsDTO, ModelInfoInputDTO
 from src.main import create_app
+from tests.doubles.security_doubles import ORIGEM, authenticated_client, build_security
 
 
 class _StartupFalso:
     """Catálogo em memória no lugar do `ModelCatalogStartup`, compartilhado entre requisições."""
 
     modelos: dict[str, dict[str, Any]] = {}
+    donos: list[str] = []
+
+    def __init__(self, owner_id: str) -> None:
+        _StartupFalso.donos.append(owner_id)
 
     async def list_models(self) -> list[dict[str, Any]]:
         return [self.modelos[nome] for nome in sorted(self.modelos)]
@@ -38,8 +43,9 @@ class _StartupFalso:
 @pytest.fixture
 def cliente(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     _StartupFalso.modelos = {}
+    _StartupFalso.donos = []
     monkeypatch.setattr(model_router_module, "ModelCatalogStartup", _StartupFalso)
-    return TestClient(create_app())
+    return authenticated_client(user_id="usr_ana", with_credential=False)
 
 
 def test_lista_os_modelos_do_startup(cliente: TestClient) -> None:
@@ -104,12 +110,12 @@ def test_remocao_devolve_204_e_depois_404(cliente: TestClient) -> None:
 
 def test_falha_inesperada_vira_500(monkeypatch: pytest.MonkeyPatch) -> None:
     class _StartupQuebrado:
-        def __init__(self) -> None:
+        def __init__(self, owner_id: str) -> None:
             raise RuntimeError("mongo fora do ar")
 
     monkeypatch.setattr(model_router_module, "ModelCatalogStartup", _StartupQuebrado)
 
-    resposta = TestClient(create_app()).get("/v1/models")
+    resposta = authenticated_client(user_id="usr_ana", with_credential=False).get("/v1/models")
 
     assert resposta.status_code == 500
     assert resposta.json()["detail"] == "mongo fora do ar"
@@ -117,6 +123,9 @@ def test_falha_inesperada_vira_500(monkeypatch: pytest.MonkeyPatch) -> None:
 
 class _StartupComErro:
     erro: Exception = RuntimeError("falha")
+
+    def __init__(self, owner_id: str) -> None:
+        self.owner_id = owner_id
 
     async def register_model(self, payload: ModelInfoInputDTO) -> dict[str, Any]:
         raise self.erro
@@ -134,7 +143,7 @@ def test_erros_do_cadastro_e_da_edicao_viram_status_http(
 ) -> None:
     _StartupComErro.erro = erro
     monkeypatch.setattr(model_router_module, "ModelCatalogStartup", _StartupComErro)
-    cliente = TestClient(create_app())
+    cliente = authenticated_client(user_id="usr_ana", with_credential=False)
 
     assert cliente.post("/v1/models", json={"model_name": "vendor/x"}).status_code == status
     assert cliente.put("/v1/models/vendor/x", json={}).status_code == status
@@ -144,4 +153,30 @@ def test_falha_inesperada_na_remocao_vira_500(monkeypatch: pytest.MonkeyPatch) -
     _StartupComErro.erro = RuntimeError("falha")
     monkeypatch.setattr(model_router_module, "ModelCatalogStartup", _StartupComErro)
 
-    assert TestClient(create_app()).delete("/v1/models/vendor/x").status_code == 500
+    cliente = authenticated_client(user_id="usr_ana", with_credential=False)
+    assert cliente.delete("/v1/models/vendor/x").status_code == 500
+
+
+def test_catalogo_e_sempre_o_da_conta_autenticada(cliente: TestClient) -> None:
+    cliente.get("/v1/models")
+    cliente.post("/v1/models", json={"model_name": "vendor/novo"})
+
+    assert _StartupFalso.donos == ["usr_ana", "usr_ana"]
+
+
+def test_visitante_nao_le_nem_altera_o_catalogo(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(model_router_module, "ModelCatalogStartup", _StartupFalso)
+    _StartupFalso.donos = []
+    visitante = TestClient(create_app(security=build_security()))
+
+    assert visitante.get("/v1/models").status_code == 401
+    assert visitante.post("/v1/models", json={"model_name": "x/y"}, headers={"Origin": ORIGEM}).status_code == 401
+    assert _StartupFalso.donos == []
+
+
+def test_escrita_no_catalogo_exige_csrf(cliente: TestClient) -> None:
+    del cliente.headers["X-CSRF-Token"]
+
+    assert cliente.post("/v1/models", json={"model_name": "vendor/novo"}).status_code == 403
+    assert cliente.put("/v1/models/vendor/novo", json={}).status_code == 403
+    assert cliente.delete("/v1/models/vendor/novo").status_code == 403

@@ -11,6 +11,12 @@ import { BenchmarkAnalysisPage } from '@/features/benchmark-analysis/BenchmarkAn
 import { ModelsPage } from '@/features/models/ModelsPage'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
 import { ComponentsGalleryPage } from '@/features/dev/ComponentsGalleryPage'
+import { CredentialPage } from '@/features/auth/CredentialPage'
+import { LoginPage } from '@/features/auth/LoginPage'
+import { RegisterPage } from '@/features/auth/RegisterPage'
+import { RequireAuth } from '@/features/auth/RequireAuth'
+import { SessionExpiredBanner } from '@/features/auth/SessionExpiredBanner'
+import { OfficialBenchmarkPage } from '@/features/benchmark/OfficialBenchmarkPage'
 import { BenchmarkRunProvider } from '@/state/BenchmarkRunContext'
 import { SidebarSlotProvider, useSidebarSlotValue } from '@/state/SidebarSlotContext'
 import { ROUTES } from './routes'
@@ -33,18 +39,27 @@ function AppShellWithRoutes({ enableDevRoute }: Required<AppRouterProps>): JSX.E
 
   return (
     <AppShell sidebar={sidebar ?? undefined}>
+      <SessionExpiredBanner />
       <div key={location.pathname} className={styles.transition}>
         <Routes location={location}>
-          <Route path={ROUTES.home} element={<HomePage />} />
-          <Route path={ROUTES.simpleChat} element={<SimpleChatPage />} />
-          <Route path={ROUTES.ralphChat} element={<RalphPage />} />
-          <Route path={ROUTES.history} element={<HistoryListPage />} />
-          <Route path={ROUTES.historyDetail} element={<HistoryDetailPage />} />
+          <Route path={ROUTES.home} element={<RequireAuth requireCredential><HomePage /></RequireAuth>} />
+          <Route path={ROUTES.simpleChat} element={<RequireAuth requireCredential><SimpleChatPage /></RequireAuth>} />
+          <Route path={ROUTES.ralphChat} element={<RequireAuth requireCredential><RalphPage /></RequireAuth>} />
+          <Route path={ROUTES.history} element={<RequireAuth><HistoryListPage /></RequireAuth>} />
+          <Route path={ROUTES.historyDetail} element={<RequireAuth><HistoryDetailPage /></RequireAuth>} />
           <Route path={ROUTES.benchmark} element={<BenchmarkPage />} />
-          <Route path={ROUTES.benchmarkSession} element={<BenchmarkSessionPage />} />
-          <Route path={ROUTES.benchmarkChildSession} element={<HistoryDetailPage source="benchmark" />} />
+          <Route path={ROUTES.officialBenchmark} element={<OfficialBenchmarkPage />} />
+          <Route path={ROUTES.officialChildSession} element={<HistoryDetailPage source="official" />} />
+          <Route path={ROUTES.benchmarkSession} element={<RequireAuth><BenchmarkSessionPage /></RequireAuth>} />
+          <Route
+            path={ROUTES.benchmarkChildSession}
+            element={<RequireAuth><HistoryDetailPage source="benchmark" /></RequireAuth>}
+          />
           <Route path={ROUTES.benchmarkAnalysis} element={<BenchmarkAnalysisPage />} />
-          <Route path={ROUTES.models} element={<ModelsPage />} />
+          <Route path={ROUTES.models} element={<RequireAuth><ModelsPage /></RequireAuth>} />
+          <Route path={ROUTES.login} element={<LoginPage />} />
+          <Route path={ROUTES.register} element={<RegisterPage />} />
+          <Route path={ROUTES.credential} element={<CredentialPage />} />
           {enableDevRoute ? (
             <Route path={ROUTES.devComponents} element={<ComponentsGalleryPage />} />
           ) : null}

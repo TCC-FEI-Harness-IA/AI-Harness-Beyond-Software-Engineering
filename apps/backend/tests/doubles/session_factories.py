@@ -78,3 +78,18 @@ def sessao_ralph(identificador: str = "sess_1", questao: str = "Q1") -> Session:
     )
     sessao.finish(status=SessionStatusEnum.COMPLETED, final_answer="RESPOSTA_FINAL: B")
     return sessao
+
+
+def nova_sessao(session_id: str = "sess_1", user_question: str = "pergunta do usuario") -> Session:
+    """Sessão direta concluída mínima, para testes de armazenamento e isolamento."""
+    return Session(
+        id=session_id,
+        user_question=user_question,
+        flow=ThinkingPhaseEnum.DIRECT_INFERENCE,
+        model_name="vendor/modelo",
+        max_tokens=1200,
+        temperature=0.3,
+        status=SessionStatusEnum.COMPLETED,
+        created_at=_INSTANTE,
+        updated_at=_INSTANTE,
+    )

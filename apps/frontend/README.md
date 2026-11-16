@@ -104,6 +104,27 @@ parser de fronteira em `src/api/parsers/`, que devolve o tipo do domínio ou lan
 
 ---
 
+## Contas, sessão e chave OpenRouter
+
+- **Mesma origem:** sem `VITE_API_BASE_URL`/`VITE_WS_BASE_URL`, o app chama `/v1` e `/auth` na própria
+  origem (proxy do Vite com `DEV_PROXY_API_TARGET`/`DEV_PROXY_AUTH_TARGET`, Nginx em produção).
+  `httpClient` envia cookies (`credentials: 'same-origin'`) e `X-CSRF-Token` nas escritas; o token
+  anti-CSRF vem de `/auth/login` e `/auth/me` e fica só em memória (`api/csrfToken.ts`).
+- **`AuthContext`** separa "autenticado" de "credencial disponível" (`canRunLlm`). Telas: `/entrar`
+  (e-mail, senha e chave opcional), `/cadastro`, `/conta/chave` (trocar/remover a chave).
+  A chave vai uma vez ao backend e o campo é limpo; nada vai para localStorage, sessionStorage ou
+  IndexedDB, e o front nunca lê o cookie.
+- **Expiração/revogação:** HTTP 401 ou WebSocket 4401 avisam o `AuthContext`, que volta a visitante,
+  limpa caches (sessões, métricas do Ralph, CSRF) e mostra "Sua sessão terminou" com o atalho para
+  entrar. `UserScope` remonta toda a árvore quando a conta muda, fechando conexões antigas.
+- **Falha no logout:** a conta e seus estados só são descartados após confirmação do servidor.
+  Uma falha de rede ou recusa mostra um aviso com a opção de tentar sair novamente, sem simular
+  que os cookies HttpOnly foram removidos ou que a sessão foi revogada.
+- **Visitante:** `BenchMark` mostra o resultado oficial de cada dataset e um convite para entrar no
+  lugar do formulário de execução; `Análise` abre com os resultados oficiais já selecionados e lê as
+  sessões Ralph pela API pública. Páginas privadas (`RequireAuth`) mostram o convite para entrar.
+- **Resultados oficiais** têm ids `pub_...` e rotas próprias (`/benchmark/oficial/:id`), somente leitura.
+
 ## Como rodar
 
 ```bash
@@ -154,8 +175,8 @@ mensagem que nomeia a variável.
 
 | Variável | Default | Descrição |
 |---|---|---|
-| `VITE_API_BASE_URL` | `http://localhost:8000` | Origem HTTP do backend. |
-| `VITE_WS_BASE_URL` | `ws://localhost:8000` | Origem WebSocket do backend. |
+| `VITE_API_BASE_URL` | *(mesma origem)* | Origem HTTP do backend; vazio = a origem da página. |
+| `VITE_WS_BASE_URL` | *(mesma origem)* | Origem WebSocket; vazio = `ws(s)://` da página. |
 | `VITE_API_PREFIX` | `/v1` | Prefixo comum de todas as rotas. |
 | `VITE_REQUEST_TIMEOUT_MS` | `60000` | Timeout das chamadas HTTP. |
 | `VITE_AVAILABLE_PROVIDERS` | *(o provedor padrão)* | Provedores oferecidos no seletor (CSV): `open_router`, `azure_ai_foundry`, `openai`. Precisa ser subconjunto de `GENAI_AVAILABLE_PROVIDERS` no backend. |

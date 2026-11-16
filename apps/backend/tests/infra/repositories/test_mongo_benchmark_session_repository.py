@@ -15,6 +15,7 @@ def _repositorio() -> MongoBenchmarkSessionRepository:
         collection=AsyncMongoMockClient()["banco_de_teste"]["baterias"],
         mapper=BenchmarkSessionDocumentMapper(),
         logger=logging.getLogger("teste"),
+        owner_id="usr_teste",
     )
 
 
@@ -47,7 +48,7 @@ async def test_alias_persistido_nao_sobrescreve_resultados_e_sobrevive_a_reexecu
     edit.alias = "Rodada de comparação"
     edit.updated_at += timedelta(minutes=1)
     await repository.update_alias(edit)
-    document = await repository.collection.find_one({"_id": session.id})
+    document = await repository.collection.find_one({"_id": f"usr_teste/{session.id}"})
     assert document is not None
     assert document["alias"] == edit.alias
     assert document["updated_at"] == edit.updated_at.isoformat()

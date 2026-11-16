@@ -27,8 +27,11 @@ class SessionRepositoryFactory:
         self.settings: ISettings = settings
         self.mapper: ISessionDocumentMapper = mapper
 
-    def create(self) -> ISessionRepository:
+    def create(self, owner_id: str) -> ISessionRepository:
         """Cria o repositório de sessões do backend configurado.
+
+        Args:
+            owner_id: Conta dona dos dados; o repositório só lê e grava os desta conta.
 
         Returns:
             ISessionRepository: `JsonFileSessionRepository` ou `MongoSessionRepository`,
@@ -40,10 +43,12 @@ class SessionRepositoryFactory:
                 collection=mongo_client.sessions_collection,
                 mapper=self.mapper,
                 logger=self.settings.logger(module_file=getfile(MongoSessionRepository)),
+                owner_id=owner_id,
             )
 
         return JsonFileSessionRepository(
             mapper=self.mapper,
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(JsonFileSessionRepository)),
+            owner_id=owner_id,
         )

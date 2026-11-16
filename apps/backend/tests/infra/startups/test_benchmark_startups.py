@@ -26,6 +26,11 @@ from src.infra.startups.benchmark_export_startup import BenchmarkExportStartup
 from src.infra.startups.benchmark_query_startup import BenchmarkQueryStartup
 from src.infra.startups.benchmark_rerun_startup import BenchmarkRerunStartup
 from src.infra.startups.benchmark_run_startup import BenchmarkRunStartup
+from tests.doubles.security_doubles import authorization_for
+
+
+def _DONO(armazenamento: Path) -> Path:
+    return armazenamento / "benchmark-sessions" / "owners" / "usr_teste"
 
 
 @pytest.fixture
@@ -65,7 +70,7 @@ def _abertura(**sobrescritas: Any) -> BenchmarkRunInputDTO:
 
 
 def test_startup_de_execucao_monta_todo_o_grafo(armazenamento: Path) -> None:
-    startup = BenchmarkRunStartup()
+    startup = BenchmarkRunStartup(owner_id="usr_teste", authorization=authorization_for())
 
     assert all(valor is not None for valor in vars(startup).values())
     assert isinstance(startup.run_benchmark_use_case, RunBenchmarkUseCase)
@@ -74,7 +79,7 @@ def test_startup_de_execucao_monta_todo_o_grafo(armazenamento: Path) -> None:
 
 
 async def test_startup_de_execucao_traduz_a_abertura_e_emite_progress_ate_o_result(armazenamento: Path) -> None:
-    startup = BenchmarkRunStartup()
+    startup = BenchmarkRunStartup(owner_id="usr_teste", authorization=authorization_for())
     startup.run_benchmark_use_case.flow_runner = _RunnerImediato()
 
     frames = [frame async for frame in startup.run(payload=_abertura())]
@@ -86,17 +91,18 @@ async def test_startup_de_execucao_traduz_a_abertura_e_emite_progress_ate_o_resu
     assert bateria["model_name"] == "vendor/modelo"
     assert bateria["temperature"] == 0.2
     assert bateria["question_count"] == 2
-    gravada = json.loads((armazenamento / "benchmark-sessions" / f"{bateria['id']}.json").read_text("utf-8"))
+    gravada = json.loads((_DONO(armazenamento) / f"{bateria['id']}.json").read_text("utf-8"))
+    assert gravada.pop("owner_id") == "usr_teste"
     assert gravada == bateria
 
 
 async def test_startup_de_consulta_lista_detalha_e_descreve(armazenamento: Path) -> None:
-    execucao = BenchmarkRunStartup()
+    execucao = BenchmarkRunStartup(owner_id="usr_teste", authorization=authorization_for())
     execucao.run_benchmark_use_case.flow_runner = _RunnerImediato()
     frames = [frame async for frame in execucao.run(payload=_abertura(question_count=1))]
     bateria = frames[-1].benchmark_session
 
-    consulta = BenchmarkQueryStartup()
+    consulta = BenchmarkQueryStartup(owner_id="usr_teste")
 
     assert isinstance(consulta.get_benchmark_session_use_case, GetBenchmarkSessionUseCase)
     assert isinstance(consulta.list_benchmark_sessions_use_case, ListBenchmarkSessionsUseCase)
@@ -109,7 +115,7 @@ async def test_startup_de_consulta_lista_detalha_e_descreve(armazenamento: Path)
 
 async def test_startup_de_consulta_recusa_bateria_inexistente(armazenamento: Path) -> None:
     with pytest.raises(BenchmarkSessionNotFoundError):
-        await BenchmarkQueryStartup().get_benchmark_session_document(benchmark_session_id="bench_9")
+        await BenchmarkQueryStartup(owner_id="usr_teste").get_benchmark_session_document(benchmark_session_id="bench_9")
 
 
 class _RunnerQueErraNoRalph:
@@ -124,7 +130,7 @@ class _RunnerQueErraNoRalph:
 
 
 def test_startup_de_exportacao_monta_todo_o_grafo(armazenamento: Path) -> None:
-    startup = BenchmarkExportStartup()
+    startup = BenchmarkExportStartup(owner_id="usr_teste")
 
     assert all(valor is not None for valor in vars(startup).values())
     assert isinstance(startup.export_use_case, ExportBenchmarkRalphErrorsUseCase)
@@ -136,12 +142,12 @@ def test_startup_de_exportacao_monta_todo_o_grafo(armazenamento: Path) -> None:
 
 
 async def test_startup_exporta_a_bateria_completa_e_a_importa_de_volta(armazenamento: Path) -> None:
-    execucao = BenchmarkRunStartup()
+    execucao = BenchmarkRunStartup(owner_id="usr_teste", authorization=authorization_for())
     execucao.run_benchmark_use_case.flow_runner = _RunnerQueErraNoRalph()
     frames = [frame async for frame in execucao.run(payload=_abertura(question_count=2))]
     bateria = frames[-1].benchmark_session
 
-    arquivo = await BenchmarkExportStartup().export_session(benchmark_session_id=bateria["id"])
+    arquivo = await BenchmarkExportStartup(owner_id="usr_teste").export_session(benchmark_session_id=bateria["id"])
 
     assert arquivo.filename == f"benchmark-session-{bateria['id']}.zip"
     with zipfile.ZipFile(io.BytesIO(arquivo.content)) as zip_:
@@ -155,22 +161,23 @@ async def test_startup_exporta_a_bateria_completa_e_a_importa_de_volta(armazenam
     assert enunciado["statement"]  # enunciado original do dataset de vestibulares
 
     with pytest.raises(BenchmarkSessionImportConflictError):
-        await BenchmarkExportStartup().import_session(content=arquivo.content)
+        await BenchmarkExportStartup(owner_id="usr_teste").import_session(content=arquivo.content)
 
-    (armazenamento / "benchmark-sessions" / f"{bateria['id']}.json").unlink()
-    importada = await BenchmarkExportStartup().import_session(content=arquivo.content)
+    (_DONO(armazenamento) / f"{bateria['id']}.json").unlink()
+    importada = await BenchmarkExportStartup(owner_id="usr_teste").import_session(content=arquivo.content)
 
     assert importada == bateria
-    assert await BenchmarkQueryStartup().get_benchmark_session_document(benchmark_session_id=bateria["id"]) == bateria
+    consulta = BenchmarkQueryStartup(owner_id="usr_teste")
+    assert await consulta.get_benchmark_session_document(benchmark_session_id=bateria["id"]) == bateria
 
 
 async def test_startup_de_exportacao_gera_o_zip_com_os_erros_do_ralph(armazenamento: Path) -> None:
-    execucao = BenchmarkRunStartup()
+    execucao = BenchmarkRunStartup(owner_id="usr_teste", authorization=authorization_for())
     execucao.run_benchmark_use_case.flow_runner = _RunnerQueErraNoRalph()
     frames = [frame async for frame in execucao.run(payload=_abertura(question_count=2))]
     bateria = frames[-1].benchmark_session
 
-    arquivo = await BenchmarkExportStartup().export_ralph_errors(benchmark_session_id=bateria["id"])
+    arquivo = await BenchmarkExportStartup(owner_id="usr_teste").export_ralph_errors(benchmark_session_id=bateria["id"])
 
     assert arquivo.filename == f"benchmark-session-{bateria['id']}-ralph-loop-errors.zip"
     with zipfile.ZipFile(io.BytesIO(arquivo.content)) as zip_:
@@ -183,18 +190,20 @@ async def test_startup_de_exportacao_gera_o_zip_com_os_erros_do_ralph(armazename
 
 async def test_startup_de_exportacao_recusa_bateria_inexistente_e_sem_erros(armazenamento: Path) -> None:
     with pytest.raises(BenchmarkSessionNotFoundError):
-        await BenchmarkExportStartup().export_ralph_errors(benchmark_session_id="bench_9")
+        await BenchmarkExportStartup(owner_id="usr_teste").export_ralph_errors(benchmark_session_id="bench_9")
 
-    execucao = BenchmarkRunStartup()
+    execucao = BenchmarkRunStartup(owner_id="usr_teste", authorization=authorization_for())
     execucao.run_benchmark_use_case.flow_runner = _RunnerImediato()
     frames = [frame async for frame in execucao.run(payload=_abertura(question_count=1))]
 
     with pytest.raises(NoBenchmarkErrorsToExportError):
-        await BenchmarkExportStartup().export_ralph_errors(benchmark_session_id=frames[-1].benchmark_session["id"])
+        await BenchmarkExportStartup(owner_id="usr_teste").export_ralph_errors(
+            benchmark_session_id=frames[-1].benchmark_session["id"]
+        )
 
 
 async def test_startup_de_reexecucao_monta_o_grafo_e_emite_progress_ate_o_result(armazenamento: Path) -> None:
-    startup = BenchmarkRerunStartup()
+    startup = BenchmarkRerunStartup(owner_id="usr_teste", authorization=authorization_for())
     assert all(valor is not None for valor in vars(startup).values())
     assert isinstance(startup.rerun_use_case, RerunBenchmarkQuestionUseCase)
     assert startup.rerun_use_case.repository is startup.repository
@@ -223,17 +232,18 @@ async def test_startup_de_reexecucao_monta_o_grafo_e_emite_progress_ate_o_result
     assert documento["status"] == "completed"
     assert documento["questions"][0]["ralph"]["is_correct"] is True
     assert documento["questions"][0]["ralph"]["session_id"] == f"{questao}_ralph"
-    gravada = json.loads((armazenamento / "benchmark-sessions" / "bench_1.json").read_text("utf-8"))
+    gravada = json.loads((_DONO(armazenamento) / "bench_1.json").read_text("utf-8"))
+    assert gravada.pop("owner_id") == "usr_teste"
     assert gravada == documento
 
 
 async def test_startup_reexecuta_lote_e_persiste_resultados_no_mesmo_json(armazenamento: Path) -> None:
-    execucao = BenchmarkRunStartup()
+    execucao = BenchmarkRunStartup(owner_id="usr_teste", authorization=authorization_for())
     execucao.run_benchmark_use_case.flow_runner = _RunnerQueErraNoRalph()
     originais = [frame async for frame in execucao.run(payload=_abertura(question_count=2))]
     original = originais[-1].benchmark_session
     ids = [question["question_id"] for question in original["questions"]]
-    startup = BenchmarkRerunStartup()
+    startup = BenchmarkRerunStartup(owner_id="usr_teste", authorization=authorization_for())
     startup.rerun_use_case.flow_runner = _RunnerImediato()
 
     frames = [frame async for frame in startup.run_many(original["id"], ids)]
@@ -243,12 +253,13 @@ async def test_startup_reexecuta_lote_e_persiste_resultados_no_mesmo_json(armaze
     assert documento["id"] == original["id"]
     assert documento["summary"]["ralph"]["correct"] == 2
     assert all(question["current_mode"] is None for question in documento["questions"])
-    gravada = json.loads((armazenamento / "benchmark-sessions" / f"{original['id']}.json").read_text("utf-8"))
+    gravada = json.loads((_DONO(armazenamento) / f"{original['id']}.json").read_text("utf-8"))
+    assert gravada.pop("owner_id") == "usr_teste"
     assert gravada == documento
 
 
 async def test_cotas_da_abertura_chegam_a_selecao_e_sao_persistidas(armazenamento: Path) -> None:
-    startup = BenchmarkRunStartup()
+    startup = BenchmarkRunStartup(owner_id="usr_teste", authorization=authorization_for())
     startup.run_benchmark_use_case.flow_runner = _RunnerImediato()
     frames = [frame async for frame in startup.run(payload=_abertura(
         question_count=3, subject_counts={"FISICA": 1, "FILOSOFIA_SOCIOLOGIA": 2, "BIOLOGIA": 0},
@@ -257,11 +268,11 @@ async def test_cotas_da_abertura_chegam_a_selecao_e_sao_persistidas(armazenament
     assert final["question_count"] == 3
     assert [q["subject"] for q in final["questions"]] == ["FILOSOFIA_SOCIOLOGIA"] * 2 + ["FISICA"]
     assert final["benchmark"]["subjects"] == ["FILOSOFIA_SOCIOLOGIA", "FISICA"]
-    assert (await BenchmarkQueryStartup().get_benchmark_session_document(final["id"])) == final
+    assert (await BenchmarkQueryStartup(owner_id="usr_teste").get_benchmark_session_document(final["id"])) == final
 
 
 def test_descricao_expoe_os_limites_por_materia(armazenamento: Path) -> None:
-    descriptor = BenchmarkQueryStartup().describe_dataset()
+    descriptor = BenchmarkQueryStartup(owner_id="usr_teste").describe_dataset()
     assert {item["id"]: item["question_count"] for item in descriptor["subjects"]} == {
         "HISTORIA": 30, "GEOGRAFIA": 30, "FILOSOFIA_SOCIOLOGIA": 30, "BIOLOGIA": 30,
         "MATEMATICA": 50, "QUIMICA": 50, "FISICA": 50,

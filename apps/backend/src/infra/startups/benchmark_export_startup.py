@@ -24,8 +24,12 @@ from src.infra.services.benchmark_session_archive_codec import BenchmarkSessionA
 class BenchmarkExportStartup:
     """Composition root da exportação e importação de baterias de benchmark."""
 
-    def __init__(self) -> None:
-        """Instancia e injeta todas as dependências da exportação e da importação."""
+    def __init__(self, owner_id: str) -> None:
+        """Instancia e injeta todas as dependências da exportação e da importação.
+
+        Args:
+            owner_id: Conta autenticada; exporta só as baterias dela e importa sempre para ela.
+        """
         self.settings: ISettings = Settings()
         self.logger = self.settings.logger(module_file=__file__)
         self.clock: IClock = ClockAdapter()
@@ -35,8 +39,10 @@ class BenchmarkExportStartup:
         benchmark_repository = BenchmarkSessionRepositoryFactory(
             settings=self.settings,
             mapper=self.benchmark_mapper,
-        ).create()
-        session_repository = SessionRepositoryFactory(settings=self.settings, mapper=self.session_mapper).create()
+        ).create(owner_id=owner_id)
+        session_repository = SessionRepositoryFactory(settings=self.settings, mapper=self.session_mapper).create(
+            owner_id=owner_id
+        )
         question_provider_for = BenchmarkQuestionProviderFactory(self.settings, self.logger).for_definition
 
         self.export_use_case = ExportBenchmarkRalphErrorsUseCase(

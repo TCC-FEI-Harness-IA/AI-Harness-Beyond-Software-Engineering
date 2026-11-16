@@ -7,6 +7,8 @@ import { MODEL_PROVIDER, type ModelProvider, isModelProvider } from '@/domain/en
 export interface AppEnv {
   readonly apiBaseUrl: string
   readonly wsBaseUrl: string
+  /** Base do serviço de autenticação (`/auth`), na mesma origem da API. */
+  readonly authBaseUrl: string
   readonly requestTimeoutMs: number
   readonly defaultProvider: ModelProvider
   readonly availableProviders: readonly ModelProvider[]
@@ -138,9 +140,20 @@ function joinUrl(base: string, prefix: string): string {
   return `${cleanBase}${cleanPrefix}`
 }
 
+// Sem URL explícita, frontend, autenticação e API ficam na mesma origem (proxy por caminhos do Vite
+// em desenvolvimento e do Nginx em produção): os cookies de sessão e de credencial seguem sozinhos.
+function sameOriginHttp(): string {
+  return window.location.origin
+}
+
+function sameOriginWs(): string {
+  const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  return `${scheme}://${window.location.host}`
+}
+
 function loadEnv(): AppEnv {
-  const apiBaseUrlRaw = readString('VITE_API_BASE_URL', 'http://localhost:8000')
-  const wsBaseUrlRaw = readString('VITE_WS_BASE_URL', 'ws://localhost:8000')
+  const apiBaseUrlRaw = readString('VITE_API_BASE_URL', sameOriginHttp())
+  const wsBaseUrlRaw = readString('VITE_WS_BASE_URL', sameOriginWs())
   const apiPrefix = readString('VITE_API_PREFIX', '/v1')
 
   validateHttpUrl('VITE_API_BASE_URL', apiBaseUrlRaw)
@@ -180,6 +193,7 @@ function loadEnv(): AppEnv {
   return Object.freeze({
     apiBaseUrl: joinUrl(apiBaseUrlRaw, apiPrefix),
     wsBaseUrl: joinUrl(wsBaseUrlRaw, apiPrefix),
+    authBaseUrl: joinUrl(apiBaseUrlRaw, '/auth'),
     requestTimeoutMs: readNumber('VITE_REQUEST_TIMEOUT_MS', 60000),
     defaultProvider,
     availableProviders,

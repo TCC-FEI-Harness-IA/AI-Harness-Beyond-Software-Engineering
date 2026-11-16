@@ -1,10 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { AppProviders } from '@/app/AppProviders'
 import { AppRouter } from '@/router/AppRouter'
-import { RunConfigProvider } from '@/state/RunConfigContext'
-import { ThemeProvider } from '@/state/ThemeContext'
-import { ViewModeProvider } from '@/state/ViewModeContext'
 import './styles/reset.css'
 import './styles/tokens.css'
 import './styles/animations.css'
@@ -35,13 +33,9 @@ async function bootstrap(root: HTMLElement): Promise<void> {
     createRoot(root).render(
       <StrictMode>
         <BrowserRouter>
-          <ThemeProvider>
-            <RunConfigProvider>
-              <ViewModeProvider>
-                <AppRouter enableDevRoute={env.enableDebugPanel} />
-              </ViewModeProvider>
-            </RunConfigProvider>
-          </ThemeProvider>
+          <AppProviders>
+            <AppRouter enableDevRoute={env.enableDebugPanel} />
+          </AppProviders>
         </BrowserRouter>
       </StrictMode>,
     )

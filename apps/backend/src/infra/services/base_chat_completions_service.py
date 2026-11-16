@@ -95,6 +95,20 @@ class BaseChatCompletionsService(ILLMService, ABC):
             return {}
         return {"reasoning_effort": reasoning_effort}
 
+    def redact(self, text: str) -> str:
+        """Remove segredos de textos que viram mensagem de erro; por padrão, devolve o texto intacto.
+
+        Args:
+            text: Texto vindo do provedor (ex.: corpo de uma resposta de erro).
+
+        Returns:
+            str: Texto seguro para logs e mensagens.
+        """
+        return text
+
+    async def authorize_request(self) -> None:
+        """Ponto de extensão para autorizar o envio após a validação local dos parâmetros."""
+
     # ── Fluxo comum ──────────────────────────────────────────────────────────
 
     def verify_provider_settings(self) -> bool:
@@ -116,6 +130,7 @@ class BaseChatCompletionsService(ILLMService, ABC):
             EmptyCompletionError: Quando o provedor responde sem texto utilizável.
         """
         self.validate_request(request=request)
+        await self.authorize_request()
         self.logger.info("Iniciando chamada ao provedor %s", self.provider_label)
 
         response_data = await self.__post_completion(request=request)
@@ -244,7 +259,7 @@ class BaseChatCompletionsService(ILLMService, ABC):
                 response_data = response.json()
         except httpx.HTTPStatusError as exc:
             self.logger.exception("%s retornou erro HTTP", self.provider_label)
-            error_body = exc.response.text
+            error_body = self.redact(exc.response.text)
             detail = f" Details: {error_body}" if error_body else ""
             raise RuntimeError(
                 f"{self.provider_label} API returned HTTP {exc.response.status_code}.{detail}"
@@ -269,10 +284,7 @@ class BaseChatCompletionsService(ILLMService, ABC):
         """
         missing = self.missing_settings()
         if missing:
-            raise ValueError(
-                f"Missing {self.provider_label} settings. "
-                f"Set the {', '.join(missing)} environment variable(s)."
-            )
+            raise ValueError(f"Missing {self.provider_label} credentials or settings: {', '.join(missing)}.")
 
         if request.llm_model.model_provider != self.provider:
             raise ValueError(

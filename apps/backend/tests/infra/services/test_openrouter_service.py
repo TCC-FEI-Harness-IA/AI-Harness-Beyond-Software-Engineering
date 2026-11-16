@@ -115,3 +115,66 @@ async def test_erro_http_nomeia_a_openrouter() -> None:
 
     with pytest.raises(RuntimeError, match="OpenRouter API returned HTTP 429"):
         await service.generate_response(request=_build_request())
+
+
+# ── Credencial do usuário ────────────────────────────────────────────────────
+
+async def test_chave_do_servidor_nunca_e_usada_como_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    import logging
+
+    from tests.doubles.fake_settings import FakeSettings
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "chave-do-servidor")
+    capturadas: list[httpx.Request] = []
+    service = OpenRouterService(
+        logger=logging.getLogger("teste"),
+        settings=FakeSettings(),
+        authorization=None,
+        transport=httpx.MockTransport(lambda request: capturadas.append(request) or httpx.Response(200)),
+    )
+
+    with pytest.raises(ValueError, match="user OpenRouter API key"):
+        await service.generate_response(request=_build_request())
+    assert capturadas == []
+
+
+async def test_chamada_depois_da_revogacao_nao_sai() -> None:
+    capturadas: list[httpx.Request] = []
+    service = _build_service(capturadas=capturadas)
+    assert service.authorization is not None
+    service.authorization.revoke("Sessão revogada.")
+
+    with pytest.raises(ValueError, match="revogada"):
+        service.validate_request(request=_build_request())
+    with pytest.raises(ValueError, match="revogada"):
+        await service.generate_response(request=_build_request())
+    assert capturadas == []
+
+
+async def test_corpo_de_erro_do_provedor_tem_a_chave_redigida() -> None:
+    service = _build_service(
+        openrouter_api_key="sk-or-v1-chave-que-vaza", status_code=401, body={"error": "bad key sk-or-v1-chave-que-vaza"}
+    )
+
+    with pytest.raises(RuntimeError) as erro:
+        await service.generate_response(request=_build_request())
+
+    assert "sk-or-v1-chave-que-vaza" not in str(erro.value)
+    assert "[REDACTED]" in str(erro.value)
+
+
+async def test_execucoes_simultaneas_usam_cada_uma_a_propria_chave() -> None:
+    import asyncio
+
+    capturadas: list[httpx.Request] = []
+    da_ana = _build_service(capturadas=capturadas, openrouter_api_key="sk-or-v1-chave-da-ana")
+    da_bia = _build_service(capturadas=capturadas, openrouter_api_key="sk-or-v1-chave-da-bia")
+
+    await asyncio.gather(*[
+        servico.generate_response(request=_build_request()) for servico in (da_ana, da_bia, da_ana, da_bia)
+    ])
+
+    assert sorted(request.headers["Authorization"] for request in capturadas) == [
+        "Bearer sk-or-v1-chave-da-ana", "Bearer sk-or-v1-chave-da-ana",
+        "Bearer sk-or-v1-chave-da-bia", "Bearer sk-or-v1-chave-da-bia",
+    ]

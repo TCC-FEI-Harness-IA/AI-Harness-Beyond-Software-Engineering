@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import ralphImage from '@/assets/ralph_image.png'
 import { ROUTES } from '@/router/routes'
+import { type CredentialUiStatus, useAuth } from '@/state/AuthContext'
 import { ThemeToggle } from './ThemeToggle'
 import styles from './TopBar.module.css'
 
@@ -17,43 +18,88 @@ export interface TopBarProps {
  * centro fica o slot do interruptor de modo (FASE 05); à direita, os links de histórico, BenchMark,
  * análise de resultados e modelos e o alternador de tema.
  */
+const CREDENTIAL_LABEL: Record<CredentialUiStatus, string> = {
+  unknown: 'verificando',
+  checking: 'verificando',
+  missing: 'ausente',
+  valid: 'ok',
+  invalid: 'inválida',
+  error: 'indisponível',
+}
+
 export function TopBar({ onToggleSidebar }: TopBarProps): JSX.Element {
+  const auth = useAuth()
+  const authenticated = auth.status === 'authenticated'
   return (
-    <header className={styles.topbar}>
-      <div className={styles.leading}>
-        {onToggleSidebar ? (
-          <button
-            type="button"
-            className={styles.sidebarToggle}
-            aria-label="Abrir barra lateral"
-            onClick={onToggleSidebar}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+    <>
+      <header className={styles.topbar}>
+        <div className={styles.leading}>
+          {onToggleSidebar ? (
+            <button
+              type="button"
+              className={styles.sidebarToggle}
+              aria-label="Abrir barra lateral"
+              onClick={onToggleSidebar}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          ) : null}
+          <Link to={ROUTES.home} className={styles.brand}>
+            <img className={styles.brandIcon} src={ralphImage} alt="" />
+            TCC Harness
+          </Link>
+        </div>
+        <div className={styles.center} />
+        <nav className={styles.actions} aria-label="Ações principais">
+          {authenticated ? (
+            <Link to={ROUTES.history} className={styles.historyLink}>
+              Histórico
+            </Link>
+          ) : null}
+          <Link to={ROUTES.benchmark} className={styles.historyLink}>
+            BenchMark
+          </Link>
+          <Link to={ROUTES.benchmarkAnalysis} className={styles.historyLink}>
+            Análise
+          </Link>
+          {authenticated ? (
+            <Link to={ROUTES.models} className={styles.historyLink}>
+              Modelos
+            </Link>
+          ) : null}
+          {authenticated ? (
+            <>
+              <span className={styles.account}>{auth.user?.email}</span>
+              <Link to={ROUTES.credential} className={styles.historyLink}>
+                Chave: {CREDENTIAL_LABEL[auth.credential.status]}
+              </Link>
+              <button type="button" className={styles.historyLink} onClick={() => void auth.logout()}>
+                Sair
+              </button>
+            </>
+          ) : auth.status === 'anonymous' ? (
+            <>
+              <Link to={ROUTES.login} className={styles.historyLink}>
+                Entrar
+              </Link>
+              <Link to={ROUTES.register} className={styles.historyLink}>
+                Criar conta
+              </Link>
+            </>
+          ) : null}
+          <ThemeToggle />
+        </nav>
+      </header>
+      {auth.logoutError ? (
+        <div role="alert" className={styles.logoutError}>
+          <span>{auth.logoutError}</span>
+          <button type="button" className={styles.historyLink} onClick={() => void auth.logout()}>
+            Tentar sair novamente
           </button>
-        ) : null}
-        <Link to={ROUTES.home} className={styles.brand}>
-          <img className={styles.brandIcon} src={ralphImage} alt="" />
-          TCC Harness
-        </Link>
-      </div>
-      <div className={styles.center} />
-      <nav className={styles.actions} aria-label="Ações principais">
-        <Link to={ROUTES.history} className={styles.historyLink}>
-          Histórico
-        </Link>
-        <Link to={ROUTES.benchmark} className={styles.historyLink}>
-          BenchMark
-        </Link>
-        <Link to={ROUTES.benchmarkAnalysis} className={styles.historyLink}>
-          Análise
-        </Link>
-        <Link to={ROUTES.models} className={styles.historyLink}>
-          Modelos
-        </Link>
-        <ThemeToggle />
-      </nav>
-    </header>
+        </div>
+      ) : null}
+    </>
   )
 }

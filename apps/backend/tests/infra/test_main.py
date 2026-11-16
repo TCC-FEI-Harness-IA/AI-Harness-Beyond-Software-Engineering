@@ -28,3 +28,33 @@ def test_registra_o_roteador_da_v1() -> None:
 
     assert "/v1/health" in caminhos
     assert "/v1/message/default" in caminhos
+
+
+def test_producao_monta_sempre_os_servicos_reais_de_seguranca() -> None:
+    from src.infra.security.auth_service_identity_provider import AuthServiceIdentityProvider
+    from src.infra.security.openrouter_key_validator import OpenRouterKeyValidator
+
+    seguranca = create_app().state.security
+
+    assert isinstance(seguranca.identity_provider, AuthServiceIdentityProvider)
+    assert isinstance(seguranca.key_validator, OpenRouterKeyValidator)
+
+
+def test_sem_chave_de_criptografia_a_aplicacao_nao_sobe(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LLM_CREDENTIAL_ENCRYPTION_KEY")
+
+    with pytest.raises(ValueError, match="LLM_CREDENTIAL_ENCRYPTION_KEY"):
+        create_app()
+
+
+def test_politica_de_cache_separa_publico_de_privado() -> None:
+    from fastapi.testclient import TestClient
+
+    from tests.doubles.security_doubles import build_security
+
+    client = TestClient(create_app(security=build_security()))
+
+    privado = client.get("/v1/health")
+
+    assert privado.headers["cache-control"] == "no-store, private"
+    assert privado.headers["vary"] == "Cookie"

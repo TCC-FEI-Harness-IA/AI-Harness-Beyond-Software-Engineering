@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { HttpError } from '@/api/errors/HttpError'
 import { AppError } from '@/api/errors/AppError'
 import { ContractError } from '@/api/errors/ContractError'
-import { getSession } from '@/api/sessionApi'
+import { loadSessionDocument } from '@/api/sessionLoader'
 import type { SessionSource } from '@/domain/types/sessionSource'
 import type { SessionDocument } from '@/domain/types/sessionDocument'
 import { getCachedSession, setCachedSession } from './sessionCache'
@@ -30,7 +30,14 @@ function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError'
 }
 
-export function useSession(sessionId: string, source: SessionSource = 'history'): UseSession {
+/**
+ * @param containerId Publicação oficial (`pub_...`) a que a sessão pertence, quando `source` é `official`.
+ */
+export function useSession(
+  sessionId: string,
+  source: SessionSource = 'history',
+  containerId: string | null = null,
+): UseSession {
   const [state, setState] = useState<UseSessionState>(() => {
     const cached = getCachedSession(sessionId, source)
     return cached ? { status: 'success', data: cached } : { status: 'loading' }
@@ -47,10 +54,10 @@ export function useSession(sessionId: string, source: SessionSource = 'history')
     const controller = new AbortController()
     setState({ status: 'loading' })
 
-    getSession(sessionId, controller.signal)
+    loadSessionDocument(sessionId, source === 'official' ? containerId : null, controller.signal)
       .then((document) => {
         if (controller.signal.aborted) return
-        if ((document.benchmark_details?.is_banchmark === true) !== (source === 'benchmark')) {
+        if ((document.benchmark_details?.is_banchmark === true) !== (source !== 'history')) {
           throw new HttpError(404, 'Sessão não pertence a este histórico.')
         }
         setCachedSession(document, source)
@@ -62,7 +69,7 @@ export function useSession(sessionId: string, source: SessionSource = 'history')
       })
 
     return () => controller.abort()
-  }, [sessionId, reloadToken, source])
+  }, [sessionId, reloadToken, source, containerId])
 
   const reload = useCallback(() => setReloadToken((token) => token + 1), [])
 

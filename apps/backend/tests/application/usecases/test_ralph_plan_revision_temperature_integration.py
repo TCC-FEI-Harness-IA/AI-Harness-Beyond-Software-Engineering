@@ -225,13 +225,16 @@ async def test_sessoes_sucessivas_nao_compartilham_o_indice_de_revisao() -> None
 
 def test_cada_sessao_do_startup_tem_o_seu_proprio_contador_de_candidatos(monkeypatch: pytest.MonkeyPatch) -> None:
     for nome, valor in {
-        "LLM_MODEL": "vendor/modelo", "OPENROUTER_API_KEY": "chave-de-teste",
+        "LLM_MODEL": "vendor/modelo",
         "GENAI_AVAILABLE_MODELS": "vendor/modelo", "GENAI_AVAILABLE_PROVIDERS": "open_router,openai",
         "LLM_MAX_TOKENS": "120000", "RALPH_FINAL_ANSWER_TOKEN_RESERVE": "4000",
     }.items():
         monkeypatch.setenv(nome, valor)
 
-    primeira, segunda = RalphThinkingStartup(), RalphThinkingStartup()
+    from tests.doubles.security_doubles import authorization_for
+
+    primeira = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
+    segunda = RalphThinkingStartup(owner_id="usr_teste", authorization=authorization_for())
     primeira.cost_guard.register_planning_attempt()
     primeira.cost_guard.register_planning_attempt()
 

@@ -2,25 +2,17 @@ from inspect import getfile
 
 from src.domain.interfaces.llm_service_interface import ILLMService
 from src.domain.interfaces.settings_interface import ISettings
-from src.infra.services.azure_ai_foundry_service import AzureAIFoundryService
-from src.infra.services.base_chat_completions_service import BaseChatCompletionsService
-from src.infra.services.openai_service import OpenAIService
+from src.domain.services.execution_authorization import ExecutionAuthorization
 from src.infra.services.openrouter_service import OpenRouterService
-
-_SERVICE_CLASSES: tuple[type[BaseChatCompletionsService], ...] = (
-    OpenRouterService,
-    AzureAIFoundryService,
-    OpenAIService,
-)
 
 
 class LLMServiceFactory:
-    """Instancia as implementações de `ILLMService` de todos os provedores suportados.
+    """Instancia os serviços de LLM disponíveis na aplicação hospedada.
 
-    Os dois composition roots (baseline e harness) precisam exatamente do mesmo conjunto
-    de serviços; concentrá-lo aqui evita que um deles fique para trás quando um provedor
-    novo entra. Instanciar todos é barato: nenhum serviço abre conexão na construção, e a
-    validação de credenciais só acontece na primeira chamada ao provedor escolhido.
+    Na versão multiusuário só a OpenRouter é oferecida, sempre com a chave do próprio usuário (na
+    autorização da execução). Os adapters da OpenAI e do Azure AI Foundry continuam no código, mas
+    não são registrados: as credenciais desses provedores configuradas no servidor nunca são
+    consumidas por requisições de usuários.
     """
 
     def __init__(self, settings: ISettings) -> None:
@@ -31,16 +23,20 @@ class LLMServiceFactory:
         """
         self.settings: ISettings = settings
 
-    def create_all(self) -> list[ILLMService]:
-        """Cria uma instância de cada provedor suportado.
+    def create_all(self, authorization: ExecutionAuthorization | None) -> list[ILLMService]:
+        """Cria os serviços de uma requisição ou execução.
+
+        Args:
+            authorization: Autorização com a credencial do usuário; `None` deixa a OpenRouter sem
+                credencial (toda chamada é recusada localmente).
 
         Returns:
-            list[ILLMService]: Um serviço por membro de `ModelProviderEnum`.
+            list[ILLMService]: A OpenRouter, ligada à credencial informada.
         """
         return [
-            service_class(
-                logger=self.settings.logger(module_file=getfile(service_class)),
+            OpenRouterService(
+                logger=self.settings.logger(module_file=getfile(OpenRouterService)),
                 settings=self.settings,
+                authorization=authorization,
             )
-            for service_class in _SERVICE_CLASSES
         ]

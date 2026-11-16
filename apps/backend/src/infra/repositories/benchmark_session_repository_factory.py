@@ -26,8 +26,11 @@ class BenchmarkSessionRepositoryFactory:
         self.settings: ISettings = settings
         self.mapper: IBenchmarkSessionDocumentMapper = mapper
 
-    def create(self) -> IBenchmarkSessionRepository:
+    def create(self, owner_id: str) -> IBenchmarkSessionRepository:
         """Cria o repositório de baterias do backend configurado.
+
+        Args:
+            owner_id: Conta dona dos dados; o repositório só lê e grava os desta conta.
 
         Returns:
             IBenchmarkSessionRepository: Repositório JSON ou MongoDB, conforme
@@ -39,10 +42,12 @@ class BenchmarkSessionRepositoryFactory:
                 collection=mongo_client.benchmark_sessions_collection,
                 mapper=self.mapper,
                 logger=self.settings.logger(module_file=getfile(MongoBenchmarkSessionRepository)),
+                owner_id=owner_id,
             )
 
         return JsonFileBenchmarkSessionRepository(
             mapper=self.mapper,
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(JsonFileBenchmarkSessionRepository)),
+            owner_id=owner_id,
         )
