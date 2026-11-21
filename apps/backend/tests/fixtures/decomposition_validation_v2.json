@@ -1,0 +1,235 @@
+{
+  "version": 2,
+  "extends": "decomposition_validation_v1.json",
+  "purpose": "Synthetic open cases added by the refinements 03 for the A.3 decomposition validator: conditions, referents and imposed priorities (change 1) and investigation versus conclusion with blocking-only rejection (change 2). The matrix of version 2 is the cases of version 1, unchanged, followed by these. expected_review, reference_report and contradictory_report belong only to a later human semantic review: they are never sent to the model nor read by production code. No benchmark question or answer key.",
+  "cases": [
+    {
+      "name": "stops_dropped_in_time_comparison",
+      "kind": "omitted_condition_in_integration",
+      "question": "Uma van e um caminhão percorrem 360 km. A van mantém 90 km/h; o caminhão mantém 80 km/h, mas é obrigado a fazer duas paradas de 20 minutos cada. Quanto tempo antes um veículo chega em relação ao outro?",
+      "general_criteria": [
+        "AC1: Determine which vehicle arrives first and the time difference, with units.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Travel times of the van and the truck",
+          "description": "The van covers 360 km at 90 km/h and the truck covers 360 km at 80 km/h. Compute each travel time as distance divided by speed, showing the substitution with units.",
+          "acceptance_criteria": [
+            {"id": "T1-AC1", "description": "Compute both travel times with units and the relation used."}
+          ]
+        },
+        {
+          "id": "T2",
+          "title": "Arrival difference",
+          "description": "Subtract the travel times found in T1 to determine which vehicle arrives first and by how much, explaining the comparison.",
+          "acceptance_criteria": [
+            {"id": "T2-AC1", "description": "Determine which vehicle arrives first and the difference with units, justifying the comparison."}
+          ],
+          "depends_on": ["T1"]
+        }
+      ],
+      "expected_review": "Reject: the two mandatory stops of the truck disappear from both tasks, so the comparison is made under conditions different from the request. The adjustment asks that the stop condition enter the truck's time and the comparison, without giving the resulting difference.",
+      "reference_report": {
+        "approved": false,
+        "issues": [
+          {
+            "task_id": "T2",
+            "criterion_id": null,
+            "problem": "Fidelity and coverage: the question imposes two 20-minute stops on the truck only; T1 computes moving times and T2 subtracts them, so the stops are lost when the parts are joined.",
+            "adjustment": "Keep the stop condition, which applies only to the truck, in the investigation of the truck's total time and in the comparison; do not state the resulting difference."
+          }
+        ]
+      }
+    },
+    {
+      "name": "margin_replaced_by_revenue",
+      "kind": "changed_referent",
+      "question": "Uma padaria vende cada bolo por R$ 40,00; ingredientes e embalagem custam R$ 22,00 por bolo e o aluguel mensal é R$ 1.800,00. Quantos bolos precisa vender no mês para cobrir o aluguel?",
+      "general_criteria": [
+        "AC1: Determine the number of cakes needed to cover the rent, explaining the reasoning.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Cakes needed to cover the rent",
+          "description": "Each cake sells for R$ 40.00 and the monthly rent is R$ 1,800.00. Determine how many cakes must be sold so that the sales revenue covers the rent, explaining the division and the rounding.",
+          "acceptance_criteria": [
+            {"id": "T1-AC1", "description": "Determine the number of cakes from the revenue per cake and the rent, with the reasoning."}
+          ]
+        }
+      ],
+      "expected_review": "Reject: the plan changes the referent from the contribution of each cake (price minus unit cost) to its revenue and drops the unit cost supplied by the question. The adjustment asks the task to investigate what each cake contributes towards the rent with the supplied costs, without stating the number of cakes.",
+      "reference_report": {
+        "approved": false,
+        "issues": [
+          {
+            "task_id": "T1",
+            "criterion_id": "T1-AC1",
+            "problem": "Fidelity: the question supplies a unit cost of R$ 22.00; the task uses the revenue per cake as the amount that covers the rent, changing the quantity under investigation and dropping a supplied condition.",
+            "adjustment": "Copy the unit cost into the task and ask it to determine, with justification, the amount each sale actually contributes towards the rent before finding the number of cakes."
+          }
+        ]
+      }
+    },
+    {
+      "name": "main_cause_defined_as_most_general",
+      "kind": "imposed_priority",
+      "question": "Segundo o relatório transcrito abaixo, qual foi o principal motivo do atraso da obra? Relatório: 'As chuvas paralisaram a obra por 12 dias; a entrega de aço atrasou 3 dias; problemas gerais de gestão foram citados pela fiscalização.'",
+      "general_criteria": [
+        "AC1: Identify the main reason for the delay according to the report, with justification.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Main reason for the delay",
+          "description": "The report lists: rain stopped the works for 12 days; the steel delivery was 3 days late; general management problems were cited by the inspectors. Identify the main reason for the delay, taking as main the most general reason, the one that encompasses the others.",
+          "acceptance_criteria": [
+            {"id": "T1-AC1", "description": "Select the most general reason and justify why it encompasses the others."}
+          ]
+        }
+      ],
+      "expected_review": "Reject: the plan introduces 'most general' as the definition of 'main', a priority that the request does not supply and that decides the answer. The adjustment asks the task to establish from the report what makes a reason the main one, keeping the choice open.",
+      "reference_report": {
+        "approved": false,
+        "issues": [
+          {
+            "task_id": "T1",
+            "criterion_id": "T1-AC1",
+            "problem": "Neutrality: the criterion defines the main reason as the most general one, a priority introduced by the planner that the question does not give and that would determine the answer.",
+            "adjustment": "Ask the task to identify the main reason according to the report and to justify, from the information in the report, the basis on which it is the main one, without fixing that basis in advance."
+          }
+        ]
+      }
+    },
+    {
+      "name": "supplied_condition_copied_into_criterion",
+      "kind": "valid_supplied_condition",
+      "question": "Um reservatório de 5.000 L está cheio e perde 120 L por dia, sem reposição. Em quantos dias completos ainda terá pelo menos 2.000 L?",
+      "general_criteria": [
+        "AC1: Determine the number of whole days with justification.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Days with at least 2,000 L",
+          "description": "A full 5,000 L reservoir loses 120 L per day with no refill. Determine for how many whole days it still holds at least 2,000 L, explaining the inequality and the rounding.",
+          "acceptance_criteria": [
+            {"id": "T1-AC1", "description": "Use the supplied condition that the volume must remain at least 2,000 L and determine the number of whole days with the inequality and its rounding."}
+          ]
+        }
+      ],
+      "expected_review": "Approve: the criterion copies a condition supplied by the user; copying it is required, not an anticipated conclusion. The number of days stays open.",
+      "reference_report": {"approved": true, "issues": []}
+    },
+    {
+      "name": "determine_whether_threshold_is_exceeded",
+      "kind": "valid_determine_whether",
+      "question": "Uma sala de 60 m² recebe 48 pessoas. O regulamento admite no máximo 1 pessoa por 1,5 m². A lotação está dentro do limite?",
+      "general_criteria": [
+        "AC1: State whether the occupancy is within the limit, with justification.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Occupancy against the limit",
+          "description": "A 60 m² room holds 48 people; the rule allows at most 1 person per 1.5 m². Determine whether the occupancy is within the limit, showing the maximum allowed and the comparison.",
+          "acceptance_criteria": [
+            {"id": "T1-AC1", "description": "Determine whether the occupancy exceeds the limit and justify it with the maximum allowed and the comparison."}
+          ]
+        }
+      ],
+      "expected_review": "Approve: 'determine whether' keeps the result open. Paired with demonstrate_threshold_is_exceeded, which imposes it.",
+      "reference_report": {"approved": true, "issues": []}
+    },
+    {
+      "name": "demonstrate_threshold_is_exceeded",
+      "kind": "anticipated_result_pair",
+      "question": "Uma sala de 60 m² recebe 48 pessoas. O regulamento admite no máximo 1 pessoa por 1,5 m². A lotação está dentro do limite?",
+      "general_criteria": [
+        "AC1: State whether the occupancy is within the limit, with justification.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Show that the room is over capacity",
+          "description": "A 60 m² room holds 48 people; the rule allows at most 1 person per 1.5 m². Demonstrate that the occupancy exceeds the limit.",
+          "acceptance_criteria": [
+            {"id": "T1-AC1", "description": "Demonstrate that the room is over capacity."}
+          ]
+        }
+      ],
+      "expected_review": "Reject: the title and the criterion impose the conclusion that the occupancy exceeds the limit, which execution must establish. The adjustment asks to determine whether it does, without saying what the answer is.",
+      "reference_report": {
+        "approved": false,
+        "issues": [
+          {
+            "task_id": "T1",
+            "criterion_id": "T1-AC1",
+            "problem": "Neutrality: the criterion requires demonstrating that the limit is exceeded, a conclusion that has not been established.",
+            "adjustment": "Ask the task to determine whether the occupancy is within the limit and to justify it with the comparison, keeping the outcome open."
+          }
+        ]
+      }
+    },
+    {
+      "name": "open_interpretation_of_two_statements",
+      "kind": "valid_open_interpretation",
+      "question": "Leia as duas declarações de moradores sobre a nova praça e explique em que elas divergem. Declaração 1: 'A praça trouxe movimento ao comércio do bairro.' Declaração 2: 'A praça trouxe barulho e tirou o sossego das noites.'",
+      "general_criteria": [
+        "AC1: Explain the divergence between the two statements with support from the texts.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Divergence between the statements",
+          "description": "Statement 1: 'The square brought activity to the neighbourhood shops.' Statement 2: 'The square brought noise and took away the quiet of the nights.' Identify how the two statements diverge, formulate the opposition between them and justify the interpretation with the wording of each statement.",
+          "acceptance_criteria": [
+            {"id": "T1-AC1", "description": "Identify the divergence between the statements and justify the interpretation with excerpts from both."}
+          ]
+        }
+      ],
+      "expected_review": "Approve: interpreting and formulating an opposition keeps the result open; asking for an interpretation is not prescribing one.",
+      "reference_report": {"approved": true, "issues": []}
+    },
+    {
+      "name": "check_whether_procedure_needs_correction",
+      "kind": "valid_hypothesis_investigated",
+      "question": "Um laboratório diluiu 10 mL de uma solução 2,0 mol/L até 50 mL e registrou a concentração final como 0,5 mol/L. O registro precisa ser corrigido?",
+      "general_criteria": [
+        "AC1: State whether the record needs correction and justify it.",
+        "AC2: Answer in Portuguese."
+      ],
+      "tasks": [
+        {
+          "id": "T1",
+          "title": "Check the recorded concentration",
+          "description": "10 mL of a 2.0 mol/L solution were diluted to 50 mL and the final concentration was recorded as 0.5 mol/L. Verify whether the record needs correction, determining the final concentration from the dilution relation and comparing it with the record.",
+          "acceptance_criteria": [
+            {"id": "T1-AC1", "description": "Determine the final concentration with the relation and units, and state whether the record needs correction with justification."}
+          ]
+        }
+      ],
+      "expected_review": "Approve: investigating whether a correction is needed is legitimate and does not require that the record be considered wrong. A plan stating that the record 'must be considered incorrect' before the investigation would anticipate the result.",
+      "reference_report": {"approved": true, "issues": []},
+      "contradictory_report": {
+        "approved": false,
+        "issues": [
+          {
+            "task_id": "T1",
+            "criterion_id": null,
+            "problem": "The task investigates the record without imposing an outcome; there is no blocking defect.",
+            "adjustment": "No adjustment is needed."
+          }
+        ]
+      }
+    }
+  ]
+}

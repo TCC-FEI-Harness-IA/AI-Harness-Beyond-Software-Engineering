@@ -1,0 +1,259 @@
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+
+from src.domain.entities.session.llm_invocation import LLMInvocation
+from src.domain.entities.session.benchmark_details import BenchmarkDetails
+from src.domain.entities.session.session_degradation import SessionDegradation
+from src.domain.entities.session.session_failure import SessionFailure
+from src.domain.entities.session.session_message import SessionMessage
+from src.domain.entities.session.session_totals import SessionTotals
+from src.domain.entities.thinking.output_diagnostic import OutputDiagnostic
+from src.domain.entities.thinking.output_recovery import OutputRecovery
+from src.domain.entities.thinking.result_revision import ResultRevision
+from src.domain.enums.invocation_outcome_enum import InvocationOutcomeEnum
+from src.domain.enums.model_provider_enum import ModelProviderEnum
+from src.domain.enums.ralph_flow_version_enum import RalphFlowVersionEnum
+from src.domain.enums.session_status_enum import SessionStatusEnum
+from src.domain.enums.thinking_phase_enum import ThinkingPhaseEnum
+
+
+@dataclass
+class Session:
+    """Representa uma sessão de inferência, baseline ou harness, persistida.
+
+    Attributes:
+        id: Identificador único da sessão.
+        user_question: Pergunta original enviada pelo usuário.
+        flow: Fluxo usado pela sessão (baseline ou marcador do fluxo Ralph).
+        model_name: Nome do modelo usado na sessão.
+        max_tokens: Limite de tokens de saída configurado para a sessão.
+        temperature: Temperatura de geração configurada para a sessão.
+        status: Estado atual da sessão.
+        created_at: Data e hora de criação em UTC.
+        updated_at: Data e hora da última atualização em UTC.
+        messages: Histórico de mensagens da sessão, em ordem.
+        totals: Totais acumulados da sessão.
+        final_answer: Resposta final entregue ao usuário, quando concluída.
+        degradations: Degradações registradas por versões anteriores do fluxo, apenas para leitura.
+        provider: Provedor efetivo das chamadas; `None` em sessões anteriores ao registro.
+        invocations: Uma entrada por chamada enviada ao modelo, na ordem do envio.
+        failure: Motivo estruturado do encerramento sem conclusão, quando houve.
+        benchmark_details: Identificação e avaliação do benchmark; padrão não benchmark para a API.
+        legacy_totals: Indica que os totais vêm de uma sessão gravada antes do registro por
+            invocação, e por isso não têm chamadas individuais correspondentes.
+        result_revisions: Revisões de resultados aprovadas e aplicadas em B.3, em ordem; vazia em
+            sessões sem revisão e nas gravadas antes deste registro.
+        flow_version: Versão do fluxo Ralph, que define o significado das fases do histórico (em especial
+            `A3`); `None` na inferência direta, que não tem fases Ralph.
+    """
+
+    id: str
+    user_question: str
+    flow: ThinkingPhaseEnum
+    model_name: str
+    max_tokens: int
+    temperature: float
+    status: SessionStatusEnum
+    created_at: datetime
+    updated_at: datetime
+    messages: list[SessionMessage] = field(default_factory=list)
+    totals: SessionTotals = field(default_factory=SessionTotals)
+    final_answer: str | None = None
+    degradations: list[SessionDegradation] = field(default_factory=list)
+    provider: ModelProviderEnum | None = None
+    invocations: list[LLMInvocation] = field(default_factory=list)
+    failure: SessionFailure | None = None
+    legacy_totals: bool = False
+    benchmark_details: BenchmarkDetails = field(default_factory=BenchmarkDetails)
+    result_revisions: list[ResultRevision] = field(default_factory=list)
+    flow_version: RalphFlowVersionEnum | None = None
+
+    def add_result_revision(self, revision: ResultRevision) -> None:
+        """Registra na auditoria uma revisão de resultados aprovada e aplicada.
+
+        Args:
+            revision: Revisão aplicada em B.3.
+        """
+        self.result_revisions.append(revision)
+        self.updated_at = revision.occurred_at
+
+    def add_message(self, message: SessionMessage) -> None:
+        """Anexa uma mensagem ao histórico e atualiza os totais da sessão.
+
+        Args:
+            message: Mensagem a ser registrada.
+        """
+        self.messages.append(message)
+        self.totals.add_message(message=message)
+        self.updated_at = message.timestamp
+
+    def start_invocation(self, invocation: LLMInvocation) -> None:
+        """Registra o envio de uma chamada ao modelo, que já conta nos totais.
+
+        Args:
+            invocation: Invocação recém-iniciada.
+        """
+        self.invocations.append(invocation)
+        self.totals.register_invocation_start()
+        self.updated_at = invocation.started_at
+
+    def complete_invocation(
+        self,
+        invocation_id: str,
+        outcome: InvocationOutcomeEnum,
+        duration_ms: int,
+        tokens_input: int | None,
+        tokens_output: int | None,
+        finish_reason: str | None = None,
+        provider_response_id: str | None = None,
+    ) -> LLMInvocation:
+        """Conclui uma invocação já registrada e acumula o seu consumo conhecido.
+
+        Args:
+            invocation_id: Identificador da invocação iniciada.
+            outcome: Desfecho da chamada.
+            duration_ms: Duração da chamada, em milissegundos.
+            tokens_input: Tokens de entrada informados, ou `None` se desconhecidos.
+            tokens_output: Tokens de saída informados, ou `None` se desconhecidos.
+            finish_reason: Motivo de término informado pelo provedor, quando há.
+            provider_response_id: Identificador da resposta no provedor, quando há.
+
+        Returns:
+            LLMInvocation: Invocação concluída, já substituída no registro.
+
+        Raises:
+            ValueError: Quando a invocação não existe ou já foi concluída.
+        """
+        completed = self.__replace_invocation(
+            invocation_id=invocation_id,
+            change=lambda invocation: invocation.complete(
+                outcome=outcome,
+                duration_ms=duration_ms,
+                tokens_input=tokens_input,
+                tokens_output=tokens_output,
+                finish_reason=finish_reason,
+                provider_response_id=provider_response_id,
+            ),
+        )
+        self.totals.add_usage(tokens_input=tokens_input, tokens_output=tokens_output, duration_ms=duration_ms)
+        return completed
+
+    def record_output_diagnostic(self, invocation_id: str, diagnostic: OutputDiagnostic) -> LLMInvocation:
+        """Associa o diagnóstico de uma saída à invocação que a produziu.
+
+        O diagnóstico não altera chamadas, consumo nem tempo: a chamada já foi contada quando enviada.
+
+        Args:
+            invocation_id: Identificador da invocação de origem.
+            diagnostic: Diagnóstico da saída avaliada pelo parser.
+
+        Returns:
+            LLMInvocation: Invocação diagnosticada, já substituída no registro.
+
+        Raises:
+            ValueError: Quando a invocação não existe ou não pode receber o diagnóstico.
+        """
+        return self.__replace_invocation(
+            invocation_id=invocation_id, change=lambda invocation: invocation.with_output_diagnostic(diagnostic)
+        )
+
+    def record_output_recovery(self, invocation_id: str, recovery: OutputRecovery) -> LLMInvocation:
+        """Registra a estratégia e o resultado da recuperação de uma saída recusada.
+
+        Args:
+            invocation_id: Identificador da invocação que produziu a saída recusada.
+            recovery: Estratégia e resultado da recuperação.
+
+        Returns:
+            LLMInvocation: Invocação atualizada, já substituída no registro.
+
+        Raises:
+            ValueError: Quando a invocação não existe ou não pode receber a recuperação.
+        """
+        return self.__replace_invocation(
+            invocation_id=invocation_id, change=lambda invocation: invocation.with_recovery(recovery)
+        )
+
+    @property
+    def rejected_output_count(self) -> int:
+        """Quantidade de saídas recusadas pelo parser, uma por invocação.
+
+        Uma saída com dois diagnósticos — por exemplo, truncada e com sintaxe inválida — conta uma
+        vez só. Invocações sem diagnóstico (sem saída, ou gravadas antes do registro) não contam.
+
+        Returns:
+            int: Invocações cujo conteúdo foi recusado.
+        """
+        return sum(1 for invocation in self.invocations if invocation.content_accepted is False)
+
+    def __replace_invocation(
+        self, invocation_id: str, change: Callable[[LLMInvocation], LLMInvocation]
+    ) -> LLMInvocation:
+        """Substitui no registro a invocação informada pela versão alterada.
+
+        Args:
+            invocation_id: Identificador da invocação.
+            change: Transformação da invocação, que valida a mudança.
+
+        Returns:
+            LLMInvocation: Invocação alterada.
+
+        Raises:
+            ValueError: Quando a invocação não pertence à sessão ou a transformação a recusa.
+        """
+        for index, invocation in enumerate(self.invocations):
+            if invocation.id == invocation_id:
+                changed = change(invocation)
+                self.invocations[index] = changed
+                return changed
+
+        raise ValueError(f"A invocação '{invocation_id}' não pertence à sessão '{self.id}'.")
+
+    def finish(
+        self,
+        status: SessionStatusEnum,
+        final_answer: str | None,
+        failure: SessionFailure | None = None,
+    ) -> None:
+        """Encerra a sessão com o status e a resposta final informados.
+
+        Args:
+            status: Estado final da sessão.
+            final_answer: Resposta final entregue ao usuário, quando houver.
+            failure: Motivo estruturado do encerramento sem conclusão, quando houver.
+
+        Raises:
+            ValueError: Quando a sessão já não está em execução ou quando uma falha é
+                informada para um status diferente de `failed`.
+        """
+        if self.status is not SessionStatusEnum.RUNNING:
+            raise ValueError(f"Sessão '{self.id}' já foi encerrada com status '{self.status.value}'.")
+        if failure is not None and status is not SessionStatusEnum.FAILED:
+            raise ValueError(f"Uma falha só pode ser registrada em uma sessão '{SessionStatusEnum.FAILED.value}'.")
+
+        self.status = status
+        self.final_answer = final_answer
+        self.failure = failure
+        self.updated_at = datetime.now(tz=UTC)
+
+    def reopen(self, updated_at: datetime) -> None:
+        """Desfaz um encerramento que não chegou a ser persistido, devolvendo a sessão à execução.
+
+        Uma sessão só vale como encerrada depois de gravada. Quando a gravação falha, o estado em
+        memória volta a ser o do último estado persistido, para que a falha possa ser tratada e a
+        sessão encerrada por outro caminho (por exemplo, como `failed`).
+
+        Args:
+            updated_at: Instante da última atualização anterior ao encerramento desfeito.
+
+        Raises:
+            ValueError: Quando a sessão já está em execução, sem encerramento a desfazer.
+        """
+        if self.status is SessionStatusEnum.RUNNING:
+            raise ValueError(f"Sessão '{self.id}' ainda está em execução: não há encerramento a desfazer.")
+
+        self.status = SessionStatusEnum.RUNNING
+        self.final_answer = None
+        self.failure = None
+        self.updated_at = updated_at

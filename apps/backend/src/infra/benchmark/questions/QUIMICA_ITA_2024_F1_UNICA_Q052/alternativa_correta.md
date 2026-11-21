@@ -1,0 +1,1 @@
+E) Todas as afirmações.

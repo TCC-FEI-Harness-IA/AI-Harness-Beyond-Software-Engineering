@@ -1,0 +1,1 @@
+B) Iniciadas ainda na primeira metade do século XX, as tensões entre China e Taiwan aumentaram desde então em decorrência da presença militar dos EUA no território taiwanês, o que contraria os interesses geopolíticos chineses na região.

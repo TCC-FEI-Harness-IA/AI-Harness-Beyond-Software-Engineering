@@ -1,0 +1,24 @@
+.wrapper {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.select {
+  padding-right: var(--space-8);
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.select:disabled {
+  cursor: not-allowed;
+}
+
+.chevron {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+}

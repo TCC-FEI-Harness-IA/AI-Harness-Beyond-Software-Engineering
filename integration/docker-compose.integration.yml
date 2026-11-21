@@ -1,0 +1,66 @@
+# Teste de integração pelo proxy de produção (TLS, cookies, CSRF e WebSockets reais) com uma
+# OpenRouter falsa. Projeto e portas próprios: não toca no ambiente de desenvolvimento.
+# Uso: python integration/run_integration.py   (sobe, testa e derruba tudo)
+name: ralph-integration
+services:
+  frontend:
+    build: { context: ../apps/frontend, target: prod }
+    environment:
+      PUBLIC_HOST: localhost
+    ports:
+      - "18443:443"
+    volumes:
+      - ../deploy/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on: [backend, auth]
+
+  backend:
+    build: { context: ../apps/backend, target: prod }
+    env_file: [../apps/backend/.env.example]
+    environment:
+      APP_ENV: production
+      COOKIE_SECURE: "true"
+      PUBLIC_ORIGINS: https://localhost:18443
+      AUTH_SERVICE_URL: http://auth:8001
+      MONGODB_URI: mongodb://mongo:27017
+      AUTH_INTERNAL_TOKEN_FILE: /run/secrets/auth_internal_token
+      LLM_CREDENTIAL_ENCRYPTION_KEY_FILE: /run/secrets/llm_credential_encryption_key
+      OPENROUTER_API_URL: http://fake-openrouter:9000/api/v1/chat/completions
+      OPENROUTER_KEY_VALIDATION_URL: http://fake-openrouter:9000/api/v1/key
+      LLM_MODEL: fake/model
+      GENAI_AVAILABLE_MODELS: fake/model
+      # O teste revoga durante a primeira chamada (1,5 s), antes do observador periódico.
+      AUTH_REVALIDATION_INTERVAL_SECONDS: "15"
+    secrets: [auth_internal_token, llm_credential_encryption_key]
+    depends_on: [mongo, auth, fake-openrouter]
+
+  auth:
+    build: { context: ../apps/auth, target: prod }
+    env_file: [../apps/auth/.env.example]
+    environment:
+      APP_ENV: production
+      AUTH_COOKIE_SECURE: "true"
+      PUBLIC_ORIGINS: https://localhost:18443
+      AUTH_TRUST_PROXY_HEADERS: "true"
+      AUTH_MONGODB_URI: mongodb://mongo:27017
+      AUTH_INTERNAL_TOKEN_FILE: /run/secrets/auth_internal_token
+      AUTH_LOGIN_MAX_ATTEMPTS: "3"
+    secrets: [auth_internal_token]
+    depends_on: [mongo]
+
+  mongo:
+    image: mongo:7
+
+  fake-openrouter:
+    build: { context: ./fake_openrouter }
+    environment:
+      FAKE_ACCEPTED_KEYS: sk-or-v1-integracao-ana,sk-or-v1-integracao-bia
+      FAKE_DELAY_SECONDS: "1.5"
+    ports:
+      - "19000:9000"
+
+secrets:
+  auth_internal_token:
+    file: ./secrets/auth_internal_token
+  llm_credential_encryption_key:
+    file: ./secrets/llm_credential_encryption_key

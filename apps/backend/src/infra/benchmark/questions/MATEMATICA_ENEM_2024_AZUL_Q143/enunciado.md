@@ -1,0 +1,31 @@
+# QUESTÃO 143
+
+Uma casa de shows terá um evento cujo custo total
+de produção é de R$ 34 350,00, sendo que comporta
+500 pessoas. O preço do ingresso será de R$ 130,00 e,
+normalmente, 60% das pessoas adquirem meia-entrada,
+pagando R$ 65,00 pelo ingresso. Além do faturamento
+proveniente da venda de ingressos, a casa de shows
+vende, com 60% de lucro, bebidas e petiscos ao público
+no dia do evento.
+Após ter vendido todos os 500 ingressos, constatou-se
+que a quantidade de meias-entradas vendidas superou
+em 50% o que estava previsto, impactando o faturamento
+estimado com a venda de ingressos.
+No dia do evento, decidiu-se manter o percentual
+de 60% de lucro sobre as bebidas e petiscos, pois todo
+o público que comprou ingresso compareceu ao
+show. Com isso, espera-se ter lucro de R$ 17 000,00
+nesse evento.
+Para que se alcance o lucro esperado, o gasto médio por
+pessoa com bebidas e petiscos, em real, deverá ser de
+
+A) 19,50.
+
+B) 28,80.
+
+C) 34,00.
+
+D) 52,00.
+
+E) 68,70.

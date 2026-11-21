@@ -1,0 +1,113 @@
+import { describe, expect, it } from 'vitest'
+import a1Completed from '@/test/fixtures/session-a1-completed-15msgs.json'
+import a1CompletedWithA3 from '@/test/fixtures/session-a1-completed-with-a3.json'
+import a1Failed1Msg from '@/test/fixtures/session-a1-failed-1msg.json'
+import a1Failed1MsgB from '@/test/fixtures/session-a1-failed-1msg-b.json'
+import a1Failed2Msgs from '@/test/fixtures/session-a1-failed-2msgs.json'
+import directCompleted from '@/test/fixtures/session-direct-completed.json'
+import directFailed1Msg from '@/test/fixtures/session-direct-failed-1msg.json'
+import directFailed1MsgB from '@/test/fixtures/session-direct-failed-1msg-b.json'
+import { ContractError } from '../errors/ContractError'
+import { parseSessionDocument } from './sessionDocument'
+
+const ALL_FIXTURES = [
+  a1Completed,
+  a1CompletedWithA3,
+  a1Failed1Msg,
+  a1Failed1MsgB,
+  a1Failed2Msgs,
+  directCompleted,
+  directFailed1Msg,
+  directFailed1MsgB,
+]
+
+describe('parseSessionDocument', () => {
+  it('processa, sem erro, todos os documentos reais de apps/backend/data/sessions/', () => {
+    for (const fixture of ALL_FIXTURES) {
+      expect(() => parseSessionDocument(fixture)).not.toThrow()
+    }
+  })
+
+  it('aceita a sessão A1 completa com 15 mensagens, preservando a ordem e os campos', () => {
+    const document = parseSessionDocument(a1Completed)
+    expect(document.flow).toBe('A1')
+    expect(document.status).toBe('completed')
+    expect(document.messages).toHaveLength(15)
+    expect(document.messages[0]?.source).toBe('user')
+    expect(document.final_answer).toContain('primos')
+  })
+
+  it('aceita uma sessão com a mensagem da fase A3, sem ContractError', () => {
+    const document = parseSessionDocument(a1CompletedWithA3)
+
+    expect(document.messages).toHaveLength(16)
+    const a3 = document.messages.find((message) => message.phase === 'A3')
+    expect(a3).toMatchObject({ source: 'llm_agent', task_id: null })
+  })
+
+  it('aceita sessões failed com uma única mensagem', () => {
+    const document = parseSessionDocument(a1Failed1Msg)
+    expect(document.status).toBe('failed')
+    expect(document.messages).toHaveLength(1)
+    expect(document.final_answer).toBeNull()
+  })
+
+  it('aceita sessões DIRECT', () => {
+    const document = parseSessionDocument(directCompleted)
+    expect(document.flow).toBe('DIRECT')
+    expect(document.messages.every((message) => message.phase === 'DIRECT')).toBe(true)
+  })
+
+  it('aceita final_answer: null e degradations: []', () => {
+    const document = parseSessionDocument(directFailed1Msg)
+    expect(document.final_answer).toBeNull()
+    expect(document.degradations).toEqual([])
+  })
+
+  it('lança ContractError quando messages não é array', () => {
+    const invalid = { ...a1Failed1Msg, messages: 'não é um array' }
+    expect(() => parseSessionDocument(invalid)).toThrow(ContractError)
+  })
+
+  it('lança ContractError quando uma mensagem tem phase inválida', () => {
+    const invalid = structuredClone(a1Failed1Msg)
+    const [firstMessage] = invalid.messages
+    if (!firstMessage) throw new Error('fixture sem mensagens')
+    firstMessage.phase = 'FASE_INEXISTENTE'
+    expect(() => parseSessionDocument(invalid)).toThrow(ContractError)
+  })
+
+  it('lança ContractError quando uma mensagem tem source inválida', () => {
+    const invalid = structuredClone(a1Failed1Msg)
+    const [firstMessage] = invalid.messages
+    if (!firstMessage) throw new Error('fixture sem mensagens')
+    firstMessage.source = 'fonte-inexistente'
+    expect(() => parseSessionDocument(invalid)).toThrow(ContractError)
+  })
+
+  it('lança ContractError quando flow tem valor fora do enum', () => {
+    const invalid = { ...a1Failed1Msg, flow: 'FLUXO_INEXISTENTE' }
+    expect(() => parseSessionDocument(invalid)).toThrow(ContractError)
+  })
+
+  it('lança ContractError quando status tem valor fora do enum', () => {
+    const invalid = { ...a1Failed1Msg, status: 'status-inexistente' }
+    expect(() => parseSessionDocument(invalid)).toThrow(ContractError)
+  })
+
+  it('processa uma degradação válida e lança quando o limit está fora do enum', () => {
+    const degradation = {
+      limit: 'task_attempts',
+      phase: 'B2',
+      task_id: 'T1',
+      description: 'limite de tentativas atingido',
+      occurred_at: '2026-09-11T23:19:00.000Z',
+    }
+    const withDegradation = { ...a1Completed, degradations: [degradation] }
+    const document = parseSessionDocument(withDegradation)
+    expect(document.degradations).toEqual([degradation])
+
+    const withInvalidLimit = { ...a1Completed, degradations: [{ ...degradation, limit: 'limite-inexistente' }] }
+    expect(() => parseSessionDocument(withInvalidLimit)).toThrow(ContractError)
+  })
+})

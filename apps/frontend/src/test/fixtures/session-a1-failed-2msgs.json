@@ -1,0 +1,55 @@
+{
+  "_id": "sess_c1c66cd9ea9f43acbdb1283b73b2ad02",
+  "id": "sess_c1c66cd9ea9f43acbdb1283b73b2ad02",
+  "user_question": "Me conte uma piada",
+  "flow": "A1",
+  "model_name": "deepseek/deepseek-v4-flash-0731",
+  "max_tokens": 1000,
+  "temperature": 0.3,
+  "status": "failed",
+  "created_at": "2026-09-13T21:33:38.925857+00:00",
+  "updated_at": "2026-09-13T21:34:37.162214+00:00",
+  "final_answer": null,
+  "totals": {
+    "total_messages": 2,
+    "total_llm_calls": 1,
+    "tokens_input": 458,
+    "tokens_output": 819,
+    "total_tokens": 1277,
+    "inference_time_ms": 10739,
+    "wall_time_ms": 58237
+  },
+  "messages": [
+    {
+      "id": "16156f75e6ae40ea91b11055d77a31d1",
+      "order": 0,
+      "timestamp": "2026-09-13T21:33:38.927679+00:00",
+      "phase": "A1",
+      "source": "user",
+      "content": "Me conte uma piada",
+      "task_id": null,
+      "context_id": null,
+      "tokens_input": 0,
+      "tokens_output": 0,
+      "total_tokens": 0,
+      "inference_time_ms": 0,
+      "model_name": null
+    },
+    {
+      "id": "8b72d68aafb7425ca616797d755677dc",
+      "order": 1,
+      "timestamp": "2026-09-13T21:33:49.668135+00:00",
+      "phase": "A1",
+      "source": "llm_agent",
+      "content": "## Critérios de aceite gerais\n\n- `AC1`: A resposta final deve ser escrita em português.\n- `AC2`: A resposta final deve ser uma piada, apresentada em formato textual.\n- `AC3`: A resposta final deve conter apenas a piada solicitada, sem introduções, explicações ou comentários adicionais.\n- `AC4`: A resposta final deve ser compreensível e autossuficiente, permitindo que o usuário entenda o humor da piada.",
+      "task_id": null,
+      "context_id": "cdefe9c",
+      "tokens_input": 458,
+      "tokens_output": 819,
+      "total_tokens": 1277,
+      "inference_time_ms": 10739,
+      "model_name": "deepseek/deepseek-v4-flash-0731"
+    }
+  ],
+  "degradations": []
+}

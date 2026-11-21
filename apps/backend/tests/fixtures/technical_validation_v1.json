@@ -1,0 +1,266 @@
+{
+  "version": 1,
+  "purpose": "Synthetic, domain-generic cases for the fixed technical criterion <task_id>-TECH of B.2 (new validation phase - 02). The reference fields belong only to a later semantic evaluation: they are never sent to the model nor read by production code. Scripted tests prove transport and contract, not accuracy.",
+  "cases": [
+    {
+      "name": "unsupplied_premise_as_fact",
+      "polarity": "negative",
+      "category": "unsupported_premise",
+      "task": {
+        "id": "T2",
+        "title": "Temperatura de equilíbrio da mistura",
+        "description": "Misturam-se 200 g de água a 80 °C com 100 g de água a 20 °C num recipiente. Determine a temperatura de equilíbrio, com o balanço de calor e a justificativa de cada termo."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Apresentar o balanço de calor com substituição dos dados e unidades."},
+        {"id": "T2-AC2", "description": "Justificar cada termo do balanço."}
+      ],
+      "learnings": ["Calor específico da água: 1 cal/(g·°C)."],
+      "preliminary_result": "Como o recipiente é de cobre e tem capacidade térmica de 50 cal/°C, partindo de 20 °C, o balanço fica 200·1·(80 − T) = 100·1·(T − 20) + 50·(T − 20). Logo 16 000 − 200T = 150T − 3 000, e T ≈ 54,3 °C. Cada termo representa o calor trocado por um corpo.",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T2-AC1": true, "T2-AC2": true, "T2-TECH": false},
+        "rationale": "The container material, its heat capacity and its initial temperature are not supplied; the result treats them as facts and they change the conclusion. The next attempt should either use only the supplied data or state and justify an explicit assumption and its effect."
+      },
+      "review_checks": [
+        "Rejects through TECH while acknowledging that the planned criteria are formally met.",
+        "Names the unsupplied premise and why it is decisive, without solving the task itself."
+      ]
+    },
+    {
+      "name": "method_outside_its_conditions",
+      "polarity": "negative",
+      "category": "method_applicability",
+      "task": {
+        "id": "T1",
+        "title": "Distância percorrida a partir das leituras de velocidade",
+        "description": "Leituras de velocidade de um carro: 0 s → 0 m/s; 2 s → 8 m/s; 4 s → 10 m/s. Determine a distância percorrida entre 0 s e 4 s, explicando o método e sua aplicabilidade."
+      },
+      "criteria": [
+        {"id": "T1-AC1", "description": "Mostrar a fórmula usada, a substituição e a unidade."}
+      ],
+      "learnings": [],
+      "preliminary_result": "Com aceleração a = (10 − 0)/4 = 2,5 m/s², d = v₀t + at²/2 = 0 + 2,5·16/2 = 20 m.",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T1-AC1": true, "T1-TECH": false},
+        "rationale": "The constant-acceleration relation is used, but the readings give 4 m/s² in the first interval and 1 m/s² in the second; the condition of the method does not hold and the derivation does not support the distance. Investigate a method compatible with varying acceleration (for example, interval by interval) and state its limits."
+      },
+      "review_checks": [
+        "Points to the readings that contradict the method's condition.",
+        "Does not demand an exact value when a justified interval estimate is given."
+      ]
+    },
+    {
+      "name": "direction_incompatible_with_table",
+      "polarity": "negative",
+      "category": "direction_check",
+      "task": {
+        "id": "T3",
+        "title": "Tendência da taxa de consumo do reagente",
+        "description": "Concentração de um reagente: 0 min → 1,00 mol/L; 10 min → 0,80 mol/L; 20 min → 0,64 mol/L. Determine se a taxa média de consumo aumenta ou diminui entre os dois intervalos, justificando com os dados."
+      },
+      "criteria": [
+        {"id": "T3-AC1", "description": "Comparar os dois intervalos com os dados da tabela."}
+      ],
+      "learnings": [],
+      "preliminary_result": "A concentração cai continuamente, então o consumo acelera: a taxa média aumenta de um intervalo para o outro, pois a curva desce cada vez mais.",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T3-AC1": true, "T3-TECH": false},
+        "rationale": "The table gives a decrease of 0,20 mol/L in the first interval and 0,16 mol/L in the second, so the stated direction contradicts the data. Recompute both variations before concluding."
+      },
+      "review_checks": [
+        "Uses the direction of the variation as a simple cross-check.",
+        "Does not reject on the planned criterion, which only asks for a comparison."
+      ]
+    },
+    {
+      "name": "cause_from_another_temporal_stage",
+      "polarity": "negative",
+      "category": "temporal_stage",
+      "task": {
+        "id": "T2",
+        "title": "Causa da queda populacional entre 1850 e 1860",
+        "description": "Texto: \"Em 1848 um incêndio destruiu o porto. Em 1855 uma epidemia matou um quarto dos moradores. Em 1870 a nova ferrovia desviou o comércio para outra cidade.\" Identifique, com base no texto, a causa da queda populacional entre 1850 e 1860 e justifique."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Indicar uma causa e citar o trecho do texto que a sustenta."}
+      ],
+      "learnings": [],
+      "preliminary_result": "A queda se deve ao desvio do comércio pela ferrovia, que retirou a principal atividade econômica: \"a nova ferrovia desviou o comércio para outra cidade\".",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T2-AC1": true, "T2-TECH": false},
+        "rationale": "The cited event is dated 1870, after the period under analysis; the result attributes the decline to a cause from a different temporal stage. Check which event of the text falls within 1850-1860."
+      },
+      "review_checks": [
+        "Identifies the temporal mismatch, not the mere presence of a quotation.",
+        "Does not require an external historical source."
+      ]
+    },
+    {
+      "name": "nearest_value_over_invalid_calculation",
+      "polarity": "negative",
+      "category": "best_fit_over_error",
+      "task": {
+        "id": "T1",
+        "title": "Probabilidade condicional com dois dados",
+        "description": "Dois dados honestos são lançados. Sabendo que o primeiro resultado é par, determine a probabilidade de a soma ser 8 e escolha a alternativa correspondente: a) 1/6 b) 1/5 c) 1/20 d) 1/3."
+      },
+      "criteria": [
+        {"id": "T1-AC1", "description": "Calcular a probabilidade com justificativa e selecionar uma alternativa fundamentada."}
+      ],
+      "learnings": [],
+      "preliminary_result": "Casos com soma 8 e primeiro par: (2,6), (4,4), (6,2), logo 3/36. Como o primeiro é par com probabilidade 1/2, P = 3/36 · 1/2 = 1/24 ≈ 0,042. A alternativa mais próxima é c) 1/20 = 0,05, escolhida por melhor ajuste.",
+      "reference": {
+        "decision": "reproved",
+        "met": {"T1-AC1": true, "T1-TECH": false},
+        "rationale": "The condition is applied twice: 3/36 is already the joint probability and must be divided by P(first even), not multiplied. Choosing the option nearest to 1/24 does not repair the derivation. Recompute the conditional probability before comparing with the options."
+      },
+      "review_checks": [
+        "Names the double conditioning, not the distance between numbers.",
+        "Does not forbid best-fit selection in general."
+      ]
+    },
+    {
+      "name": "intermediate_task_correct",
+      "polarity": "positive",
+      "category": "intermediate_scope",
+      "task": {
+        "id": "T1",
+        "title": "Massa molar do carbonato de cálcio",
+        "description": "Com as massas atômicas fornecidas (Ca = 40, C = 12, O = 16), determine a massa molar do CaCO₃, mostrando a soma."
+      },
+      "criteria": [
+        {"id": "T1-AC1", "description": "Mostrar a soma das massas atômicas com unidade."}
+      ],
+      "learnings": [],
+      "preliminary_result": "M(CaCO₃) = 40 + 12 + 3·16 = 100 g/mol, somando as massas atômicas de cada átomo da fórmula.",
+      "reference": {
+        "decision": "approved",
+        "met": {"T1-AC1": true, "T1-TECH": true},
+        "rationale": "The intermediate result is correct and supported; it does not need to answer the final question (for example, the mass of gas released), which belongs to another task."
+      },
+      "review_checks": [
+        "Does not demand analyses of other tasks or the final answer format."
+      ]
+    },
+    {
+      "name": "open_question_supported_estimate",
+      "polarity": "positive",
+      "category": "estimate",
+      "task": {
+        "id": "T1",
+        "title": "Estimativa do consumo mensal de água em banhos",
+        "description": "Estime quantos litros de água uma família de quatro pessoas usa por mês em banhos, explicitando as hipóteses e seu efeito sobre a precisão."
+      },
+      "criteria": [
+        {"id": "T1-AC1", "description": "Apresentar a estimativa com unidade e as hipóteses adotadas."}
+      ],
+      "learnings": [],
+      "preliminary_result": "Hipóteses: um banho por pessoa por dia, 8 min por banho, vazão de 10 L/min, 30 dias. Estimativa: 4 · 8 · 10 · 30 ≈ 9 600 L por mês. A vazão é a hipótese mais incerta: chuveiros entre 6 e 12 L/min levam a algo entre 5 800 e 11 500 L. É uma estimativa de ordem de grandeza.",
+      "reference": {
+        "decision": "approved",
+        "met": {"T1-AC1": true, "T1-TECH": true},
+        "rationale": "An open question answered by an explicit, reasonable estimate whose hypotheses and precision are stated; no exact value is required."
+      },
+      "review_checks": [
+        "Accepts the estimate without requiring exactness or external data.",
+        "Checks that the hypotheses are explicit and compatible with the scenario."
+      ]
+    },
+    {
+      "name": "justified_hypothesis",
+      "polarity": "positive",
+      "category": "supported_hypothesis",
+      "task": {
+        "id": "T2",
+        "title": "Tempo de queda de uma esfera de aço",
+        "description": "Uma pequena esfera de aço é solta do repouso a 1,25 m do chão. Determine o tempo de queda, justificando as hipóteses do modelo. Use g = 10 m/s²."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Mostrar a relação usada, a substituição e a unidade."}
+      ],
+      "learnings": [],
+      "preliminary_result": "Hipótese: resistência do ar desprezível, porque a esfera é densa e pequena e a altura é curta, de modo que a velocidade atingida (5 m/s) é baixa. Com h = g t²/2: t = √(2·1,25/10) = 0,5 s.",
+      "reference": {
+        "decision": "approved",
+        "met": {"T2-AC1": true, "T2-TECH": true},
+        "rationale": "The hypothesis is explicit, compatible with the scenario and justified; the method applies under it and the calculation supports the conclusion."
+      },
+      "review_checks": [
+        "Does not reject a justified hypothesis just because the question did not state it."
+      ]
+    },
+    {
+      "name": "legitimate_approximation",
+      "polarity": "positive",
+      "category": "approximation",
+      "task": {
+        "id": "T3",
+        "title": "Período de um pêndulo simples",
+        "description": "Um pêndulo simples tem 1,0 m de comprimento e oscila com pequena amplitude. Determine o período e escolha a alternativa: a) 1,0 s b) 2,0 s c) 3,0 s d) 4,0 s."
+      },
+      "criteria": [
+        {"id": "T3-AC1", "description": "Calcular o período com a fórmula aplicável e selecionar uma alternativa fundamentada."}
+      ],
+      "learnings": ["Aceleração da gravidade: g ≈ 9,8 m/s²."],
+      "preliminary_result": "Para pequenas amplitudes, T = 2π√(L/g) = 2π√(1,0/9,8) ≈ 2,01 s. A alternativa b) 2,0 s é o melhor ajuste, compatível com a precisão dos dados; o valor obtido não é igual a 2,0 s.",
+      "reference": {
+        "decision": "approved",
+        "met": {"T3-AC1": true, "T3-TECH": true},
+        "rationale": "The small-amplitude condition is supplied, the formula applies and the best-fit choice rests on a valid calculation and the data precision."
+      },
+      "review_checks": [
+        "Accepts the best fit without an exact match or a universal tolerance."
+      ]
+    },
+    {
+      "name": "pertinent_contextual_inference",
+      "polarity": "positive",
+      "category": "contextual_inference",
+      "task": {
+        "id": "T1",
+        "title": "Motivo da mudança de cultivo",
+        "description": "Texto: \"Depois de três verões seguidos com o rio seco, os agricultores do vale deixaram o arroz e passaram a plantar mandioca.\" Determine, com base no texto, o motivo provável da mudança de cultivo, justificando a inferência."
+      },
+      "criteria": [
+        {"id": "T1-AC1", "description": "Apresentar o motivo e o trecho que sustenta a inferência."}
+      ],
+      "learnings": [],
+      "preliminary_result": "O motivo provável é a falta de água: a mudança vem logo depois de \"três verões seguidos com o rio seco\", e o arroz depende de muita água, enquanto a mandioca tolera seca. O texto não usa a palavra \"porque\", mas a sequência e o contraste entre as culturas sustentam a inferência.",
+      "reference": {
+        "decision": "approved",
+        "met": {"T1-AC1": true, "T1-TECH": true},
+        "rationale": "A pertinent contextual inference grounded on the passage; the absence of an explicit causal word is not a defect."
+      },
+      "review_checks": [
+        "Avoids hyper-literalism while applying the same standard of implicit content to alternatives."
+      ]
+    },
+    {
+      "name": "optional_final_justification_absent",
+      "polarity": "positive",
+      "category": "scope_limits",
+      "task": {
+        "id": "T2",
+        "title": "Comparação do custo total de dois financiamentos",
+        "description": "Financiamento A: 12 parcelas de R$ 110. Financiamento B: entrada de R$ 200 e 10 parcelas de R$ 100. Determine qual tem o menor custo total, mostrando as contas."
+      },
+      "criteria": [
+        {"id": "T2-AC1", "description": "Calcular o custo total de cada financiamento e compará-los."}
+      ],
+      "learnings": [],
+      "preliminary_result": "Custo de A = 12 · 110 = R$ 1 320. Custo de B = 200 + 10 · 100 = R$ 1 200. B tem o menor custo total, R$ 120 a menos que A.",
+      "reference": {
+        "decision": "approved",
+        "met": {"T2-AC1": true, "T2-TECH": true},
+        "rationale": "The comparison asked for is complete and correct; a final-answer marker, a letter or an additional justification beyond the task was not requested."
+      },
+      "review_checks": [
+        "Does not demand final presentation, external justification or analyses outside the task."
+      ]
+    }
+  ]
+}

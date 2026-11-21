@@ -1,37 +1,13 @@
-from pydantic import BaseModel
-from typing import Literal
+from pydantic import BaseModel, ConfigDict
 
-
-class MessageInputDTO(BaseModel):
-    user_input: str
-
-
-class ProviderConfigDTO(BaseModel):
-    model_name: str
-    endpoint: str | None = None
-
-
-class ModelConfigDTO(BaseModel):
-    provider: Literal["local", "open_router"]
-    provider_config: ProviderConfigDTO
-    max_tokens: int
-
-
-class PredefinedStrategyDTO(BaseModel):
-    number_of_phases: int
-
-
-class StrategiesDTO(BaseModel):
-    predefined: PredefinedStrategyDTO
-
-
-class ReasoningConfigDTO(BaseModel):
-    phase_breaking_strategy: Literal["autonomous", "predefined"]
-    strategies: StrategiesDTO | None = None
-    next_phase_strategy: Literal["ai_based", "algorithmic"]
+from src.infra.routes.v1.message.dtos.message_input_dto import MessageInputDTO
+from src.infra.routes.v1.message.dtos.model_config_dto import ModelConfigDTO
 
 
 class ReasoningInputDTO(BaseModel):
+    """Frame de abertura do WebSocket do fluxo harness, enviado uma única vez."""
+
+    model_config = ConfigDict(protected_namespaces=())
+
     message: MessageInputDTO
     llm_model_config: ModelConfigDTO
-    reasoning_config: ReasoningConfigDTO

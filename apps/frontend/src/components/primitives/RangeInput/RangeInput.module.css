@@ -1,0 +1,18 @@
+.range {
+  width: 100%;
+  height: 36px;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.range:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.range:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

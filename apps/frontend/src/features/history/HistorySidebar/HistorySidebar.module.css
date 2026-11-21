@@ -1,0 +1,50 @@
+.nav {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.item:hover {
+  background: var(--color-separator);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.itemActive {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.icon {
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+.skeletonItem {
+  padding: var(--space-2) var(--space-3);
+}

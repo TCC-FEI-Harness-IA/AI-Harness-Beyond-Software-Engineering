@@ -1,0 +1,498 @@
+{
+  "version": 1,
+  "purpose": "Human semantic review cases for B.2/C.1 validation and scripted contract inputs; reference verdicts are a rubric, not an answer key nor an automatic score.",
+  "cases": [
+    {
+      "name": "exact_result",
+      "phase": "B2",
+      "category": "exact",
+      "criteria": [
+        {
+          "id": "T1-AC1",
+          "description": "Determinar a velocidade média no percurso, com fórmula, substituição e unidades."
+        }
+      ],
+      "learnings": [
+        "Percurso: 1.200 m em 60 s."
+      ],
+      "result": "v_m = Δs/Δt = 1.200 m / 60 s = 20 m/s. A fórmula se aplica porque o enunciado dá a distância total e o tempo total.",
+      "reference_decision": "approved",
+      "reference_unmet": [],
+      "reference_justification": "O resultado exato decorre dos dados e da fórmula aplicada sob as condições dadas.",
+      "review_checks": [
+        "Approves without demanding extra proof for an exact, supported value.",
+        "Does not require the final answer format inside the task."
+      ]
+    },
+    {
+      "name": "approximate_period_best_fit",
+      "phase": "C1",
+      "category": "approximation",
+      "criteria": [
+        {
+          "id": "AC1",
+          "description": "Determinar o período orbital pedido, em meses."
+        },
+        {
+          "id": "AC2",
+          "description": "Selecionar a alternativa sustentada pela determinação."
+        }
+      ],
+      "learnings": [
+        "Período da Terra: 12 meses.",
+        "Razão entre os semieixos maiores do planeta e da Terra: 1,2987.",
+        "Alternativas: A) 12 meses; B) 15 meses; C) 18 meses; D) 24 meses; E) 30 meses."
+      ],
+      "stored_results": [
+        {
+          "task_id": "T1",
+          "title": "Período orbital",
+          "content": "Pela terceira lei de Kepler, para a mesma estrela, T/12 = 1,2987^(3/2) = 1,480; logo T ≈ 17,76 meses."
+        },
+        {
+          "task_id": "T2",
+          "title": "Escolha da alternativa",
+          "content": "O período calculado é 17,76 meses. C) 18 meses é o melhor ajuste: diferença de 0,24 mês, compatível com a precisão da razão fornecida; B) 15 e D) 24 diferem por vários meses. 17,76 não é igual a 18."
+        }
+      ],
+      "reference_decision": "approved",
+      "reference_unmet": [],
+      "reference_justification": "AC1 é coberto pelo período calculado (17,76 meses); AC2, pela escolha de C) 18 meses fundamentada por comparação e precisão, sem afirmar igualdade.",
+      "review_checks": [
+        "Approves without C.2 and without requiring an exact match.",
+        "The justification cites the calculated period and the comparison grounding the choice.",
+        "Does not describe 17.76 as equal to 18."
+      ]
+    },
+    {
+      "name": "calculated_23_choice_20",
+      "phase": "C1",
+      "category": "approximation",
+      "criteria": [
+        {
+          "id": "AC1",
+          "description": "Selecionar a alternativa correspondente ao valor obtido."
+        },
+        {
+          "id": "AC2",
+          "description": "Responder em português."
+        }
+      ],
+      "learnings": [
+        "Alternativas: A) 5; B) 10; C) 20; D) 40; E) 80."
+      ],
+      "stored_results": [
+        {
+          "task_id": "T1",
+          "title": "Contagem",
+          "content": "A contagem com as hipóteses dadas resulta em 23 combinações. Nenhuma alternativa é 23; C) 20 é a mais próxima (diferença 3), enquanto B) 10 e D) 40 diferem por fatores de cerca de 2. A escolha é por melhor ajuste, sem igualdade."
+        }
+      ],
+      "reference_decision": "approved",
+      "reference_unmet": [],
+      "reference_justification": "A seleção de C) 20 é fundamentada pela comparação com as alternativas disponíveis; a falta de igualdade sozinha não é lacuna.",
+      "review_checks": [
+        "Lack of equality alone does not cause rejection.",
+        "Does not demand that the calculation reach exactly 20."
+      ]
+    },
+    {
+      "name": "elimination_without_direct_calculation",
+      "phase": "B2",
+      "category": "elimination",
+      "criteria": [
+        {
+          "id": "T1-AC1",
+          "description": "Identificar a alternativa mais sustentada pelo texto, justificando a comparação."
+        }
+      ],
+      "learnings": [
+        "Alternativas: A) expansão industrial; B) êxodo urbano; C) adaptação ao regime de chuvas; D) mineração; E) turismo."
+      ],
+      "result": "O texto descreve plantio escalonado conforme as primeiras chuvas. A, D e E não aparecem no texto; B contraria a permanência no campo. C é a única compatível, por inferência contextual, sem cálculo envolvido.",
+      "reference_decision": "approved",
+      "reference_unmet": [],
+      "reference_justification": "A escolha de C está fundamentada por eliminação das demais e inferência contextual pertinente.",
+      "review_checks": [
+        "Accepts a choice grounded by elimination and inference without any calculation reaching the option.",
+        "Does not require the option's literal words in the text."
+      ]
+    },
+    {
+      "name": "open_estimate_with_hypothesis",
+      "phase": "C1",
+      "category": "estimate",
+      "criteria": [
+        {
+          "id": "AC1",
+          "description": "Estimar o volume mensal de água gasto em banhos pela família, com unidade."
+        },
+        {
+          "id": "AC2",
+          "description": "Responder em português."
+        }
+      ],
+      "learnings": [
+        "Família de 4 pessoas.",
+        "Pedido: estimar o volume mensal de água gasto em banhos."
+      ],
+      "stored_results": [
+        {
+          "task_id": "T1",
+          "title": "Estimativa",
+          "content": "Hipóteses explícitas: 1 banho por pessoa por dia, 8 min por banho, vazão de 9 L/min, mês de 30 dias. V ≈ 4 × 8 min × 9 L/min × 30 ≈ 8.640 L ≈ 9 × 10^3 L por mês. É uma estimativa de ordem de grandeza; mudar a vazão altera o valor proporcionalmente."
+        }
+      ],
+      "reference_decision": "approved",
+      "reference_unmet": [],
+      "reference_justification": "A estimativa tem unidade, hipóteses explícitas e ordem de grandeza; C.3 deve apresentá-la como estimativa.",
+      "review_checks": [
+        "Accepts an explicit estimate without demanding an exact value the question does not support.",
+        "C.3 presents it as an estimate, keeping the stated hypotheses when it justifies."
+      ]
+    },
+    {
+      "name": "conditioning_error_local",
+      "phase": "B2",
+      "category": "identifiable_error",
+      "criteria": [
+        {
+          "id": "T1-AC1",
+          "description": "Calcular a probabilidade condicional pedida, justificando o espaço amostral usado."
+        }
+      ],
+      "learnings": [
+        "Uma moeda honesta é lançada 7 vezes; sabe-se que o primeiro lançamento deu cara.",
+        "Pedido: probabilidade de obter pelo menos 4 caras, dado que o primeiro lançamento deu cara."
+      ],
+      "result": "É preciso ter pelo menos 3 caras nos 6 lançamentos restantes: (C(6,3)+C(6,4)+C(6,5)+C(6,6))/64 = 42/64. Como o primeiro lançamento precisa ser cara, multiplico por 1/2: P = 21/64.",
+      "reference_decision": "reproved",
+      "reference_unmet": [
+        "T1-AC1"
+      ],
+      "reference_justification": "Erro de condicionamento: o primeiro lançamento já é dado; multiplicar de novo por 1/2 conta a condição duas vezes. A conta escrita contradiz a probabilidade condicional pedida.",
+      "review_checks": [
+        "Identifies the double conditioning as the defect, not the numeric distance between values.",
+        "The presence of an explanation is not taken as correctness."
+      ],
+      "corrective_result": "O primeiro lançamento já é cara (dado); basta ter pelo menos 3 caras nos 6 restantes: (20+15+6+1)/64 = 42/64. Não se multiplica por 1/2, porque a condição já restringe o espaço amostral."
+    },
+    {
+      "name": "conditioning_error_union",
+      "phase": "C1",
+      "category": "identifiable_error",
+      "criteria": [
+        {
+          "id": "AC1",
+          "description": "Determinar a probabilidade condicional pedida."
+        },
+        {
+          "id": "AC2",
+          "description": "Selecionar a alternativa sustentada pela determinação."
+        }
+      ],
+      "learnings": [
+        "Uma moeda honesta é lançada 7 vezes; sabe-se que o primeiro lançamento deu cara.",
+        "Alternativas: A) 5/64; B) 35/64; C) 42/64; D) 57/64; E) 63/64."
+      ],
+      "stored_results": [
+        {
+          "task_id": "T1",
+          "title": "Probabilidade condicional",
+          "content": "Pelo menos 3 caras nos 6 restantes: 42/64; multiplicando pela probabilidade 1/2 do primeiro lançamento, P = 21/64."
+        },
+        {
+          "task_id": "T2",
+          "title": "Escolha",
+          "content": "21/64 não aparece; B) 35/64 é a alternativa mais próxima de 21/64."
+        }
+      ],
+      "reference_decision": "reproved",
+      "reference_unmet": [
+        "AC1",
+        "AC2"
+      ],
+      "reference_justification": "T1 multiplica por 1/2 uma condição já dada (o primeiro lançamento é cara), obtendo metade da probabilidade condicional; a escolha de T2 se apoia nesse erro. Investigar o condicionamento do evento dado.",
+      "review_checks": [
+        "Forwards the conditioning issue to C.2 even though T1 was approved by B.2.",
+        "Does not use a distance rule between options as the reason.",
+        "Does not compute the corrected probability inside C.1."
+      ],
+      "corrective_task": "Investigue o condicionamento da probabilidade pedida: a moeda honesta é lançada 7 vezes e o primeiro lançamento já deu cara. Determine a probabilidade de pelo menos 4 caras dado esse evento, explicando o espaço amostral, confirmando ou corrigindo explicitamente o resultado registrado de 21/64, e compare com as alternativas A) 5/64; B) 35/64; C) 42/64; D) 57/64; E) 63/64.",
+      "corrective_result": "Correção de T1: o evento dado restringe o espaço amostral aos 64 resultados dos 6 lançamentos restantes; multiplicar por 1/2 contou a condição duas vezes. P = 42/64, igual à alternativa C) 42/64; a escolha anterior de B) 35/64 se apoiava no valor incorreto."
+    },
+    {
+      "name": "collisions_real_contradiction",
+      "phase": "C1",
+      "category": "contradiction",
+      "criteria": [
+        {
+          "id": "AC1",
+          "description": "Comparar as forças médias e as energias dissipadas nas duas barreiras."
+        },
+        {
+          "id": "AC2",
+          "description": "Responder em português."
+        }
+      ],
+      "learnings": [
+        "Mesmo veículo, mesma velocidade inicial e mesma duração de contato nas duas barreiras.",
+        "Na barreira de pneus o veículo rebate; na barreira de blocos ele para."
+      ],
+      "stored_results": [
+        {
+          "task_id": "T1",
+          "title": "Forças médias",
+          "content": "|Δp| é maior nos pneus (rebate) do que nos blocos (para); com o mesmo Δt, a força média é maior nos pneus."
+        },
+        {
+          "task_id": "T2",
+          "title": "Energia dissipada",
+          "content": "Nos blocos toda a energia cinética é dissipada; nos pneus parte retorna ao veículo. A dissipação é maior nos blocos."
+        },
+        {
+          "task_id": "T3",
+          "title": "Análise conjunta",
+          "content": "A barreira de blocos produz a maior força média, e os pneus dissipam mais energia."
+        }
+      ],
+      "reference_decision": "reproved",
+      "reference_unmet": [
+        "AC1"
+      ],
+      "reference_justification": "T3 afirma o oposto de T1 e T2 sobre os mesmos objetos e condições (força e dissipação). Investigar a comparação conjunta sem decidir antecipadamente qual resultado está errado.",
+      "review_checks": [
+        "Names the results and the incompatible statements.",
+        "Does not decide in C.1 which result is wrong."
+      ],
+      "corrective_task": "Investigue a comparação conjunta entre a barreira de pneus (o veículo rebate) e a de blocos (o veículo para), com o mesmo veículo, a mesma velocidade inicial e a mesma duração de contato. As afirmações registradas sobre força média e energia dissipada são incompatíveis: determine, por impulso e balanço de energia, qual barreira tem a maior força média e qual dissipa mais energia, explicando qual afirmação registrada é confirmada ou corrigida.",
+      "corrective_result": "Correção de T3: com o mesmo Δt, |Δp| é maior nos pneus, logo a força média é maior nos pneus; nos blocos toda a energia cinética é dissipada, logo a dissipação é maior nos blocos. T1 e T2 são confirmados; T3 inverteu as duas comparações."
+    },
+    {
+      "name": "collisions_different_hypotheses",
+      "phase": "C1",
+      "category": "no_contradiction",
+      "criteria": [
+        {
+          "id": "AC1",
+          "description": "Comparar as forças médias nas duas barreiras nas condições do enunciado."
+        },
+        {
+          "id": "AC2",
+          "description": "Responder em português."
+        }
+      ],
+      "learnings": [
+        "Mesmo veículo, mesma velocidade inicial e mesma duração de contato nas duas barreiras."
+      ],
+      "stored_results": [
+        {
+          "task_id": "T1",
+          "title": "Forças nas condições dadas",
+          "content": "Com o mesmo Δt dado, a força média é maior nos pneus, porque |Δp| é maior quando o veículo rebate."
+        },
+        {
+          "task_id": "T2",
+          "title": "Sensibilidade à duração",
+          "content": "Sob a hipótese explícita, diferente do enunciado, de que o contato nos pneus durasse três vezes mais, a força média nos pneus seria menor que nos blocos."
+        }
+      ],
+      "reference_decision": "approved",
+      "reference_unmet": [],
+      "reference_justification": "T1 e T2 tratam de hipóteses diferentes e explícitas; nas condições do enunciado, T1 determina a comparação. Não há contradição.",
+      "review_checks": [
+        "Does not report a false contradiction between results under different explicit hypotheses."
+      ]
+    },
+    {
+      "name": "ratio_without_period",
+      "phase": "C1",
+      "category": "missing_content",
+      "criteria": [
+        {
+          "id": "AC1",
+          "description": "Determinar o período orbital de Marte, em meses."
+        },
+        {
+          "id": "AC2",
+          "description": "Selecionar a alternativa sustentada pela determinação."
+        }
+      ],
+      "learnings": [
+        "Período da Terra: 12 meses.",
+        "Alternativas: A) 12; B) 18; C) 23; D) 30; E) 40 meses."
+      ],
+      "stored_results": [
+        {
+          "task_id": "T1",
+          "title": "Razão de distâncias",
+          "content": "A razão entre as distâncias médias de Marte e da Terra ao Sol é 1,52, adimensional."
+        }
+      ],
+      "reference_decision": "reproved",
+      "reference_unmet": [
+        "AC1",
+        "AC2"
+      ],
+      "reference_justification": "Só há uma razão adimensional de distâncias; o período em meses não foi determinado e a escolha não está sustentada. Investigar o período pela relação orbital aplicável.",
+      "review_checks": [
+        "Does not treat the ratio as the period.",
+        "Does not delegate the missing calculation to C.3 nor compute it in C.1."
+      ],
+      "corrective_task": "Determine o período orbital de Marte em meses pela relação orbital aplicável, usando o período da Terra de 12 meses e a razão de distâncias registrada em Key Learnings. Explique a fórmula, as hipóteses e a comparação com as alternativas A) 12; B) 18; C) 23; D) 30; E) 40 meses.",
+      "corrective_result": "Pela terceira lei de Kepler, para a mesma estrela, T_M = 12 meses × 1,52^(3/2) ≈ 22,5 meses. C) 23 meses é o melhor ajuste (diferença de 0,5 mês), sem igualdade."
+    },
+    {
+      "name": "presentation_only_marker",
+      "phase": "C1",
+      "category": "presentation_only",
+      "criteria": [
+        {
+          "id": "AC1",
+          "description": "Identificar a alternativa sustentada pelo cálculo."
+        },
+        {
+          "id": "AC2",
+          "description": "Terminar com a linha RESPOSTA_FINAL: LETRA."
+        }
+      ],
+      "learnings": [
+        "Alternativas: A) 1 g; B) 2 g; C) 3 g."
+      ],
+      "stored_results": [
+        {
+          "task_id": "T1",
+          "title": "Massa por porção",
+          "content": "6 g / 2 = 3 g, que corresponde a C) 3 g; A e B não correspondem."
+        }
+      ],
+      "reference_decision": "approved",
+      "reference_unmet": [],
+      "reference_justification": "O conteúdo identifica C; a linha RESPOSTA_FINAL é apresentação que C.3 aplica.",
+      "review_checks": [
+        "The missing marker line alone is not a content gap."
+      ]
+    },
+    {
+      "name": "presentation_only_translation",
+      "phase": "C1",
+      "category": "presentation_only",
+      "criteria": [
+        {
+          "id": "AC1",
+          "description": "Determinar a velocidade média, com unidade."
+        },
+        {
+          "id": "AC2",
+          "description": "Responder em português."
+        }
+      ],
+      "learnings": [
+        "Percurso: 1.200 m em 60 s."
+      ],
+      "stored_results": [
+        {
+          "task_id": "T1",
+          "title": "Average speed",
+          "content": "v = 1,200 m / 60 s = 20 m/s, because the total distance and total time are given."
+        }
+      ],
+      "reference_decision": "approved",
+      "reference_unmet": [],
+      "reference_justification": "O conteúdo determina 20 m/s; a tradução para o português é apresentação em C.3.",
+      "review_checks": [
+        "Results in another language do not make the language criterion unmet."
+      ]
+    },
+    {
+      "name": "implicit_religiosity_supported",
+      "phase": "B2",
+      "category": "implicit_content",
+      "criteria": [
+        {
+          "id": "T1-AC1",
+          "description": "Identificar a alternativa mais sustentada pelo texto, justificando a interpretação."
+        }
+      ],
+      "learnings": [
+        "Texto: comunidades realizam um rito religioso para pedir chuva em anos de estiagem.",
+        "Alternativas: A) controle técnico da irrigação; D) interpretação dos ciclos de chuva e seca."
+      ],
+      "result": "O rito descrito é a forma como a comunidade interpreta a chegada da chuva e da seca; D expressa essa interpretação ambiental, ainda que não use a palavra religiosidade. A trata de técnica de irrigação, ausente do texto.",
+      "reference_decision": "approved",
+      "reference_unmet": [],
+      "reference_justification": "A religiosidade está implícita na interpretação ambiental descrita; não se exige a palavra literal, e o mesmo padrão valeria para qualquer opção.",
+      "review_checks": [
+        "Does not reject D for lacking the literal word while accepting implicit content for another option.",
+        "Feedback does not push a supported answer to a different option only because a term is implicit."
+      ]
+    },
+    {
+      "name": "false_equality",
+      "phase": "C1",
+      "category": "false_equality",
+      "criteria": [
+        {
+          "id": "AC1",
+          "description": "Determinar a distância pedida."
+        },
+        {
+          "id": "AC2",
+          "description": "Selecionar a alternativa sustentada pela determinação."
+        }
+      ],
+      "learnings": [
+        "Alternativas: A) 44 mm; B) 60 mm; C) 80 mm."
+      ],
+      "stored_results": [
+        {
+          "task_id": "T1",
+          "title": "Distância",
+          "content": "Pela equação das lentes delgadas, a distância do objeto à objetiva é 47 mm, o que corresponde exatamente à alternativa A) 44 mm."
+        }
+      ],
+      "reference_decision": "reproved",
+      "reference_unmet": [
+        "AC2"
+      ],
+      "reference_justification": "O resultado afirma uma igualdade falsa (47 mm = 44 mm). Investigar se a escolha se sustenta por aproximação explícita ou se há erro no cálculo.",
+      "review_checks": [
+        "Treats the false equality as a real contradiction.",
+        "C.1 itself never writes that 47 corresponds exactly to 44."
+      ],
+      "corrective_task": "Investigue a relação entre a distância calculada de 47 mm e as alternativas A) 44 mm; B) 60 mm; C) 80 mm: o resultado registrado afirma igualdade entre valores diferentes. Verifique o cálculo pela equação das lentes delgadas e fundamente a escolha, explicando se ela é exata ou aproximada.",
+      "corrective_result": "Correção de T1: a equação das lentes delgadas confirma cerca de 47 mm; 47 mm não é igual a 44 mm. A) 44 mm é o melhor ajuste (diferença de 3 mm, contra mais de 13 mm das demais)."
+    },
+    {
+      "name": "explicit_approximation_47_to_44",
+      "phase": "C1",
+      "category": "approximation",
+      "criteria": [
+        {
+          "id": "AC1",
+          "description": "Determinar a distância pedida."
+        },
+        {
+          "id": "AC2",
+          "description": "Selecionar a alternativa sustentada pela determinação."
+        }
+      ],
+      "learnings": [
+        "Alternativas: A) 44 mm; B) 60 mm; C) 80 mm."
+      ],
+      "stored_results": [
+        {
+          "task_id": "T1",
+          "title": "Distância",
+          "content": "Pela equação das lentes delgadas, a distância do objeto à objetiva é aproximadamente 47 mm. A) 44 mm é o melhor ajuste: diferença de 3 mm, enquanto B e C diferem em mais de 13 mm; não há igualdade."
+        }
+      ],
+      "reference_decision": "approved",
+      "reference_unmet": [],
+      "reference_justification": "A escolha de 44 mm por aproximação explícita está fundamentada pela comparação; a diferença de 3 mm sozinha não é defeito.",
+      "review_checks": [
+        "Approves the explicit approximation, distinct from the false-equality case."
+      ]
+    }
+  ]
+}

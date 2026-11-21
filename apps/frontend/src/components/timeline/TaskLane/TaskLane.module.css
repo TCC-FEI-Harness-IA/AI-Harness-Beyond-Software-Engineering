@@ -1,0 +1,72 @@
+.lane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-separator);
+  animation: fadeInUp var(--duration-base) var(--ease-out) both;
+}
+
+.lane:last-child {
+  border-bottom: none;
+}
+
+.discarded {
+  opacity: 0.5;
+}
+
+.discarded .title {
+  text-decoration: line-through;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  flex: 1;
+  min-width: 120px;
+}
+
+.stats {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.track {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  overflow-x: auto;
+  padding-block: var(--space-1);
+  scrollbar-width: thin;
+}
+
+.stepWrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.stepWrapper:not(:first-child)::before {
+  content: '';
+  width: 12px;
+  height: 1px;
+  background: var(--color-hairline);
+  flex-shrink: 0;
+}
+
+.attemptTag {
+  font-size: var(--text-xs);
+  color: var(--color-warning);
+  white-space: nowrap;
+  padding-inline: var(--space-1);
+}

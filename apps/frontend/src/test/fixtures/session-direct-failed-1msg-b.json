@@ -1,0 +1,40 @@
+{
+  "_id": "sess_a40bffb1198b4262a600fd57f8e22c24",
+  "id": "sess_a40bffb1198b4262a600fd57f8e22c24",
+  "user_question": "ping",
+  "flow": "DIRECT",
+  "model_name": "openai/gpt-4o-mini",
+  "max_tokens": 50,
+  "temperature": 0.3,
+  "status": "failed",
+  "created_at": "2026-09-11T23:17:58.129899+00:00",
+  "updated_at": "2026-09-11T23:17:58.558685+00:00",
+  "final_answer": null,
+  "totals": {
+    "total_messages": 1,
+    "total_llm_calls": 0,
+    "tokens_input": 0,
+    "tokens_output": 0,
+    "total_tokens": 0,
+    "inference_time_ms": 0,
+    "wall_time_ms": 429
+  },
+  "messages": [
+    {
+      "id": "905b61c434b547e292c63da35414745b",
+      "order": 0,
+      "timestamp": "2026-09-11T23:17:58.130864+00:00",
+      "phase": "DIRECT",
+      "source": "user",
+      "content": "ping",
+      "task_id": null,
+      "context_id": null,
+      "tokens_input": 0,
+      "tokens_output": 0,
+      "total_tokens": 0,
+      "inference_time_ms": 0,
+      "model_name": null
+    }
+  ],
+  "degradations": []
+}

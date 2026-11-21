@@ -1,0 +1,22 @@
+# QUESTÃO 157
+
+Uma doceira vende e entrega, em seu bairro, porções
+de 100 g de docinhos de aniversário. Atualmente, a taxa
+única de entrega é R$ 10,00, e o valor cobrado por uma
+porção é R$ 25,00. Por uma estratégia de vendas, a partir
+da próxima semana, a taxa única de entrega será R$ 15,00,
+e um novo valor será cobrado por uma porção, de maneira
+que o valor total a ser pago por um cliente na compra de
+5 porções permaneça o mesmo.
+A partir da próxima semana, qual será o novo valor
+cobrado, em real, por uma porção?
+
+A) 12,50
+
+B) 20,00
+
+C) 24,00
+
+D) 30,00
+
+E) 37,50

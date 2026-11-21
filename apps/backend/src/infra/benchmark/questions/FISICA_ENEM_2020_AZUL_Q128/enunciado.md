@@ -1,0 +1,27 @@
+# QUESTÃO 128
+
+Mesmo para peixes de aquário, como o peixe
+arco-íris, a temperatura da água fora da faixa ideal
+(26 °C a 28 °C), bem como sua variação brusca, pode
+afetar a saúde do animal. Para manter a temperatura
+da água dentro do aquário na média desejada, utilizam-
+se dispositivos de aquecimento com termostato. Por
+exemplo, para um aquário de 50 L, pode-se utilizar um
+sistema de aquecimento de 50 W otimizado para suprir
+sua taxa de resfriamento. Essa taxa pode ser considerada
+praticamente constante, já que a temperatura externa ao
+aquário é mantida pelas estufas. Utilize para a água o
+calor específico 4,0 kJ kg−1 K−1 e a densidade 1 kg L−1.
+Se o sistema de aquecimento for desligado por 1 h, qual
+o valor mais próximo para a redução da temperatura da
+água do aquário?
+
+A) 4,0 °C
+
+B) 3,6 °C
+
+C) 0,9 °C
+
+D) 0,6 °C
+
+E) 0,3 °C

@@ -1,35 +1,13 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import Literal
+from pydantic import BaseModel, ConfigDict
 
-
-class MessageInputDTO(BaseModel):
-    user_input: str
-
-
-class ProviderConfigDTO(BaseModel):
-    model_name: str
-    endpoint: str | None = None
-
-
-class ModelConfigDTO(BaseModel):
-    provider: Literal["local", "open_router"]
-    provider_config: ProviderConfigDTO
-    max_tokens: int
-    temperature: float = Field(default=0.7)
-
-    @field_validator("temperature", mode="before")
-    @classmethod
-    def validate_and_round_temperature(cls, value: float) -> float:
-        if not value:
-            return 0.7
-
-        temperature = float(value)
-        if not 0 <= temperature <= 1:
-            raise ValueError("temperature deve estar entre 0 e 1")
-
-        return round(temperature, 1)
+from src.infra.routes.v1.message.dtos.message_input_dto import MessageInputDTO
+from src.infra.routes.v1.message.dtos.model_config_dto import ModelConfigDTO
 
 
 class DefaultInputDTO(BaseModel):
+    """Corpo da requisição do fluxo baseline."""
+
+    model_config = ConfigDict(protected_namespaces=())
+
     message: MessageInputDTO
     llm_model_config: ModelConfigDTO

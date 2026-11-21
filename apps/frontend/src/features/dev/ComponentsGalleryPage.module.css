@@ -1,0 +1,34 @@
+.section {
+  margin-bottom: var(--space-10);
+}
+
+.sectionTitle {
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  margin-bottom: var(--space-4);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: var(--content-max);
+}
+
+.panelSpacing {
+  margin-top: var(--space-4);
+}
+
+.scrollArea {
+  height: 220px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 0.5px var(--color-hairline);
+}

@@ -1,0 +1,1 @@
+export { LegendBar } from './LegendBar'
