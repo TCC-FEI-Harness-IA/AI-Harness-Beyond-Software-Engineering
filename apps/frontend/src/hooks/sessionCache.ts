@@ -13,7 +13,7 @@ export function getCachedSession(id: string, source: SessionSource = 'history'):
 }
 
 export function setCachedSession(document: SessionDocument, source: SessionSource = 'history'): void {
-  if (source !== 'history' && document.benchmark_details?.is_correct == null) {
+  if (source === 'benchmark' && document.benchmark_details?.is_correct == null) {
     cache.delete(`${source}:${document.id}`)
     return
   }
@@ -22,9 +22,4 @@ export function setCachedSession(document: SessionDocument, source: SessionSourc
 
 export function getAllCachedSessions(): SessionDocument[] {
   return [...cache.values()]
-}
-
-/** Esvazia o cache — no logout, na expiração da sessão e na troca de conta. */
-export function clearSessionCache(): void {
-  cache.clear()
 }

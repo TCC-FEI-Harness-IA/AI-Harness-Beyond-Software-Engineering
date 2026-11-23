@@ -55,7 +55,6 @@ def _build_repository(storage_path: Path) -> JsonFileSessionRepository:
         mapper=SessionDocumentMapper(),
         settings=FakeSettings(ralph_sessions_storage_path=str(storage_path)),
         logger=logging.getLogger("teste"),
-        owner_id="usr_teste",
     )
 
 
@@ -68,7 +67,7 @@ def storage_path(tmp_path: Path) -> Path:
 async def test_save_cria_o_diretorio_e_o_arquivo_da_sessao(storage_path: Path) -> None:
     await _build_repository(storage_path=storage_path).save(session=_nova_sessao())
 
-    assert (storage_path / "owners" / "usr_teste" / "sess_ab12.json").is_file()
+    assert (storage_path / "sess_ab12.json").is_file()
 
 
 async def test_save_seguido_de_find_by_id_devolve_sessao_equivalente(storage_path: Path) -> None:
@@ -103,7 +102,7 @@ async def test_save_nao_deixa_arquivo_temporario_remanescente(storage_path: Path
 async def test_arquivo_gravado_e_utf8_legivel_e_indentado(storage_path: Path) -> None:
     await _build_repository(storage_path=storage_path).save(session=_nova_sessao())
 
-    conteudo = (storage_path / "owners" / "usr_teste" / "sess_ab12.json").read_text(encoding="utf-8")
+    conteudo = (storage_path / "sess_ab12.json").read_text(encoding="utf-8")
     assert "pergunta com acentuação" in conteudo
     assert '\n  "id": "sess_ab12"' in conteudo
 
@@ -113,8 +112,8 @@ async def test_find_by_id_de_sessao_inexistente_devolve_none(storage_path: Path)
 
 
 async def test_find_by_id_de_arquivo_com_json_invalido_e_recusado(storage_path: Path) -> None:
-    (storage_path / "owners" / "usr_teste").mkdir(parents=True)
-    (storage_path / "owners" / "usr_teste" / "sess_ab12.json").write_text("{invalido", encoding="utf-8")
+    storage_path.mkdir(parents=True)
+    (storage_path / "sess_ab12.json").write_text("{invalido", encoding="utf-8")
 
     with pytest.raises(ValueError, match="JSON inválido"):
         await _build_repository(storage_path=storage_path).find_by_id(session_id="sess_ab12")
@@ -131,9 +130,9 @@ async def test_list_ids_devolve_os_ids_em_ordem_alfabetica(storage_path: Path) -
 async def test_list_ids_ignora_temporarios_e_arquivos_de_outra_extensao(storage_path: Path) -> None:
     repositorio = _build_repository(storage_path=storage_path)
     await repositorio.save(session=_nova_sessao(session_id="sess_a"))
-    (storage_path / "owners" / "usr_teste" / "sess_b.json.tmp").write_text("{}", encoding="utf-8")
-    (storage_path / "owners" / "usr_teste" / "anotacoes.txt").write_text("nada", encoding="utf-8")
-    (storage_path / "owners" / "usr_teste" / "subpasta").mkdir()
+    (storage_path / "sess_b.json.tmp").write_text("{}", encoding="utf-8")
+    (storage_path / "anotacoes.txt").write_text("nada", encoding="utf-8")
+    (storage_path / "subpasta").mkdir()
 
     assert await repositorio.list_ids() == ["sess_a"]
 
@@ -178,8 +177,8 @@ async def test_documento_gravado_e_o_produzido_pelo_mapper(storage_path: Path) -
     sessao = _nova_sessao()
     await _build_repository(storage_path=storage_path).save(session=sessao)
 
-    gravado = json.loads((storage_path / "owners" / "usr_teste" / "sess_ab12.json").read_text(encoding="utf-8"))
-    assert gravado == {**SessionDocumentMapper().to_document(session=sessao), "owner_id": "usr_teste"}
+    gravado = json.loads((storage_path / "sess_ab12.json").read_text(encoding="utf-8"))
+    assert gravado == SessionDocumentMapper().to_document(session=sessao)
 
 
 async def test_save_interrompido_nao_corrompe_o_documento_anterior(
@@ -189,7 +188,7 @@ async def test_save_interrompido_nao_corrompe_o_documento_anterior(
     repositorio = _build_repository(storage_path=storage_path)
     sessao = _nova_sessao()
     await repositorio.save(session=sessao)
-    documento_anterior = {**SessionDocumentMapper().to_document(session=sessao), "owner_id": "usr_teste"}
+    documento_anterior = SessionDocumentMapper().to_document(session=sessao)
 
     def _promocao_interrompida(origem: object, destino: object) -> None:
         raise OSError("processo interrompido antes de promover o arquivo temporário")
@@ -201,5 +200,4 @@ async def test_save_interrompido_nao_corrompe_o_documento_anterior(
         await repositorio.save(session=sessao)
 
     monkeypatch.undo()
-    arquivo = storage_path / "owners" / "usr_teste" / "sess_ab12.json"
-    assert json.loads(arquivo.read_text(encoding="utf-8")) == documento_anterior
+    assert json.loads((storage_path / "sess_ab12.json").read_text(encoding="utf-8")) == documento_anterior

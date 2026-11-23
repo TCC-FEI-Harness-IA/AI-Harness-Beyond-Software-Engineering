@@ -44,17 +44,14 @@ const NOT_FOUND_ICON = (
   </svg>
 )
 
-export function BenchmarkSessionView({
+function BenchmarkSessionView({
   session,
   isLive,
   onAliasSaved,
-  official,
 }: {
   session: BenchmarkSessionDocument
   isLive: boolean
   onAliasSaved?: () => void
-  /** Resultado oficial: somente leitura, sem alias, exportação ou reexecução. */
-  official?: { publishedAt: string; textRedacted: boolean; sourceBenchmarkSessionId: string }
 }): JSX.Element {
   const { isActive, rerun } = useBenchmarkRun()
   const subjectCounts = new Map<string, number>()
@@ -77,15 +74,7 @@ export function BenchmarkSessionView({
             {BENCHMARK_SESSION_STATUS_LABEL[session.status]}
           </Badge>
           {isLive ? <Badge tone="accent">Ao vivo</Badge> : null}
-          {official ? <Badge tone="context">Resultado oficial</Badge> : null}
         </div>
-        {official ? (
-          <p className={styles.meta}>
-            <span>Publicado em {formatDateTime(official.publishedAt)}</span>
-            <span>Bateria de origem {official.sourceBenchmarkSessionId}</span>
-            {official.textRedacted ? <span>Textos das sessões omitidos (termos do dataset)</span> : null}
-          </p>
-        ) : null}
         <p className={styles.meta}>
           {session.alias ? <span>{formatDateTime(session.created_at)}</span> : null}
           <span>{benchmarkLabel(session.benchmark)}</span>
@@ -96,7 +85,7 @@ export function BenchmarkSessionView({
           <span>{session.max_parallel} em paralelo</span>
           <span className={styles.id}>{session.id}</span>
         </p>
-        {session.status !== 'running' && !isLive && onAliasSaved && !official ? (
+        {session.status !== 'running' && !isLive && onAliasSaved ? (
           <BenchmarkAliasEditor key={`${session.id}:${session.alias ?? ''}`} session={session} onSaved={onAliasSaved} />
         ) : null}
         {session.benchmark.dataset !== 'vestibular' ? (
@@ -134,23 +123,15 @@ export function BenchmarkSessionView({
         <h2 className={styles.sectionTitle}>Simples × Ralph</h2>
         <BenchmarkSummary session={session} />
       </Card>
-      {official ? null : (
-        <>
-          <BenchmarkSessionExport session={session} />
-          <BenchmarkRalphErrorsExport session={session} />
-        </>
-      )}
+      <BenchmarkSessionExport session={session} />
+      <BenchmarkRalphErrorsExport session={session} />
       <h2 className={styles.sectionTitle}>Questões e sessões</h2>
-      {official ? (
-        <BenchmarkQuestionsTable session={session} />
-      ) : (
-        <BenchmarkQuestionsTable
-          session={session}
-          onRerun={(questionId) => rerun(session.id, questionId, session.benchmark.dataset)}
-          onRerunMany={(questionIds) => rerun(session.id, questionIds, session.benchmark.dataset)}
-          rerunDisabled={isActive}
-        />
-      )}
+      <BenchmarkQuestionsTable
+        session={session}
+        onRerun={(questionId) => rerun(session.id, questionId, session.benchmark.dataset)}
+        onRerunMany={(questionIds) => rerun(session.id, questionIds, session.benchmark.dataset)}
+        rerunDisabled={isActive}
+      />
     </>
   )
 }

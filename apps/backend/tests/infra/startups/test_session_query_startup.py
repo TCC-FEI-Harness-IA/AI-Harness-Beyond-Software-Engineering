@@ -44,20 +44,19 @@ async def _gravar(storage_path: Path, session_id: str) -> None:
         mapper=SessionDocumentMapper(),
         settings=FakeSettings(ralph_sessions_storage_path=str(storage_path)),
         logger=logging.getLogger("teste"),
-        owner_id="usr_teste",
     )
     await repositorio.save(session=_nova_sessao(session_id=session_id))
 
 
 def test_constroi_todo_o_grafo_sem_deixar_atributo_nulo(storage_path: Path) -> None:
-    startup = SessionQueryStartup(owner_id="usr_teste")
+    startup = SessionQueryStartup()
 
     assert vars(startup)
     assert all(valor is not None for valor in vars(startup).values())
 
 
 def test_injeta_o_repositorio_no_caso_de_uso(storage_path: Path) -> None:
-    startup = SessionQueryStartup(owner_id="usr_teste")
+    startup = SessionQueryStartup()
 
     assert isinstance(startup.get_session_use_case, GetSessionUseCase)
     assert startup.get_session_use_case.repository is startup.session_repository
@@ -66,7 +65,7 @@ def test_injeta_o_repositorio_no_caso_de_uso(storage_path: Path) -> None:
 async def test_devolve_o_documento_da_sessao_gravada(storage_path: Path) -> None:
     await _gravar(storage_path=storage_path, session_id="sess_ab12")
 
-    documento = await SessionQueryStartup(owner_id="usr_teste").get_session_document(session_id="sess_ab12")
+    documento = await SessionQueryStartup().get_session_document(session_id="sess_ab12")
 
     assert documento["_id"] == "sess_ab12"
     assert documento["id"] == "sess_ab12"
@@ -75,11 +74,11 @@ async def test_devolve_o_documento_da_sessao_gravada(storage_path: Path) -> None
 
 async def test_documento_de_sessao_inexistente_e_recusado(storage_path: Path) -> None:
     with pytest.raises(SessionNotFoundError):
-        await SessionQueryStartup(owner_id="usr_teste").get_session_document(session_id="sess_zzz")
+        await SessionQueryStartup().get_session_document(session_id="sess_zzz")
 
 
 async def test_lista_os_identificadores_gravados(storage_path: Path) -> None:
     await _gravar(storage_path=storage_path, session_id="sess_b")
     await _gravar(storage_path=storage_path, session_id="sess_a")
 
-    assert await SessionQueryStartup(owner_id="usr_teste").list_session_ids() == ["sess_a", "sess_b"]
+    assert await SessionQueryStartup().list_session_ids() == ["sess_a", "sess_b"]

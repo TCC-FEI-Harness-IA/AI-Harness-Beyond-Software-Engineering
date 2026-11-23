@@ -38,7 +38,7 @@ class RerunBenchmarkQuestionUseCase:
     respeitam o paralelismo da bateria e os fluxos de cada questão continuam em sequência.
     """
 
-    _active_sessions: ClassVar[set[tuple[str, str]]] = set()
+    _active_sessions: ClassVar[set[str]] = set()
     _FLOW_ORDER = (BenchmarkInferenceModeEnum.SIMPLE, BenchmarkInferenceModeEnum.RALPH)
 
     def __init__(
@@ -49,7 +49,6 @@ class RerunBenchmarkQuestionUseCase:
         clock: IClock,
         settings: ISettings,
         logger: logging.Logger,
-        owner_id: str,
     ) -> None:
         """Inicializa o caso de uso.
 
@@ -60,7 +59,6 @@ class RerunBenchmarkQuestionUseCase:
             clock: Fonte de tempo.
             settings: Configurações, fonte do intervalo de progresso.
             logger: Logger do módulo.
-            owner_id: Conta dona da bateria, obtida da autenticação validada.
         """
         self.question_provider_for = question_provider_for
         self.flow_runner: IBenchmarkFlowRunner = flow_runner
@@ -68,7 +66,6 @@ class RerunBenchmarkQuestionUseCase:
         self.clock: IClock = clock
         self.settings: ISettings = settings
         self.logger = logger
-        self.owner_id = owner_id
 
     async def execute(
         self, benchmark_session_id: str, question_id: str
@@ -88,10 +85,9 @@ class RerunBenchmarkQuestionUseCase:
         """
         if not question_ids or len(set(question_ids)) != len(question_ids):
             raise InvalidBenchmarkRequestError("Selecione ao menos uma questão, sem identificadores repetidos.")
-        scope = (self.owner_id, benchmark_session_id)
-        if scope in self._active_sessions:
+        if benchmark_session_id in self._active_sessions:
             raise BenchmarkSessionNotFinishedError(benchmark_session_id=benchmark_session_id)
-        self._active_sessions.add(scope)
+        self._active_sessions.add(benchmark_session_id)
         try:
             benchmark_session = await self.__load(benchmark_session_id=benchmark_session_id)
             provider, queue = self.__prepare(benchmark_session=benchmark_session, question_ids=question_ids)
@@ -123,7 +119,7 @@ class RerunBenchmarkQuestionUseCase:
                     benchmark_session.question(question_id).abort_rerun()
             yield RerunBenchmarkQuestionOutputDTO(benchmark_session=benchmark_session, finished=True)
         finally:
-            self._active_sessions.discard(scope)
+            self._active_sessions.discard(benchmark_session_id)
 
     # ── Preparação ───────────────────────────────────────────────────────────
 

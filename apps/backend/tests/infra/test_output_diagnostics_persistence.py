@@ -6,6 +6,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 from mongomock_motor import AsyncMongoMockClient
 
 from src.domain.entities.benchmark.benchmark_ralph_error import BenchmarkRalphError
@@ -14,6 +15,7 @@ from src.infra.mappers.session_document_mapper import SessionDocumentMapper
 from src.infra.repositories.json_file_session_repository import JsonFileSessionRepository
 from src.infra.repositories.mongo_session_repository import MongoSessionRepository
 from src.infra.services.benchmark_ralph_errors_archive_builder import BenchmarkRalphErrorsArchiveBuilder
+from src.main import create_app
 from tests.doubles.benchmark_factories import desfecho, questao
 from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.output_diagnostic_factories import DIAGNOSTICO_Q037, RECUPERACAO, sessao_com_recusa_recuperada
@@ -24,7 +26,6 @@ def _repositorio_json(caminho: Path) -> JsonFileSessionRepository:
         mapper=SessionDocumentMapper(),
         settings=FakeSettings(ralph_sessions_storage_path=str(caminho)),
         logger=logging.getLogger("teste"),
-        owner_id="usr_teste",
     )
 
 
@@ -48,7 +49,7 @@ async def test_repositorio_json_le_sessao_antiga_sem_os_campos_novos(tmp_path: P
     repositorio = _repositorio_json(tmp_path)
     sessao = sessao_com_recusa_recuperada()
     await repositorio.save(session=sessao)
-    arquivo = next((tmp_path / "owners" / "usr_teste").glob("*.json"))
+    arquivo = next(tmp_path.glob("*.json"))
     documento = json.loads(arquivo.read_text(encoding="utf-8"))
     for invocacao in documento["invocations"]:
         for chave in ("recovers_invocation_id", "content_accepted", "output_diagnostic", "recovery"):
@@ -70,7 +71,6 @@ async def test_repositorio_mongo_preserva_diagnosticos_e_recuperacao() -> None:
         collection=AsyncMongoMockClient()["banco"]["sessoes"],
         mapper=SessionDocumentMapper(),
         logger=logging.getLogger("teste"),
-        owner_id="usr_teste",
     )
     sessao = sessao_com_recusa_recuperada()
 
@@ -88,9 +88,7 @@ async def test_consulta_da_sessao_devolve_os_diagnosticos(tmp_path: Path, monkey
     sessao = sessao_com_recusa_recuperada()
     await _repositorio_json(caminho).save(session=sessao)
 
-    from tests.doubles.security_doubles import authenticated_client
-
-    resposta = authenticated_client(user_id="usr_teste", with_credential=False).get(f"/v1/sessions/{sessao.id}")
+    resposta = TestClient(create_app()).get(f"/v1/sessions/{sessao.id}")
 
     assert resposta.status_code == 200
     invocacoes = resposta.json()["invocations"]

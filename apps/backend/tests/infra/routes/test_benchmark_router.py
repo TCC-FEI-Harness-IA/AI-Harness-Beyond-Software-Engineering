@@ -16,9 +16,9 @@ from src.domain.errors.invalid_benchmark_request_error import InvalidBenchmarkRe
 from src.domain.errors.no_benchmark_errors_to_export_error import NoBenchmarkErrorsToExportError
 from src.infra.routes.v1.benchmark import router as benchmark_router_module
 from src.infra.routes.v1.benchmark.dtos.benchmark_frame_dto import BenchmarkFrameDTO
-from src.infra.routes.v1.benchmark.router import _rerun, _run_benchmark
+from src.infra.routes.v1.benchmark.router import rerun_benchmark_question, run_benchmark
 from src.infra.services.benchmark_ralph_errors_archive_builder import BenchmarkArchive
-from tests.doubles.security_doubles import authenticated_client
+from src.main import create_app
 
 
 def _frame(tipo: str = "progress", status: str = "running") -> BenchmarkFrameDTO:
@@ -33,10 +33,8 @@ class _FakeRunStartup:
     construction_error: Exception | None = None
     payloads: list[Any] = []
     closed = 0
-    kwargs: list[dict[str, Any]] = []
 
-    def __init__(self, **kwargs: Any) -> None:
-        _FakeRunStartup.kwargs.append(kwargs)
+    def __init__(self) -> None:
         if _FakeRunStartup.construction_error is not None:
             raise _FakeRunStartup.construction_error
 
@@ -55,10 +53,8 @@ class _FakeQueryStartup:
     """Dublê do startup de consultas, com respostas e falhas programáveis."""
 
     error: Exception | None = None
-    owners: list[str | None] = []
 
-    def __init__(self, owner_id: str | None = None) -> None:
-        _FakeQueryStartup.owners.append(owner_id)
+    def __init__(self) -> None:
         if _FakeQueryStartup.error is not None:
             raise _FakeQueryStartup.error
 
@@ -83,11 +79,6 @@ class _QueryStartupQueLevanta(_FakeQueryStartup):
 
 class _FakeExportStartup:
     """Dublê do startup de exportação, com arquivo e falha programáveis."""
-
-    owners: list[str] = []
-
-    def __init__(self, owner_id: str) -> None:
-        _FakeExportStartup.owners.append(owner_id)
 
     error: Exception | None = None
     requested: list[str] = []
@@ -149,9 +140,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     _FakeQueryStartup.error = None
     monkeypatch.setattr(benchmark_router_module, "BenchmarkRunStartup", _FakeRunStartup)
     monkeypatch.setattr(benchmark_router_module, "BenchmarkQueryStartup", _FakeQueryStartup)
-    _FakeRunStartup.kwargs = []
-    _FakeQueryStartup.owners = []
-    return authenticated_client(user_id="usr_ana")
+    return TestClient(create_app())
 
 
 # ── Consultas ────────────────────────────────────────────────────────────────
@@ -466,20 +455,9 @@ def test_falha_inesperada_nao_envia_frame_quando_o_socket_ja_esta_desconectado(
     monkeypatch.setattr(benchmark_router_module, "BenchmarkRunStartup", _FakeRunStartup)
     websocket = _SocketDesconectado(raw_text=json.dumps(_abertura()))
 
-    asyncio.run(_run_benchmark(websocket, _ExecucaoDireta()))
+    asyncio.run(run_benchmark(websocket))
 
     assert websocket.sent == []
-
-
-class _ExecucaoDireta:
-    """Execução já autorizada que só roda o trabalho, para os testes de baixo nível."""
-
-    owner_id = "usr_ana"
-    authorization = None
-
-    async def run(self, work: Any) -> bool:
-        await work
-        return True
 
 
 # ── WebSocket de reexecução ──────────────────────────────────────────────────
@@ -497,7 +475,7 @@ class _FakeRerunStartup:
     requested_many: list[tuple[str, list[str]]] = []
     closed = 0
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self) -> None:
         if _FakeRerunStartup.construction_error is not None:
             raise _FakeRerunStartup.construction_error
 
@@ -672,7 +650,7 @@ def test_falha_na_reexecucao_nao_envia_frame_quando_o_socket_ja_esta_desconectad
     monkeypatch.setattr(benchmark_router_module, "BenchmarkRerunStartup", _FakeRerunStartup)
     websocket = _SocketDesconectado(raw_text="")
 
-    asyncio.run(_rerun(websocket, _ExecucaoDireta(), "bench_1", "Q1"))
+    asyncio.run(rerun_benchmark_question(websocket, "bench_1", "Q1"))
 
     assert websocket.sent == []
 

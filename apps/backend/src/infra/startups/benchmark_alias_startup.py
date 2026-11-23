@@ -10,14 +10,11 @@ from src.infra.repositories.benchmark_session_repository_factory import Benchmar
 class BenchmarkAliasStartup:
     """Composition root da edição de aliases das baterias de benchmark."""
 
-    def __init__(self, owner_id: str) -> None:
-        """Monta a edição de alias das baterias da conta autenticada."""
+    def __init__(self) -> None:
         settings = Settings()
         self.document_mapper = BenchmarkSessionDocumentMapper()
         self.update_use_case = UpdateBenchmarkAliasUseCase(
-            repository=BenchmarkSessionRepositoryFactory(settings=settings, mapper=self.document_mapper).create(
-                owner_id=owner_id
-            ),
+            repository=BenchmarkSessionRepositoryFactory(settings=settings, mapper=self.document_mapper).create(),
             clock=ClockAdapter(),
             logger=settings.logger(module_file=__file__),
         )

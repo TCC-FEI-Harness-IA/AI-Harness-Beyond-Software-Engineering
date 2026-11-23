@@ -2,23 +2,15 @@
 // `unknown` e só sai tipada depois de passar por um parser de fronteira.
 
 import { env } from '../config/env'
-import { emitUnauthorized } from './authEvents'
-import { getCsrfToken } from './csrfToken'
 import { CanceledError } from './errors/CanceledError'
 import { ContractError } from './errors/ContractError'
 import { HttpError } from './errors/HttpError'
 import { NetworkError } from './errors/NetworkError'
 import { TimeoutError } from './errors/TimeoutError'
 
-type Method = 'GET' | 'POST' | 'PUT' | 'DELETE'
-
-interface ClientOptions {
-  baseUrl: () => string
-  /** `true` na API: um 401 significa que a sessão deixou de valer. */
-  notifyUnauthorized: boolean
+function buildUrl(path: string): string {
+  return `${env.apiBaseUrl}${path}`
 }
-
-const UNAUTHORIZED = 401
 
 async function readDetail(response: Response): Promise<string | null> {
   try {
@@ -47,8 +39,7 @@ async function parseBody<T>(response: Response, parse: (raw: unknown) => T): Pro
 }
 
 async function request<T>(
-  options: ClientOptions,
-  method: Method,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
   body: unknown,
   readBody: (response: Response) => Promise<T>,
@@ -67,24 +58,19 @@ async function request<T>(
   try {
     // `Blob` (arquivo) segue bruto, com o próprio tipo; o resto vira JSON.
     const isRaw = body instanceof Blob
-    const headers: Record<string, string> = {}
-    if (body !== undefined) {
-      headers['Content-Type'] = isRaw ? body.type || 'application/octet-stream' : 'application/json'
-    }
-    const csrf = getCsrfToken()
-    if (method !== 'GET' && csrf !== null) headers['X-CSRF-Token'] = csrf
     const init: RequestInit = {
       method,
       body: body === undefined ? null : isRaw ? body : JSON.stringify(body),
       signal: controller.signal,
-      // Cookies de sessão e da credencial (HttpOnly) seguem sozinhos; o JavaScript nunca os lê.
-      credentials: 'same-origin',
-      headers,
+    }
+    if (body !== undefined) {
+      init.headers = {
+        'Content-Type': isRaw ? body.type || 'application/octet-stream' : 'application/json',
+      }
     }
 
-    const response = await fetch(`${options.baseUrl()}${path}`, init)
+    const response = await fetch(buildUrl(path), init)
 
-    if (response.status === UNAUTHORIZED && options.notifyUnauthorized) emitUnauthorized()
     if (response.status >= 400) {
       const detail = await readDetail(response)
       throw new HttpError(response.status, detail)
@@ -109,31 +95,35 @@ async function request<T>(
   }
 }
 
-function createHttpClient(options: ClientOptions) {
-  return {
-    get: <T>(path: string, parse: (raw: unknown) => T, signal?: AbortSignal): Promise<T> =>
-      request(options, 'GET', path, undefined, (response) => parseBody(response, parse), signal),
-    /** Baixa um arquivo: devolve o corpo como `Blob`, sem interpretá-lo como JSON. */
-    getBlob: (path: string, signal?: AbortSignal): Promise<Blob> =>
-      request(options, 'GET', path, undefined, (response) => response.blob(), signal),
-    post: <T>(path: string, body: unknown, parse: (raw: unknown) => T, signal?: AbortSignal): Promise<T> =>
-      request(options, 'POST', path, body, (response) => parseBody(response, parse), signal),
-    put: <T>(path: string, body: unknown, parse: (raw: unknown) => T, signal?: AbortSignal): Promise<T> =>
-      request(options, 'PUT', path, body, (response) => parseBody(response, parse), signal),
-    /** Envia um arquivo como corpo bruto (`Content-Type` do próprio `Blob`) e interpreta a resposta JSON. */
-    upload: <T>(path: string, file: Blob, parse: (raw: unknown) => T, signal?: AbortSignal): Promise<T> =>
-      request(options, 'POST', path, file, (response) => parseBody(response, parse), signal),
-    /** Remove um recurso; a resposta (204) não tem corpo. */
-    delete: (path: string, signal?: AbortSignal): Promise<void> =>
-      request(options, 'DELETE', path, undefined, () => Promise.resolve(), signal),
-    /** Escrita sem corpo de resposta (204). */
-    postEmpty: (path: string, body?: unknown, signal?: AbortSignal): Promise<void> =>
-      request(options, 'POST', path, body, () => Promise.resolve(), signal),
-  }
+export const httpClient = {
+  get: <T>(path: string, parse: (raw: unknown) => T, signal?: AbortSignal): Promise<T> =>
+    request('GET', path, undefined, (response) => parseBody(response, parse), signal),
+  /** Baixa um arquivo: devolve o corpo como `Blob`, sem interpretá-lo como JSON. */
+  getBlob: (path: string, signal?: AbortSignal): Promise<Blob> =>
+    request('GET', path, undefined, (response) => response.blob(), signal),
+  post: <T>(
+    path: string,
+    body: unknown,
+    parse: (raw: unknown) => T,
+    signal?: AbortSignal,
+  ): Promise<T> =>
+    request('POST', path, body, (response) => parseBody(response, parse), signal),
+  put: <T>(
+    path: string,
+    body: unknown,
+    parse: (raw: unknown) => T,
+    signal?: AbortSignal,
+  ): Promise<T> =>
+    request('PUT', path, body, (response) => parseBody(response, parse), signal),
+  /** Envia um arquivo como corpo bruto (`Content-Type` do próprio `Blob`) e interpreta a resposta JSON. */
+  upload: <T>(
+    path: string,
+    file: Blob,
+    parse: (raw: unknown) => T,
+    signal?: AbortSignal,
+  ): Promise<T> =>
+    request('POST', path, file, (response) => parseBody(response, parse), signal),
+  /** Remove um recurso; a resposta (204) não tem corpo. */
+  delete: (path: string, signal?: AbortSignal): Promise<void> =>
+    request('DELETE', path, undefined, () => Promise.resolve(), signal),
 }
-
-/** API do backend (`/v1`). */
-export const httpClient = createHttpClient({ baseUrl: () => env.apiBaseUrl, notifyUnauthorized: true })
-
-/** Serviço de autenticação (`/auth`): ali, 401 é resposta esperada (sem sessão, login inválido). */
-export const authHttpClient = createHttpClient({ baseUrl: () => env.authBaseUrl, notifyUnauthorized: false })

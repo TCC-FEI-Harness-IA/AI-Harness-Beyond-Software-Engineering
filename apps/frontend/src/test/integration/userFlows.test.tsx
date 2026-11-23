@@ -18,18 +18,17 @@ import { EVENT_SUBTYPE, type EventSubtype } from '@/domain/enums/eventSubtype'
 import { EVENT_TYPE, type EventType } from '@/domain/enums/eventType'
 import { TASK_LABEL_SETUP, TASK_LABEL_SYNTHESIS } from '@/domain/enums/taskLabels'
 import type { ThinkingPhase } from '@/domain/enums/thinkingPhase'
-import { TestAuth } from '@/test/TestAuth'
 
 function renderApp(initialPath: string): void {
   render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <ThemeProvider><TestAuth>
+      <ThemeProvider>
         <RunConfigProvider>
           <ViewModeProvider>
             <AppRouter />
           </ViewModeProvider>
         </RunConfigProvider>
-      </TestAuth></ThemeProvider>
+      </ThemeProvider>
     </MemoryRouter>,
   )
 }

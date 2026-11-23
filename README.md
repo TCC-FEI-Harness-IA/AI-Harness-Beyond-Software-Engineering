@@ -40,113 +40,33 @@ O documento apresenta a adaptação do Ralph Wiggum Loop, originalmente voltado 
 
 O guia operacional é uma orientação derivada, enquanto a seção identificada como transcrição preserva o texto original do paper. As regras acrescentadas depois do paper (hoje, a etapa **A.3 — Task Decomposition Validator**, que aprova o plano antes da execução, a etapa **A.4 — Aprendizados pontuais do enunciado** (A.3 nas sessões antigas), a verificação da **tarefa inteira em B.2**, com a descrição da tarefa e o critério técnico obrigatório **`<task_id>-TECH`**, a área de **Aprendizados Pontuais** em todo prompt das fases B e C, a **temperatura 1 nas retentativas** (com a primeira revisão de A.2 a 0,5), a **procedência visível** dos aprendizados (`[Question]`, `[Task T1]`), as **regras de redação das tarefas** e a **reinicialização de contexto entre fases** com recuperação de saídas inválidas) ficam numa seção própria do documento e são detalhadas, com exemplos, em [`NOVAS_REGRAS_RALPH_LOOP.md`](NOVAS_REGRAS_RALPH_LOOP.md), base para atualizar o paper. O documento também explicita essa distinção e descreve as etapas, os critérios de aceite e a separação de contexto e resultados entre as tarefas.
 
-## Uso multiusuário
-
-A aplicação aceita visitantes e contas:
-
-| Perfil | Benchmarks e análises oficiais | Chamadas LLM | Dados pessoais | Publicar resultados oficiais |
-|---|---|---|---|---|
-| Visitante | Sim | Não | Não | Não |
-| Usuário autenticado | Sim | Sim, com a própria chave OpenRouter | Só os próprios | Não |
-| Administrador | Sim | Sim, com a própria chave | Os próprios + operações administrativas (CLI) | Sim |
-
-- **Serviços:** `apps/frontend` (React), `apps/auth` (cadastro/login por e-mail e senha — premissa
-  desta entrega), `apps/backend` (API e fluxos LLM) e MongoDB. Frontend, `/auth` e `/v1` ficam na
-  mesma origem por proxy de caminhos (Vite em desenvolvimento, Nginx em produção).
-- **Sessão:** cookie HttpOnly com token opaco, 24 h absolutas a partir do login, revogada no logout.
-- **Chave OpenRouter:** informada no login (ou depois), validada com a OpenRouter e guardada **no
-  navegador**, cifrada (JWE) num cookie HttpOnly vinculado à conta e à sessão; nunca é gravada no
-  servidor. Não existe chave do servidor nem fallback.
-- **Dados:** histórico, baterias e modelos são da conta (isolados em JSON e no MongoDB).
-- **Resultados oficiais:** cópias preservadas das últimas baterias concluídas de vestibular, MMLU e
-  GPQA, públicas em `/v1/public/benchmarks`; trocá-las exige comando de administrador.
-
-Detalhes: [backend](apps/backend/README.md#uso-multiusuário-autenticação-credenciais-e-resultados-oficiais),
-[autenticação](apps/auth/README.md) e [frontend](apps/frontend/README.md#contas-sessão-e-chave-openrouter).
-
 ## Como rodar com Docker
 
-### 1. Configuração e segredos (uma vez)
+Pré-requisito: copiar os arquivos de ambiente e preenchê-los:
 
 ```bash
 cp apps/backend/.env.example apps/backend/.env
-cp apps/auth/.env.example apps/auth/.env
 cp apps/frontend/.env.example apps/frontend/.env
-cp .env.example .env                 # PUBLIC_HOST/PUBLIC_ORIGIN/portas (produção)
-./scripts/generate-secrets.sh        # cria ./secrets (fora do Git): chave do cookie da credencial e segredo backend<->auth
 ```
 
-Os segredos de infraestrutura nunca vão para o repositório nem para o frontend: os containers os
-recebem como segredos do Compose (`/run/secrets/*`, variáveis `*_FILE`). A chave de criptografia da
-credencial é a mesma para todas as instâncias do backend e não muda a cada reinício. Para trocá-la,
-`./scripts/generate-secrets.sh --rotate-credential-key` e reinicie o backend: os cookies de credencial
-existentes deixam de valer e cada usuário informa a chave de novo (o login continua válido).
-`--rotate-internal-token` troca o segredo entre backend e auth (reinicie os dois).
-
-### 2. Desenvolvimento (hot-reload)
+Ambiente de desenvolvimento (código montado como volume, hot-reload no back e no front):
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build     # http://localhost:5173
+docker compose -f docker-compose.dev.yml up --build
 ```
 
-Diferenças só do desenvolvimento: HTTP (cookies sem `Secure`), `APP_ENV=development` e portas do
-backend (8000), auth (8001) e MongoDB (27017) publicadas para depuração.
-
-### 3. Produção
+Ambiente de produção (front compilado e servido por Nginx, back sem reload):
 
 ```bash
-# Certificados TLS em deploy/certs/{fullchain,privkey}.pem (teste local: ./scripts/generate-local-cert.sh)
-docker compose up --build -d                              # https://PUBLIC_HOST
+docker compose up --build
 ```
 
-Só o Nginx publica portas (80 → redireciona para 443; 443 com TLS e WSS). Backend, auth e MongoDB
-ficam na rede interna; `/internal` do auth nunca sai pelo proxy. Cookies `Secure` com prefixos
-`__Host-`/`__Secure-`, HSTS e CSP; os logs do Nginx não registram cookies nem corpos e as
-aplicações redigem chaves e tokens. Os dados ficam nos volumes `backend_data` e `mongo_data`
-(sobrevivem a `down`; só `down -v` apaga).
+Serviços após subir:
 
-### 4. Administrador
+| Serviço | Dev | Prod |
+|---|---|---|
+| Frontend | http://localhost:5173 | http://localhost:3000 |
+| Backend (API) | http://localhost:8000 | http://localhost:8000 |
+| MongoDB | localhost:27017 | — (apenas na rede interna do Compose) |
 
-```bash
-docker compose exec auth python -m src.infra.cli.admin_cli create-admin --email admin@exemplo.com
-```
-
-Não há cadastro público de administradores nem credenciais padrão (ver [apps/auth](apps/auth/README.md)).
-
-### 5. Resultados oficiais
-
-```bash
-docker compose exec backend python -m src.infra.cli.official_publications_cli discover
-docker compose exec backend python -m src.infra.cli.official_publications_cli inspect --source legacy
-docker compose exec backend python -m src.infra.cli.official_publications_cli publish-initial \
-  --source legacy --published-by "admin" --apply
-# Substituição explícita, mais tarde:
-docker compose exec backend python -m src.infra.cli.official_publications_cli replace \
-  --source owner:usr_... --benchmark-session-id bench_... --published-by "admin" --apply
-```
-
-`legacy` é o histórico pessoal anterior às contas (dados sem dono no armazenamento configurado).
-Sem `--apply`, nada é gravado. Antes de gravar, o armazenamento oficial vai para
-`data/backups/official`. Para recuperar o histórico pessoal antigo numa conta (cópia, sem alterar
-a origem): `docker compose exec backend python -m src.infra.cli.legacy_data_cli assign --owner usr_... --apply`.
-
-### 6. Backup
-
-- MongoDB (contas, sessões de login, catálogos e, se configurado, dados do backend):
-  `docker compose exec mongo mongodump --archive > backup-mongo.archive`
-- Arquivos do backend (histórico JSON e publicações oficiais):
-  `docker run --rm -v <projeto>_backend_data:/data -v "$PWD":/out alpine tar czf /out/backend_data.tgz -C /data .`
-- Guarde também `./secrets` em local seguro: sem a chave de aplicação, os cookies de credencial
-  emitidos deixam de abrir (os dados não dependem dela).
-
-### 7. Verificações
-
-```bash
-(cd apps/backend && .venv/bin/flake8 src tests && .venv/bin/pytest)       # cobertura 100%
-(cd apps/auth && .venv/bin/flake8 src tests && .venv/bin/pytest)          # cobertura 100%
-(cd apps/frontend && npm run lint && npm run typecheck && npm run test:coverage && npm run build)
-docker compose config --quiet && docker compose -f docker-compose.dev.yml config --quiet
-apps/backend/.venv/bin/python integration/run_integration.py   # proxy TLS, cookies, CSRF e WebSockets reais, OpenRouter falsa
-```
-
-Para parar: `docker compose down` (ou `-f docker-compose.dev.yml down`).
+Para parar os containers, use `docker compose down` (ou `docker compose -f docker-compose.dev.yml down`). Os dados do MongoDB ficam em um volume nomeado e sobrevivem ao `down`; só `docker compose down -v` os apaga.

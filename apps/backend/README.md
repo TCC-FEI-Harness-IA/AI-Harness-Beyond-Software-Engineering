@@ -93,7 +93,6 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
 ## Sumário
 
 - [Boas práticas de desenvolvimento](#boas-práticas-de-desenvolvimento)
-- [Uso multiusuário: autenticação, credenciais e resultados oficiais](#uso-multiusuário-autenticação-credenciais-e-resultados-oficiais)
 - [Provedores de LLM](#provedores-de-llm)
 - [Como rodar](#como-rodar)
 - [Endpoints HTTP](#endpoints-http)
@@ -128,148 +127,7 @@ As seções seguintes documentam a execução e os contratos técnicos da API.
 
 ---
 
-## Uso multiusuário: autenticação, credenciais e resultados oficiais
-
-### Regras de acesso
-
-| Perfil | Benchmarks e análises oficiais | Chamadas LLM | Dados pessoais | Publicar resultados oficiais |
-|---|---|---|---|---|
-| Visitante | Sim (`/v1/public/*`) | Não | Não | Não |
-| Usuário autenticado | Sim | Sim, com a própria chave OpenRouter válida | Só os próprios | Não |
-| Administrador | Sim | Sim, com a própria chave | Os próprios e operações administrativas explícitas (CLI) | Sim (CLI) |
-
-Tudo é verificado no servidor, em HTTP e em WebSocket. Conhecer o identificador de uma sessão,
-bateria ou modelo de outra conta não dá acesso: a resposta é `404`, igual a um recurso inexistente.
-
-### Identidade
-
-O login é feito pelo serviço [`apps/auth`](../auth/README.md) (e-mail e senha). A cada requisição
-privada o backend lê o cookie de sessão (`ralph_session`; `__Host-ralph_session` com `Secure`) e o
-valida em `POST {AUTH_SERVICE_URL}/internal/sessions/verify`, apresentando o segredo de serviço
-`AUTH_INTERNAL_TOKEN` (`AuthServiceIdentityProvider`). Headers de identidade enviados pelo cliente
-são ignorados. Se a validação não responde, a operação privada falha fechada (`503`, WebSocket
-`4503`); as rotas públicas não dependem dela. Dependências FastAPI em
-`src/infra/security/request_security.py`:
-
-- `current_identity`: exige sessão válida (`401`).
-- `writer_identity`: escrita — além da sessão, `Origin` permitida (`PUBLIC_ORIGINS`) e
-  `X-CSRF-Token` igual ao token anti-CSRF da sessão (padrão *synchronizer token*; `403`).
-- `request_execution`: chamada LLM por HTTP — além do anterior, credencial válida (`428`).
-
-### Credencial OpenRouter (cookie cifrado e HttpOnly)
-
-1. Com login, o front envia a chave **uma vez** em `PUT /v1/credentials/openrouter`.
-2. O backend a valida em `GET https://openrouter.ai/api/v1/key` (`OPENROUTER_KEY_VALIDATION_URL`,
-   sem custo) e devolve o cookie `ralph_llm_credential` (`__Secure-` com `Secure`): HttpOnly,
-   `SameSite=Strict`, `Path=/v1`, expirando junto com a sessão.
-3. O conteúdo é um JWE compacto (`dir` + `A256GCM`, biblioteca `joserfc`) com `sub` (conta), `sid`
-   (sessão de login), `exp` (nunca depois do fim da sessão) e a chave. Cookie adulterado, expirado
-   ou de outra conta/sessão é recusado. Assinatura sozinha (JWT/JWS) não daria confidencialidade.
-4. A cada execução, `open_authorization` decifra o cookie e monta uma `ExecutionAuthorization` só
-   daquela requisição/execução. `LLMServiceFactory.create_all(authorization)` cria uma instância da
-   `OpenRouterService` com ela: nada global muda, então execuções simultâneas nunca misturam chaves.
-5. A chave nunca é persistida (banco, arquivos, sessões, baterias, exportações), nem logada:
-   `LLMCredential` não aparece em `repr`, corpos de erro do provedor são redigidos e todos os
-   loggers passam pelo `RedactingFilter` (chaves `sk-or-…`, `Bearer …`, cookies `ralph_*`).
-
-`GET /v1/credentials/openrouter` devolve só `{status: missing|valid|invalid, available, expires_at}`;
-`DELETE` remove o cookie. Não há chave do servidor: `OPENROUTER_API_KEY` não é lida, e sem a
-credencial do usuário a chamada é recusada localmente (sem fallback). Na versão hospedada só a
-OpenRouter é registrada; os adapters da OpenAI e do Azure continuam no código, sem uso.
-
-**Chave de aplicação** (`LLM_CREDENTIAL_ENCRYPTION_KEY[_FILE]`, 32 bytes em base64url): gere com
-`scripts/generate-secrets.sh` (raiz), mantenha-a igual em todas as instâncias do backend e fora do
-repositório e do frontend. Sem ela (ou inválida) a aplicação não sobe. Trocá-la
-(`./scripts/generate-secrets.sh --rotate-credential-key` + reinício) invalida os cookies de
-credencial já emitidos: os usuários continuam logados e só precisam informar a chave de novo.
-
-### Ciclo de vida das execuções
-
-`open_websocket_execution` (em `src/infra/security/websocket_security.py`) autoriza a conexão antes
-de qualquer trabalho LLM: `Origin` obrigatória e permitida (senão o handshake é recusado), sessão
-(`4401`), credencial (`4428`), limites (`4429`). Tokens nunca vão na URL. Durante a execução, a
-sessão é revalidada no auth antes de **cada chamada LLM**, em HTTP e WebSocket. O prazo é conferido
-antes e depois dessa validação. O observador periódico (`AUTH_REVALIDATION_INTERVAL_SECONDS`) também
-interrompe trabalhos sem novos envios. Expiração (24 h absolutas), logout ou validação indisponível
-bloqueiam o próximo envio e encerram o trabalho pelo mesmo caminho da desconexão: sessões em execução
-terminam `failed` e a bateria `interrupted`, com o progresso preservado; o cliente recebe um frame
-de erro e o fechamento `4401`.
-
-### Isolamento dos dados
-
-Os repositórios são escopados ao dono (`SessionRepositoryFactory(...).create(owner_id)` etc.),
-sempre a conta autenticada — nunca um valor do corpo:
-
-- JSON: `RALPH_*_STORAGE_PATH/owners/<owner_id>/<id>.json` (o documento também leva `owner_id`).
-- MongoDB: `_id = "<owner_id>/<id>"` e campo `owner_id`.
-
-O mesmo identificador em contas diferentes não colide, e documentos legados (sem dono, na raiz ou
-com `_id` simples) não aparecem para ninguém. Importações gravam sempre para a conta da sessão:
-campos de dono, perfil ou "oficial" dentro do ZIP são ignorados; reimportar na mesma conta
-continua `409`. Modelos: catálogo compartilhado (`models`, somente leitura para usuários, mantido
-por `scripts/seed_models.py`) e catálogo pessoal (`user_models`, índice único
-`(owner_id, model_name)`); `GET /v1/models` marca `scope: shared|personal`.
-
-Para levar o histórico anterior às contas para uma conta (por exemplo, a do autor), use a cópia
-explícita (a origem não é alterada; sem `--apply` só informa):
-
-```bash
-python -m src.infra.cli.legacy_data_cli assign --owner usr_... --apply
-```
-
-### Limites configuráveis
-
-`RUN_MAX_CONCURRENT_PER_USER` (padrão 2) e `RUN_MAX_STARTS_PER_WINDOW`/`RUN_STARTS_WINDOW_SECONDS`
-(30 por hora) valem para inferência simples, Ralph, baterias e reexecuções, **por conta e por
-instância do backend** (contadores em memória; com várias réplicas, cada uma aplica o limite ao
-que atende). Os limites de tokens, duração e paralelismo do Ralph e do benchmark continuam iguais.
-Tentativas de login são limitadas no serviço de autenticação (MongoDB, válido entre instâncias).
-
-### API pública e resultados oficiais
-
-| Rota | Descrição |
-|---|---|
-| `GET /v1/public/benchmarks` | Publicações oficiais vigentes (vestibular, MMLU, GPQA), com a bateria publicada. |
-| `GET /v1/public/benchmarks/{publication_id}` | Detalhe de uma publicação (vigente ou substituída). |
-| `GET /v1/public/benchmarks/{publication_id}/sessions/{session_id}` | Sessão filha — só se pertencer àquela publicação. |
-
-Sem login, sem chamadas LLM e sem ler dados pessoais; `Cache-Control: public, max-age=60` (as
-respostas privadas usam `no-store, private` e `Vary: Cookie`). A visão pública omite quem publicou
-e a origem pessoal. Para datasets em `RALPH_PUBLIC_REDACTED_DATASETS` (padrão `gpqa`, cujos autores
-pedem que as questões não sejam publicadas em texto), as sessões públicas trocam enunciados,
-prompts e respostas por um aviso, preservando fases, subtipos, tarefas e totais (que a análise usa).
-`GET /v1/sessions/{id}` continua exclusivamente privado.
-
-As publicações são **cópias** guardadas fora dos dados pessoais (`RALPH_OFFICIAL_STORAGE_PATH`, ou
-as coleções `official_publications`/`official_sessions` no MongoDB): reexecutar questões ou renomear
-a bateria privada não altera a publicação. A carga e a substituição são administrativas:
-
-```bash
-# Dentro do container do backend (enxerga o volume/MongoDB efetivo)
-python -m src.infra.cli.official_publications_cli discover
-python -m src.infra.cli.official_publications_cli inspect --source legacy          # só leitura
-python -m src.infra.cli.official_publications_cli publish-initial --source legacy \
-    --published-by "admin" --apply                                                  # backup antes
-python -m src.infra.cli.official_publications_cli replace --source owner:usr_... \
-    --benchmark-session-id bench_... --published-by "admin" --apply
-python -m src.infra.cli.official_publications_cli list
-```
-
-- A origem é sempre explícita: `legacy` (histórico sem dono, anterior às contas) ou
-  `owner:<user_id>`; nunca "todas as contas".
-- Seleção: por dataset, a bateria `completed` e íntegra de maior `created_at` (empate: menor
-  identificador). Íntegra = todas as questões com os dois desfechos e todas as sessões filhas
-  presentes, legíveis, ligadas à bateria e encerradas. Respostas erradas e falhas técnicas por
-  questão são preservadas; a pontuação nunca é critério. As mais recentes descartadas aparecem no
-  relatório com o motivo; dataset sem bateria íntegra aparece como `AUSENTE` (nada é inventado).
-- `publish-initial` só publica datasets sem publicação vigente e é idempotente; `replace` é a
-  única forma de trocar uma vigente (a anterior fica `superseded`, com id e data preservados).
-- Antes de gravar, o armazenamento oficial é copiado para `--backup-dir`
-  (padrão `./data/backups/official`).
-
 ## Provedores de LLM
-
-> Versão hospedada: só a OpenRouter é registrada e sempre com a chave do usuário (ver acima).
 
 A aplicação fala com três provedores — **OpenRouter**, **OpenAI** e **Azure AI Foundry** — e o
 `provider` do corpo da requisição decide qual atende cada chamada; `LLM_PROVIDER` é apenas o
@@ -296,13 +154,10 @@ cd apps/backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
 
-cp .env.example .env   # LLM_MODEL, GENAI_AVAILABLE_*, AUTH_* e LLM_CREDENTIAL_ENCRYPTION_KEY (ou *_FILE)
+cp .env.example .env   # preencha LLM_PROVIDER/LLM_MODEL, a credencial do provedor e GENAI_AVAILABLE_*
 
-uvicorn src.main:create_app --factory --reload --port 8000
+uvicorn src.main:app --reload --port 8000
 ```
-
-O backend precisa do serviço de autenticação (`apps/auth`, porta 8001) para as rotas privadas; o
-caminho recomendado é `docker compose -f docker-compose.dev.yml up --build` na raiz.
 
 Verificação (lint + testes + cobertura):
 
@@ -319,8 +174,7 @@ Base path: `/v1`.
 
 ### `POST /v1/message/default`
 
-Executa uma chamada direta ao modelo. Exige sessão, `X-CSRF-Token`, `Origin` permitida e
-credencial OpenRouter válida (`401`/`403`/`428`); respeita os limites por conta (`429`).
+Executa uma chamada direta ao modelo.
 
 **Requisição** — [`DefaultInputDTO`](#defaultinputdto):
 
@@ -371,7 +225,7 @@ curl -X POST http://localhost:8000/v1/message/default \
 
 ### `GET /v1/sessions`
 
-Lista os identificadores das sessões **da conta autenticada** (`401` sem sessão).
+Lista os identificadores de todas as sessões persistidas.
 
 **Resposta `200`**:
 
@@ -1207,7 +1061,7 @@ Ver `.env.example` para o arquivo completo.
 | `LLM_TIMEOUT_SECONDS` | `30` | Timeout das chamadas HTTP, em qualquer provedor. |
 | `LLM_REASONING_EFFORT` | *(vazio)* | Esforço de raciocínio (`minimal`/`low`/`medium`/`high`); vazio não envia o parâmetro. Como o teto de saída de cada chamada cobre raciocínio **e** resposta, limitá-lo evita que o modelo gaste o saldo da sessão pensando e devolva conteúdo vazio. |
 | `OPENROUTER_API_URL` | `https://openrouter.ai/api/v1/chat/completions` | Endpoint de chat completions. |
-| `OPENROUTER_API_KEY` | — | **Não é mais lida.** A chave é sempre a do usuário, no cookie cifrado. |
+| `OPENROUTER_API_KEY` | *(vazio)* | Chave da API. Obrigatória para usar o provedor. |
 | `OPENROUTER_HTTP_REFERER` | *(vazio)* | Header `HTTP-Referer`, opcional. |
 | `OPENROUTER_X_TITLE` | *(vazio)* | Header `X-Title`, opcional. |
 | `OPENAI_API_URL` | `https://api.openai.com/v1/chat/completions` | Endpoint de chat completions. |
@@ -1224,23 +1078,7 @@ Ver `.env.example` para o arquivo completo.
 | `MONGODB_URI` | `mongodb://localhost:27017` | URI de conexão do MongoDB (catálogo de modelos e, com o backend `mongodb`, as sessões). |
 | `MONGODB_DATABASE` | `tcc` | Banco de dados usado no MongoDB. |
 | `MONGODB_SESSIONS_COLLECTION` | `sessions` | Coleção que guarda os documentos de sessão no MongoDB. |
-| `MONGODB_MODELS_COLLECTION` | `models` | Catálogo compartilhado de modelos (somente leitura para usuários). |
-| `MONGODB_USER_MODELS_COLLECTION` | `user_models` | Catálogos pessoais de modelos (índice único `owner_id` + `model_name`). |
-| `RALPH_OFFICIAL_STORAGE_PATH` | `./data/official` | Publicações oficiais, com o backend `json_file`. |
-| `MONGODB_OFFICIAL_PUBLICATIONS_COLLECTION` | `official_publications` | Publicações oficiais no MongoDB. |
-| `MONGODB_OFFICIAL_SESSIONS_COLLECTION` | `official_sessions` | Cópias das sessões filhas das publicações no MongoDB. |
-| `RALPH_PUBLIC_REDACTED_DATASETS` | `gpqa` | Datasets cujas sessões públicas omitem os textos (CSV; vazio publica tudo). |
-| `APP_ENV` | `development` | `production` recusa `COOKIE_SECURE=false` e origens sem `https`. |
-| `AUTH_SERVICE_URL` | `http://localhost:8001` | Endereço interno do serviço de autenticação. |
-| `AUTH_INTERNAL_TOKEN` / `_FILE` | — (obrigatório) | Segredo de serviço da verificação interna (≥ 32 caracteres). |
-| `LLM_CREDENTIAL_ENCRYPTION_KEY` / `_FILE` | — (obrigatório) | Chave de aplicação do JWE da credencial (32 bytes em base64url). |
-| `COOKIE_SECURE` | `false` | Cookies com `Secure` (e prefixos `__Host-`/`__Secure-`). Obrigatório em produção. |
-| `PUBLIC_ORIGINS` | `http://localhost:5173` | Origens do frontend aceitas em escritas e WebSockets (CSV). |
-| `OPENROUTER_KEY_VALIDATION_URL` | `https://openrouter.ai/api/v1/key` | Validação da chave do usuário, sem custo. |
-| `AUTH_REVALIDATION_INTERVAL_SECONDS` | `15` | Revalidação da sessão durante execuções longas. |
-| `RUN_MAX_CONCURRENT_PER_USER` | `2` | Execuções LLM simultâneas por conta (por instância). |
-| `RUN_MAX_STARTS_PER_WINDOW` | `30` | Execuções iniciadas por conta na janela (por instância). |
-| `RUN_STARTS_WINDOW_SECONDS` | `3600` | Duração da janela de inícios. |
+| `MONGODB_MODELS_COLLECTION` | `models` | Coleção do catálogo de modelos (`/v1/models`). |
 | `RALPH_SESSION_FLUSH_EVERY_MESSAGE` | `true` | Persiste a sessão após cada mensagem registrada. |
 | `RALPH_SESSION_ID_PREFIX` | `sess` | Prefixo do identificador de sessão. |
 | `RALPH_MAX_TASK_ATTEMPTS` | `5` | Máximo de tentativas por tarefa, incluindo a inicial (até cinco pares B.1/B.2). Esgotado sem aprovação, a execução é interrompida: nenhum resultado reprovado é armazenado ou sintetizado. |
@@ -1502,10 +1340,6 @@ As gravações dos desfechos são serializadas para preservar os resultados de t
 o cliente cancela ou desconecta, os fluxos ativos são cancelados; resultados já gravados permanecem,
 e fluxos interrompidos ou ainda na fila mantêm o desfecho anterior. O progresso transitório dos outros
 workers não é persistido junto aos resultados concluídos.
-
-O bloqueio de reexecução considera a conta e o identificador da bateria. Duas contas podem
-reexecutar suas próprias cópias importadas com o mesmo ID; duas execuções da mesma bateria da
-mesma conta continuam sendo recusadas dentro do processo.
 
 No frontend, marque as questões e use **Executar novamente selecionadas**. O checkbox do cabeçalho
 seleciona todas as questões elegíveis da bateria, inclusive em outras páginas. A seleção individual

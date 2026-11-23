@@ -17,7 +17,6 @@ from src.application.usecases.ralph_thinking_usecase import RalphThinkingUseCase
 from src.domain.entities.resilience.cost_budget import CostBudget
 from src.domain.entities.thinking.thinking_event import ThinkingEvent
 from src.domain.interfaces.settings_interface import ISettings
-from src.domain.services.execution_authorization import ExecutionAuthorization
 from src.domain.services.learnings_memory import LearningsMemory
 from src.domain.services.results_ledger import ResultsLedger
 from src.domain.services.task_queue import TaskQueue
@@ -27,12 +26,13 @@ from src.infra.adapters.cost_guard_adapter import CostGuardAdapter
 from src.infra.adapters.id_generator_adapter import IdGeneratorAdapter
 from src.infra.adapters.llm_completions_adapter import LLMCompletionsAdapter
 from src.infra.adapters.model_catalog_adapter import ModelCatalogAdapter
+from src.infra.adapters.mongo_client_adapter import MongoClientAdapter
 from src.infra.adapters.session_recorder_adapter import SessionRecorderAdapter
 from src.infra.adapters.structured_response_parser_adapter import StructuredResponseParserAdapter
 from src.infra.config.settings import Settings
 from src.infra.mappers.session_document_mapper import SessionDocumentMapper
 from src.infra.providers.file_prompt_template_provider import FilePromptTemplateProvider
-from src.infra.repositories.model_catalog_repository_factory import ModelCatalogRepositoryFactory
+from src.infra.repositories.mongo_model_info_repository import MongoModelInfoRepository
 from src.infra.repositories.session_repository_factory import SessionRepositoryFactory
 from src.infra.routes.v1.message.dtos.context_window_dto import ContextWindowDTO
 from src.infra.routes.v1.message.dtos.reasoning_event_dto import ReasoningEventDTO
@@ -52,21 +52,8 @@ class RalphThinkingStartup:
     estado da sessão em execução.
     """
 
-    def __init__(
-        self,
-        owner_id: str,
-        authorization: ExecutionAuthorization,
-        benchmark_details: BenchmarkDetails | None = None,
-    ) -> None:
-        """Instancia e injeta todas as dependências do fluxo harness.
-
-        Args:
-            owner_id: Conta autenticada dona da sessão criada.
-            authorization: Autorização da execução, com a credencial OpenRouter do usuário; é a
-                mesma instância durante toda a execução, então novas chamadas param assim que ela
-                é revogada ou expira.
-            benchmark_details: Metadados de benchmark, quando o fluxo roda dentro de uma bateria.
-        """
+    def __init__(self, benchmark_details: BenchmarkDetails | None = None) -> None:
+        """Instancia e injeta todas as dependências do fluxo harness."""
         self.settings: ISettings = Settings()
         self.logger = self.settings.logger(module_file=__file__)
 
@@ -77,7 +64,7 @@ class RalphThinkingStartup:
         self.session_repository = SessionRepositoryFactory(
             settings=self.settings,
             mapper=self.session_document_mapper,
-        ).create(owner_id=owner_id)
+        ).create()
         self.session_recorder = SessionRecorderAdapter(
             benchmark_details=benchmark_details,
             repository=self.session_repository,
@@ -112,13 +99,17 @@ class RalphThinkingStartup:
         )
         self.context_window_factory = ContextWindowFactoryAdapter(id_generator=self.id_generator)
 
-        llm_services = LLMServiceFactory(settings=self.settings).create_all(authorization=authorization)
+        llm_services = LLMServiceFactory(settings=self.settings).create_all()
         self.model_catalog = ModelCatalogAdapter(
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(ModelCatalogAdapter)),
-            model_repository=ModelCatalogRepositoryFactory(
-                settings=self.settings, server_selection_timeout_ms=_MODEL_CATALOG_TIMEOUT_MS
-            ).create(owner_id=owner_id),
+            model_repository=MongoModelInfoRepository(
+                collection=MongoClientAdapter(
+                    settings=self.settings,
+                    server_selection_timeout_ms=_MODEL_CATALOG_TIMEOUT_MS,
+                ).models_collection,
+                logger=self.settings.logger(module_file=getfile(MongoModelInfoRepository)),
+            ),
         )
         self.llm_completions = LLMCompletionsAdapter(
             llm_services=llm_services,

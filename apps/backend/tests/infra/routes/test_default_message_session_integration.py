@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.infra.startups import default_message_startup as startup_module
-from tests.doubles.security_doubles import authenticated_client
+from src.main import create_app
 from tests.doubles.fake_llm_service import FakeLLMService
 
 
@@ -21,7 +21,7 @@ class _FakeLLMServiceFactory:
         self.settings = settings
         self.llm_service = llm_service
 
-    def create_all(self, authorization: object = None) -> list[FakeLLMService]:
+    def create_all(self) -> list[FakeLLMService]:
         """Devolve o dublê como único serviço registrado."""
         return [self.llm_service]
 
@@ -32,6 +32,7 @@ def storage_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     caminho = tmp_path / "sessions"
     monkeypatch.setenv("RALPH_SESSIONS_STORAGE_PATH", str(caminho))
     monkeypatch.setenv("LLM_MODEL", "vendor/modelo")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", "vendor/modelo")
     monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router")
     return caminho
@@ -46,7 +47,7 @@ def client(storage_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
         "LLMServiceFactory",
         lambda settings: _FakeLLMServiceFactory(settings=settings, llm_service=llm_service),
     )
-    return authenticated_client(user_id="usr_teste")
+    return TestClient(create_app())
 
 
 def _build_body() -> dict[str, object]:
@@ -67,7 +68,7 @@ def test_inferencia_direta_grava_a_sessao_completa_em_disco(client: TestClient, 
     assert resposta.status_code == 200
     session_id = resposta.json()["session_id"]
 
-    documento = json.loads((storage_path / "owners" / "usr_teste" / f"{session_id}.json").read_text(encoding="utf-8"))
+    documento = json.loads((storage_path / f"{session_id}.json").read_text(encoding="utf-8"))
     assert documento["user_question"] == "Qual dos números é primo, par e maior que 2?"
     assert documento["final_answer"] == "resposta do modelo"
     assert documento["status"] == "completed"
@@ -88,8 +89,7 @@ def test_consulta_devolve_o_mesmo_documento_gravado(client: TestClient, storage_
     consulta = client.get(f"/v1/sessions/{session_id}")
 
     assert consulta.status_code == 200
-    arquivo = storage_path / "owners" / "usr_teste" / f"{session_id}.json"
-    assert {**consulta.json(), "owner_id": "usr_teste"} == json.loads(arquivo.read_text(encoding="utf-8"))
+    assert consulta.json() == json.loads((storage_path / f"{session_id}.json").read_text(encoding="utf-8"))
 
 
 def test_listagem_inclui_a_sessao_recem_criada(client: TestClient) -> None:

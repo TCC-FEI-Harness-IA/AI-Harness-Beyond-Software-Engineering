@@ -94,25 +94,3 @@ describe('config/env', () => {
     await expect(importEnv()).rejects.toThrow(/VITE_DEFAULT_PROVIDER/)
   })
 })
-
-describe('config/env — mesma origem', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs()
-  })
-
-  it('sem URLs explícitas, usa a origem da página para API, WebSocket e autenticação', async () => {
-    stubEnv({ VITE_API_BASE_URL: '', VITE_WS_BASE_URL: '' })
-    const { env } = await importEnv()
-
-    expect(env.apiBaseUrl).toBe(`${window.location.origin}/v1`)
-    expect(env.wsBaseUrl).toBe(`ws://${window.location.host}/v1`)
-    expect(env.authBaseUrl).toBe(`${window.location.origin}/auth`)
-  })
-
-  it('com URL explícita, a autenticação fica na mesma origem da API', async () => {
-    stubEnv()
-    const { env } = await importEnv()
-
-    expect(env.authBaseUrl).toBe('http://localhost:8000/auth')
-  })
-})

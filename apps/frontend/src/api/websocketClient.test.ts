@@ -269,29 +269,3 @@ describe('openReasoningStream', () => {
     warnSpy.mockRestore()
   })
 })
-
-describe('fim da sessão de autenticação durante o Ralph', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs()
-    vi.unstubAllGlobals()
-  })
-
-  it('fechamento 4401 avisa a expiração para o restante do app', async () => {
-    const { openReasoningStream } = await importWebsocketClient()
-    const { onUnauthorized } = await import('./authEvents')
-    const ouvinte = vi.fn()
-    const cancelar = onUnauthorized(ouvinte)
-    const onFailure = vi.fn()
-    openReasoningStream(PAYLOAD, {
-      onEvent: vi.fn(), onErrorFrame: vi.fn(), onClose: vi.fn(), onFailure, onFrameWarning: vi.fn(),
-    })
-    const socket = FakeWebSocket.latest()
-
-    socket.emitOpen()
-    socket.emitClose(4401)
-
-    expect(ouvinte).toHaveBeenCalledTimes(1)
-    expect(onFailure.mock.calls[0]?.[0].code).toBe(4401)
-    cancelar()
-  })
-})

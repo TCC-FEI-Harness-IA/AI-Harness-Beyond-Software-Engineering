@@ -17,13 +17,9 @@ import {
 } from '@/domain/services/benchmarkAnalysis'
 import { buildAnalysisCsv, buildAnalysisMarkdown } from '@/domain/services/benchmarkAnalysisReport'
 import { groupByProcess, PROCESS_DIMENSION_LABEL, type ProcessDimension } from '@/domain/services/ralphProcessMetrics'
-import { listBenchmarkSessions } from '@/api/benchmarkApi'
-import { listOfficialPublications } from '@/api/publicBenchmarkApi'
-import { officialAsDocument } from '@/domain/services/officialBattery'
 import type { BenchmarkSessionDocument } from '@/domain/types/benchmarkSession'
-import { useAsync } from '@/hooks/useAsync'
+import { useBenchmarkSessions } from '@/hooks/useBenchmarkData'
 import { useRalphProcessMetrics } from '@/hooks/useRalphProcessMetrics'
-import { useAuth } from '@/state/AuthContext'
 import { saveBlob } from '@/hooks/saveBlob'
 import { AnalysisOverview } from './AnalysisOverview'
 import { BreakdownTable, LOW_N } from './BreakdownTable'
@@ -76,29 +72,8 @@ const BREAKDOWNS: ReadonlyArray<{ dimension: AnalysisDimension; hint: string; mu
 
 const PROCESS_DIMENSIONS: ProcessDimension[] = ['taskCount', 'verificationFailures', 'planRejections']
 
-/** Sem o parâmetro na URL, vale a seleção padrão (os resultados oficiais); vazio é "nenhuma". */
-function readSelection(params: URLSearchParams, defaults: readonly string[]): string[] {
-  const raw = params.get(SELECTION_PARAM)
-  if (raw === null) return [...defaults]
-  return raw.split(',').filter((id) => id !== '')
-}
-
-interface AnalysisSources {
-  sessions: BenchmarkSessionDocument[]
-  officialIds: string[]
-}
-
-/**
- * Resultados oficiais (públicos) sempre; baterias da conta só com login. A lista privada não é
- * consultada por visitantes, e nada é filtrado no navegador a partir de um histórico completo.
- */
-async function loadSources(authenticated: boolean, signal: AbortSignal): Promise<AnalysisSources> {
-  const [official, personal] = await Promise.all([
-    listOfficialPublications(signal),
-    authenticated ? listBenchmarkSessions(signal) : Promise.resolve([]),
-  ])
-  const officialDocuments = official.map(officialAsDocument)
-  return { sessions: [...officialDocuments, ...personal], officialIds: officialDocuments.map((item) => item.id) }
+function readSelection(params: URLSearchParams): string[] {
+  return (params.get(SELECTION_PARAM) ?? '').split(',').filter((id) => id !== '')
 }
 
 function AnalysisDashboard({ sessions }: { sessions: readonly BenchmarkSessionDocument[] }): JSX.Element {
@@ -116,17 +91,7 @@ function AnalysisDashboard({ sessions }: { sessions: readonly BenchmarkSessionDo
     () => records.flatMap((record) => (record.ralph.session_id === null ? [] : [record.ralph.session_id])),
     [records],
   )
-  // Sessões de resultados oficiais são lidas pela API pública (sem login); as demais, pela da conta.
-  const containerBySession = useMemo(
-    () =>
-      new Map(
-        records.flatMap((record) =>
-          record.ralph.session_id === null ? [] : [[record.ralph.session_id, record.benchmarkSessionId] as const],
-        ),
-      ),
-    [records],
-  )
-  const process = useRalphProcessMetrics(ralphSessionIds, containerBySession)
+  const process = useRalphProcessMetrics(ralphSessionIds)
   const multiDataset = new Set(sessions.map((session) => session.benchmark.dataset)).size > 1
 
   const exportCsv = (): void => {
@@ -218,21 +183,19 @@ function AnalysisDashboard({ sessions }: { sessions: readonly BenchmarkSessionDo
  * mostra o comparativo pareado Simples × Ralph Loop com as quebras para o relatório técnico.
  */
 export function BenchmarkAnalysisPage(): JSX.Element {
-  const auth = useAuth()
-  const authenticated = auth.status === 'authenticated'
-  const list = useAsync((signal) => loadSources(authenticated, signal), [authenticated])
+  const list = useBenchmarkSessions()
   const [params, setParams] = useSearchParams()
-  const loaded = list.status === 'success' ? list.data : null
-  const officialIds = useMemo(() => loaded?.officialIds ?? [], [loaded])
-  const selectedIds = useMemo(() => new Set(readSelection(params, officialIds)), [params, officialIds])
+  const selectedIds = useMemo(() => new Set(readSelection(params)), [params])
 
   const setSelection = (ids: string[]): void => {
     const next = new URLSearchParams(params)
-    next.set(SELECTION_PARAM, ids.join(','))
+    if (ids.length === 0) next.delete(SELECTION_PARAM)
+    else next.set(SELECTION_PARAM, ids.join(','))
     setParams(next, { replace: true })
   }
 
-  const sessions = useMemo(() => loaded?.sessions ?? [], [loaded])
+  const loaded = list.status === 'success' ? list.data : null
+  const sessions = useMemo(() => loaded ?? [], [loaded])
   const selected = useMemo(
     () => sessions.filter((session) => selectedIds.has(session.id)),
     [sessions, selectedIds],
@@ -259,12 +222,7 @@ export function BenchmarkAnalysisPage(): JSX.Element {
                 Atualizar baterias
               </Button>
             </div>
-            <ExecutionPicker
-              sessions={sessions}
-              selectedIds={selectedIds}
-              onChange={setSelection}
-              officialIds={new Set(officialIds)}
-            />
+            <ExecutionPicker sessions={sessions} selectedIds={selectedIds} onChange={setSelection} />
             {selected.length === 0 ? (
               <EmptyState
                 icon={CHART_ICON}

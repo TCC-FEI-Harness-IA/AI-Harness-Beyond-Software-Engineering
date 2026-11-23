@@ -13,7 +13,6 @@ import { sessionToRun } from '@/domain/services/sessionToRun'
 import { RalphView } from '@/features/ralph/RalphView'
 import { SimpleChatView } from '@/features/simple-chat/SimpleChatView'
 import { useBenchmarkSession } from '@/hooks/useBenchmarkData'
-import { useOfficialPublication } from '@/hooks/useOfficialPublications'
 import { useSession } from '@/hooks/useSession'
 import { useSessionList } from '@/hooks/useSessionList'
 import { ROUTES, buildBenchmarkChildSessionPath, buildBenchmarkSessionPath, buildHistoryDetailPath } from '@/router/routes'
@@ -36,39 +35,27 @@ const NOT_FOUND_ICON = (
  * uma variante "de histórico" (regra de reuso 3 do README).
  */
 export function HistoryDetailPage({ source = 'history' }: { source?: SessionSource }): JSX.Element {
-  const {
-    sessionId: rawSessionId,
-    benchmarkSessionId: rawBenchmarkSessionId,
-    publicationId: rawPublicationId,
-  } = useParams<{ sessionId: string; benchmarkSessionId: string; publicationId: string }>()
+  const { sessionId: rawSessionId, benchmarkSessionId: rawBenchmarkSessionId } = useParams<{
+    sessionId: string
+    benchmarkSessionId: string
+  }>()
   const sessionId = rawSessionId ? decodeURIComponent(rawSessionId) : ''
-  const publicationId = source === 'official' && rawPublicationId ? decodeURIComponent(rawPublicationId) : null
-  // Numa publicação oficial, o "contêiner" das sessões é a publicação (`pub_...`), não a bateria.
   const benchmarkSessionId =
-    source === 'benchmark' && rawBenchmarkSessionId ? decodeURIComponent(rawBenchmarkSessionId) : publicationId
+    source === 'benchmark' && rawBenchmarkSessionId ? decodeURIComponent(rawBenchmarkSessionId) : null
   const navigate = useNavigate()
-  const { state, reload } = useSession(sessionId, source, publicationId)
+  const { state, reload } = useSession(sessionId, source)
 
   // Numa sessão de benchmark, a barra lateral lista só as sessões da mesma bateria — ao vivo,
   // quando é a bateria em execução, ou como foram persistidas.
   const benchmarkRun = useBenchmarkRun()
   const liveBattery = benchmarkRun.session?.id === benchmarkSessionId ? benchmarkRun.session : null
-  const storedBattery = useBenchmarkSession(liveBattery === null && source === 'benchmark' ? benchmarkSessionId : null)
-  const officialBattery = useOfficialPublication(publicationId)
-  const knownSessionIds =
-    source === 'official'
-      ? officialBattery.status === 'success'
-        ? officialBattery.data?.battery.session_ids
-        : null
-      : storedBattery.status === 'success'
-        ? storedBattery.data?.session_ids
-        : null
-  const batterySessionIds = benchmarkSessionId === null ? null : (liveBattery?.session_ids ?? knownSessionIds ?? [])
-  const { items: sidebarItems, isLoadingIds: isSidebarLoading } = useSessionList(source, batterySessionIds, publicationId)
-  const isBatteryLoading =
-    benchmarkSessionId !== null &&
-    liveBattery === null &&
-    (source === 'official' ? officialBattery.status === 'loading' : storedBattery.status === 'loading')
+  const storedBattery = useBenchmarkSession(liveBattery === null ? benchmarkSessionId : null)
+  const batterySessionIds =
+    benchmarkSessionId === null
+      ? null
+      : (liveBattery?.session_ids ?? (storedBattery.status === 'success' ? storedBattery.data?.session_ids : null) ?? [])
+  const { items: sidebarItems, isLoadingIds: isSidebarLoading } = useSessionList(source, batterySessionIds)
+  const isBatteryLoading = benchmarkSessionId !== null && liveBattery === null && storedBattery.status === 'loading'
   const backPath = benchmarkSessionId === null ? ROUTES.history : buildBenchmarkSessionPath(benchmarkSessionId)
   const linkTo = useMemo(
     () =>
@@ -176,14 +163,6 @@ export function HistoryDetailPage({ source = 'history' }: { source?: SessionSour
             ) : null}
           </div>
         </PageContainer>
-      ) : null}
-      {source === 'official' ? (
-        <p className={styles.notice} role="note">
-          Resultado oficial: sessão pública e somente leitura.
-          {officialBattery.status === 'success' && officialBattery.data?.textRedacted
-            ? ' Enunciados, prompts e respostas foram omitidos a pedido dos autores do dataset; a estrutura do processo continua visível.'
-            : null}
-        </p>
       ) : null}
       {document.status === SESSION_STATUS.FAILED ? (
         <p className={styles.notice} role="status">

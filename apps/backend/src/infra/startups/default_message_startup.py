@@ -4,15 +4,15 @@ from inspect import getfile
 from src.application.dtos.default_message_input_dto import DefaultMessageInputDTO
 from src.application.usecases.default_message_usecase import DefaultMessageUseCase
 from src.domain.interfaces.settings_interface import ISettings
-from src.domain.services.execution_authorization import ExecutionAuthorization
 from src.infra.adapters.clock_adapter import ClockAdapter
 from src.infra.adapters.id_generator_adapter import IdGeneratorAdapter
 from src.infra.adapters.llm_completions_adapter import LLMCompletionsAdapter
 from src.infra.adapters.model_catalog_adapter import ModelCatalogAdapter
+from src.infra.adapters.mongo_client_adapter import MongoClientAdapter
 from src.infra.adapters.session_recorder_adapter import SessionRecorderAdapter
 from src.infra.config.settings import Settings
 from src.infra.mappers.session_document_mapper import SessionDocumentMapper
-from src.infra.repositories.model_catalog_repository_factory import ModelCatalogRepositoryFactory
+from src.infra.repositories.mongo_model_info_repository import MongoModelInfoRepository
 from src.infra.repositories.session_repository_factory import SessionRepositoryFactory
 from src.infra.routes.v1.message.dtos.default_input_dto import DefaultInputDTO
 from src.infra.routes.v1.message.dtos.default_output_dto import DefaultOutputDTO
@@ -30,29 +30,22 @@ class DefaultMessageStartup:
     (Pydantic) para os DTOs da camada de aplicação, e o caminho inverso na saída.
     """
 
-    def __init__(
-        self,
-        owner_id: str,
-        authorization: ExecutionAuthorization,
-        benchmark_details: BenchmarkDetails | None = None,
-    ) -> None:
-        """Instancia e injeta todas as dependências do fluxo baseline.
-
-        Args:
-            owner_id: Conta autenticada dona da sessão criada.
-            authorization: Autorização da requisição, com a credencial OpenRouter do usuário.
-            benchmark_details: Metadados de benchmark, quando o fluxo roda dentro de uma bateria.
-        """
+    def __init__(self, benchmark_details: BenchmarkDetails | None = None) -> None:
+        """Instancia e injeta todas as dependências do fluxo baseline."""
         self.settings: ISettings = Settings()
         self.logger = self.settings.logger(module_file=__file__)
 
-        llm_services = LLMServiceFactory(settings=self.settings).create_all(authorization=authorization)
+        llm_services = LLMServiceFactory(settings=self.settings).create_all()
         self.model_catalog = ModelCatalogAdapter(
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(ModelCatalogAdapter)),
-            model_repository=ModelCatalogRepositoryFactory(
-                settings=self.settings, server_selection_timeout_ms=_MODEL_CATALOG_TIMEOUT_MS
-            ).create(owner_id=owner_id),
+            model_repository=MongoModelInfoRepository(
+                collection=MongoClientAdapter(
+                    settings=self.settings,
+                    server_selection_timeout_ms=_MODEL_CATALOG_TIMEOUT_MS,
+                ).models_collection,
+                logger=self.settings.logger(module_file=getfile(MongoModelInfoRepository)),
+            ),
         )
         llm_completions_adapter = LLMCompletionsAdapter(
             llm_services=llm_services,
@@ -64,7 +57,7 @@ class DefaultMessageStartup:
         session_repository = SessionRepositoryFactory(
             settings=self.settings,
             mapper=SessionDocumentMapper(),
-        ).create(owner_id=owner_id)
+        ).create()
         session_recorder = SessionRecorderAdapter(
             benchmark_details=benchmark_details,
             repository=session_repository,

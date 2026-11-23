@@ -8,7 +8,6 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-*.tsbuildinfo
 
 # Virtual environments
 .env/
@@ -78,11 +77,3 @@ apps/backend/.env
 teste benchmark/resultados/
 benchmark-session*
 exemplo_interno_prompt*
-
-# Segredos de infraestrutura (scripts/generate-secrets.sh) e certificados TLS — nunca versionar
-secrets/
-deploy/certs/
-/.env
-apps/auth/.env
-integration/secrets/
-integration/certs/

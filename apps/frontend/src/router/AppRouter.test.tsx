@@ -9,7 +9,6 @@ import { ThemeProvider } from '@/state/ThemeContext'
 import { ViewModeProvider } from '@/state/ViewModeContext'
 import { AppRouter } from './AppRouter'
 import { buildHistoryDetailPath } from './routes'
-import { TestAuth } from '@/test/TestAuth'
 
 // As telas de histórico buscam sessões de verdade — para este smoke test de roteamento, uma
 // lista vazia é suficiente e evita qualquer chamada de rede real.
@@ -31,13 +30,13 @@ vi.mock('@/api/modelsApi', async () => {
 function renderAt(path: string, enableDevRoute = false): void {
   render(
     <MemoryRouter initialEntries={[path]}>
-      <ThemeProvider><TestAuth>
+      <ThemeProvider>
         <RunConfigProvider>
           <ViewModeProvider>
             <AppRouter enableDevRoute={enableDevRoute} />
           </ViewModeProvider>
         </RunConfigProvider>
-      </TestAuth></ThemeProvider>
+      </ThemeProvider>
     </MemoryRouter>,
   )
 }

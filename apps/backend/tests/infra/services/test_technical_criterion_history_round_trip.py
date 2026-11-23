@@ -110,7 +110,6 @@ def _repositorio(caminho: Path) -> JsonFileSessionRepository:
     return JsonFileSessionRepository(
         mapper=SessionDocumentMapper(), settings=FakeSettings(ralph_sessions_storage_path=str(caminho)),
         logger=logging.getLogger("teste.tech.historico"),
-        owner_id="usr_teste",
     )
 
 
@@ -125,8 +124,7 @@ async def test_sessao_nova_grava_tech_nos_relatorios_e_o_round_trip_preserva_tud
     lida = await repositorio.find_by_id(session_id=nova.id)
 
     assert lida is not None and lida.flow_version is RalphFlowVersionEnum.VALIDATED_PLANNING
-    gravado = json.loads((tmp_path / "owners" / "usr_teste" / f"{nova.id}.json").read_text(encoding="utf-8"))
-    assert gravado.pop("owner_id") == "usr_teste"
+    gravado = json.loads((tmp_path / f"{nova.id}.json").read_text(encoding="utf-8"))
     assert SessionDocumentMapper().to_document(session=lida) == gravado
     b2 = [(m.subtype, m.content) for m in lida.messages if m.phase is Phase.B2_TASK_VERIFICATION]
     assert [subtipo for subtipo, _ in b2] == [Sub.VERIFY_FAIL, Sub.VERIFY_PASS]
@@ -141,8 +139,7 @@ async def test_sessao_antiga_sem_tech_e_lida_sem_ser_reescrita_nem_revalidada(
     tmp_path: Path, proibir_parser: Callable[[], None],
 ) -> None:
     proibir_parser()
-    (tmp_path / "owners" / "usr_teste").mkdir(parents=True)
-    arquivo = tmp_path / "owners" / "usr_teste" / "ralph_antiga.json"
+    arquivo = tmp_path / "ralph_antiga.json"
     arquivo.write_text(json.dumps(_documento_antigo(), ensure_ascii=False), encoding="utf-8")
     original = arquivo.read_bytes()
 

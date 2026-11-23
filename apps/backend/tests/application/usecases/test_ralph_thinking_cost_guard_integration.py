@@ -25,7 +25,6 @@ from src.infra.adapters.llm_completions_adapter import LLMCompletionsAdapter
 from src.infra.services.openrouter_service import OpenRouterService
 from tests.doubles.fake_model_catalog import FakeModelCatalog
 from tests.doubles.fake_settings import FakeSettings
-from tests.doubles.security_doubles import authorization_for
 from tests.doubles.ralph_scenario import RalphScenario
 from tests.doubles.ralph_scripts import plano_aprovado
 from tests.doubles.ralph_scripts import (
@@ -390,8 +389,7 @@ def _cenario_http(
 
     service = OpenRouterService(
         logger=logging.getLogger("teste.http"),
-        settings=FakeSettings(),
-        authorization=authorization_for(api_key=api_key) if api_key else None,
+        settings=FakeSettings(openrouter_api_key=api_key),
         transport=httpx.MockTransport(handler),
     )
     adapter = LLMCompletionsAdapter(
@@ -456,7 +454,7 @@ async def test_credencial_ausente_nao_envia_requisicao_nem_conta_chamada() -> No
     assert cenario.session.totals.total_llm_calls == 0
     assert cenario.session.failure.reason is SessionFailureReasonEnum.TECHNICAL_ERROR
     assert cenario.session.failure.phase is _FASE.A1_GENERAL_CRITERIA
-    assert "user OpenRouter API key" in cenario.session.failure.description
+    assert "OPENROUTER_API_KEY" in cenario.session.failure.description
     assert cenario.cost_guard.remaining_tokens() == 10_000 - 1_000
 
 

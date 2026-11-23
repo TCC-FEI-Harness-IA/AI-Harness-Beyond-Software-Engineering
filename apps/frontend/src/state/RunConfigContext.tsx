@@ -138,8 +138,6 @@ interface RunConfigProviderProps {
   loadLimits?: (signal: AbortSignal) => Promise<BackendLimits>
   /** Fonte do catálogo de modelos; os testes a substituem. */
   loadModels?: (signal: AbortSignal) => Promise<ModelInfo[]>
-  /** Só com sessão autenticada: limites e catálogo pessoal são dados privados. */
-  enabled?: boolean
 }
 
 /** Provider da configuração de execução (modelo, max_tokens, temperature) dos dois fluxos. */
@@ -147,7 +145,6 @@ export function RunConfigProvider({
   children,
   loadLimits = getBackendLimits,
   loadModels = getModelCatalog,
-  enabled = true,
 }: RunConfigProviderProps): JSX.Element {
   const [config, setConfig] = useState<RunConfig>(readStoredConfig)
   const [maxTokensLimit, setMaxTokensLimit] = useState<number | null>(null)
@@ -156,7 +153,6 @@ export function RunConfigProvider({
   const [modelsReloadToken, setModelsReloadToken] = useState(0)
 
   useEffect(() => {
-    if (!enabled) return undefined
     const controller = new AbortController()
     loadLimits(controller.signal)
       .then((limits) => {
@@ -174,10 +170,9 @@ export function RunConfigProvider({
         // teto local; o backend continua recusando um `max_tokens` acima do dele.
       })
     return () => controller.abort()
-  }, [loadLimits, enabled])
+  }, [loadLimits])
 
   useEffect(() => {
-    if (!enabled) return undefined
     const controller = new AbortController()
     loadModels(controller.signal)
       .then((catalog) => {
@@ -196,7 +191,7 @@ export function RunConfigProvider({
         if (!controller.signal.aborted) setModelsStatus('error')
       })
     return () => controller.abort()
-  }, [loadModels, modelsReloadToken, enabled])
+  }, [loadModels, modelsReloadToken])
 
   const reloadModels = useCallback(() => {
     setModelsReloadToken((token) => token + 1)

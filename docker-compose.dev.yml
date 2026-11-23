@@ -1,29 +1,9 @@
-# Desenvolvimento: código montado como volume, hot-reload em todos os serviços. Diferenças de
-# segurança SÓ deste arquivo: HTTP (cookies sem Secure), portas do backend, auth e MongoDB
-# publicadas no host para depuração, e APP_ENV=development. Nunca use este arquivo em produção.
+# Ambiente de desenvolvimento: código montado como volume, hot-reload nos dois lados.
+# Uso: docker compose -f docker-compose.dev.yml up --build
 #
-# Pré-requisitos: ./scripts/generate-secrets.sh e os .env de apps/backend e apps/auth.
-# Uso: docker compose -f docker-compose.dev.yml up --build   ->  http://localhost:5173
+# Pré-requisito: apps/backend/.env e apps/frontend/.env preenchidos
+# (cp apps/*/.env.example apps/*/.env).
 services:
-  frontend:
-    build:
-      context: ./apps/frontend
-      target: dev
-    environment:
-      # Proxy do Vite por caminhos: /v1 (HTTP e WebSocket) e /auth na mesma origem do front.
-      DEV_PROXY_API_TARGET: http://backend:8000
-      DEV_PROXY_AUTH_TARGET: http://auth:8001
-    ports:
-      - "5173:5173"
-    depends_on:
-      - backend
-      - auth
-    volumes:
-      - ./apps/frontend:/app
-      - frontend_node_modules:/app/node_modules
-    networks:
-      - app
-
   backend:
     build:
       context: ./apps/backend
@@ -31,16 +11,8 @@ services:
     env_file:
       - ./apps/backend/.env
     environment:
-      APP_ENV: development
-      COOKIE_SECURE: "false"
-      PUBLIC_ORIGINS: http://localhost:5173
-      AUTH_SERVICE_URL: http://auth:8001
+      # Nome do serviço `mongo` nesta mesma rede, não `localhost` do .env local.
       MONGODB_URI: mongodb://mongo:27017
-      AUTH_INTERNAL_TOKEN_FILE: /run/secrets/auth_internal_token
-      LLM_CREDENTIAL_ENCRYPTION_KEY_FILE: /run/secrets/llm_credential_encryption_key
-    secrets:
-      - auth_internal_token
-      - llm_credential_encryption_key
     ports:
       - "8000:8000"
     volumes:
@@ -48,34 +20,11 @@ services:
       - backend_data:/app/data
     depends_on:
       - mongo
-      - auth
     networks:
       - app
 
-  auth:
-    build:
-      context: ./apps/auth
-      target: dev
-    env_file:
-      - ./apps/auth/.env
-    environment:
-      APP_ENV: development
-      AUTH_COOKIE_SECURE: "false"
-      PUBLIC_ORIGINS: http://localhost:5173
-      AUTH_TRUST_PROXY_HEADERS: "false"
-      AUTH_MONGODB_URI: mongodb://mongo:27017
-      AUTH_INTERNAL_TOKEN_FILE: /run/secrets/auth_internal_token
-    secrets:
-      - auth_internal_token
-    ports:
-      - "8001:8001"
-    volumes:
-      - ./apps/auth:/app
-    depends_on:
-      - mongo
-    networks:
-      - app
-
+  # Usado quando RALPH_SESSION_STORAGE_BACKEND=mongodb (ver apps/backend/.env). O volume
+  # nomeado `mongo_data` sobrevive a `docker compose down` — só `down -v` apaga os dados.
   mongo:
     image: mongo:7
     ports:
@@ -85,11 +34,19 @@ services:
     networks:
       - app
 
-secrets:
-  auth_internal_token:
-    file: ./secrets/auth_internal_token
-  llm_credential_encryption_key:
-    file: ./secrets/llm_credential_encryption_key
+  frontend:
+    build:
+      context: ./apps/frontend
+      target: dev
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./apps/frontend:/app
+      - frontend_node_modules:/app/node_modules
+    networks:
+      - app
 
 networks:
   app:

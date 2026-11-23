@@ -3,7 +3,7 @@
 // mudar a seleção não rebusca o que já foi carregado.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { loadSessionDocument } from '@/api/sessionLoader'
+import { getSession } from '@/api/sessionApi'
 import {
   type RalphProcessMetrics,
   ralphProcessMetrics,
@@ -28,48 +28,30 @@ export interface RalphProcessMetricsState {
   load: () => void
 }
 
-/** Chave do cache: a mesma sessão numa publicação oficial e numa conta são cópias independentes. */
-function cacheKey(id: string, containers: ReadonlyMap<string, string> | undefined): string {
-  return `${containers?.get(id) ?? 'privada'}:${id}`
-}
-
-function snapshot(
-  sessionIds: readonly string[],
-  containers: ReadonlyMap<string, string> | undefined,
-): Map<string, RalphProcessMetrics> {
+function snapshot(sessionIds: readonly string[]): Map<string, RalphProcessMetrics> {
   const result = new Map<string, RalphProcessMetrics>()
   for (const id of sessionIds) {
-    const metrics = metricsCache.get(cacheKey(id, containers))
+    const metrics = metricsCache.get(id)
     if (metrics !== undefined) result.set(id, metrics)
   }
   return result
 }
 
-/**
- * @param containerBySession Bateria (ou publicação oficial `pub_...`) de cada sessão: as sessões de
- * resultados oficiais são lidas pela API pública, sem login.
- */
-export function useRalphProcessMetrics(
-  sessionIds: readonly string[],
-  containerBySession?: ReadonlyMap<string, string>,
-): RalphProcessMetricsState {
+export function useRalphProcessMetrics(sessionIds: readonly string[]): RalphProcessMetricsState {
   const [enabled, setEnabled] = useState(false)
-  const [metrics, setMetrics] = useState(() => snapshot(sessionIds, containerBySession))
+  const [metrics, setMetrics] = useState(() => snapshot(sessionIds))
   const [running, setRunning] = useState(false)
   const [failed, setFailed] = useState(0)
   const idsKey = sessionIds.join('|')
   const idsRef = useRef(sessionIds)
   idsRef.current = sessionIds
-  const containersRef = useRef(containerBySession)
-  containersRef.current = containerBySession
 
   useEffect(() => {
     const ids = idsRef.current
-    const containers = containersRef.current
-    setMetrics(snapshot(ids, containers))
+    setMetrics(snapshot(ids))
     setFailed(0)
     if (!enabled) return undefined
-    const pending = ids.filter((id) => !metricsCache.has(cacheKey(id, containers)))
+    const pending = ids.filter((id) => !metricsCache.has(id))
     if (pending.length === 0) {
       setRunning(false)
       return undefined
@@ -85,14 +67,14 @@ export function useRalphProcessMetrics(
         const id = pending[cursor] as string
         cursor += 1
         try {
-          const document = await loadSessionDocument(id, containers?.get(id) ?? null, controller.signal)
-          metricsCache.set(cacheKey(id, containers), ralphProcessMetrics(document))
+          const document = await getSession(id, controller.signal)
+          metricsCache.set(id, ralphProcessMetrics(document))
         } catch {
           if (controller.signal.aborted) return
           failures += 1
           setFailed(failures)
         }
-        if (!controller.signal.aborted) setMetrics(snapshot(ids, containers))
+        if (!controller.signal.aborted) setMetrics(snapshot(ids))
       }
     }
 

@@ -8,10 +8,9 @@
 
 import { env } from '../config/env'
 import type { BenchmarkRunInput, BenchmarkSessionDocument } from '../domain/types/benchmarkSession'
-import { emitUnauthorized } from './authEvents'
 import { AppError } from './errors/AppError'
 import { WebSocketError } from './errors/WebSocketError'
-import { WS_CLOSE_UNAUTHENTICATED, WS_OPEN_TIMEOUT_MESSAGE } from './errors/messages'
+import { WS_OPEN_TIMEOUT_MESSAGE } from './errors/messages'
 import { parseBenchmarkFrame } from './parsers/benchmarkSession'
 
 const BENCHMARK_RUN_PATH = '/benchmark/run'
@@ -110,7 +109,6 @@ function openStream(
     closed = true
     detach()
 
-    if (event.code === WS_CLOSE_UNAUTHENTICATED) emitUnauthorized()
     handlers.onClose(event.code)
     if (event.code !== NORMAL_CLOSE) {
       handlers.onFailure(WebSocketError.fromCloseCode(event.code))

@@ -18,41 +18,27 @@ from src.infra.repositories.benchmark_session_repository_factory import Benchmar
 class BenchmarkQueryStartup:
     """Composition root das consultas de benchmark: baterias persistidas e dataset de questões."""
 
-    def __init__(self, owner_id: str | None = None) -> None:
-        """Instancia e injeta todas as dependências das consultas.
-
-        Args:
-            owner_id: Conta autenticada dona das baterias consultadas; `None` só descreve o dataset
-                (consulta pública, sem acesso a baterias).
-        """
+    def __init__(self) -> None:
+        """Instancia e injeta todas as dependências das consultas."""
         self.settings: ISettings = Settings()
         self.logger = self.settings.logger(module_file=__file__)
 
         self.document_mapper = BenchmarkSessionDocumentMapper()
-        self.repository = (
-            BenchmarkSessionRepositoryFactory(settings=self.settings, mapper=self.document_mapper).create(owner_id)
-            if owner_id is not None
-            else None
-        )
+        self.repository = BenchmarkSessionRepositoryFactory(
+            settings=self.settings,
+            mapper=self.document_mapper,
+        ).create()
         self.question_provider = FileBenchmarkQuestionProvider(
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(FileBenchmarkQuestionProvider)),
         )
-        self.get_benchmark_session_use_case = (
-            GetBenchmarkSessionUseCase(
-                repository=self.repository,
-                logger=self.settings.logger(module_file=getfile(GetBenchmarkSessionUseCase)),
-            )
-            if self.repository is not None
-            else None
+        self.get_benchmark_session_use_case = GetBenchmarkSessionUseCase(
+            repository=self.repository,
+            logger=self.settings.logger(module_file=getfile(GetBenchmarkSessionUseCase)),
         )
-        self.list_benchmark_sessions_use_case = (
-            ListBenchmarkSessionsUseCase(
-                repository=self.repository,
-                logger=self.settings.logger(module_file=getfile(ListBenchmarkSessionsUseCase)),
-            )
-            if self.repository is not None
-            else None
+        self.list_benchmark_sessions_use_case = ListBenchmarkSessionsUseCase(
+            repository=self.repository,
+            logger=self.settings.logger(module_file=getfile(ListBenchmarkSessionsUseCase)),
         )
         self.logger.info("BenchmarkQueryStartup inicializado")
 
@@ -69,7 +55,6 @@ class BenchmarkQueryStartup:
             BenchmarkSessionNotFoundError: Quando a bateria não existe.
             ValueError: Quando o identificador ou o documento persistido é inválido.
         """
-        assert self.get_benchmark_session_use_case is not None
         benchmark_session = await self.get_benchmark_session_use_case.execute(
             benchmark_session_id=benchmark_session_id
         )
@@ -81,7 +66,6 @@ class BenchmarkQueryStartup:
         Returns:
             list[dict[str, Any]]: Documentos das baterias.
         """
-        assert self.list_benchmark_sessions_use_case is not None
         benchmark_sessions = await self.list_benchmark_sessions_use_case.execute()
         return [self.document_mapper.to_document(benchmark_session=item) for item in benchmark_sessions]
 

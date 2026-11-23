@@ -1,7 +1,7 @@
 import asyncio
 import copy
 import logging
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import Callable
 from dataclasses import replace
 
 import pytest
@@ -69,7 +69,6 @@ def _caso_de_uso(
     sessao: BenchmarkSession | None = None,
     repositorio: InMemoryBenchmarkSessionRepository | None = None,
     provider: FakeBenchmarkQuestionProvider | None = None,
-    owner_id: str = "usr_teste",
 ) -> tuple[RerunBenchmarkQuestionUseCase, FakeBenchmarkFlowRunner, InMemoryBenchmarkSessionRepository, list]:
     repositorio = repositorio or InMemoryBenchmarkSessionRepository()
     if sessao is not None:
@@ -83,7 +82,6 @@ def _caso_de_uso(
         return provider
 
     caso = RerunBenchmarkQuestionUseCase(
-        owner_id=owner_id,
         question_provider_for=provider_para,
         flow_runner=runner,
         repository=repositorio,
@@ -249,44 +247,6 @@ async def test_nao_roda_duas_reexecucoes_da_mesma_bateria_ao_mesmo_tempo() -> No
     assert restante[-1].finished
     await _coletar(caso, question_id="Q2")
     assert repositorio.sessions["bench_1"].question("Q2").ralph.session_id == "Q2_ralph_nova"
-
-
-async def test_contas_diferentes_reexecutam_copias_com_o_mesmo_id_ao_mesmo_tempo() -> None:
-    ana, _, repo_ana, _ = _caso_de_uso(_acerta, _bateria_encerrada(), owner_id="usr_ana")
-    bia, _, repo_bia, _ = _caso_de_uso(_acerta, _bateria_encerrada(), owner_id="usr_bia")
-    primeira = ana.execute_many("bench_1", ["Q1"])
-    segunda = bia.execute_many("bench_1", ["Q1"])
-    try:
-        await anext(primeira)
-        await anext(segunda)
-        resultados = await asyncio.gather(
-            _restante(primeira), _restante(segunda),
-        )
-        assert all(resultado[-1].finished for resultado in resultados)
-        assert repo_ana.sessions["bench_1"].question("Q1").ralph.is_correct
-        assert repo_bia.sessions["bench_1"].question("Q1").ralph.is_correct
-    finally:
-        await primeira.aclose()
-        await segunda.aclose()
-
-
-async def _restante(
-    generator: AsyncGenerator[RerunBenchmarkQuestionOutputDTO, None],
-) -> list[RerunBenchmarkQuestionOutputDTO]:
-    return [item async for item in generator]
-
-
-async def test_instancias_da_mesma_conta_compartilham_o_bloqueio_da_bateria() -> None:
-    primeira_instancia, _, repo, _ = _caso_de_uso(_acerta, _bateria_encerrada(), owner_id="usr_ana")
-    outra_instancia, _, _, _ = _caso_de_uso(_acerta, repositorio=repo, owner_id="usr_ana")
-    primeira = primeira_instancia.execute_many("bench_1", ["Q1"])
-    try:
-        await anext(primeira)
-        with pytest.raises(BenchmarkSessionNotFinishedError):
-            await anext(outra_instancia.execute_many("bench_1", ["Q2"]))
-    finally:
-        await primeira.aclose()
-    assert (await _coletar(outra_instancia, "Q2"))[-1].finished
 
 
 async def test_cancelamento_cancela_o_fluxo_e_mantem_o_desfecho_anterior() -> None:

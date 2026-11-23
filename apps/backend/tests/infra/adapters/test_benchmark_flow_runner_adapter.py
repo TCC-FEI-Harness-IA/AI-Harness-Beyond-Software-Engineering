@@ -18,13 +18,9 @@ from tests.doubles.fake_clock import FakeClock
 from tests.doubles.fake_id_generator import FakeIdGenerator
 from tests.doubles.fake_settings import FakeSettings
 from tests.doubles.in_memory_session_repository import InMemorySessionRepository
-from tests.doubles.security_doubles import authorization_for
 
 _SIMPLES = BenchmarkInferenceModeEnum.SIMPLE
 _RALPH = BenchmarkInferenceModeEnum.RALPH
-
-
-_AUTORIZACAO = authorization_for(owner_id="usr_ana")
 
 
 class _Ambiente:
@@ -34,7 +30,6 @@ class _Ambiente:
         self.repository = InMemorySessionRepository(failing_save_calls=failing_save_calls)
         self.startups: list[Any] = []
         self.payloads: list[Any] = []
-        self.credenciais: list[tuple[str, Any]] = []
 
     def recorder(self, benchmark_details: BenchmarkDetails) -> SessionRecorderAdapter:
         return SessionRecorderAdapter(
@@ -58,8 +53,7 @@ async def _iniciar(recorder: SessionRecorderAdapter, payload: Any) -> None:
 
 
 def _fabrica_simples(ambiente: _Ambiente, resposta: str | Exception, iniciar: bool = True) -> Callable[..., Any]:
-    def fabrica(owner_id: str, authorization: Any, benchmark_details: BenchmarkDetails) -> Any:
-        ambiente.credenciais.append((owner_id, authorization))
+    def fabrica(benchmark_details: BenchmarkDetails) -> Any:
         recorder = ambiente.recorder(benchmark_details)
 
         async def run(payload: Any) -> Any:
@@ -81,8 +75,7 @@ def _fabrica_simples(ambiente: _Ambiente, resposta: str | Exception, iniciar: bo
 
 
 def _fabrica_ralph(ambiente: _Ambiente, eventos: list[tuple[str, str, int]], erro: Exception | None = None):
-    def fabrica(owner_id: str, authorization: Any, benchmark_details: BenchmarkDetails) -> Any:
-        ambiente.credenciais.append((owner_id, authorization))
+    def fabrica(benchmark_details: BenchmarkDetails) -> Any:
         recorder = ambiente.recorder(benchmark_details)
 
         async def run(payload: Any) -> AsyncGenerator[Any, None]:
@@ -105,8 +98,6 @@ def _runner(simple: Callable[..., Any] | None = None, ralph: Callable[..., Any] 
         evaluator=BenchmarkAnswerEvaluator(),
         clock=FakeClock(monotonic_values=[1000, 3500]),
         logger=logging.getLogger("teste"),
-        owner_id="usr_ana",
-        authorization=_AUTORIZACAO,
         simple_startup_factory=simple or (lambda **_: None),
         ralph_startup_factory=ralph or (lambda **_: None),
     )
@@ -224,8 +215,7 @@ async def test_cancelamento_encerra_como_failed_a_sessao_em_execucao() -> None:
     ambiente = _Ambiente()
     iniciou = asyncio.Event()
 
-    def fabrica(owner_id: str, authorization: Any, benchmark_details: BenchmarkDetails) -> Any:
-        ambiente.credenciais.append((owner_id, authorization))
+    def fabrica(benchmark_details: BenchmarkDetails) -> Any:
         recorder = ambiente.recorder(benchmark_details)
 
         async def run(payload: Any) -> AsyncGenerator[Any, None]:
@@ -249,8 +239,7 @@ async def test_cancelamento_antes_de_criar_a_sessao_so_propaga() -> None:
     ambiente = _Ambiente()
     chamou = asyncio.Event()
 
-    def fabrica(owner_id: str, authorization: Any, benchmark_details: BenchmarkDetails) -> Any:
-        ambiente.credenciais.append((owner_id, authorization))
+    def fabrica(benchmark_details: BenchmarkDetails) -> Any:
         recorder = ambiente.recorder(benchmark_details)
 
         async def run(payload: Any) -> Any:
@@ -272,8 +261,7 @@ async def test_cancelamento_com_sessao_ja_encerrada_nao_a_encerra_de_novo() -> N
     ambiente = _Ambiente()
     encerrou = asyncio.Event()
 
-    def fabrica(owner_id: str, authorization: Any, benchmark_details: BenchmarkDetails) -> Any:
-        ambiente.credenciais.append((owner_id, authorization))
+    def fabrica(benchmark_details: BenchmarkDetails) -> Any:
         recorder = ambiente.recorder(benchmark_details)
 
         async def run(payload: Any) -> AsyncGenerator[Any, None]:
@@ -299,19 +287,8 @@ def test_por_padrao_usa_os_composition_roots_da_api() -> None:
     from src.infra.startups.ralph_thinking_startup import RalphThinkingStartup
 
     runner = BenchmarkFlowRunnerAdapter(
-        evaluator=BenchmarkAnswerEvaluator(), clock=FakeClock(), logger=logging.getLogger("teste"),
-        owner_id="usr_ana", authorization=_AUTORIZACAO,
+        evaluator=BenchmarkAnswerEvaluator(), clock=FakeClock(), logger=logging.getLogger("teste")
     )
 
     assert runner.simple_startup_factory is DefaultMessageStartup
     assert runner.ralph_startup_factory is RalphThinkingStartup
-
-
-async def test_cada_fluxo_recebe_o_dono_e_a_mesma_autorizacao_da_bateria() -> None:
-    ambiente = _Ambiente()
-    runner = _runner(simple=_fabrica_simples(ambiente, "A"), ralph=_fabrica_ralph(ambiente, [("result", "A", 5)]))
-
-    await runner.run(request=_pedido(BenchmarkInferenceModeEnum.SIMPLE), on_tokens=lambda _: None)
-    await runner.run(request=_pedido(BenchmarkInferenceModeEnum.RALPH), on_tokens=lambda _: None)
-
-    assert ambiente.credenciais == [("usr_ana", _AUTORIZACAO), ("usr_ana", _AUTORIZACAO)]

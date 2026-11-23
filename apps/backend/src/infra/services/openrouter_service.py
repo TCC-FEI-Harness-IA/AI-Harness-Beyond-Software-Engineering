@@ -1,44 +1,15 @@
-import logging
 from typing import Any
-
-import httpx
 
 from src.domain.entities.llm.llm_provider_request import LLMProviderRequest
 from src.domain.enums.model_provider_enum import ModelProviderEnum
-from src.domain.interfaces.settings_interface import ISettings
-from src.domain.services.execution_authorization import ExecutionAuthorization
 from src.infra.services.base_chat_completions_service import BaseChatCompletionsService
 
-USER_CREDENTIAL_LABEL = "user OpenRouter API key"
+_API_KEY_VARIABLE = "OPENROUTER_API_KEY"
 _MINIMAL_EFFORT = "minimal"
 
 
 class OpenRouterService(BaseChatCompletionsService):
-    """Integração com a API de chat completions da OpenRouter, com a chave do usuário.
-
-    A chave vem exclusivamente da autorização da execução (cookie cifrado decifrado na requisição),
-    nunca da configuração do servidor. Cada requisição ou execução tem a sua instância, então
-    execuções simultâneas nunca compartilham credencial. Antes de cada chamada a autorização é
-    conferida: depois do fim da sessão ou de uma revogação, nenhuma chamada sai.
-    """
-
-    def __init__(
-        self,
-        logger: logging.Logger,
-        settings: ISettings,
-        authorization: ExecutionAuthorization | None = None,
-        transport: httpx.AsyncBaseTransport | None = None,
-    ) -> None:
-        """Inicializa o serviço.
-
-        Args:
-            logger: Logger do módulo.
-            settings: Configurações da aplicação (endpoint, timeout, raciocínio).
-            authorization: Autorização da execução, com a credencial do usuário.
-            transport: Transporte HTTP alternativo, para testes.
-        """
-        super().__init__(logger=logger, settings=settings, transport=transport)
-        self.authorization = authorization
+    """Integração com a API de chat completions da OpenRouter."""
 
     @property
     def provider(self) -> ModelProviderEnum:
@@ -51,34 +22,23 @@ class OpenRouterService(BaseChatCompletionsService):
         return "OpenRouter"
 
     def missing_settings(self) -> list[str]:
-        """Sem autorização não há credencial: a chave do servidor nunca é usada como alternativa."""
-        return [] if self.authorization is not None else [USER_CREDENTIAL_LABEL]
-
-    def validate_request(self, request: LLMProviderRequest) -> None:
-        """Valida localmente a requisição e a vigência da autorização.
-
-        Raises:
-            ValueError: Configuração ou requisição inválidas.
-            ExecutionNotAuthorizedError: Sessão expirada ou revogada (subclasse de `ValueError`).
-        """
-        super().validate_request(request=request)
-        assert self.authorization is not None
-        self.authorization.ensure_active()
+        """Lista as variáveis obrigatórias da OpenRouter que estão sem valor."""
+        if self.settings.openrouter_api_key:
+            return []
+        return [_API_KEY_VARIABLE]
 
     def completions_url(self, request: LLMProviderRequest) -> str:
         """Devolve o endpoint configurado — o mesmo para qualquer modelo."""
         return self.settings.openrouter_api_url
 
-    async def authorize_request(self) -> None:
-        """Revalida a sessão no auth antes de cada chamada, sem esperar pelo observador WebSocket."""
-        assert self.authorization is not None
-        await self.authorization.revalidate()
-
     def headers(self) -> dict[str, str]:
-        """Monta os headers com a chave do usuário e a identificação opcional do app."""
-        assert self.authorization is not None
+        """Monta os headers da requisição, com a autenticação e a identificação do app.
+
+        `HTTP-Referer` e `X-Title` são opcionais: a OpenRouter os usa apenas para atribuir
+        o consumo a uma aplicação nos seus rankings.
+        """
         headers = {
-            "Authorization": f"Bearer {self.authorization.credential.api_key}",
+            "Authorization": f"Bearer {self.settings.openrouter_api_key}",
             "Content-Type": "application/json",
         }
 
@@ -91,10 +51,6 @@ class OpenRouterService(BaseChatCompletionsService):
             headers["X-Title"] = title
 
         return headers
-
-    def redact(self, text: str) -> str:
-        """Remove a chave do usuário de textos que viram mensagem de erro."""
-        return self.authorization.credential.redact(text) if self.authorization is not None else text
 
     def payload_extras(self, request: LLMProviderRequest) -> dict[str, Any]:
         """Traduz o esforço de raciocínio para o bloco `reasoning` próprio da OpenRouter.

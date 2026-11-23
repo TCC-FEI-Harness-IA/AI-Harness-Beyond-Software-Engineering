@@ -51,7 +51,6 @@ def _build_repository() -> MongoSessionRepository:
         collection=colecao,
         mapper=SessionDocumentMapper(),
         logger=logging.getLogger("teste"),
-        owner_id="usr_teste",
     )
 
 
@@ -85,10 +84,8 @@ async def test_documento_gravado_e_o_produzido_pelo_mapper() -> None:
     await repositorio.save(session=sessao)
 
     colecao = repositorio.collection
-    gravado = await colecao.find_one({"_id": "usr_teste/sess_ab12"})
-    assert gravado == {
-        **SessionDocumentMapper().to_document(session=sessao), "_id": "usr_teste/sess_ab12", "owner_id": "usr_teste"
-    }
+    gravado = await colecao.find_one({"_id": "sess_ab12"})
+    assert gravado == SessionDocumentMapper().to_document(session=sessao)
 
 
 async def test_find_by_id_de_sessao_inexistente_devolve_none() -> None:

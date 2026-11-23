@@ -23,17 +23,10 @@ export interface ExecutionPickerProps {
   sessions: readonly BenchmarkSessionDocument[]
   selectedIds: ReadonlySet<string>
   onChange: (ids: string[]) => void
-  /** Baterias que são resultados oficiais publicados (as demais são execuções da conta). */
-  officialIds?: ReadonlySet<string>
 }
 
 /** Lista as baterias com caixas de seleção; permite misturar benchmarks na mesma análise. */
-export function ExecutionPicker({
-  sessions,
-  selectedIds,
-  onChange,
-  officialIds = new Set<string>(),
-}: ExecutionPickerProps): JSX.Element {
+export function ExecutionPicker({ sessions, selectedIds, onChange }: ExecutionPickerProps): JSX.Element {
   const [dataset, setDataset] = useState<DatasetFilter>('all')
   const [onlyWithResults, setOnlyWithResults] = useState(true)
 
@@ -142,10 +135,7 @@ export function ExecutionPicker({
                     <td className={styles.left}>
                       <label htmlFor={inputId} className={styles.groupLabel}>
                         {session.alias ?? formatDateTime(session.created_at)}
-                      </label>{' '}
-                      <Badge tone={officialIds.has(session.id) ? 'context' : 'neutral'}>
-                        {officialIds.has(session.id) ? 'Oficial' : 'Minha execução'}
-                      </Badge>
+                      </label>
                       <span className={styles.groupMeta}>
                         {session.alias ? `${formatDateTime(session.created_at)} · ` : ''}
                         <span className={styles.mono}>{session.id}</span>

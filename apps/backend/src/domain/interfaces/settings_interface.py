@@ -86,6 +86,12 @@ class ISettings(ABC):
 
     @property
     @abstractmethod
+    def openrouter_api_key(self) -> str:
+        """Chave de API da OpenRouter."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def openrouter_http_referer(self) -> str:
         """Valor do header `HTTP-Referer`. Vazio quando não configurado."""
         raise NotImplementedError
@@ -191,37 +197,7 @@ class ISettings(ABC):
     @property
     @abstractmethod
     def mongodb_models_collection(self) -> str:
-        """Nome da coleção do catálogo compartilhado de modelos (somente leitura para usuários comuns)."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def mongodb_user_models_collection(self) -> str:
-        """Nome da coleção dos catálogos pessoais de modelos, um por conta."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def ralph_official_storage_path(self) -> str:
-        """Diretório das publicações oficiais quando o armazenamento é `json_file`."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def mongodb_official_publications_collection(self) -> str:
-        """Coleção das publicações oficiais no MongoDB."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def mongodb_official_sessions_collection(self) -> str:
-        """Coleção das cópias das sessões filhas das publicações oficiais no MongoDB."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def ralph_public_redacted_datasets(self) -> list[str]:
-        """Datasets cujas sessões públicas têm os textos omitidos (termos de uso do dataset)."""
+        """Nome da coleção que guarda o catálogo de modelos no MongoDB."""
         raise NotImplementedError
 
     @property

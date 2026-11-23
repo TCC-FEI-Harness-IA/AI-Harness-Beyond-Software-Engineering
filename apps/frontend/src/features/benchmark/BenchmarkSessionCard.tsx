@@ -26,11 +26,8 @@ function scoreLabel(label: string, summary: BenchmarkModeSummary): string {
 /** Cartão de uma bateria na listagem: desfecho, acertos por fluxo, consumo e duração. */
 export function BenchmarkSessionCard({
   session,
-  official = false,
 }: {
   session: BenchmarkSessionDocument
-  /** Resultado oficial publicado (público), distinto das baterias pessoais. */
-  official?: boolean
 }): JSX.Element {
   return (
     <Card as="li" className={styles.card}>
@@ -42,7 +39,6 @@ export function BenchmarkSessionCard({
           <Badge tone={BENCHMARK_SESSION_STATUS_TONE[session.status]}>
             {BENCHMARK_SESSION_STATUS_LABEL[session.status]}
           </Badge>
-          {official ? <Badge tone="context">Oficial</Badge> : null}
         </div>
         <p className={styles.scores}>
           <span>{scoreLabel('Simples', session.summary.simple)}</span>

@@ -6,8 +6,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AppError } from '@/api/errors/AppError'
 import { ContractError } from '@/api/errors/ContractError'
-import { listSessionIds } from '@/api/sessionApi'
-import { loadSessionDocument } from '@/api/sessionLoader'
+import { getSession, listSessionIds } from '@/api/sessionApi'
 import { env } from '@/config/env'
 import { truncate } from '@/domain/services/formatters'
 import { sessionSummary } from '@/domain/services/sessionSummary'
@@ -48,11 +47,7 @@ function sortByCreatedAtDesc(items: SessionSummaryView[]): SessionSummaryView[] 
  * `explicitIds` restringe a lista a sessões conhecidas (ex.: as de uma bateria de benchmark) e
  * dispensa `GET /v1/sessions`; `null` lista todas as sessões da fonte.
  */
-export function useSessionList(
-  source: SessionSource = 'history',
-  explicitIds: readonly string[] | null = null,
-  containerId: string | null = null,
-): UseSessionList {
+export function useSessionList(source: SessionSource = 'history', explicitIds: readonly string[] | null = null): UseSessionList {
   const [ids, setIds] = useState<string[] | null>(null)
   const [isLoadingIds, setIsLoadingIds] = useState(true)
   const [error, setError] = useState<AppError | null>(null)
@@ -107,7 +102,7 @@ export function useSessionList(
 
     function appendItem(document: SessionDocument): void {
       setProcessedIds((prev) => prev.includes(document.id) ? prev : [...prev, document.id])
-      if ((document.benchmark_details?.is_banchmark === true) !== (source !== 'history')) return
+      if ((document.benchmark_details?.is_banchmark === true) !== (source === 'benchmark')) return
       setCachedSession(document, source)
       const view = toSummaryView(document)
       setItems((prev) => sortByCreatedAtDesc([...prev.filter((item) => item.id !== view.id), view]))
@@ -128,7 +123,7 @@ export function useSessionList(
         }
 
         try {
-          const document = await loadSessionDocument(id, source === 'official' ? containerId : null, controller.signal)
+          const document = await getSession(id, controller.signal)
           if (controller.signal.aborted) return
           appendItem(document)
         } catch (rawError) {
@@ -146,7 +141,7 @@ export function useSessionList(
     void Promise.all(workers)
 
     return () => controller.abort()
-  }, [ids, source, containerId])
+  }, [ids, source])
 
   const reload = useCallback(() => setReloadToken((token) => token + 1), [])
 

@@ -9,7 +9,6 @@ from src.domain.entities.benchmark.benchmark_session import BenchmarkSession
 from src.domain.interfaces.benchmark_session_document_mapper_interface import IBenchmarkSessionDocumentMapper
 from src.domain.interfaces.benchmark_session_repository_interface import IBenchmarkSessionRepository
 from src.domain.interfaces.settings_interface import ISettings
-from src.infra.repositories.owner_scope import OWNER_KEY, validate_owner_id
 
 _ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 _DOCUMENT_SUFFIX = ".json"
@@ -19,32 +18,23 @@ _FILE_ENCODING = "utf-8"
 
 
 class JsonFileBenchmarkSessionRepository(IBenchmarkSessionRepository):
-    """Repositório de baterias de benchmark apoiado em arquivos JSON locais, escopado a um proprietário.
-
-    As baterias de cada conta ficam em `<base>/owners/<owner_id>/`.
+    """Repositório de baterias de benchmark apoiado em arquivos JSON locais.
 
     Segue o mesmo protocolo de `JsonFileSessionRepository`: um arquivo por bateria, gravado de
     forma atômica (temporário seguido de `os.replace`) e com todo o I/O fora do event loop.
     """
 
-    def __init__(
-        self, mapper: IBenchmarkSessionDocumentMapper, settings: ISettings, logger: logging.Logger, owner_id: str
-    ) -> None:
+    def __init__(self, mapper: IBenchmarkSessionDocumentMapper, settings: ISettings, logger: logging.Logger) -> None:
         """Inicializa o repositório.
 
         Args:
             mapper: Conversor entre `BenchmarkSession` e o documento persistido.
             settings: Configurações da aplicação, fonte do diretório das baterias.
             logger: Logger do módulo.
-            owner_id: Conta dona das baterias lidas e gravadas por esta instância.
-
-        Raises:
-            ValueError: Quando o proprietário é inválido.
         """
         self.mapper: IBenchmarkSessionDocumentMapper = mapper
         self.settings: ISettings = settings
         self.logger = logger
-        self.owner_id = validate_owner_id(owner_id)
 
     async def save(self, benchmark_session: BenchmarkSession) -> None:
         """Persiste (insere ou substitui) a bateria inteira.
@@ -57,7 +47,7 @@ class JsonFileBenchmarkSessionRepository(IBenchmarkSessionRepository):
         """
         self.__validate_id(benchmark_session_id=benchmark_session.id)
         payload = json.dumps(
-            {**self.mapper.to_document(benchmark_session=benchmark_session), OWNER_KEY: self.owner_id},
+            self.mapper.to_document(benchmark_session=benchmark_session),
             ensure_ascii=False,
             indent=_DOCUMENT_INDENT,
         )
@@ -137,8 +127,8 @@ class JsonFileBenchmarkSessionRepository(IBenchmarkSessionRepository):
         return self.mapper.from_document(document=document)
 
     def __storage_directory(self) -> Path:
-        """Devolve o diretório das baterias do proprietário."""
-        return Path(self.settings.ralph_benchmark_sessions_storage_path) / "owners" / self.owner_id
+        """Devolve o diretório configurado para as baterias."""
+        return Path(self.settings.ralph_benchmark_sessions_storage_path)
 
     def __document_path(self, benchmark_session_id: str) -> Path:
         """Devolve o caminho do documento de uma bateria já validada."""

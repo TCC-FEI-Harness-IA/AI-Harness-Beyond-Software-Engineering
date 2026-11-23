@@ -6,7 +6,6 @@ from src.application.usecases.run_benchmark_usecase import RunBenchmarkUseCase
 from src.domain.enums.benchmark_session_status_enum import BenchmarkSessionStatusEnum
 from src.domain.enums.benchmark_dataset_enum import BenchmarkDatasetEnum
 from src.domain.interfaces.settings_interface import ISettings
-from src.domain.services.execution_authorization import ExecutionAuthorization
 from src.domain.services.benchmark_answer_evaluator import BenchmarkAnswerEvaluator
 from src.infra.adapters.benchmark_flow_runner_adapter import BenchmarkFlowRunnerAdapter
 from src.infra.adapters.clock_adapter import ClockAdapter
@@ -30,13 +29,8 @@ class BenchmarkRunStartup:
     bateria em execução.
     """
 
-    def __init__(self, owner_id: str, authorization: ExecutionAuthorization) -> None:
-        """Instancia e injeta todas as dependências da execução da bateria.
-
-        Args:
-            owner_id: Conta autenticada dona da bateria e das sessões filhas.
-            authorization: Autorização da execução, compartilhada por todas as chamadas da bateria.
-        """
+    def __init__(self) -> None:
+        """Instancia e injeta todas as dependências da execução da bateria."""
         self.settings: ISettings = Settings()
         self.logger = self.settings.logger(module_file=__file__)
 
@@ -45,7 +39,7 @@ class BenchmarkRunStartup:
         self.repository = BenchmarkSessionRepositoryFactory(
             settings=self.settings,
             mapper=self.document_mapper,
-        ).create(owner_id=owner_id)
+        ).create()
         self.question_provider = FileBenchmarkQuestionProvider(
             settings=self.settings,
             logger=self.settings.logger(module_file=getfile(FileBenchmarkQuestionProvider)),
@@ -54,8 +48,6 @@ class BenchmarkRunStartup:
             evaluator=BenchmarkAnswerEvaluator(),
             clock=self.clock,
             logger=self.settings.logger(module_file=getfile(BenchmarkFlowRunnerAdapter)),
-            owner_id=owner_id,
-            authorization=authorization,
         )
         self.run_benchmark_use_case = RunBenchmarkUseCase(
             question_provider=self.question_provider,

@@ -1,15 +1,11 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { listBenchmarkSessions } from '@/api/benchmarkApi'
 import { NetworkError } from '@/api/errors/NetworkError'
-import { getOfficialSession, listOfficialPublications } from '@/api/publicBenchmarkApi'
 import { getSession } from '@/api/sessionApi'
-import type { OfficialPublication } from '@/domain/types/officialPublication'
-import { AuthProvider } from '@/state/AuthContext'
-import { CREDENCIAL_VALIDA, fakeAuthApi, SESSAO_ANA } from '@/test/renderWithAuth'
 import type { BenchmarkQuestionRun, BenchmarkSessionDocument } from '@/domain/types/benchmarkSession'
 import { saveBlob } from '@/hooks/saveBlob'
 import { clearRalphProcessMetricsCache } from '@/hooks/useRalphProcessMetrics'
@@ -19,7 +15,6 @@ import { BenchmarkAnalysisPage } from './BenchmarkAnalysisPage'
 
 vi.mock('@/api/benchmarkApi', () => ({ listBenchmarkSessions: vi.fn() }))
 vi.mock('@/api/sessionApi', () => ({ getSession: vi.fn() }))
-vi.mock('@/api/publicBenchmarkApi', () => ({ listOfficialPublications: vi.fn(), getOfficialSession: vi.fn() }))
 vi.mock('@/hooks/saveBlob', () => ({ saveBlob: vi.fn() }))
 
 const listMock = listBenchmarkSessions as unknown as Mock
@@ -75,13 +70,9 @@ function LocationProbe(): JSX.Element {
   return <output data-testid="location">{location.search}</output>
 }
 
-function renderPage(search = '', visitor = false): void {
+function renderPage(search = ''): void {
   render(
     <MemoryRouter initialEntries={[`${ROUTES.benchmarkAnalysis}${search}`]}>
-      <AuthProvider
-        api={fakeAuthApi()}
-        {...(visitor ? {} : { initialState: { session: SESSAO_ANA, credential: CREDENCIAL_VALIDA } })}
-      >
       <Routes>
         <Route
           path={ROUTES.benchmarkAnalysis}
@@ -93,7 +84,6 @@ function renderPage(search = '', visitor = false): void {
           }
         />
       </Routes>
-      </AuthProvider>
     </MemoryRouter>,
   )
 }
@@ -107,10 +97,6 @@ function tooltipOf(chart: HTMLElement): HTMLElement {
 function lastTooltip(): HTMLElement {
   return screen.getAllByRole('tooltip').at(-1) as HTMLElement
 }
-
-beforeEach(() => {
-  vi.mocked(listOfficialPublications).mockResolvedValue([])
-})
 
 afterEach(() => {
   clearRalphProcessMetricsCache()
@@ -142,7 +128,7 @@ describe('BenchmarkAnalysisPage', () => {
     expect(screen.queryByLabelText('Vestibular A')).not.toBeInTheDocument()
     await user.click(screen.getByLabelText('MMLU B'))
     await user.click(screen.getByRole('button', { name: 'Limpar seleção' }))
-    expect(screen.getByTestId('location').textContent).toBe('?execucoes=')
+    expect(screen.getByTestId('location').textContent).toBe('')
   })
 
   it('monta o dashboard consolidado com as quebras, a lista qualitativa e as exportações', async () => {
@@ -277,57 +263,5 @@ describe('BenchmarkAnalysisPage', () => {
     expect(await screen.findByLabelText('Vestibular A')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Atualizar baterias' }))
     await waitFor(() => expect(listMock).toHaveBeenCalledTimes(3))
-  })
-})
-
-
-describe('BenchmarkAnalysisPage — visitante e resultados oficiais', () => {
-  function oficial(id: string, documento: BenchmarkSessionDocument): OfficialPublication {
-    return {
-      id, dataset: documento.benchmark.dataset, status: 'active', publishedAt: '2026-11-15T12:00:00+00:00',
-      supersedes: null, supersededBy: null, supersededAt: null, sourceBenchmarkSessionId: documento.id,
-      textRedacted: false, battery: documento,
-    }
-  }
-
-  it('abre com os resultados oficiais já selecionados, sem login e sem a lista privada', async () => {
-    vi.mocked(listOfficialPublications).mockResolvedValue([oficial('pub_v', vestibular), oficial('pub_m', mmlu)])
-    renderPage('', true)
-
-    expect(await screen.findByRole('heading', { name: 'Resumo executivo' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Vestibular A')).toBeChecked()
-    expect(screen.getByLabelText('MMLU B')).toBeChecked()
-    expect(screen.getAllByText('Oficial').length).toBeGreaterThanOrEqual(2)
-    expect(listMock).not.toHaveBeenCalled()
-  })
-
-  it('métricas do Ralph dos resultados oficiais vêm da API pública', async () => {
-    vi.mocked(listOfficialPublications).mockResolvedValue([oficial('pub_v', vestibular)])
-    vi.mocked(getOfficialSession).mockImplementation((_: string, id: string) =>
-      Promise.resolve({
-        id, user_question: 'Q', flow: 'A1', flow_version: 2, model_name: 'm', max_tokens: 1, temperature: 0,
-        status: 'completed', created_at: '', updated_at: '', final_answer: null, degradations: [],
-        totals: { total_messages: 0, total_llm_calls: 2, tokens_input: 0, tokens_output: 0, total_tokens: 0, inference_time_ms: 0, wall_time_ms: 0 },
-        messages: [],
-      }),
-    )
-    const user = userEvent.setup()
-    renderPage('', true)
-
-    await user.click(await screen.findByRole('button', { name: /Carregar métricas do processo/ }))
-
-    await waitFor(() => expect(getOfficialSession).toHaveBeenCalledTimes(6))
-    expect(vi.mocked(getOfficialSession).mock.calls.every((call) => call[0] === 'pub_v')).toBe(true)
-    expect(getSessionMock).not.toHaveBeenCalled()
-  })
-
-  it('usuário autenticado vê os oficiais e as próprias execuções juntos', async () => {
-    vi.mocked(listOfficialPublications).mockResolvedValue([oficial('pub_v', vestibular)])
-    listMock.mockResolvedValue([mmlu])
-    renderPage()
-
-    expect(await screen.findByLabelText('Vestibular A')).toBeChecked()
-    expect(screen.getByLabelText('MMLU B')).not.toBeChecked()
-    expect(screen.getByText('Minha execução')).toBeInTheDocument()
   })
 })

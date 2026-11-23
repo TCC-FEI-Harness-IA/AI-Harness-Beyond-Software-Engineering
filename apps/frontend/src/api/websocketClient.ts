@@ -4,10 +4,9 @@
 import { env } from '../config/env'
 import type { DefaultInputDTO } from '../domain/types/defaultInput'
 import type { ReasoningErrorFrame, ReasoningEventDTO } from '../domain/types/reasoningEvent'
-import { emitUnauthorized } from './authEvents'
 import { AppError } from './errors/AppError'
 import { WebSocketError } from './errors/WebSocketError'
-import { WS_CLOSE_UNAUTHENTICATED, WS_OPEN_TIMEOUT_MESSAGE } from './errors/messages'
+import { WS_OPEN_TIMEOUT_MESSAGE } from './errors/messages'
 import { parseReasoningFrame } from './parsers/reasoningFrame'
 
 // Caminho constante do módulo — nenhum literal de rota espalhado (README, seção 8, item 1).
@@ -85,7 +84,6 @@ export function openReasoningStream(
     closed = true
     detach()
 
-    if (event.code === WS_CLOSE_UNAUTHENTICATED) emitUnauthorized()
     handlers.onClose(event.code)
     if (event.code !== 1000) {
       handlers.onFailure(WebSocketError.fromCloseCode(event.code))

@@ -6,10 +6,6 @@ from src.domain.entities.llm.model_info import ModelInfo
 class IModelInfoRepository(ABC):
     """Contrato de persistência do catálogo de modelos."""
 
-    async def ensure_indexes(self) -> None:
-        """Cria os índices exigidos pelo armazenamento; por padrão, não há nenhum."""
-        return None
-
     @abstractmethod
     async def list_all(self) -> list[ModelInfo]:
         """Lista todos os modelos cadastrados.

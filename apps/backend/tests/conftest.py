@@ -1,5 +1,4 @@
 """Configuração compartilhada da suíte de testes."""
-import base64
 from collections.abc import Callable
 
 import pytest
@@ -31,14 +30,3 @@ def budget_factory() -> Callable[..., CostBudget]:
         return CostBudget(**(_LIMITES_PEQUENOS | overrides))
 
     return _factory
-
-
-@pytest.fixture(autouse=True)
-def segredos_de_teste(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Segredos de infraestrutura fictícios, para `create_app()` subir sem os valores reais.
-
-    Nunca há chave OpenRouter do servidor: a única credencial LLM é a do usuário, no cookie cifrado.
-    """
-    monkeypatch.setenv("AUTH_INTERNAL_TOKEN", "segredo-interno-de-teste-com-mais-de-32-caracteres")
-    monkeypatch.setenv("LLM_CREDENTIAL_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"k" * 32).decode())
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)

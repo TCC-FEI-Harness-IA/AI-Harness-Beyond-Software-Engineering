@@ -2,7 +2,6 @@ import pytest
 
 from src.domain.entities.llm.model_info import ModelInfo
 from src.domain.errors.model_already_registered_error import ModelAlreadyRegisteredError
-from src.infra.repositories.layered_model_info_repository import LayeredModelInfoRepository
 from src.infra.repositories.mongo_model_info_repository import MongoModelInfoRepository
 from src.infra.routes.v1.model.dtos.model_info_dto import ModelInfoFieldsDTO, ModelInfoInputDTO
 from src.infra.startups.model_catalog_startup import ModelCatalogStartup
@@ -10,33 +9,31 @@ from tests.doubles.in_memory_model_info_repository import InMemoryModelInfoRepos
 
 
 def _startup_em_memoria(
-    monkeypatch: pytest.MonkeyPatch,
-    repositorio: InMemoryModelInfoRepository,
-    compartilhado: InMemoryModelInfoRepository | None = None,
+    monkeypatch: pytest.MonkeyPatch, repositorio: InMemoryModelInfoRepository
 ) -> ModelCatalogStartup:
-    startup = ModelCatalogStartup(owner_id="usr_teste")
-    catalogo = LayeredModelInfoRepository(personal=repositorio, shared=compartilhado or InMemoryModelInfoRepository())
-    monkeypatch.setattr(startup, "catalog", catalogo)
-    monkeypatch.setattr(startup, "model_repository", repositorio)
-    monkeypatch.setattr(startup.list_models_use_case, "repository", catalogo)
-    for usecase in (startup.register_model_use_case, startup.update_model_use_case, startup.delete_model_use_case):
+    startup = ModelCatalogStartup()
+    for usecase in (
+        startup.list_models_use_case,
+        startup.register_model_use_case,
+        startup.update_model_use_case,
+        startup.delete_model_use_case,
+    ):
         monkeypatch.setattr(usecase, "repository", repositorio)
     return startup
 
 
 def test_constroi_todo_o_grafo_sem_deixar_atributo_nulo() -> None:
-    startup = ModelCatalogStartup(owner_id="usr_teste")
+    startup = ModelCatalogStartup()
 
     assert vars(startup)
     assert all(valor is not None for valor in vars(startup).values())
 
 
-def test_escritas_usam_o_catalogo_pessoal_e_a_listagem_o_catalogo_em_camadas() -> None:
-    startup = ModelCatalogStartup(owner_id="usr_teste")
+def test_todos_os_casos_de_uso_compartilham_o_repositorio_mongo() -> None:
+    startup = ModelCatalogStartup()
 
     assert isinstance(startup.model_repository, MongoModelInfoRepository)
-    assert startup.model_repository.owner_id == "usr_teste"
-    assert startup.list_models_use_case.repository is startup.catalog
+    assert startup.list_models_use_case.repository is startup.model_repository
     assert startup.register_model_use_case.repository is startup.model_repository
     assert startup.update_model_use_case.repository is startup.model_repository
     assert startup.delete_model_use_case.repository is startup.model_repository
@@ -55,20 +52,7 @@ async def test_lista_os_modelos_como_documentos(monkeypatch: pytest.MonkeyPatch)
             "output_price_per_million_tokens": None,
             "context_length": 8192,
             "throughput_tokens_per_second": None,
-            "scope": "personal",
         }
-    ]
-
-
-async def test_listagem_identifica_os_modelos_compartilhados(monkeypatch: pytest.MonkeyPatch) -> None:
-    startup = _startup_em_memoria(
-        monkeypatch,
-        InMemoryModelInfoRepository(models=[ModelInfo(model_name="b/meu")]),
-        compartilhado=InMemoryModelInfoRepository(models=[ModelInfo(model_name="a/comum")]),
-    )
-
-    assert [(item["model_name"], item["scope"]) for item in await startup.list_models()] == [
-        ("a/comum", "shared"), ("b/meu", "personal"),
     ]
 
 

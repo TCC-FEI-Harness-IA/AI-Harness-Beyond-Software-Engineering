@@ -12,7 +12,6 @@ import { ThemeProvider } from '@/state/ThemeContext'
 import { ViewModeProvider } from '@/state/ViewModeContext'
 import { FakeWebSocket } from '@/test/doubles/FakeWebSocket'
 import { benchmarkSession, completedBenchmarkSession, outcome, questionRun } from '@/test/fixtures/benchmarkSession'
-import { TestAuth } from '@/test/TestAuth'
 
 const details: BenchmarkDetails = {
   is_banchmark: true, question_name: 'Q1', corret_answer: 'A) um', providade_answer: 'RESPOSTA_FINAL: A',
@@ -30,9 +29,9 @@ const normal = { ...direct, id: 'sess_normal', user_question: 'Pergunta normal d
 function renderApp(path: string): void {
   render(
     <MemoryRouter initialEntries={[path]}>
-      <ThemeProvider><TestAuth><RunConfigProvider><ViewModeProvider>
+      <ThemeProvider><RunConfigProvider><ViewModeProvider>
         <AppRouter />
-      </ViewModeProvider></RunConfigProvider></TestAuth></ThemeProvider>
+      </ViewModeProvider></RunConfigProvider></ThemeProvider>
     </MemoryRouter>,
   )
 }
@@ -820,6 +819,6 @@ describe('Exportação e importação de bateria completa', () => {
     expect(await screen.findByRole('heading', { name: 'Bateria importada' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Exportar sessão completa' })).toBeEnabled()
     const importCall = backend.fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')
-    expect(importCall?.[1]?.headers).toEqual({ 'Content-Type': 'application/zip', 'X-CSRF-Token': 'csrf-ana' })
+    expect(importCall?.[1]?.headers).toEqual({ 'Content-Type': 'application/zip' })
   })
 })

@@ -13,7 +13,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from src.infra.startups import default_message_startup as default_startup_module
 from src.infra.startups import ralph_thinking_startup as ralph_startup_module
-from tests.doubles.security_doubles import authenticated_client
+from src.main import create_app
 from tests.doubles.ralph_scripts import plano_aprovado
 from tests.doubles.fake_llm_service import FakeLLMService
 from tests.doubles.scripted_llm_completions import ScriptedLLMCompletions
@@ -26,7 +26,7 @@ class _FakeLLMServiceFactory:
         self.settings = settings
         self.llm_service = llm_service
 
-    def create_all(self, authorization: object = None) -> list[FakeLLMService]:
+    def create_all(self) -> list[FakeLLMService]:
         """Devolve o dublê como único serviço registrado."""
         return [self.llm_service]
 
@@ -114,6 +114,7 @@ def storage_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     caminho = tmp_path / "sessions"
     monkeypatch.setenv("RALPH_SESSIONS_STORAGE_PATH", str(caminho))
     monkeypatch.setenv("LLM_MODEL", "vendor/modelo")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "chave-de-teste")
     monkeypatch.setenv("GENAI_AVAILABLE_MODELS", "vendor/modelo")
     monkeypatch.setenv("GENAI_AVAILABLE_PROVIDERS", "open_router")
     monkeypatch.setenv("LLM_MAX_TOKENS", "120000")
@@ -137,7 +138,7 @@ def _build_client(
         "LLMCompletionsAdapter",
         lambda **kwargs: scripted_completions,
     )
-    return authenticated_client(user_id="usr_teste")
+    return TestClient(create_app())
 
 
 @pytest.fixture
@@ -190,7 +191,7 @@ def test_harness_completo_grava_pergunta_fases_resposta_tokens_e_tempos(
     assert frames[-1]["type"] == "result"
     session_id = frames[-1]["session_id"]
 
-    documento = json.loads((storage_path / "owners" / "usr_teste" / f"{session_id}.json").read_text(encoding="utf-8"))
+    documento = json.loads((storage_path / f"{session_id}.json").read_text(encoding="utf-8"))
     assert documento["user_question"] == "Qual dos seguintes números é primo, par e maior que 2?"
     assert documento["flow"] == "A1"
     assert documento["status"] == "completed"
@@ -207,8 +208,7 @@ def test_harness_completo_grava_uma_invocacao_por_chamada_sem_falha_e_com_o_prov
 ) -> None:
     frames, _ = _run_harness(client)
 
-    arquivo = storage_path / "owners" / "usr_teste" / f"{frames[-1]['session_id']}.json"
-    documento = json.loads(arquivo.read_text(encoding="utf-8"))
+    documento = json.loads((storage_path / f"{frames[-1]['session_id']}.json").read_text(encoding="utf-8"))
     assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 9
     assert {invocacao["outcome"] for invocacao in documento["invocations"]} == {"success"}
     assert sum(i["tokens_input"] + i["tokens_output"] for i in documento["invocations"]) == (
@@ -241,15 +241,14 @@ def test_harness_interrompido_por_limite_encerra_com_um_unico_frame_de_erro_e_pe
     assert "result" not in {frame["type"] for frame in frames}
     assert not [frame for frame in frames if frame["phase"] in ("B3", "C1", "C3")]
 
-    arquivo = storage_path / "owners" / "usr_teste" / f"{frames[-1]['session_id']}.json"
-    documento = json.loads(arquivo.read_text(encoding="utf-8"))
+    documento = json.loads((storage_path / f"{frames[-1]['session_id']}.json").read_text(encoding="utf-8"))
     assert documento["status"] == "failed"
     assert documento["final_answer"] is None
     assert documento["failure"]["reason"] == "resource_limit"
     assert documento["failure"]["limit"] == "task_attempts"
     assert documento["failure"]["task_id"] == "T1"
     assert len(documento["invocations"]) == documento["totals"]["total_llm_calls"] == 6
-    assert {**client.get(f"/v1/sessions/{frames[-1]['session_id']}").json(), "owner_id": "usr_teste"} == documento
+    assert client.get(f"/v1/sessions/{frames[-1]['session_id']}").json() == documento
 
 
 def test_consulta_apos_o_websocket_devolve_exatamente_a_sessao_persistida(
@@ -261,8 +260,7 @@ def test_consulta_apos_o_websocket_devolve_exatamente_a_sessao_persistida(
     consulta = client.get(f"/v1/sessions/{session_id}")
 
     assert consulta.status_code == 200
-    arquivo = storage_path / "owners" / "usr_teste" / f"{session_id}.json"
-    assert {**consulta.json(), "owner_id": "usr_teste"} == json.loads(arquivo.read_text(encoding="utf-8"))
+    assert consulta.json() == json.loads((storage_path / f"{session_id}.json").read_text(encoding="utf-8"))
 
 
 def test_baseline_cria_sessao_direct_inference_com_duas_mensagens(client: TestClient) -> None:

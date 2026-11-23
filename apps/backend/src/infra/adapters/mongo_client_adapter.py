@@ -55,21 +55,6 @@ class MongoClientAdapter:
         database = self.client[self.settings.mongodb_database]
         return database[self.settings.mongodb_models_collection]
 
-    @property
-    def user_models_collection(self) -> AsyncIOMotorCollection:
-        """Coleção dos catálogos pessoais de modelos (um documento por conta e modelo)."""
-        return self.client[self.settings.mongodb_database][self.settings.mongodb_user_models_collection]
-
-    @property
-    def official_publications_collection(self) -> AsyncIOMotorCollection:
-        """Coleção das publicações oficiais de benchmark."""
-        return self.client[self.settings.mongodb_database][self.settings.mongodb_official_publications_collection]
-
-    @property
-    def official_sessions_collection(self) -> AsyncIOMotorCollection:
-        """Coleção das cópias das sessões filhas das publicações oficiais."""
-        return self.client[self.settings.mongodb_database][self.settings.mongodb_official_sessions_collection]
-
     def close(self) -> None:
         """Fecha a conexão com o MongoDB."""
         self.client.close()
