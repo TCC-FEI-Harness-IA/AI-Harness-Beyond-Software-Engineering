@@ -1,0 +1,4128 @@
+{
+  "matplotlib_version": "3.11.2",
+  "source_sha256": {
+    "benchmark-session-bench_9be03b85641c4b62bfa7cd81ebe62d03-ralph-loop-errors.zip": "fd7725a9d1738f1eaecff755a0cbbcd5f6431db93e6fc0accdaabcb92af53f34",
+    "analise-benchmark-questoes_desconsidera-erros.csv": "d02722d16225d33495e06d23f2acb4d6b89f894d8a7c85d0c87914b85c825058",
+    "benchmark-session-bench_b72b883cb604496c917119d00e55d3b3-ralph-loop-errors.zip": "05f45b766455a239566a4dd17d25b4c7c5d9222b053eba07364d6a7d69acbf53",
+    "analise-benchmark-questoes_considera-erros.csv": "489eaa79e46be89eb311e2db9fe1f1b8236b35f793bccf914c585b576c4d5944",
+    "benchmark-session-bench_c0b581509c944a10adde91d57d80ef7f-ralph-loop-errors.zip": "31d410a1610d45abd64488467731ecb7ed0ba67f3108adc6809d9bfdf6539bc4"
+  },
+  "original_report_sha256": "d88e3abcca3a8af35de1ab90f78cf250cf987ec7a21a89c9b7051b538ba1b0cd",
+  "figures": [
+    {
+      "id": "01_resultado_global_e_benchmarks",
+      "kind": "observed_paired_accuracy_difference",
+      "rows": [
+        {
+          "label": "Global",
+          "full": {
+            "n": 743,
+            "simple_correct": 652,
+            "ralph_correct": 637,
+            "simple_accuracy": 0.8775235531628532,
+            "ralph_accuracy": 0.857335127860027,
+            "delta_pp": -2.0188425302826376,
+            "net": -15,
+            "recoveries": 36,
+            "regressions": 51,
+            "both_correct": 601,
+            "both_wrong": 55,
+            "mcnemar_p": 0.1329018851954619,
+            "recovery_rate": 0.3956043956043956,
+            "regression_rate": 0.07822085889570553,
+            "simple_failure": 2,
+            "ralph_failure": 31,
+            "simple_ci": [
+              0.8519896702935075,
+              0.8991737705870395
+            ],
+            "ralph_ci": [
+              0.8303475633983156,
+              0.880646709520705
+            ],
+            "both_wrong_same": 42,
+            "paired_delta_ci_pp_approx": [
+              -4.476685888412501,
+              0.43900082784722594
+            ],
+            "simples_tokens": {
+              "sum": 651365,
+              "mean": 876.6689098250337,
+              "median": 544,
+              "p90": 1047.4000000000005,
+              "p95": 1398.6999999999998,
+              "max": 193303
+            },
+            "ralph_tokens": {
+              "sum": 45653918,
+              "mean": 61445.38088829071,
+              "median": 51834,
+              "p90": 98566.80000000005,
+              "p95": 132214.29999999996,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 3097.969,
+              "mean": 4.169541049798116,
+              "median": 1.778,
+              "p90": 4.168800000000002,
+              "p95": 5.743399999999997,
+              "max": 1306.081
+            },
+            "ralph_segundos": {
+              "sum": 38388.035,
+              "mean": 51.66626514131897,
+              "median": 37.654,
+              "p90": 77.53380000000001,
+              "p95": 101.78309999999998,
+              "max": 1827.664
+            },
+            "token_ratio": 70.08960874471303,
+            "time_ratio": 12.391355433188648
+          },
+          "clean": {
+            "n": 711,
+            "simple_correct": 627,
+            "ralph_correct": 636,
+            "simple_accuracy": 0.8818565400843882,
+            "ralph_accuracy": 0.8945147679324894,
+            "delta_pp": 1.2658227848101267,
+            "net": 9,
+            "recoveries": 35,
+            "regressions": 26,
+            "both_correct": 601,
+            "both_wrong": 49,
+            "mcnemar_p": 0.30567741986311836,
+            "recovery_rate": 0.4166666666666667,
+            "regression_rate": 0.04146730462519936,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.856053922302483,
+              0.9035550697330534
+            ],
+            "ralph_ci": [
+              0.8697769636091394,
+              0.9150124370021607
+            ],
+            "both_wrong_same": 41,
+            "paired_delta_ci_pp_approx": [
+              -0.8866769609890386,
+              3.418322530609292
+            ],
+            "simples_tokens": {
+              "sum": 424991,
+              "mean": 597.7369901547116,
+              "median": 529,
+              "p90": 1003.0,
+              "p95": 1299.5,
+              "max": 5620
+            },
+            "ralph_tokens": {
+              "sum": 41800522,
+              "mean": 58791.170182841066,
+              "median": 50964,
+              "p90": 90091.0,
+              "p95": 114453.0,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 1649.679,
+              "mean": 2.3202236286919833,
+              "median": 1.75,
+              "p90": 3.796,
+              "p95": 5.2204999999999995,
+              "max": 37.323
+            },
+            "ralph_segundos": {
+              "sum": 31565.269,
+              "mean": 44.395596343178624,
+              "median": 37.239,
+              "p90": 72.543,
+              "p95": 88.381,
+              "max": 414.948
+            },
+            "token_ratio": 98.35625225004765,
+            "time_ratio": 19.134188530010988
+          }
+        },
+        {
+          "label": "GPQA Diamond",
+          "full": {
+            "n": 190,
+            "simple_correct": 140,
+            "ralph_correct": 134,
+            "simple_accuracy": 0.7368421052631579,
+            "ralph_accuracy": 0.7052631578947368,
+            "delta_pp": -3.1578947368421053,
+            "net": -6,
+            "recoveries": 22,
+            "regressions": 28,
+            "both_correct": 112,
+            "both_wrong": 28,
+            "mcnemar_p": 0.47988766169832786,
+            "recovery_rate": 0.44,
+            "regression_rate": 0.2,
+            "simple_failure": 1,
+            "ralph_failure": 21,
+            "simple_ci": [
+              0.6699812508478442,
+              0.7943157088817623
+            ],
+            "ralph_ci": [
+              0.6368839336097585,
+              0.7655067648225671
+            ],
+            "both_wrong_same": 20,
+            "paired_delta_ci_pp_approx": [
+              -10.457526525452517,
+              4.141737051768306
+            ],
+            "simples_tokens": {
+              "sum": 360343,
+              "mean": 1896.542105263158,
+              "median": 730.5,
+              "p90": 1439.2,
+              "p95": 1914.6999999999978,
+              "max": 193303
+            },
+            "ralph_tokens": {
+              "sum": 17488399,
+              "mean": 92044.2052631579,
+              "median": 76537.5,
+              "p90": 150939.69999999995,
+              "p95": 200465.64999999988,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 2062.982,
+              "mean": 10.8578,
+              "median": 3.0140000000000002,
+              "p90": 7.1045,
+              "p95": 9.520299999999995,
+              "max": 1306.081
+            },
+            "ralph_segundos": {
+              "sum": 17593.437,
+              "mean": 92.59703684210527,
+              "median": 57.386,
+              "p90": 133.53789999999995,
+              "p95": 179.53999999999985,
+              "max": 1827.664
+            },
+            "token_ratio": 48.53264528518661,
+            "time_ratio": 8.528158267982949
+          },
+          "clean": {
+            "n": 169,
+            "simple_correct": 123,
+            "ralph_correct": 134,
+            "simple_accuracy": 0.727810650887574,
+            "ralph_accuracy": 0.7928994082840237,
+            "delta_pp": 6.508875739644971,
+            "net": 11,
+            "recoveries": 22,
+            "regressions": 11,
+            "both_correct": 112,
+            "both_wrong": 24,
+            "mcnemar_p": 0.08014331245794892,
+            "recovery_rate": 0.4782608695652174,
+            "regression_rate": 0.08943089430894309,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.6562003180516572,
+              0.78929464898562
+            ],
+            "ralph_ci": [
+              0.7256278105078255,
+              0.8471514328258165
+            ],
+            "both_wrong_same": 19,
+            "paired_delta_ci_pp_approx": [
+              -0.1002486592673737,
+              13.118000138557315
+            ],
+            "simples_tokens": {
+              "sum": 145266,
+              "mean": 859.5621301775147,
+              "median": 725,
+              "p90": 1259.6000000000001,
+              "p95": 1628.7999999999997,
+              "max": 5620
+            },
+            "ralph_tokens": {
+              "sum": 14390433,
+              "mean": 85150.49112426036,
+              "median": 70810,
+              "p90": 134068.80000000002,
+              "p95": 169569.3999999999,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 658.361,
+              "mean": 3.8956272189349113,
+              "median": 2.919,
+              "p90": 6.7646000000000015,
+              "p95": 8.106399999999997,
+              "max": 37.323
+            },
+            "ralph_segundos": {
+              "sum": 11256.277,
+              "mean": 66.60518934911242,
+              "median": 54.346,
+              "p90": 104.18560000000002,
+              "p95": 143.63359999999997,
+              "max": 414.948
+            },
+            "token_ratio": 99.0626368179753,
+            "time_ratio": 17.09742375383718
+          }
+        },
+        {
+          "label": "MMLU",
+          "full": {
+            "n": 285,
+            "simple_correct": 256,
+            "ralph_correct": 248,
+            "simple_accuracy": 0.8982456140350877,
+            "ralph_accuracy": 0.8701754385964913,
+            "delta_pp": -2.807017543859649,
+            "net": -8,
+            "recoveries": 8,
+            "regressions": 16,
+            "both_correct": 240,
+            "both_wrong": 21,
+            "mcnemar_p": 0.15158963203430176,
+            "recovery_rate": 0.27586206896551724,
+            "regression_rate": 0.0625,
+            "simple_failure": 0,
+            "ralph_failure": 3,
+            "simple_ci": [
+              0.8576838991537141,
+              0.928214361181954
+            ],
+            "ralph_ci": [
+              0.8261794123778903,
+              0.9043251379781714
+            ],
+            "both_wrong_same": 20,
+            "paired_delta_ci_pp_approx": [
+              -6.166178081069365,
+              0.5521429933500674
+            ],
+            "simples_tokens": {
+              "sum": 95380,
+              "mean": 334.6666666666667,
+              "median": 287,
+              "p90": 478.79999999999995,
+              "p95": 571.8000000000002,
+              "max": 2303
+            },
+            "ralph_tokens": {
+              "sum": 13073641,
+              "mean": 45872.42456140351,
+              "median": 45421,
+              "p90": 63360.2,
+              "p95": 71730.8,
+              "max": 104870
+            },
+            "simples_segundos": {
+              "sum": 483.372,
+              "mean": 1.6960421052631578,
+              "median": 1.463,
+              "p90": 2.2535999999999996,
+              "p95": 2.7996,
+              "max": 10.786
+            },
+            "ralph_segundos": {
+              "sum": 10321.785,
+              "mean": 36.21678947368421,
+              "median": 32.89,
+              "p90": 53.763600000000004,
+              "p95": 67.27900000000002,
+              "max": 120.094
+            },
+            "token_ratio": 137.06899769343678,
+            "time_ratio": 21.353708944663737
+          },
+          "clean": {
+            "n": 282,
+            "simple_correct": 254,
+            "ralph_correct": 248,
+            "simple_accuracy": 0.900709219858156,
+            "ralph_accuracy": 0.8794326241134752,
+            "delta_pp": -2.127659574468085,
+            "net": -6,
+            "recoveries": 8,
+            "regressions": 14,
+            "both_correct": 240,
+            "both_wrong": 20,
+            "mcnemar_p": 0.28627872467041016,
+            "recovery_rate": 0.2857142857142857,
+            "regression_rate": 0.05511811023622047,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8602400035156054,
+              0.9304080743818973
+            ],
+            "ralph_ci": [
+              0.836241854493107,
+              0.912424909533732
+            ],
+            "both_wrong_same": 20,
+            "paired_delta_ci_pp_approx": [
+              -5.383911558580227,
+              1.1285924096440563
+            ],
+            "simples_tokens": {
+              "sum": 92309,
+              "mean": 327.33687943262413,
+              "median": 285.5,
+              "p90": 473.8,
+              "p95": 562.4499999999998,
+              "max": 1041
+            },
+            "ralph_tokens": {
+              "sum": 12996648,
+              "mean": 46087.40425531915,
+              "median": 45422.0,
+              "p90": 63001.0,
+              "p95": 71801.45,
+              "max": 104870
+            },
+            "simples_segundos": {
+              "sum": 468.171,
+              "mean": 1.6601808510638298,
+              "median": 1.4415,
+              "p90": 2.2227,
+              "p95": 2.7979,
+              "max": 10.596
+            },
+            "ralph_segundos": {
+              "sum": 10264.264,
+              "mean": 36.398099290780145,
+              "median": 32.942499999999995,
+              "p90": 53.8074,
+              "p95": 67.55724999999998,
+              "max": 120.094
+            },
+            "token_ratio": 140.7950254038068,
+            "time_ratio": 21.924177277106015
+          }
+        },
+        {
+          "label": "Vestibulares",
+          "full": {
+            "n": 268,
+            "simple_correct": 256,
+            "ralph_correct": 255,
+            "simple_accuracy": 0.9552238805970149,
+            "ralph_accuracy": 0.9514925373134329,
+            "delta_pp": -0.3731343283582089,
+            "net": -1,
+            "recoveries": 6,
+            "regressions": 7,
+            "both_correct": 249,
+            "both_wrong": 6,
+            "mcnemar_p": 1,
+            "recovery_rate": 0.5,
+            "regression_rate": 0.02734375,
+            "simple_failure": 1,
+            "ralph_failure": 7,
+            "simple_ci": [
+              0.9233785494327954,
+              0.9742034494960056
+            ],
+            "ralph_ci": [
+              0.9187888813102917,
+              0.9714358881190931
+            ],
+            "both_wrong_same": 2,
+            "paired_delta_ci_pp_approx": [
+              -3.0145357274328175,
+              2.2682670707163997
+            ],
+            "simples_tokens": {
+              "sum": 195642,
+              "mean": 730.0074626865671,
+              "median": 619.5,
+              "p90": 1237.7000000000003,
+              "p95": 1417.3499999999995,
+              "max": 4095
+            },
+            "ralph_tokens": {
+              "sum": 15091878,
+              "mean": 56312.977611940296,
+              "median": 51138.5,
+              "p90": 83549.50000000003,
+              "p95": 101241.09999999998,
+              "max": 185238
+            },
+            "simples_segundos": {
+              "sum": 551.615,
+              "mean": 2.0582649253731344,
+              "median": 1.77,
+              "p90": 3.1002000000000005,
+              "p95": 3.838049999999997,
+              "max": 12.112
+            },
+            "ralph_segundos": {
+              "sum": 10472.813,
+              "mean": 39.0776604477612,
+              "median": 35.175,
+              "p90": 60.59780000000001,
+              "p95": 68.60815,
+              "max": 139.274
+            },
+            "token_ratio": 77.14027662771798,
+            "time_ratio": 18.985729177052836
+          },
+          "clean": {
+            "n": 260,
+            "simple_correct": 250,
+            "ralph_correct": 254,
+            "simple_accuracy": 0.9615384615384616,
+            "ralph_accuracy": 0.9769230769230769,
+            "delta_pp": 1.5384615384615385,
+            "net": 4,
+            "recoveries": 5,
+            "regressions": 1,
+            "both_correct": 249,
+            "both_wrong": 5,
+            "mcnemar_p": 0.21875,
+            "recovery_rate": 0.5,
+            "regression_rate": 0.004,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.9306606084724288,
+              0.9789765693719495
+            ],
+            "ralph_ci": [
+              0.9505767025399692,
+              0.9893817145658885
+            ],
+            "both_wrong_same": 2,
+            "paired_delta_ci_pp_approx": [
+              -0.30209222961809634,
+              3.3790153065411737
+            ],
+            "simples_tokens": {
+              "sum": 187416,
+              "mean": 720.8307692307692,
+              "median": 617.0,
+              "p90": 1165.8999999999996,
+              "p95": 1405.9499999999996,
+              "max": 4095
+            },
+            "ralph_tokens": {
+              "sum": 14413441,
+              "mean": 55436.31153846154,
+              "median": 51005.0,
+              "p90": 80008.1,
+              "p95": 96112.8,
+              "max": 185238
+            },
+            "simples_segundos": {
+              "sum": 523.147,
+              "mean": 2.0121038461538463,
+              "median": 1.7505,
+              "p90": 3.0882,
+              "p95": 3.648299999999998,
+              "max": 12.112
+            },
+            "ralph_segundos": {
+              "sum": 10044.728000000001,
+              "mean": 38.63356923076923,
+              "median": 34.9485,
+              "p90": 58.5204,
+              "p95": 67.62244999999999,
+              "max": 139.274
+            },
+            "token_ratio": 76.90613928373244,
+            "time_ratio": 19.200584157034257
+          }
+        }
+      ]
+    },
+    {
+      "id": "02_areas_do_conhecimento",
+      "kind": "observed_paired_accuracy_difference",
+      "rows": [
+        {
+          "label": "Exatas e tecnologia",
+          "full": {
+            "n": 399,
+            "simple_correct": 339,
+            "ralph_correct": 332,
+            "simple_accuracy": 0.849624060150376,
+            "ralph_accuracy": 0.8320802005012531,
+            "delta_pp": -1.7543859649122806,
+            "net": -7,
+            "recoveries": 27,
+            "regressions": 34,
+            "both_correct": 305,
+            "both_wrong": 33,
+            "mcnemar_p": 0.4426260049464714,
+            "recovery_rate": 0.45,
+            "regression_rate": 0.10029498525073746,
+            "simple_failure": 1,
+            "ralph_failure": 26,
+            "simple_ci": [
+              0.811226539090699,
+              0.8813536159329767
+            ],
+            "ralph_ci": [
+              0.7922745870246699,
+              0.8655524419404701
+            ],
+            "both_wrong_same": 23,
+            "paired_delta_ci_pp_approx": [
+              -5.591877378054122,
+              2.0831054482295617
+            ],
+            "simples_tokens": {
+              "sum": 308428,
+              "mean": 773.0025062656641,
+              "median": 652,
+              "p90": 1349.3999999999996,
+              "p95": 1595.4999999999995,
+              "max": 5620
+            },
+            "ralph_tokens": {
+              "sum": 28769395,
+              "mean": 72103.74686716792,
+              "median": 60506,
+              "p90": 122349.19999999995,
+              "p95": 153820.99999999994,
+              "max": 338863
+            },
+            "simples_segundos": {
+              "sum": 1176.724,
+              "mean": 2.9491829573934836,
+              "median": 2.145,
+              "p90": 5.0278,
+              "p95": 7.4655,
+              "max": 37.323
+            },
+            "ralph_segundos": {
+              "sum": 23636.659,
+              "mean": 59.239746867167916,
+              "median": 42.366,
+              "p90": 98.0974,
+              "p95": 129.59519999999992,
+              "max": 1818.531
+            },
+            "token_ratio": 93.27750723021256,
+            "time_ratio": 20.086833446075715
+          },
+          "clean": {
+            "n": 372,
+            "simple_correct": 317,
+            "ralph_correct": 331,
+            "simple_accuracy": 0.8521505376344086,
+            "ralph_accuracy": 0.8897849462365591,
+            "delta_pp": 3.763440860215054,
+            "net": 14,
+            "recoveries": 26,
+            "regressions": 12,
+            "both_correct": 305,
+            "both_wrong": 29,
+            "mcnemar_p": 0.03355243967962451,
+            "recovery_rate": 0.4727272727272727,
+            "regression_rate": 0.03785488958990536,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8124860977069042,
+              0.8846163476222968
+            ],
+            "ralph_ci": [
+              0.8538914494708859,
+              0.917710493832428
+            ],
+            "both_wrong_same": 23,
+            "paired_delta_ci_pp_approx": [
+              0.5338345629706946,
+              6.993047157459413
+            ],
+            "simples_tokens": {
+              "sum": 277487,
+              "mean": 745.9327956989247,
+              "median": 641.5,
+              "p90": 1265.7,
+              "p95": 1556.35,
+              "max": 5620
+            },
+            "ralph_tokens": {
+              "sum": 25420261,
+              "mean": 68334.03494623656,
+              "median": 59243.5,
+              "p90": 113256.5,
+              "p95": 135408.4,
+              "max": 289109
+            },
+            "simples_segundos": {
+              "sum": 1043.019,
+              "mean": 2.8038145161290324,
+              "median": 2.1035000000000004,
+              "p90": 4.773300000000003,
+              "p95": 6.781599999999999,
+              "max": 37.323
+            },
+            "ralph_segundos": {
+              "sum": 18802.978,
+              "mean": 50.54563978494624,
+              "median": 41.6495,
+              "p90": 86.76130000000005,
+              "p95": 104.34134999999999,
+              "max": 242.613
+            },
+            "token_ratio": 91.60883572924136,
+            "time_ratio": 18.027454916928647
+          }
+        },
+        {
+          "label": "Biológicas e saúde",
+          "full": {
+            "n": 104,
+            "simple_correct": 90,
+            "ralph_correct": 90,
+            "simple_accuracy": 0.8653846153846154,
+            "ralph_accuracy": 0.8653846153846154,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 5,
+            "regressions": 5,
+            "both_correct": 85,
+            "both_wrong": 9,
+            "mcnemar_p": 1,
+            "recovery_rate": 0.35714285714285715,
+            "regression_rate": 0.05555555555555555,
+            "simple_failure": 1,
+            "ralph_failure": 3,
+            "simple_ci": [
+              0.786649411801308,
+              0.9180888292342079
+            ],
+            "ralph_ci": [
+              0.786649411801308,
+              0.9180888292342079
+            ],
+            "both_wrong_same": 8,
+            "paired_delta_ci_pp_approx": [
+              -5.988427678718234,
+              5.988427678718234
+            ],
+            "simples_tokens": {
+              "sum": 238452,
+              "mean": 2292.8076923076924,
+              "median": 398.0,
+              "p90": 638.2,
+              "p95": 830.65,
+              "max": 193303
+            },
+            "ralph_tokens": {
+              "sum": 5478756,
+              "mean": 52680.346153846156,
+              "median": 44118.5,
+              "p90": 70821.2,
+              "p95": 81634.24999999999,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 1514.73,
+              "mean": 14.564711538461538,
+              "median": 1.5815000000000001,
+              "p90": 3.6711000000000005,
+              "p95": 5.816449999999995,
+              "max": 1306.081
+            },
+            "ralph_segundos": {
+              "sum": 6019.159,
+              "mean": 57.876528846153846,
+              "median": 33.325,
+              "p90": 65.7523,
+              "p95": 76.18459999999999,
+              "max": 1827.664
+            },
+            "token_ratio": 22.976347440994413,
+            "time_ratio": 3.9737504373716765
+          },
+          "clean": {
+            "n": 101,
+            "simple_correct": 88,
+            "ralph_correct": 90,
+            "simple_accuracy": 0.8712871287128713,
+            "ralph_accuracy": 0.8910891089108911,
+            "delta_pp": 1.9801980198019802,
+            "net": 2,
+            "recoveries": 5,
+            "regressions": 3,
+            "both_correct": 85,
+            "both_wrong": 8,
+            "mcnemar_p": 0.7265625,
+            "recovery_rate": 0.38461538461538464,
+            "regression_rate": 0.03409090909090909,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.7921530010704891,
+              0.9232128555632813
+            ],
+            "ralph_ci": [
+              0.8154299832554898,
+              0.9380887190654149
+            ],
+            "both_wrong_same": 7,
+            "paired_delta_ci_pp_approx": [
+              -3.5222347079396323,
+              7.482630747543593
+            ],
+            "simples_tokens": {
+              "sum": 44059,
+              "mean": 436.2277227722772,
+              "median": 373,
+              "p90": 611.0,
+              "p95": 823.0,
+              "max": 3057
+            },
+            "ralph_tokens": {
+              "sum": 5145075,
+              "mean": 50941.33663366337,
+              "median": 44627,
+              "p90": 70810.0,
+              "p95": 79658.0,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 204.691,
+              "mean": 2.026643564356436,
+              "median": 1.58,
+              "p90": 3.62,
+              "p95": 5.19,
+              "max": 10.195
+            },
+            "ralph_segundos": {
+              "sum": 4154.797,
+              "mean": 41.13660396039604,
+              "median": 33.576,
+              "p90": 65.081,
+              "p95": 74.522,
+              "max": 414.948
+            },
+            "token_ratio": 116.77693547288862,
+            "time_ratio": 20.29789780693826
+          }
+        },
+        {
+          "label": "Humanas e sociais",
+          "full": {
+            "n": 230,
+            "simple_correct": 213,
+            "ralph_correct": 205,
+            "simple_accuracy": 0.9260869565217391,
+            "ralph_accuracy": 0.8913043478260869,
+            "delta_pp": -3.4782608695652173,
+            "net": -8,
+            "recoveries": 4,
+            "regressions": 12,
+            "both_correct": 201,
+            "both_wrong": 13,
+            "mcnemar_p": 0.076812744140625,
+            "recovery_rate": 0.23529411764705882,
+            "regression_rate": 0.056338028169014086,
+            "simple_failure": 0,
+            "ralph_failure": 2,
+            "simple_ci": [
+              0.8848315091670849,
+              0.9533432139485867
+            ],
+            "ralph_ci": [
+              0.8444676769731079,
+              0.925284619765774
+            ],
+            "both_wrong_same": 11,
+            "paired_delta_ci_pp_approx": [
+              -6.8644929884027315,
+              -0.09202875072770311
+            ],
+            "simples_tokens": {
+              "sum": 102234,
+              "mean": 444.495652173913,
+              "median": 453.0,
+              "p90": 682.3,
+              "p95": 742.55,
+              "max": 1041
+            },
+            "ralph_tokens": {
+              "sum": 10897805,
+              "mean": 47381.760869565216,
+              "median": 47642.5,
+              "p90": 66661.2,
+              "p95": 73372.19999999998,
+              "max": 105014
+            },
+            "simples_segundos": {
+              "sum": 392.102,
+              "mean": 1.704791304347826,
+              "median": 1.5045,
+              "p90": 2.3785999999999996,
+              "p95": 2.7971,
+              "max": 10.596
+            },
+            "ralph_segundos": {
+              "sum": 8356.881,
+              "mean": 36.334265217391305,
+              "median": 33.7915,
+              "p90": 53.887499999999996,
+              "p95": 62.56569999999999,
+              "max": 78.085
+            },
+            "token_ratio": 106.59668016511141,
+            "time_ratio": 21.313028242651146
+          },
+          "clean": {
+            "n": 228,
+            "simple_correct": 212,
+            "ralph_correct": 205,
+            "simple_accuracy": 0.9298245614035088,
+            "ralph_accuracy": 0.8991228070175439,
+            "delta_pp": -3.070175438596491,
+            "net": -7,
+            "recoveries": 4,
+            "regressions": 11,
+            "both_correct": 201,
+            "both_wrong": 12,
+            "mcnemar_p": 0.11846923828125,
+            "recovery_rate": 0.25,
+            "regression_rate": 0.05188679245283019,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8890591600171402,
+              0.9563461484078131
+            ],
+            "ralph_ci": [
+              0.8531829063644268,
+              0.9318363086016012
+            ],
+            "both_wrong_same": 11,
+            "paired_delta_ci_pp_approx": [
+              -6.3828570097687685,
+              0.24250613257578646
+            ],
+            "simples_tokens": {
+              "sum": 101194,
+              "mean": 443.8333333333333,
+              "median": 453.0,
+              "p90": 681.3,
+              "p95": 738.4499999999997,
+              "max": 1041
+            },
+            "ralph_tokens": {
+              "sum": 10727224,
+              "mean": 47049.228070175435,
+              "median": 47549.5,
+              "p90": 65940.90000000001,
+              "p95": 72758.65,
+              "max": 104870
+            },
+            "simples_segundos": {
+              "sum": 387.556,
+              "mean": 1.6998070175438595,
+              "median": 1.5019999999999998,
+              "p90": 2.3441000000000005,
+              "p95": 2.7973,
+              "max": 10.596
+            },
+            "ralph_segundos": {
+              "sum": 8232.158,
+              "mean": 36.10595614035088,
+              "median": 33.7015,
+              "p90": 53.719800000000006,
+              "p95": 62.382149999999996,
+              "max": 77.398
+            },
+            "token_ratio": 106.00652212581774,
+            "time_ratio": 21.241209012374984
+          }
+        },
+        {
+          "label": "Geral/interdisciplinar",
+          "full": {
+            "n": 10,
+            "simple_correct": 10,
+            "ralph_correct": 10,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_correct": 10,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": null,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.7224672001371107,
+              0.9999999999999999
+            ],
+            "ralph_ci": [
+              0.7224672001371107,
+              0.9999999999999999
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              0.0,
+              0.0
+            ],
+            "simples_tokens": {
+              "sum": 2251,
+              "mean": 225.1,
+              "median": 228.5,
+              "p90": 244.2,
+              "p95": 245.1,
+              "max": 246
+            },
+            "ralph_tokens": {
+              "sum": 507962,
+              "mean": 50796.2,
+              "median": 43653.0,
+              "p90": 69256.29999999999,
+              "p95": 84170.64999999997,
+              "max": 99085
+            },
+            "simples_segundos": {
+              "sum": 14.413,
+              "mean": 1.4413,
+              "median": 1.6844999999999999,
+              "p90": 1.9112,
+              "p95": 2.0875999999999997,
+              "max": 2.264
+            },
+            "ralph_segundos": {
+              "sum": 375.336,
+              "mean": 37.5336,
+              "median": 32.3725,
+              "p90": 49.58589999999999,
+              "p95": 63.57144999999997,
+              "max": 77.557
+            },
+            "token_ratio": 225.66059529098177,
+            "time_ratio": 26.04149032123777
+          },
+          "clean": {
+            "n": 10,
+            "simple_correct": 10,
+            "ralph_correct": 10,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_correct": 10,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": null,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.7224672001371107,
+              0.9999999999999999
+            ],
+            "ralph_ci": [
+              0.7224672001371107,
+              0.9999999999999999
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              0.0,
+              0.0
+            ],
+            "simples_tokens": {
+              "sum": 2251,
+              "mean": 225.1,
+              "median": 228.5,
+              "p90": 244.2,
+              "p95": 245.1,
+              "max": 246
+            },
+            "ralph_tokens": {
+              "sum": 507962,
+              "mean": 50796.2,
+              "median": 43653.0,
+              "p90": 69256.29999999999,
+              "p95": 84170.64999999997,
+              "max": 99085
+            },
+            "simples_segundos": {
+              "sum": 14.413,
+              "mean": 1.4413,
+              "median": 1.6844999999999999,
+              "p90": 1.9112,
+              "p95": 2.0875999999999997,
+              "max": 2.264
+            },
+            "ralph_segundos": {
+              "sum": 375.336,
+              "mean": 37.5336,
+              "median": 32.3725,
+              "p90": 49.58589999999999,
+              "p95": 63.57144999999997,
+              "max": 77.557
+            },
+            "token_ratio": 225.66059529098177,
+            "time_ratio": 26.04149032123777
+          }
+        }
+      ]
+    },
+    {
+      "id": "03_comparacao_por_materia",
+      "kind": "observed_paired_accuracy_difference",
+      "rows": [
+        {
+          "label": "GPQA · Biologia",
+          "full": {
+            "n": 19,
+            "simple_correct": 11,
+            "ralph_correct": 14,
+            "simple_accuracy": 0.5789473684210527,
+            "ralph_accuracy": 0.7368421052631579,
+            "delta_pp": 15.789473684210526,
+            "net": 3,
+            "recoveries": 4,
+            "regressions": 1,
+            "both_correct": 10,
+            "both_wrong": 4,
+            "mcnemar_p": 0.375,
+            "recovery_rate": 0.5,
+            "regression_rate": 0.09090909090909091,
+            "simple_failure": 1,
+            "ralph_failure": 1,
+            "simple_ci": [
+              0.3627590353425504,
+              0.7685810871754576
+            ],
+            "ralph_ci": [
+              0.5120844910218489,
+              0.8819358765321748
+            ],
+            "both_wrong_same": 3,
+            "paired_delta_ci_pp_approx": [
+              -6.758497085030529,
+              38.33744445345158
+            ],
+            "simples_tokens": {
+              "sum": 207473,
+              "mean": 10919.631578947368,
+              "median": 611,
+              "p90": 1552.1999999999987,
+              "p95": 22081.599999999595,
+              "max": 193303
+            },
+            "ralph_tokens": {
+              "sum": 1785821,
+              "mean": 93990.57894736843,
+              "median": 61628,
+              "p90": 155153.1999999999,
+              "p95": 290789.39999999956,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 1372.2169999999999,
+              "mean": 72.22194736842104,
+              "median": 3.557,
+              "p90": 6.7258,
+              "p95": 136.95219999999722,
+              "max": 1306.081
+            },
+            "ralph_segundos": {
+              "sum": 3113.1639999999998,
+              "mean": 163.85073684210525,
+              "median": 55.503,
+              "p90": 147.80719999999977,
+              "p95": 556.219599999997,
+              "max": 1827.664
+            },
+            "token_ratio": 8.607486275322572,
+            "time_ratio": 2.2687111440828964
+          },
+          "clean": {
+            "n": 18,
+            "simple_correct": 11,
+            "ralph_correct": 14,
+            "simple_accuracy": 0.6111111111111112,
+            "ralph_accuracy": 0.7777777777777778,
+            "delta_pp": 16.666666666666664,
+            "net": 3,
+            "recoveries": 4,
+            "regressions": 1,
+            "both_correct": 10,
+            "both_wrong": 3,
+            "mcnemar_p": 0.375,
+            "recovery_rate": 0.5714285714285714,
+            "regression_rate": 0.09090909090909091,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.3861904160223791,
+              0.7969475342783638
+            ],
+            "ralph_ci": [
+              0.5478541568378739,
+              0.9099907189139831
+            ],
+            "both_wrong_same": 2,
+            "paired_delta_ci_pp_approx": [
+              -7.101387835289518,
+              40.43472116862284
+            ],
+            "simples_tokens": {
+              "sum": 14170,
+              "mean": 787.2222222222222,
+              "median": 598.5,
+              "p90": 1096.9,
+              "p95": 1458.1499999999974,
+              "max": 3057
+            },
+            "ralph_tokens": {
+              "sum": 1516895,
+              "mean": 84271.94444444444,
+              "median": 59399.5,
+              "p90": 93773.60000000003,
+              "p95": 180837.49999999948,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 66.136,
+              "mean": 3.6742222222222223,
+              "median": 3.532,
+              "p90": 6.1424,
+              "p95": 6.705599999999999,
+              "max": 7.049
+            },
+            "ralph_segundos": {
+              "sum": 1285.5,
+              "mean": 71.41666666666667,
+              "median": 51.304500000000004,
+              "p90": 77.8412,
+              "p95": 131.11089999999953,
+              "max": 414.948
+            },
+            "token_ratio": 107.04975299929428,
+            "time_ratio": 19.437220273376074
+          }
+        },
+        {
+          "label": "GPQA · Química",
+          "full": {
+            "n": 85,
+            "simple_correct": 54,
+            "ralph_correct": 50,
+            "simple_accuracy": 0.6352941176470588,
+            "ralph_accuracy": 0.5882352941176471,
+            "delta_pp": -4.705882352941177,
+            "net": -4,
+            "recoveries": 12,
+            "regressions": 16,
+            "both_correct": 38,
+            "both_wrong": 19,
+            "mcnemar_p": 0.5715881884098053,
+            "recovery_rate": 0.3870967741935484,
+            "regression_rate": 0.2962962962962963,
+            "simple_failure": 0,
+            "ralph_failure": 12,
+            "simple_ci": [
+              0.5291813302163223,
+              0.7297068094575224
+            ],
+            "ralph_ci": [
+              0.4820101461448797,
+              0.6868299449467584
+            ],
+            "both_wrong_same": 12,
+            "paired_delta_ci_pp_approx": [
+              -16.93832697650115,
+              7.526562270618794
+            ],
+            "simples_tokens": {
+              "sum": 85800,
+              "mean": 1009.4117647058823,
+              "median": 759,
+              "p90": 1595.4000000000003,
+              "p95": 2122.9999999999995,
+              "max": 5620
+            },
+            "ralph_tokens": {
+              "sum": 9584244,
+              "mean": 112755.81176470588,
+              "median": 96787,
+              "p90": 191517.6,
+              "p95": 210402.39999999997,
+              "max": 338863
+            },
+            "simples_segundos": {
+              "sum": 392.154,
+              "mean": 4.613576470588235,
+              "median": 3.17,
+              "p90": 7.599000000000001,
+              "p95": 9.6464,
+              "max": 37.323
+            },
+            "ralph_segundos": {
+              "sum": 9626.249,
+              "mean": 113.24998823529411,
+              "median": 76.795,
+              "p90": 146.73960000000002,
+              "p95": 185.0162,
+              "max": 1818.531
+            },
+            "token_ratio": 111.70447552447553,
+            "time_ratio": 24.54711414393325
+          },
+          "clean": {
+            "n": 73,
+            "simple_correct": 45,
+            "ralph_correct": 50,
+            "simple_accuracy": 0.6164383561643836,
+            "ralph_accuracy": 0.684931506849315,
+            "delta_pp": 6.8493150684931505,
+            "net": 5,
+            "recoveries": 12,
+            "regressions": 7,
+            "both_correct": 38,
+            "both_wrong": 16,
+            "mcnemar_p": 0.359283447265625,
+            "recovery_rate": 0.42857142857142855,
+            "regression_rate": 0.15555555555555556,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.501740834746836,
+              0.7194939031264869
+            ],
+            "ralph_ci": [
+              0.5714090676146497,
+              0.7799637513606277
+            ],
+            "both_wrong_same": 12,
+            "paired_delta_ci_pp_approx": [
+              -4.828122026515964,
+              18.526752163502266
+            ],
+            "simples_tokens": {
+              "sum": 71810,
+              "mean": 983.6986301369863,
+              "median": 742,
+              "p90": 1551.9999999999998,
+              "p95": 2048.9999999999986,
+              "max": 5620
+            },
+            "ralph_tokens": {
+              "sum": 7420412,
+              "mean": 101649.47945205479,
+              "median": 89511,
+              "p90": 157456.59999999995,
+              "p95": 193935.19999999995,
+              "max": 289109
+            },
+            "simples_segundos": {
+              "sum": 326.46,
+              "mean": 4.472054794520548,
+              "median": 3.07,
+              "p90": 7.335799999999998,
+              "p95": 9.6252,
+              "max": 37.323
+            },
+            "ralph_segundos": {
+              "sum": 5822.676,
+              "mean": 79.76268493150685,
+              "median": 71.701,
+              "p90": 139.89319999999998,
+              "p95": 146.21139999999997,
+              "max": 242.613
+            },
+            "token_ratio": 103.33396462888177,
+            "time_ratio": 17.835802242234884
+          }
+        },
+        {
+          "label": "GPQA · Física",
+          "full": {
+            "n": 86,
+            "simple_correct": 75,
+            "ralph_correct": 70,
+            "simple_accuracy": 0.872093023255814,
+            "ralph_accuracy": 0.813953488372093,
+            "delta_pp": -5.813953488372093,
+            "net": -5,
+            "recoveries": 6,
+            "regressions": 11,
+            "both_correct": 64,
+            "both_wrong": 5,
+            "mcnemar_p": 0.332305908203125,
+            "recovery_rate": 0.5454545454545454,
+            "regression_rate": 0.14666666666666667,
+            "simple_failure": 0,
+            "ralph_failure": 8,
+            "simple_ci": [
+              0.7853122106350142,
+              0.9270537820825729
+            ],
+            "ralph_ci": [
+              0.7189498897582024,
+              0.8821089165972619
+            ],
+            "both_wrong_same": 5,
+            "paired_delta_ci_pp_approx": [
+              -15.184578545540779,
+              3.5566715687965935
+            ],
+            "simples_tokens": {
+              "sum": 67070,
+              "mean": 779.8837209302326,
+              "median": 697.5,
+              "p90": 1222.0,
+              "p95": 1477.25,
+              "max": 2245
+            },
+            "ralph_tokens": {
+              "sum": 6118334,
+              "mean": 71143.41860465116,
+              "median": 63203.0,
+              "p90": 115458.5,
+              "p95": 131985.25,
+              "max": 243580
+            },
+            "simples_segundos": {
+              "sum": 298.611,
+              "mean": 3.472220930232558,
+              "median": 2.6864999999999997,
+              "p90": 6.1370000000000005,
+              "p95": 8.033999999999999,
+              "max": 20.516
+            },
+            "ralph_segundos": {
+              "sum": 4854.024,
+              "mean": 56.44213953488372,
+              "median": 44.207499999999996,
+              "p90": 92.465,
+              "p95": 105.8105,
+              "max": 208.56
+            },
+            "token_ratio": 91.22311018339049,
+            "time_ratio": 16.25534223454595
+          },
+          "clean": {
+            "n": 78,
+            "simple_correct": 67,
+            "ralph_correct": 70,
+            "simple_accuracy": 0.8589743589743589,
+            "ralph_accuracy": 0.8974358974358975,
+            "delta_pp": 3.8461538461538463,
+            "net": 3,
+            "recoveries": 6,
+            "regressions": 3,
+            "both_correct": 64,
+            "both_wrong": 5,
+            "mcnemar_p": 0.5078125,
+            "recovery_rate": 0.5454545454545454,
+            "regression_rate": 0.04477611940298507,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.7648602182063984,
+              0.9193895594361288
+            ],
+            "ralph_ci": [
+              0.8104556014759761,
+              0.9471066523425362
+            ],
+            "both_wrong_same": 5,
+            "paired_delta_ci_pp_approx": [
+              -3.6921691713079006,
+              11.384476863615593
+            ],
+            "simples_tokens": {
+              "sum": 59286,
+              "mean": 760.0769230769231,
+              "median": 702.5,
+              "p90": 1177.3999999999999,
+              "p95": 1294.4499999999987,
+              "max": 1986
+            },
+            "ralph_tokens": {
+              "sum": 5453126,
+              "mean": 69911.8717948718,
+              "median": 62817.5,
+              "p90": 113604.2,
+              "p95": 122754.19999999992,
+              "max": 243580
+            },
+            "simples_segundos": {
+              "sum": 265.765,
+              "mean": 3.4072435897435898,
+              "median": 2.6864999999999997,
+              "p90": 6.1297999999999995,
+              "p95": 7.366799999999991,
+              "max": 20.516
+            },
+            "ralph_segundos": {
+              "sum": 4148.101,
+              "mean": 53.18078205128205,
+              "median": 43.954499999999996,
+              "p90": 87.98859999999999,
+              "p95": 98.42599999999997,
+              "max": 199.039
+            },
+            "token_ratio": 91.9799952771312,
+            "time_ratio": 15.608153820104228
+          }
+        },
+        {
+          "label": "Vest. · Física",
+          "full": {
+            "n": 49,
+            "simple_correct": 44,
+            "ralph_correct": 48,
+            "simple_accuracy": 0.8979591836734694,
+            "ralph_accuracy": 0.9795918367346939,
+            "delta_pp": 8.16326530612245,
+            "net": 4,
+            "recoveries": 4,
+            "regressions": 0,
+            "both_correct": 44,
+            "both_wrong": 1,
+            "mcnemar_p": 0.125,
+            "recovery_rate": 0.8,
+            "regression_rate": 0.0,
+            "simple_failure": 1,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.7824363845080409,
+              0.9556204532552373
+            ],
+            "ralph_ci": [
+              0.8930647847660838,
+              0.9963883274101746
+            ],
+            "both_wrong_same": 1,
+            "paired_delta_ci_pp_approx": [
+              0.4174409476633052,
+              15.909089664581593
+            ],
+            "simples_tokens": {
+              "sum": 36135,
+              "mean": 737.4489795918367,
+              "median": 667,
+              "p90": 1107.6,
+              "p95": 1200.9999999999995,
+              "max": 1372
+            },
+            "ralph_tokens": {
+              "sum": 2856570,
+              "mean": 58297.34693877551,
+              "median": 55238,
+              "p90": 81866.60000000002,
+              "p95": 95738.2,
+              "max": 153688
+            },
+            "simples_segundos": {
+              "sum": 98.856,
+              "mean": 2.017469387755102,
+              "median": 1.856,
+              "p90": 2.836400000000002,
+              "p95": 3.672399999999997,
+              "max": 4.595
+            },
+            "ralph_segundos": {
+              "sum": 1919.908,
+              "mean": 39.18179591836735,
+              "median": 35.181,
+              "p90": 57.41320000000001,
+              "p95": 73.56099999999995,
+              "max": 84.501
+            },
+            "token_ratio": 79.0527189705272,
+            "time_ratio": 19.421259205308733
+          },
+          "clean": {
+            "n": 48,
+            "simple_correct": 44,
+            "ralph_correct": 47,
+            "simple_accuracy": 0.9166666666666666,
+            "ralph_accuracy": 0.9791666666666666,
+            "delta_pp": 6.25,
+            "net": 3,
+            "recoveries": 3,
+            "regressions": 0,
+            "both_correct": 44,
+            "both_wrong": 1,
+            "mcnemar_p": 0.25,
+            "recovery_rate": 0.75,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8044669820963272,
+              0.9671162431819081
+            ],
+            "ralph_ci": [
+              0.8910078200474814,
+              0.9963128890224893
+            ],
+            "both_wrong_same": 1,
+            "paired_delta_ci_pp_approx": [
+              -0.6702982006688174,
+              13.170298200668817
+            ],
+            "simples_tokens": {
+              "sum": 34763,
+              "mean": 724.2291666666666,
+              "median": 666.5,
+              "p90": 1039.8000000000004,
+              "p95": 1141.85,
+              "max": 1258
+            },
+            "ralph_tokens": {
+              "sum": 2782362,
+              "mean": 57965.875,
+              "median": 55121.0,
+              "p90": 82754.90000000004,
+              "p95": 95784.3,
+              "max": 153688
+            },
+            "simples_segundos": {
+              "sum": 94.778,
+              "mean": 1.9745416666666666,
+              "median": 1.8535,
+              "p90": 2.7158,
+              "p95": 3.3345,
+              "max": 4.595
+            },
+            "ralph_segundos": {
+              "sum": 1878.715,
+              "mean": 39.139895833333334,
+              "median": 35.0565,
+              "p90": 57.61730000000001,
+              "p95": 74.05874999999999,
+              "max": 84.501
+            },
+            "token_ratio": 80.03802893881425,
+            "time_ratio": 19.822268880963936
+          }
+        },
+        {
+          "label": "Vest. · Matemática",
+          "full": {
+            "n": 49,
+            "simple_correct": 48,
+            "ralph_correct": 47,
+            "simple_accuracy": 0.9795918367346939,
+            "ralph_accuracy": 0.9591836734693877,
+            "delta_pp": -2.0408163265306123,
+            "net": -1,
+            "recoveries": 1,
+            "regressions": 2,
+            "both_correct": 46,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": 1.0,
+            "regression_rate": 0.041666666666666664,
+            "simple_failure": 0,
+            "ralph_failure": 2,
+            "simple_ci": [
+              0.8930647847660838,
+              0.9963883274101746
+            ],
+            "ralph_ci": [
+              0.8628696769391992,
+              0.9887343666338142
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              -9.016837983625583,
+              4.93520533056436
+            ],
+            "simples_tokens": {
+              "sum": 35955,
+              "mean": 733.7755102040817,
+              "median": 629,
+              "p90": 1020.2,
+              "p95": 1301.1999999999987,
+              "max": 2481
+            },
+            "ralph_tokens": {
+              "sum": 3232752,
+              "mean": 65974.5306122449,
+              "median": 57170,
+              "p90": 112728.40000000001,
+              "p95": 126150.19999999991,
+              "max": 185238
+            },
+            "simples_segundos": {
+              "sum": 123.48,
+              "mean": 2.52,
+              "median": 2.007,
+              "p90": 3.890400000000003,
+              "p95": 5.327999999999999,
+              "max": 10.689
+            },
+            "ralph_segundos": {
+              "sum": 2197.56,
+              "mean": 44.84816326530612,
+              "median": 37.514,
+              "p90": 69.4604,
+              "p95": 86.55279999999992,
+              "max": 139.274
+            },
+            "token_ratio": 89.9110554860242,
+            "time_ratio": 17.796890184645285
+          },
+          "clean": {
+            "n": 47,
+            "simple_correct": 46,
+            "ralph_correct": 47,
+            "simple_accuracy": 0.9787234042553191,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 2.127659574468085,
+            "net": 1,
+            "recoveries": 1,
+            "regressions": 0,
+            "both_correct": 46,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": 1.0,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8888701895837066,
+              0.996234231961403
+            ],
+            "ralph_ci": [
+              0.9244423958360037,
+              1.0
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              -2.0424765628511787,
+              6.297795711787349
+            ],
+            "simples_tokens": {
+              "sum": 33926,
+              "mean": 721.8297872340426,
+              "median": 623,
+              "p90": 1007.0,
+              "p95": 1324.899999999999,
+              "max": 2481
+            },
+            "ralph_tokens": {
+              "sum": 3015278,
+              "mean": 64154.85106382979,
+              "median": 56738,
+              "p90": 112517.4,
+              "p95": 126634.89999999992,
+              "max": 185238
+            },
+            "simples_segundos": {
+              "sum": 118.062,
+              "mean": 2.511957446808511,
+              "median": 1.966,
+              "p90": 4.137799999999998,
+              "p95": 5.348,
+              "max": 10.689
+            },
+            "ralph_segundos": {
+              "sum": 2051.381,
+              "mean": 43.64640425531915,
+              "median": 36.595,
+              "p90": 67.2344,
+              "p95": 86.58519999999992,
+              "max": 139.274
+            },
+            "token_ratio": 88.87808760242882,
+            "time_ratio": 17.375455269265302
+          }
+        },
+        {
+          "label": "Vest. · Química",
+          "full": {
+            "n": 50,
+            "simple_correct": 46,
+            "ralph_correct": 46,
+            "simple_accuracy": 0.92,
+            "ralph_accuracy": 0.92,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 1,
+            "regressions": 1,
+            "both_correct": 45,
+            "both_wrong": 3,
+            "mcnemar_p": 1,
+            "recovery_rate": 0.25,
+            "regression_rate": 0.021739130434782608,
+            "simple_failure": 0,
+            "ralph_failure": 2,
+            "simple_ci": [
+              0.8116175308165717,
+              0.968450485911407
+            ],
+            "ralph_ci": [
+              0.8116175308165717,
+              0.968450485911407
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              -5.599897098685869,
+              5.599897098685869
+            ],
+            "simples_tokens": {
+              "sum": 52484,
+              "mean": 1049.68,
+              "median": 810.0,
+              "p90": 1588.6,
+              "p95": 1649.6999999999998,
+              "max": 4095
+            },
+            "ralph_tokens": {
+              "sum": 3143326,
+              "mean": 62866.52,
+              "median": 56578.5,
+              "p90": 98968.2,
+              "p95": 108837.49999999999,
+              "max": 179282
+            },
+            "simples_segundos": {
+              "sum": 127.237,
+              "mean": 2.54474,
+              "median": 2.0484999999999998,
+              "p90": 3.5267,
+              "p95": 4.311999999999999,
+              "max": 12.112
+            },
+            "ralph_segundos": {
+              "sum": 2161.354,
+              "mean": 43.22708,
+              "median": 38.763999999999996,
+              "p90": 65.364,
+              "p95": 67.63215,
+              "max": 129.342
+            },
+            "token_ratio": 59.89112872494474,
+            "time_ratio": 16.986835590276414
+          },
+          "clean": {
+            "n": 48,
+            "simple_correct": 45,
+            "ralph_correct": 46,
+            "simple_accuracy": 0.9375,
+            "ralph_accuracy": 0.9583333333333334,
+            "delta_pp": 2.083333333333333,
+            "net": 1,
+            "recoveries": 1,
+            "regressions": 0,
+            "both_correct": 45,
+            "both_wrong": 2,
+            "mcnemar_p": 1,
+            "recovery_rate": 0.3333333333333333,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8316456194505365,
+              0.9785167670916107
+            ],
+            "ralph_ci": [
+              0.8602434412954456,
+              0.9884981065106133
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              -1.9999249677917792,
+              6.166591634458445
+            ],
+            "simples_tokens": {
+              "sum": 49491,
+              "mean": 1031.0625,
+              "median": 764.5,
+              "p90": 1575.4,
+              "p95": 1657.1,
+              "max": 4095
+            },
+            "ralph_tokens": {
+              "sum": 2926340,
+              "mean": 60965.416666666664,
+              "median": 56065.0,
+              "p90": 93102.40000000002,
+              "p95": 100531.3,
+              "max": 179282
+            },
+            "simples_segundos": {
+              "sum": 114.23,
+              "mean": 2.3797916666666667,
+              "median": 2.0484999999999998,
+              "p90": 3.4418,
+              "p95": 4.0649,
+              "max": 12.112
+            },
+            "ralph_segundos": {
+              "sum": 2035.424,
+              "mean": 42.40466666666667,
+              "median": 37.9885,
+              "p90": 64.3067,
+              "p95": 67.3929,
+              "max": 129.342
+            },
+            "token_ratio": 59.12873047624821,
+            "time_ratio": 17.81864659021273
+          }
+        },
+        {
+          "label": "Vest. · Biologia",
+          "full": {
+            "n": 30,
+            "simple_correct": 30,
+            "ralph_correct": 28,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 0.9333333333333333,
+            "delta_pp": -6.666666666666667,
+            "net": -2,
+            "recoveries": 0,
+            "regressions": 2,
+            "both_correct": 28,
+            "both_wrong": 0,
+            "mcnemar_p": 0.5,
+            "recovery_rate": null,
+            "regression_rate": 0.06666666666666667,
+            "simple_failure": 0,
+            "ralph_failure": 2,
+            "simple_ci": [
+              0.8864866068260312,
+              0.9999999999999999
+            ],
+            "ralph_ci": [
+              0.7867654163738308,
+              0.9815229762087295
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              -15.745328735776006,
+              2.4119954024426713
+            ],
+            "simples_tokens": {
+              "sum": 15334,
+              "mean": 511.1333333333333,
+              "median": 490.5,
+              "p90": 592.1,
+              "p95": 634.3,
+              "max": 697
+            },
+            "ralph_tokens": {
+              "sum": 1274472,
+              "mean": 42482.4,
+              "median": 33788.5,
+              "p90": 60750.700000000004,
+              "p95": 68194.39999999998,
+              "max": 81983
+            },
+            "simples_segundos": {
+              "sum": 50.734,
+              "mean": 1.6911333333333334,
+              "median": 1.6135000000000002,
+              "p90": 2.1859,
+              "p95": 2.7018999999999975,
+              "max": 4.152
+            },
+            "ralph_segundos": {
+              "sum": 846.634,
+              "mean": 28.221133333333334,
+              "median": 24.116,
+              "p90": 44.8345,
+              "p95": 46.696549999999995,
+              "max": 48.034
+            },
+            "token_ratio": 83.11412547280553,
+            "time_ratio": 16.687704497969804
+          },
+          "clean": {
+            "n": 28,
+            "simple_correct": 28,
+            "ralph_correct": 28,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_correct": 28,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": null,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8793566952341543,
+              0.9999999999999998
+            ],
+            "ralph_ci": [
+              0.8793566952341543,
+              0.9999999999999998
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              0.0,
+              0.0
+            ],
+            "simples_tokens": {
+              "sum": 14244,
+              "mean": 508.7142857142857,
+              "median": 490.5,
+              "p90": 589.0,
+              "p95": 609.15,
+              "max": 697
+            },
+            "ralph_tokens": {
+              "sum": 1209717,
+              "mean": 43204.17857142857,
+              "median": 35257.5,
+              "p90": 61690.100000000006,
+              "p95": 68779.2,
+              "max": 81983
+            },
+            "simples_segundos": {
+              "sum": 46.776,
+              "mean": 1.6705714285714286,
+              "median": 1.5125000000000002,
+              "p90": 2.0998,
+              "p95": 2.7705499999999987,
+              "max": 4.152
+            },
+            "ralph_segundos": {
+              "sum": 809.936,
+              "mean": 28.926285714285715,
+              "median": 25.805999999999997,
+              "p90": 45.0575,
+              "p95": 46.85265,
+              "max": 48.034
+            },
+            "token_ratio": 84.9281802864364,
+            "time_ratio": 17.315204378313666
+          }
+        },
+        {
+          "label": "Vest. · Geografia",
+          "full": {
+            "n": 30,
+            "simple_correct": 30,
+            "ralph_correct": 28,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 0.9333333333333333,
+            "delta_pp": -6.666666666666667,
+            "net": -2,
+            "recoveries": 0,
+            "regressions": 2,
+            "both_correct": 28,
+            "both_wrong": 0,
+            "mcnemar_p": 0.5,
+            "recovery_rate": null,
+            "regression_rate": 0.06666666666666667,
+            "simple_failure": 0,
+            "ralph_failure": 1,
+            "simple_ci": [
+              0.8864866068260312,
+              0.9999999999999999
+            ],
+            "ralph_ci": [
+              0.7867654163738308,
+              0.9815229762087295
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              -15.745328735776006,
+              2.4119954024426713
+            ],
+            "simples_tokens": {
+              "sum": 18270,
+              "mean": 609,
+              "median": 611.5,
+              "p90": 712.0,
+              "p95": 732.55,
+              "max": 764
+            },
+            "ralph_tokens": {
+              "sum": 1609524,
+              "mean": 53650.8,
+              "median": 49914.0,
+              "p90": 77167.0,
+              "p95": 83105.39999999998,
+              "max": 105014
+            },
+            "simples_segundos": {
+              "sum": 50.847,
+              "mean": 1.6949,
+              "median": 1.5030000000000001,
+              "p90": 2.5171000000000006,
+              "p95": 2.897499999999999,
+              "max": 3.439
+            },
+            "ralph_segundos": {
+              "sum": 1171.234,
+              "mean": 39.041133333333335,
+              "median": 37.3805,
+              "p90": 54.9087,
+              "p95": 59.66559999999998,
+              "max": 78.085
+            },
+            "token_ratio": 88.09655172413792,
+            "time_ratio": 23.034475976950457
+          },
+          "clean": {
+            "n": 29,
+            "simple_correct": 29,
+            "ralph_correct": 28,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 0.9655172413793104,
+            "delta_pp": -3.4482758620689653,
+            "net": -1,
+            "recoveries": 0,
+            "regressions": 1,
+            "both_correct": 28,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": null,
+            "regression_rate": 0.034482758620689655,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8830302015002593,
+              1.0
+            ],
+            "ralph_ci": [
+              0.8282447812067973,
+              0.9938867857072374
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              -10.206772360482944,
+              3.310220636345014
+            ],
+            "simples_tokens": {
+              "sum": 17528,
+              "mean": 604.4137931034483,
+              "median": 611,
+              "p90": 710.2,
+              "p95": 717.0,
+              "max": 764
+            },
+            "ralph_tokens": {
+              "sum": 1504510,
+              "mean": 51879.65517241379,
+              "median": 49664,
+              "p90": 73746.0,
+              "p95": 78172.0,
+              "max": 86484
+            },
+            "simples_segundos": {
+              "sum": 48.84,
+              "mean": 1.6841379310344828,
+              "median": 1.484,
+              "p90": 2.5392,
+              "p95": 2.9139999999999993,
+              "max": 3.439
+            },
+            "ralph_segundos": {
+              "sum": 1093.1490000000001,
+              "mean": 37.694793103448276,
+              "median": 37.005,
+              "p90": 51.8666,
+              "p95": 55.6472,
+              "max": 62.47
+            },
+            "token_ratio": 85.83466453674122,
+            "time_ratio": 22.382248157248156
+          }
+        },
+        {
+          "label": "Vest. · História",
+          "full": {
+            "n": 30,
+            "simple_correct": 28,
+            "ralph_correct": 28,
+            "simple_accuracy": 0.9333333333333333,
+            "ralph_accuracy": 0.9333333333333333,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_correct": 28,
+            "both_wrong": 2,
+            "mcnemar_p": 1,
+            "recovery_rate": 0.0,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.7867654163738308,
+              0.9815229762087295
+            ],
+            "ralph_ci": [
+              0.7867654163738308,
+              0.9815229762087295
+            ],
+            "both_wrong_same": 1,
+            "paired_delta_ci_pp_approx": [
+              0.0,
+              0.0
+            ],
+            "simples_tokens": {
+              "sum": 19763,
+              "mean": 658.7666666666667,
+              "median": 653.0,
+              "p90": 795.2,
+              "p95": 798.1,
+              "max": 824
+            },
+            "ralph_tokens": {
+              "sum": 1517078,
+              "mean": 50569.26666666667,
+              "median": 51065.5,
+              "p90": 68561.2,
+              "p95": 70623.84999999999,
+              "max": 82633
+            },
+            "simples_segundos": {
+              "sum": 54.119,
+              "mean": 1.8039666666666667,
+              "median": 1.662,
+              "p90": 2.4892000000000003,
+              "p95": 2.954099999999999,
+              "max": 3.426
+            },
+            "ralph_segundos": {
+              "sum": 1169.614,
+              "mean": 38.98713333333333,
+              "median": 35.5035,
+              "p90": 62.2615,
+              "p95": 67.94709999999998,
+              "max": 74.157
+            },
+            "token_ratio": 76.76354804432525,
+            "time_ratio": 21.61189231138787
+          },
+          "clean": {
+            "n": 30,
+            "simple_correct": 28,
+            "ralph_correct": 28,
+            "simple_accuracy": 0.9333333333333333,
+            "ralph_accuracy": 0.9333333333333333,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_correct": 28,
+            "both_wrong": 2,
+            "mcnemar_p": 1,
+            "recovery_rate": 0.0,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.7867654163738308,
+              0.9815229762087295
+            ],
+            "ralph_ci": [
+              0.7867654163738308,
+              0.9815229762087295
+            ],
+            "both_wrong_same": 1,
+            "paired_delta_ci_pp_approx": [
+              0.0,
+              0.0
+            ],
+            "simples_tokens": {
+              "sum": 19763,
+              "mean": 658.7666666666667,
+              "median": 653.0,
+              "p90": 795.2,
+              "p95": 798.1,
+              "max": 824
+            },
+            "ralph_tokens": {
+              "sum": 1517078,
+              "mean": 50569.26666666667,
+              "median": 51065.5,
+              "p90": 68561.2,
+              "p95": 70623.84999999999,
+              "max": 82633
+            },
+            "simples_segundos": {
+              "sum": 54.119,
+              "mean": 1.8039666666666667,
+              "median": 1.662,
+              "p90": 2.4892000000000003,
+              "p95": 2.954099999999999,
+              "max": 3.426
+            },
+            "ralph_segundos": {
+              "sum": 1169.614,
+              "mean": 38.98713333333333,
+              "median": 35.5035,
+              "p90": 62.2615,
+              "p95": 67.94709999999998,
+              "max": 74.157
+            },
+            "token_ratio": 76.76354804432525,
+            "time_ratio": 21.61189231138787
+          }
+        },
+        {
+          "label": "Vest. · Filosofia/Sociologia",
+          "full": {
+            "n": 30,
+            "simple_correct": 30,
+            "ralph_correct": 30,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_correct": 30,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": null,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8864866068260312,
+              0.9999999999999999
+            ],
+            "ralph_ci": [
+              0.8864866068260312,
+              0.9999999999999999
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              0.0,
+              0.0
+            ],
+            "simples_tokens": {
+              "sum": 17701,
+              "mean": 590.0333333333333,
+              "median": 563.5,
+              "p90": 732.7,
+              "p95": 784.4999999999999,
+              "max": 841
+            },
+            "ralph_tokens": {
+              "sum": 1458156,
+              "mean": 48605.2,
+              "median": 49400.0,
+              "p90": 65325.00000000001,
+              "p95": 71082.65,
+              "max": 74824
+            },
+            "simples_segundos": {
+              "sum": 46.342,
+              "mean": 1.5447333333333333,
+              "median": 1.377,
+              "p90": 1.9425000000000001,
+              "p95": 2.172299999999999,
+              "max": 5.01
+            },
+            "ralph_segundos": {
+              "sum": 1006.509,
+              "mean": 33.5503,
+              "median": 32.341,
+              "p90": 46.6896,
+              "p95": 53.571549999999974,
+              "max": 58.462
+            },
+            "token_ratio": 82.37704084514999,
+            "time_ratio": 21.719153251909717
+          },
+          "clean": {
+            "n": 30,
+            "simple_correct": 30,
+            "ralph_correct": 30,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_correct": 30,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": null,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8864866068260312,
+              0.9999999999999999
+            ],
+            "ralph_ci": [
+              0.8864866068260312,
+              0.9999999999999999
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              0.0,
+              0.0
+            ],
+            "simples_tokens": {
+              "sum": 17701,
+              "mean": 590.0333333333333,
+              "median": 563.5,
+              "p90": 732.7,
+              "p95": 784.4999999999999,
+              "max": 841
+            },
+            "ralph_tokens": {
+              "sum": 1458156,
+              "mean": 48605.2,
+              "median": 49400.0,
+              "p90": 65325.00000000001,
+              "p95": 71082.65,
+              "max": 74824
+            },
+            "simples_segundos": {
+              "sum": 46.342,
+              "mean": 1.5447333333333333,
+              "median": 1.377,
+              "p90": 1.9425000000000001,
+              "p95": 2.172299999999999,
+              "max": 5.01
+            },
+            "ralph_segundos": {
+              "sum": 1006.509,
+              "mean": 33.5503,
+              "median": 32.341,
+              "p90": 46.6896,
+              "p95": 53.571549999999974,
+              "max": 58.462
+            },
+            "token_ratio": 82.37704084514999,
+            "time_ratio": 21.719153251909717
+          }
+        }
+      ]
+    },
+    {
+      "id": "04_origem_nivel_e_complexidade",
+      "kind": "observed_paired_accuracy_difference",
+      "rows": [
+        {
+          "label": "Vest. · ENEM",
+          "full": {
+            "n": 203,
+            "simple_correct": 199,
+            "ralph_correct": 195,
+            "simple_accuracy": 0.9802955665024631,
+            "ralph_accuracy": 0.9605911330049262,
+            "delta_pp": -1.9704433497536946,
+            "net": -4,
+            "recoveries": 1,
+            "regressions": 5,
+            "both_correct": 194,
+            "both_wrong": 3,
+            "mcnemar_p": 0.21875,
+            "recovery_rate": 0.25,
+            "regression_rate": 0.02512562814070352,
+            "simple_failure": 1,
+            "ralph_failure": 4,
+            "simple_ci": [
+              0.950439734687992,
+              0.9923113032895579
+            ],
+            "ralph_ci": [
+              0.9241761225881618,
+              0.9798979497287706
+            ],
+            "both_wrong_same": 2,
+            "paired_delta_ci_pp_approx": [
+              -4.3256477400385105,
+              0.38476104053112103
+            ],
+            "simples_tokens": {
+              "sum": 123983,
+              "mean": 610.7536945812808,
+              "median": 592,
+              "p90": 761.8000000000001,
+              "p95": 851.7999999999997,
+              "max": 1802
+            },
+            "ralph_tokens": {
+              "sum": 10451621,
+              "mean": 51485.817733990145,
+              "median": 50004,
+              "p90": 71342.0,
+              "p95": 81793.69999999995,
+              "max": 138056
+            },
+            "simples_segundos": {
+              "sum": 362.831,
+              "mean": 1.787344827586207,
+              "median": 1.643,
+              "p90": 2.553400000000001,
+              "p95": 3.120599999999999,
+              "max": 7.526
+            },
+            "ralph_segundos": {
+              "sum": 7324.44,
+              "mean": 36.08098522167488,
+              "median": 33.676,
+              "p90": 54.40920000000002,
+              "p95": 62.44489999999999,
+              "max": 119.619
+            },
+            "token_ratio": 84.29882322576482,
+            "time_ratio": 20.186918978808315
+          },
+          "clean": {
+            "n": 198,
+            "simple_correct": 195,
+            "ralph_correct": 194,
+            "simple_accuracy": 0.9848484848484849,
+            "ralph_accuracy": 0.9797979797979798,
+            "delta_pp": -0.5050505050505051,
+            "net": -1,
+            "recoveries": 0,
+            "regressions": 1,
+            "both_correct": 194,
+            "both_wrong": 3,
+            "mcnemar_p": 1,
+            "recovery_rate": 0.0,
+            "regression_rate": 0.005128205128205128,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.9564076674063349,
+              0.9948339710647942
+            ],
+            "ralph_ci": [
+              0.9492164061101024,
+              0.9921164652936191
+            ],
+            "both_wrong_same": 2,
+            "paired_delta_ci_pp_approx": [
+              -1.4949313053232594,
+              0.4848302952222493
+            ],
+            "simples_tokens": {
+              "sum": 119730,
+              "mean": 604.6969696969697,
+              "median": 590.5,
+              "p90": 750.0000000000001,
+              "p95": 829.0999999999997,
+              "max": 1802
+            },
+            "ralph_tokens": {
+              "sum": 10106932,
+              "mean": 51045.11111111111,
+              "median": 49890.0,
+              "p90": 70124.3,
+              "p95": 79143.09999999998,
+              "max": 138056
+            },
+            "simples_segundos": {
+              "sum": 350.18,
+              "mean": 1.7685858585858585,
+              "median": 1.6295000000000002,
+              "p90": 2.4677000000000007,
+              "p95": 3.095099999999999,
+              "max": 7.526
+            },
+            "ralph_segundos": {
+              "sum": 7090.967,
+              "mean": 35.81296464646465,
+              "median": 33.6445,
+              "p90": 53.0195,
+              "p95": 59.02554999999992,
+              "max": 119.619
+            },
+            "token_ratio": 84.41436565605947,
+            "time_ratio": 20.249491689988005
+          }
+        },
+        {
+          "label": "Vest. · UNICAMP",
+          "full": {
+            "n": 16,
+            "simple_correct": 15,
+            "ralph_correct": 16,
+            "simple_accuracy": 0.9375,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 6.25,
+            "net": 1,
+            "recoveries": 1,
+            "regressions": 0,
+            "both_correct": 15,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": 1.0,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.7167126242970107,
+              0.9888806552353576
+            ],
+            "ralph_ci": [
+              0.8063923194655637,
+              1.0000000000000002
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              -5.999774903375338,
+              18.49977490337534
+            ],
+            "simples_tokens": {
+              "sum": 9914,
+              "mean": 619.625,
+              "median": 628.0,
+              "p90": 757.5,
+              "p95": 773.75,
+              "max": 797
+            },
+            "ralph_tokens": {
+              "sum": 760693,
+              "mean": 47543.3125,
+              "median": 47741.0,
+              "p90": 58553.5,
+              "p95": 61818.25,
+              "max": 69838
+            },
+            "simples_segundos": {
+              "sum": 35.79,
+              "mean": 2.236875,
+              "median": 1.7200000000000002,
+              "p90": 4.019,
+              "p95": 4.334,
+              "max": 4.88
+            },
+            "ralph_segundos": {
+              "sum": 539.941,
+              "mean": 33.7463125,
+              "median": 34.051500000000004,
+              "p90": 46.562,
+              "p95": 48.653,
+              "max": 50.51
+            },
+            "token_ratio": 76.7291708694775,
+            "time_ratio": 15.086364906398437
+          },
+          "clean": {
+            "n": 16,
+            "simple_correct": 15,
+            "ralph_correct": 16,
+            "simple_accuracy": 0.9375,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 6.25,
+            "net": 1,
+            "recoveries": 1,
+            "regressions": 0,
+            "both_correct": 15,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": 1.0,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.7167126242970107,
+              0.9888806552353576
+            ],
+            "ralph_ci": [
+              0.8063923194655637,
+              1.0000000000000002
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              -5.999774903375338,
+              18.49977490337534
+            ],
+            "simples_tokens": {
+              "sum": 9914,
+              "mean": 619.625,
+              "median": 628.0,
+              "p90": 757.5,
+              "p95": 773.75,
+              "max": 797
+            },
+            "ralph_tokens": {
+              "sum": 760693,
+              "mean": 47543.3125,
+              "median": 47741.0,
+              "p90": 58553.5,
+              "p95": 61818.25,
+              "max": 69838
+            },
+            "simples_segundos": {
+              "sum": 35.79,
+              "mean": 2.236875,
+              "median": 1.7200000000000002,
+              "p90": 4.019,
+              "p95": 4.334,
+              "max": 4.88
+            },
+            "ralph_segundos": {
+              "sum": 539.941,
+              "mean": 33.7463125,
+              "median": 34.051500000000004,
+              "p90": 46.562,
+              "p95": 48.653,
+              "max": 50.51
+            },
+            "token_ratio": 76.7291708694775,
+            "time_ratio": 15.086364906398437
+          }
+        },
+        {
+          "label": "Vest. · FUVEST",
+          "full": {
+            "n": 7,
+            "simple_correct": 7,
+            "ralph_correct": 7,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_correct": 7,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": null,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.6456695649333126,
+              1.0
+            ],
+            "ralph_ci": [
+              0.6456695649333126,
+              1.0
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              0.0,
+              0.0
+            ],
+            "simples_tokens": {
+              "sum": 6469,
+              "mean": 924.1428571428571,
+              "median": 705,
+              "p90": 1469.4000000000005,
+              "p95": 1975.199999999999,
+              "max": 2481
+            },
+            "ralph_tokens": {
+              "sum": 410303,
+              "mean": 58614.71428571428,
+              "median": 47728,
+              "p90": 90535.00000000003,
+              "p95": 111471.99999999994,
+              "max": 132409
+            },
+            "simples_segundos": {
+              "sum": 21.791,
+              "mean": 3.113,
+              "median": 1.842,
+              "p90": 5.556600000000003,
+              "p95": 8.122799999999994,
+              "max": 10.689
+            },
+            "ralph_segundos": {
+              "sum": 282.51300000000003,
+              "mean": 40.359,
+              "median": 30.835,
+              "p90": 64.46560000000002,
+              "p95": 78.52779999999997,
+              "max": 92.59
+            },
+            "token_ratio": 63.42603184417994,
+            "time_ratio": 12.964664310954065
+          },
+          "clean": {
+            "n": 7,
+            "simple_correct": 7,
+            "ralph_correct": 7,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_correct": 7,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": null,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.6456695649333126,
+              1.0
+            ],
+            "ralph_ci": [
+              0.6456695649333126,
+              1.0
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              0.0,
+              0.0
+            ],
+            "simples_tokens": {
+              "sum": 6469,
+              "mean": 924.1428571428571,
+              "median": 705,
+              "p90": 1469.4000000000005,
+              "p95": 1975.199999999999,
+              "max": 2481
+            },
+            "ralph_tokens": {
+              "sum": 410303,
+              "mean": 58614.71428571428,
+              "median": 47728,
+              "p90": 90535.00000000003,
+              "p95": 111471.99999999994,
+              "max": 132409
+            },
+            "simples_segundos": {
+              "sum": 21.791,
+              "mean": 3.113,
+              "median": 1.842,
+              "p90": 5.556600000000003,
+              "p95": 8.122799999999994,
+              "max": 10.689
+            },
+            "ralph_segundos": {
+              "sum": 282.51300000000003,
+              "mean": 40.359,
+              "median": 30.835,
+              "p90": 64.46560000000002,
+              "p95": 78.52779999999997,
+              "max": 92.59
+            },
+            "token_ratio": 63.42603184417994,
+            "time_ratio": 12.964664310954065
+          }
+        },
+        {
+          "label": "Vest. · ITA",
+          "full": {
+            "n": 42,
+            "simple_correct": 35,
+            "ralph_correct": 37,
+            "simple_accuracy": 0.8333333333333334,
+            "ralph_accuracy": 0.8809523809523809,
+            "delta_pp": 4.761904761904762,
+            "net": 2,
+            "recoveries": 4,
+            "regressions": 2,
+            "both_correct": 33,
+            "both_wrong": 3,
+            "mcnemar_p": 0.6875,
+            "recovery_rate": 0.5714285714285714,
+            "regression_rate": 0.05714285714285714,
+            "simple_failure": 0,
+            "ralph_failure": 3,
+            "simple_ci": [
+              0.6939599725535115,
+              0.9168408335360192
+            ],
+            "ralph_ci": [
+              0.7499960973799032,
+              0.9480619667224176
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              -6.715209693914521,
+              16.239019217724046
+            ],
+            "simples_tokens": {
+              "sum": 55276,
+              "mean": 1316.095238095238,
+              "median": 1278.0,
+              "p90": 1593.4,
+              "p95": 1679.2999999999997,
+              "max": 4095
+            },
+            "ralph_tokens": {
+              "sum": 3469261,
+              "mean": 82601.45238095238,
+              "median": 76016.0,
+              "p90": 116402.0,
+              "p95": 154951.5,
+              "max": 185238
+            },
+            "simples_segundos": {
+              "sum": 131.203,
+              "mean": 3.1238809523809525,
+              "median": 2.6029999999999998,
+              "p90": 4.361,
+              "p95": 5.3673499999999965,
+              "max": 12.112
+            },
+            "ralph_segundos": {
+              "sum": 2325.919,
+              "mean": 55.37902380952381,
+              "median": 53.884,
+              "p90": 77.0461,
+              "p95": 84.28794999999998,
+              "max": 139.274
+            },
+            "token_ratio": 62.762518995585786,
+            "time_ratio": 17.727635801010646
+          },
+          "clean": {
+            "n": 39,
+            "simple_correct": 33,
+            "ralph_correct": 37,
+            "simple_accuracy": 0.8461538461538461,
+            "ralph_accuracy": 0.9487179487179487,
+            "delta_pp": 10.256410256410255,
+            "net": 4,
+            "recoveries": 4,
+            "regressions": 0,
+            "both_correct": 33,
+            "both_wrong": 2,
+            "mcnemar_p": 0.125,
+            "recovery_rate": 0.6666666666666666,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.7027053635107331,
+              0.927525276230179
+            ],
+            "ralph_ci": [
+              0.8311435995238639,
+              0.9858220445847259
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              0.6102226640777797,
+              19.90259784874273
+            ],
+            "simples_tokens": {
+              "sum": 51303,
+              "mean": 1315.4615384615386,
+              "median": 1266,
+              "p90": 1592.2,
+              "p95": 1694.6000000000001,
+              "max": 4095
+            },
+            "ralph_tokens": {
+              "sum": 3135513,
+              "mean": 80397.76923076923,
+              "median": 73326,
+              "p90": 121267.20000000011,
+              "p95": 157444.40000000002,
+              "max": 185238
+            },
+            "simples_segundos": {
+              "sum": 115.386,
+              "mean": 2.958615384615385,
+              "median": 2.596,
+              "p90": 4.263000000000001,
+              "p95": 4.676300000000001,
+              "max": 12.112
+            },
+            "ralph_segundos": {
+              "sum": 2131.3070000000002,
+              "mean": 54.64889743589744,
+              "median": 52.025,
+              "p90": 78.0824,
+              "p95": 88.98510000000007,
+              "max": 139.274
+            },
+            "token_ratio": 61.11753698614116,
+            "time_ratio": 18.471105680065175
+          }
+        },
+        {
+          "label": "GPQA · Diamond",
+          "full": {
+            "n": 190,
+            "simple_correct": 140,
+            "ralph_correct": 134,
+            "simple_accuracy": 0.7368421052631579,
+            "ralph_accuracy": 0.7052631578947368,
+            "delta_pp": -3.1578947368421053,
+            "net": -6,
+            "recoveries": 22,
+            "regressions": 28,
+            "both_correct": 112,
+            "both_wrong": 28,
+            "mcnemar_p": 0.47988766169832786,
+            "recovery_rate": 0.44,
+            "regression_rate": 0.2,
+            "simple_failure": 1,
+            "ralph_failure": 21,
+            "simple_ci": [
+              0.6699812508478442,
+              0.7943157088817623
+            ],
+            "ralph_ci": [
+              0.6368839336097585,
+              0.7655067648225671
+            ],
+            "both_wrong_same": 20,
+            "paired_delta_ci_pp_approx": [
+              -10.457526525452517,
+              4.141737051768306
+            ],
+            "simples_tokens": {
+              "sum": 360343,
+              "mean": 1896.542105263158,
+              "median": 730.5,
+              "p90": 1439.2,
+              "p95": 1914.6999999999978,
+              "max": 193303
+            },
+            "ralph_tokens": {
+              "sum": 17488399,
+              "mean": 92044.2052631579,
+              "median": 76537.5,
+              "p90": 150939.69999999995,
+              "p95": 200465.64999999988,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 2062.982,
+              "mean": 10.8578,
+              "median": 3.0140000000000002,
+              "p90": 7.1045,
+              "p95": 9.520299999999995,
+              "max": 1306.081
+            },
+            "ralph_segundos": {
+              "sum": 17593.437,
+              "mean": 92.59703684210527,
+              "median": 57.386,
+              "p90": 133.53789999999995,
+              "p95": 179.53999999999985,
+              "max": 1827.664
+            },
+            "token_ratio": 48.53264528518661,
+            "time_ratio": 8.528158267982949
+          },
+          "clean": {
+            "n": 169,
+            "simple_correct": 123,
+            "ralph_correct": 134,
+            "simple_accuracy": 0.727810650887574,
+            "ralph_accuracy": 0.7928994082840237,
+            "delta_pp": 6.508875739644971,
+            "net": 11,
+            "recoveries": 22,
+            "regressions": 11,
+            "both_correct": 112,
+            "both_wrong": 24,
+            "mcnemar_p": 0.08014331245794892,
+            "recovery_rate": 0.4782608695652174,
+            "regression_rate": 0.08943089430894309,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.6562003180516572,
+              0.78929464898562
+            ],
+            "ralph_ci": [
+              0.7256278105078255,
+              0.8471514328258165
+            ],
+            "both_wrong_same": 19,
+            "paired_delta_ci_pp_approx": [
+              -0.1002486592673737,
+              13.118000138557315
+            ],
+            "simples_tokens": {
+              "sum": 145266,
+              "mean": 859.5621301775147,
+              "median": 725,
+              "p90": 1259.6000000000001,
+              "p95": 1628.7999999999997,
+              "max": 5620
+            },
+            "ralph_tokens": {
+              "sum": 14390433,
+              "mean": 85150.49112426036,
+              "median": 70810,
+              "p90": 134068.80000000002,
+              "p95": 169569.3999999999,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 658.361,
+              "mean": 3.8956272189349113,
+              "median": 2.919,
+              "p90": 6.7646000000000015,
+              "p95": 8.106399999999997,
+              "max": 37.323
+            },
+            "ralph_segundos": {
+              "sum": 11256.277,
+              "mean": 66.60518934911242,
+              "median": 54.346,
+              "p90": 104.18560000000002,
+              "p95": 143.63359999999997,
+              "max": 414.948
+            },
+            "token_ratio": 99.0626368179753,
+            "time_ratio": 17.09742375383718
+          }
+        },
+        {
+          "label": "MMLU · Fundamental",
+          "full": {
+            "n": 5,
+            "simple_correct": 5,
+            "ralph_correct": 5,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_correct": 5,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": null,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.5655175352168251,
+              1.0
+            ],
+            "ralph_ci": [
+              0.5655175352168251,
+              1.0
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              0.0,
+              0.0
+            ],
+            "simples_tokens": {
+              "sum": 1479,
+              "mean": 295.8,
+              "median": 293,
+              "p90": 336.4,
+              "p95": 347.2,
+              "max": 358
+            },
+            "ralph_tokens": {
+              "sum": 238744,
+              "mean": 47748.8,
+              "median": 41462,
+              "p90": 58210.2,
+              "p95": 58897.6,
+              "max": 59585
+            },
+            "simples_segundos": {
+              "sum": 6.2,
+              "mean": 1.24,
+              "median": 1.345,
+              "p90": 1.5428,
+              "p95": 1.5894,
+              "max": 1.636
+            },
+            "ralph_segundos": {
+              "sum": 157.654,
+              "mean": 31.5308,
+              "median": 31.234,
+              "p90": 37.427,
+              "p95": 39.382999999999996,
+              "max": 41.339
+            },
+            "token_ratio": 161.42258282623393,
+            "time_ratio": 25.42806451612903
+          },
+          "clean": {
+            "n": 5,
+            "simple_correct": 5,
+            "ralph_correct": 5,
+            "simple_accuracy": 1.0,
+            "ralph_accuracy": 1.0,
+            "delta_pp": 0.0,
+            "net": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_correct": 5,
+            "both_wrong": 0,
+            "mcnemar_p": 1,
+            "recovery_rate": null,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.5655175352168251,
+              1.0
+            ],
+            "ralph_ci": [
+              0.5655175352168251,
+              1.0
+            ],
+            "both_wrong_same": 0,
+            "paired_delta_ci_pp_approx": [
+              0.0,
+              0.0
+            ],
+            "simples_tokens": {
+              "sum": 1479,
+              "mean": 295.8,
+              "median": 293,
+              "p90": 336.4,
+              "p95": 347.2,
+              "max": 358
+            },
+            "ralph_tokens": {
+              "sum": 238744,
+              "mean": 47748.8,
+              "median": 41462,
+              "p90": 58210.2,
+              "p95": 58897.6,
+              "max": 59585
+            },
+            "simples_segundos": {
+              "sum": 6.2,
+              "mean": 1.24,
+              "median": 1.345,
+              "p90": 1.5428,
+              "p95": 1.5894,
+              "max": 1.636
+            },
+            "ralph_segundos": {
+              "sum": 157.654,
+              "mean": 31.5308,
+              "median": 31.234,
+              "p90": 37.427,
+              "p95": 39.382999999999996,
+              "max": 41.339
+            },
+            "token_ratio": 161.42258282623393,
+            "time_ratio": 25.42806451612903
+          }
+        },
+        {
+          "label": "MMLU · Ensino médio",
+          "full": {
+            "n": 70,
+            "simple_correct": 66,
+            "ralph_correct": 62,
+            "simple_accuracy": 0.9428571428571428,
+            "ralph_accuracy": 0.8857142857142857,
+            "delta_pp": -5.714285714285714,
+            "net": -4,
+            "recoveries": 2,
+            "regressions": 6,
+            "both_correct": 60,
+            "both_wrong": 2,
+            "mcnemar_p": 0.2890625,
+            "recovery_rate": 0.5,
+            "regression_rate": 0.09090909090909091,
+            "simple_failure": 0,
+            "ralph_failure": 1,
+            "simple_ci": [
+              0.8620804952516177,
+              0.9775562208992887
+            ],
+            "ralph_ci": [
+              0.7903577841784561,
+              0.9409387105336235
+            ],
+            "both_wrong_same": 1,
+            "paired_delta_ci_pp_approx": [
+              -13.57613937165123,
+              2.1475679430798023
+            ],
+            "simples_tokens": {
+              "sum": 26335,
+              "mean": 376.2142857142857,
+              "median": 318.0,
+              "p90": 552.8000000000001,
+              "p95": 625.3,
+              "max": 872
+            },
+            "ralph_tokens": {
+              "sum": 3236533,
+              "mean": 46236.18571428571,
+              "median": 44498.0,
+              "p90": 62189.2,
+              "p95": 66397.5,
+              "max": 92317
+            },
+            "simples_segundos": {
+              "sum": 124.569,
+              "mean": 1.7795571428571428,
+              "median": 1.387,
+              "p90": 2.5484000000000004,
+              "p95": 2.8890999999999996,
+              "max": 10.596
+            },
+            "ralph_segundos": {
+              "sum": 2542.034,
+              "mean": 36.314771428571426,
+              "median": 33.853,
+              "p90": 52.1831,
+              "p95": 68.14569999999999,
+              "max": 87.184
+            },
+            "token_ratio": 122.89853806721094,
+            "time_ratio": 20.406634074288146
+          },
+          "clean": {
+            "n": 69,
+            "simple_correct": 66,
+            "ralph_correct": 62,
+            "simple_accuracy": 0.9565217391304348,
+            "ralph_accuracy": 0.8985507246376812,
+            "delta_pp": -5.797101449275362,
+            "net": -4,
+            "recoveries": 2,
+            "regressions": 6,
+            "both_correct": 60,
+            "both_wrong": 1,
+            "mcnemar_p": 0.2890625,
+            "recovery_rate": 0.6666666666666666,
+            "regression_rate": 0.09090909090909091,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8797879725062087,
+              0.9851040961037877
+            ],
+            "ralph_ci": [
+              0.8050811424505202,
+              0.9499833618915401
+            ],
+            "both_wrong_same": 1,
+            "paired_delta_ci_pp_approx": [
+              -13.77203253366011,
+              2.1778296351093847
+            ],
+            "simples_tokens": {
+              "sum": 26037,
+              "mean": 377.3478260869565,
+              "median": 322,
+              "p90": 555.6000000000001,
+              "p95": 626.5999999999999,
+              "max": 872
+            },
+            "ralph_tokens": {
+              "sum": 3170966,
+              "mean": 45956.02898550725,
+              "median": 44109,
+              "p90": 61554.0,
+              "p95": 66256.59999999999,
+              "max": 92317
+            },
+            "simples_segundos": {
+              "sum": 122.03,
+              "mean": 1.7685507246376813,
+              "median": 1.386,
+              "p90": 2.5330000000000004,
+              "p95": 2.8971999999999993,
+              "max": 10.596
+            },
+            "ralph_segundos": {
+              "sum": 2495.396,
+              "mean": 36.165159420289854,
+              "median": 33.712,
+              "p90": 52.3652,
+              "p95": 68.35939999999998,
+              "max": 87.184
+            },
+            "token_ratio": 121.78691861581595,
+            "time_ratio": 20.449037122019178
+          }
+        },
+        {
+          "label": "MMLU · Graduação",
+          "full": {
+            "n": 30,
+            "simple_correct": 28,
+            "ralph_correct": 27,
+            "simple_accuracy": 0.9333333333333333,
+            "ralph_accuracy": 0.9,
+            "delta_pp": -3.3333333333333335,
+            "net": -1,
+            "recoveries": 1,
+            "regressions": 2,
+            "both_correct": 26,
+            "both_wrong": 1,
+            "mcnemar_p": 1,
+            "recovery_rate": 0.5,
+            "regression_rate": 0.07142857142857142,
+            "simple_failure": 0,
+            "ralph_failure": 2,
+            "simple_ci": [
+              0.7867654163738308,
+              0.9815229762087295
+            ],
+            "ralph_ci": [
+              0.7437891742081593,
+              0.9654001112526658
+            ],
+            "both_wrong_same": 1,
+            "paired_delta_ci_pp_approx": [
+              -14.778518957095262,
+              8.111852290428594
+            ],
+            "simples_tokens": {
+              "sum": 13555,
+              "mean": 451.8333333333333,
+              "median": 351.5,
+              "p90": 657.8000000000001,
+              "p95": 769.3999999999996,
+              "max": 2303
+            },
+            "ralph_tokens": {
+              "sum": 1399727,
+              "mean": 46657.566666666666,
+              "median": 47247.5,
+              "p90": 64591.70000000001,
+              "p95": 71856.35,
+              "max": 89538
+            },
+            "simples_segundos": {
+              "sum": 59.452,
+              "mean": 1.9817333333333333,
+              "median": 1.6035,
+              "p90": 2.7350000000000003,
+              "p95": 4.535899999999993,
+              "max": 10.786
+            },
+            "ralph_segundos": {
+              "sum": 1071.758,
+              "mean": 35.72526666666667,
+              "median": 33.6425,
+              "p90": 56.724900000000005,
+              "p95": 64.61499999999998,
+              "max": 68.891
+            },
+            "token_ratio": 103.26278126152711,
+            "time_ratio": 18.02728251362444
+          },
+          "clean": {
+            "n": 28,
+            "simple_correct": 26,
+            "ralph_correct": 27,
+            "simple_accuracy": 0.9285714285714286,
+            "ralph_accuracy": 0.9642857142857143,
+            "delta_pp": 3.571428571428571,
+            "net": 1,
+            "recoveries": 1,
+            "regressions": 0,
+            "both_correct": 26,
+            "both_wrong": 1,
+            "mcnemar_p": 1,
+            "recovery_rate": 0.5,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.7735463743160095,
+              0.9801879358846942
+            ],
+            "ralph_ci": [
+              0.8228780225664668,
+              0.9936674801509623
+            ],
+            "both_wrong_same": 1,
+            "paired_delta_ci_pp_approx": [
+              -3.4284428019287647,
+              10.571299944785906
+            ],
+            "simples_tokens": {
+              "sum": 10782,
+              "mean": 385.07142857142856,
+              "median": 349.0,
+              "p90": 619.1,
+              "p95": 689.6999999999999,
+              "max": 818
+            },
+            "ralph_tokens": {
+              "sum": 1388301,
+              "mean": 49582.17857142857,
+              "median": 47684.0,
+              "p90": 66199.1,
+              "p95": 71862.05,
+              "max": 89538
+            },
+            "simples_segundos": {
+              "sum": 46.79,
+              "mean": 1.6710714285714285,
+              "median": 1.5655000000000001,
+              "p90": 2.2047000000000003,
+              "p95": 2.9219999999999997,
+              "max": 5.759
+            },
+            "ralph_segundos": {
+              "sum": 1060.875,
+              "mean": 37.888392857142854,
+              "median": 33.731,
+              "p90": 57.4027,
+              "p95": 65.49499999999999,
+              "max": 68.891
+            },
+            "token_ratio": 128.76099053978854,
+            "time_ratio": 22.673113913229322
+          }
+        },
+        {
+          "label": "MMLU · Profissional",
+          "full": {
+            "n": 20,
+            "simple_correct": 17,
+            "ralph_correct": 18,
+            "simple_accuracy": 0.85,
+            "ralph_accuracy": 0.9,
+            "delta_pp": 5.0,
+            "net": 1,
+            "recoveries": 1,
+            "regressions": 0,
+            "both_correct": 17,
+            "both_wrong": 2,
+            "mcnemar_p": 1,
+            "recovery_rate": 0.3333333333333333,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.6395811352592431,
+              0.9476312541037835
+            ],
+            "ralph_ci": [
+              0.6989663547715128,
+              0.9721335187862319
+            ],
+            "both_wrong_same": 2,
+            "paired_delta_ci_pp_approx": [
+              -4.799819922700269,
+              14.79981992270027
+            ],
+            "simples_tokens": {
+              "sum": 8503,
+              "mean": 425.15,
+              "median": 374.0,
+              "p90": 569.2,
+              "p95": 645.8000000000003,
+              "max": 1041
+            },
+            "ralph_tokens": {
+              "sum": 1126756,
+              "mean": 56337.8,
+              "median": 55492.0,
+              "p90": 75627.20000000001,
+              "p95": 88009.40000000001,
+              "max": 104870
+            },
+            "simples_segundos": {
+              "sum": 43.516999999999996,
+              "mean": 2.17585,
+              "median": 1.631,
+              "p90": 2.525400000000003,
+              "p95": 4.534400000000003,
+              "max": 9.805
+            },
+            "ralph_segundos": {
+              "sum": 912.885,
+              "mean": 45.64425,
+              "median": 42.0475,
+              "p90": 70.30010000000001,
+              "p95": 74.63765000000001,
+              "max": 76.835
+            },
+            "token_ratio": 132.51276020228156,
+            "time_ratio": 20.977663901463796
+          },
+          "clean": {
+            "n": 20,
+            "simple_correct": 17,
+            "ralph_correct": 18,
+            "simple_accuracy": 0.85,
+            "ralph_accuracy": 0.9,
+            "delta_pp": 5.0,
+            "net": 1,
+            "recoveries": 1,
+            "regressions": 0,
+            "both_correct": 17,
+            "both_wrong": 2,
+            "mcnemar_p": 1,
+            "recovery_rate": 0.3333333333333333,
+            "regression_rate": 0.0,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.6395811352592431,
+              0.9476312541037835
+            ],
+            "ralph_ci": [
+              0.6989663547715128,
+              0.9721335187862319
+            ],
+            "both_wrong_same": 2,
+            "paired_delta_ci_pp_approx": [
+              -4.799819922700269,
+              14.79981992270027
+            ],
+            "simples_tokens": {
+              "sum": 8503,
+              "mean": 425.15,
+              "median": 374.0,
+              "p90": 569.2,
+              "p95": 645.8000000000003,
+              "max": 1041
+            },
+            "ralph_tokens": {
+              "sum": 1126756,
+              "mean": 56337.8,
+              "median": 55492.0,
+              "p90": 75627.20000000001,
+              "p95": 88009.40000000001,
+              "max": 104870
+            },
+            "simples_segundos": {
+              "sum": 43.516999999999996,
+              "mean": 2.17585,
+              "median": 1.631,
+              "p90": 2.525400000000003,
+              "p95": 4.534400000000003,
+              "max": 9.805
+            },
+            "ralph_segundos": {
+              "sum": 912.885,
+              "mean": 45.64425,
+              "median": 42.0475,
+              "p90": 70.30010000000001,
+              "p95": 74.63765000000001,
+              "max": 76.835
+            },
+            "token_ratio": 132.51276020228156,
+            "time_ratio": 20.977663901463796
+          }
+        },
+        {
+          "label": "MMLU · Geral/especializado",
+          "full": {
+            "n": 160,
+            "simple_correct": 140,
+            "ralph_correct": 136,
+            "simple_accuracy": 0.875,
+            "ralph_accuracy": 0.85,
+            "delta_pp": -2.5,
+            "net": -4,
+            "recoveries": 4,
+            "regressions": 8,
+            "both_correct": 132,
+            "both_wrong": 16,
+            "mcnemar_p": 0.3876953125,
+            "recovery_rate": 0.2,
+            "regression_rate": 0.05714285714285714,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.814809889465813,
+              0.9176054641555581
+            ],
+            "ralph_ci": [
+              0.7865061198301088,
+              0.8970815435498377
+            ],
+            "both_wrong_same": 16,
+            "paired_delta_ci_pp_approx": [
+              -6.73899611194112,
+              1.7389961119411197
+            ],
+            "simples_tokens": {
+              "sum": 45508,
+              "mean": 284.425,
+              "median": 265.0,
+              "p90": 377.5,
+              "p95": 449.04999999999995,
+              "max": 574
+            },
+            "ralph_tokens": {
+              "sum": 7071881,
+              "mean": 44199.25625,
+              "median": 44681.5,
+              "p90": 60455.2,
+              "p95": 68527.04999999999,
+              "max": 101268
+            },
+            "simples_segundos": {
+              "sum": 249.634,
+              "mean": 1.5602125,
+              "median": 1.42,
+              "p90": 2.057499999999999,
+              "p95": 2.5444499999999985,
+              "max": 7.239
+            },
+            "ralph_segundos": {
+              "sum": 5637.454,
+              "mean": 35.2340875,
+              "median": 32.296,
+              "p90": 50.9043,
+              "p95": 60.452749999999966,
+              "max": 120.094
+            },
+            "token_ratio": 155.39863320734815,
+            "time_ratio": 22.582877332414654
+          },
+          "clean": {
+            "n": 160,
+            "simple_correct": 140,
+            "ralph_correct": 136,
+            "simple_accuracy": 0.875,
+            "ralph_accuracy": 0.85,
+            "delta_pp": -2.5,
+            "net": -4,
+            "recoveries": 4,
+            "regressions": 8,
+            "both_correct": 132,
+            "both_wrong": 16,
+            "mcnemar_p": 0.3876953125,
+            "recovery_rate": 0.2,
+            "regression_rate": 0.05714285714285714,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.814809889465813,
+              0.9176054641555581
+            ],
+            "ralph_ci": [
+              0.7865061198301088,
+              0.8970815435498377
+            ],
+            "both_wrong_same": 16,
+            "paired_delta_ci_pp_approx": [
+              -6.73899611194112,
+              1.7389961119411197
+            ],
+            "simples_tokens": {
+              "sum": 45508,
+              "mean": 284.425,
+              "median": 265.0,
+              "p90": 377.5,
+              "p95": 449.04999999999995,
+              "max": 574
+            },
+            "ralph_tokens": {
+              "sum": 7071881,
+              "mean": 44199.25625,
+              "median": 44681.5,
+              "p90": 60455.2,
+              "p95": 68527.04999999999,
+              "max": 101268
+            },
+            "simples_segundos": {
+              "sum": 249.634,
+              "mean": 1.5602125,
+              "median": 1.42,
+              "p90": 2.057499999999999,
+              "p95": 2.5444499999999985,
+              "max": 7.239
+            },
+            "ralph_segundos": {
+              "sum": 5637.454,
+              "mean": 35.2340875,
+              "median": 32.296,
+              "p90": 50.9043,
+              "p95": 60.452749999999966,
+              "max": 120.094
+            },
+            "token_ratio": 155.39863320734815,
+            "time_ratio": 22.582877332414654
+          }
+        }
+      ]
+    },
+    {
+      "id": "05_erros_e_causas_das_falhas",
+      "kind": "error_decomposition",
+      "semantic_errors": {
+        "simple": 89,
+        "ralph": 75
+      },
+      "operational_errors": {
+        "simple": 2,
+        "ralph": 31
+      },
+      "causes": [
+        {
+          "code": "task_attempts",
+          "label": "Cinco tentativas de tarefa",
+          "count": 16
+        },
+        {
+          "code": "parse_or_schema",
+          "label": "JSON / contrato de saída",
+          "count": 8
+        },
+        {
+          "code": "session_timeout",
+          "label": "Tempo de sessão",
+          "count": 3
+        },
+        {
+          "code": "format_final",
+          "label": "Resposta final inválida",
+          "count": 2
+        },
+        {
+          "code": "planning_attempts",
+          "label": "Cinco planos reprovados",
+          "count": 1
+        },
+        {
+          "code": "provider_credit",
+          "label": "Crédito do provedor",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "06_custo_e_ganho_de_acuracia",
+      "kind": "token_cost_and_accuracy",
+      "population": "clean",
+      "rows": [
+        {
+          "label": "GPQA Diamond",
+          "summary": {
+            "n": 169,
+            "simple_correct": 123,
+            "ralph_correct": 134,
+            "simple_accuracy": 0.727810650887574,
+            "ralph_accuracy": 0.7928994082840237,
+            "delta_pp": 6.508875739644971,
+            "net": 11,
+            "recoveries": 22,
+            "regressions": 11,
+            "both_correct": 112,
+            "both_wrong": 24,
+            "mcnemar_p": 0.08014331245794892,
+            "recovery_rate": 0.4782608695652174,
+            "regression_rate": 0.08943089430894309,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.6562003180516572,
+              0.78929464898562
+            ],
+            "ralph_ci": [
+              0.7256278105078255,
+              0.8471514328258165
+            ],
+            "both_wrong_same": 19,
+            "paired_delta_ci_pp_approx": [
+              -0.1002486592673737,
+              13.118000138557315
+            ],
+            "simples_tokens": {
+              "sum": 145266,
+              "mean": 859.5621301775147,
+              "median": 725,
+              "p90": 1259.6000000000001,
+              "p95": 1628.7999999999997,
+              "max": 5620
+            },
+            "ralph_tokens": {
+              "sum": 14390433,
+              "mean": 85150.49112426036,
+              "median": 70810,
+              "p90": 134068.80000000002,
+              "p95": 169569.3999999999,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 658.361,
+              "mean": 3.8956272189349113,
+              "median": 2.919,
+              "p90": 6.7646000000000015,
+              "p95": 8.106399999999997,
+              "max": 37.323
+            },
+            "ralph_segundos": {
+              "sum": 11256.277,
+              "mean": 66.60518934911242,
+              "median": 54.346,
+              "p90": 104.18560000000002,
+              "p95": 143.63359999999997,
+              "max": 414.948
+            },
+            "token_ratio": 99.0626368179753,
+            "time_ratio": 17.09742375383718
+          }
+        },
+        {
+          "label": "Vestibulares",
+          "summary": {
+            "n": 260,
+            "simple_correct": 250,
+            "ralph_correct": 254,
+            "simple_accuracy": 0.9615384615384616,
+            "ralph_accuracy": 0.9769230769230769,
+            "delta_pp": 1.5384615384615385,
+            "net": 4,
+            "recoveries": 5,
+            "regressions": 1,
+            "both_correct": 249,
+            "both_wrong": 5,
+            "mcnemar_p": 0.21875,
+            "recovery_rate": 0.5,
+            "regression_rate": 0.004,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.9306606084724288,
+              0.9789765693719495
+            ],
+            "ralph_ci": [
+              0.9505767025399692,
+              0.9893817145658885
+            ],
+            "both_wrong_same": 2,
+            "paired_delta_ci_pp_approx": [
+              -0.30209222961809634,
+              3.3790153065411737
+            ],
+            "simples_tokens": {
+              "sum": 187416,
+              "mean": 720.8307692307692,
+              "median": 617.0,
+              "p90": 1165.8999999999996,
+              "p95": 1405.9499999999996,
+              "max": 4095
+            },
+            "ralph_tokens": {
+              "sum": 14413441,
+              "mean": 55436.31153846154,
+              "median": 51005.0,
+              "p90": 80008.1,
+              "p95": 96112.8,
+              "max": 185238
+            },
+            "simples_segundos": {
+              "sum": 523.147,
+              "mean": 2.0121038461538463,
+              "median": 1.7505,
+              "p90": 3.0882,
+              "p95": 3.648299999999998,
+              "max": 12.112
+            },
+            "ralph_segundos": {
+              "sum": 10044.728000000001,
+              "mean": 38.63356923076923,
+              "median": 34.9485,
+              "p90": 58.5204,
+              "p95": 67.62244999999999,
+              "max": 139.274
+            },
+            "token_ratio": 76.90613928373244,
+            "time_ratio": 19.200584157034257
+          }
+        },
+        {
+          "label": "MMLU",
+          "summary": {
+            "n": 282,
+            "simple_correct": 254,
+            "ralph_correct": 248,
+            "simple_accuracy": 0.900709219858156,
+            "ralph_accuracy": 0.8794326241134752,
+            "delta_pp": -2.127659574468085,
+            "net": -6,
+            "recoveries": 8,
+            "regressions": 14,
+            "both_correct": 240,
+            "both_wrong": 20,
+            "mcnemar_p": 0.28627872467041016,
+            "recovery_rate": 0.2857142857142857,
+            "regression_rate": 0.05511811023622047,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.8602400035156054,
+              0.9304080743818973
+            ],
+            "ralph_ci": [
+              0.836241854493107,
+              0.912424909533732
+            ],
+            "both_wrong_same": 20,
+            "paired_delta_ci_pp_approx": [
+              -5.383911558580227,
+              1.1285924096440563
+            ],
+            "simples_tokens": {
+              "sum": 92309,
+              "mean": 327.33687943262413,
+              "median": 285.5,
+              "p90": 473.8,
+              "p95": 562.4499999999998,
+              "max": 1041
+            },
+            "ralph_tokens": {
+              "sum": 12996648,
+              "mean": 46087.40425531915,
+              "median": 45422.0,
+              "p90": 63001.0,
+              "p95": 71801.45,
+              "max": 104870
+            },
+            "simples_segundos": {
+              "sum": 468.171,
+              "mean": 1.6601808510638298,
+              "median": 1.4415,
+              "p90": 2.2227,
+              "p95": 2.7979,
+              "max": 10.596
+            },
+            "ralph_segundos": {
+              "sum": 10264.264,
+              "mean": 36.398099290780145,
+              "median": 32.942499999999995,
+              "p90": 53.8074,
+              "p95": 67.55724999999998,
+              "max": 120.094
+            },
+            "token_ratio": 140.7950254038068,
+            "time_ratio": 21.924177277106015
+          }
+        },
+        {
+          "label": "Global",
+          "summary": {
+            "n": 711,
+            "simple_correct": 627,
+            "ralph_correct": 636,
+            "simple_accuracy": 0.8818565400843882,
+            "ralph_accuracy": 0.8945147679324894,
+            "delta_pp": 1.2658227848101267,
+            "net": 9,
+            "recoveries": 35,
+            "regressions": 26,
+            "both_correct": 601,
+            "both_wrong": 49,
+            "mcnemar_p": 0.30567741986311836,
+            "recovery_rate": 0.4166666666666667,
+            "regression_rate": 0.04146730462519936,
+            "simple_failure": 0,
+            "ralph_failure": 0,
+            "simple_ci": [
+              0.856053922302483,
+              0.9035550697330534
+            ],
+            "ralph_ci": [
+              0.8697769636091394,
+              0.9150124370021607
+            ],
+            "both_wrong_same": 41,
+            "paired_delta_ci_pp_approx": [
+              -0.8866769609890386,
+              3.418322530609292
+            ],
+            "simples_tokens": {
+              "sum": 424991,
+              "mean": 597.7369901547116,
+              "median": 529,
+              "p90": 1003.0,
+              "p95": 1299.5,
+              "max": 5620
+            },
+            "ralph_tokens": {
+              "sum": 41800522,
+              "mean": 58791.170182841066,
+              "median": 50964,
+              "p90": 90091.0,
+              "p95": 114453.0,
+              "max": 487560
+            },
+            "simples_segundos": {
+              "sum": 1649.679,
+              "mean": 2.3202236286919833,
+              "median": 1.75,
+              "p90": 3.796,
+              "p95": 5.2204999999999995,
+              "max": 37.323
+            },
+            "ralph_segundos": {
+              "sum": 31565.269,
+              "mean": 44.395596343178624,
+              "median": 37.239,
+              "p90": 72.543,
+              "p95": 88.381,
+              "max": 414.948
+            },
+            "token_ratio": 98.35625225004765,
+            "time_ratio": 19.134188530010988
+          }
+        }
+      ]
+    }
+  ],
+  "export_checks": [
+    {
+      "figure": "01_resultado_global_e_benchmarks",
+      "text_within_canvas": true,
+      "width_inches": 7.8,
+      "height_inches": 5.0,
+      "png_dpi": 600
+    },
+    {
+      "figure": "02_areas_do_conhecimento",
+      "text_within_canvas": true,
+      "width_inches": 7.8,
+      "height_inches": 5.0,
+      "png_dpi": 600
+    },
+    {
+      "figure": "03_comparacao_por_materia",
+      "text_within_canvas": true,
+      "width_inches": 7.8,
+      "height_inches": 7.0,
+      "png_dpi": 600
+    },
+    {
+      "figure": "04_origem_nivel_e_complexidade",
+      "text_within_canvas": true,
+      "width_inches": 7.8,
+      "height_inches": 7.0,
+      "png_dpi": 600
+    },
+    {
+      "figure": "05_erros_e_causas_das_falhas",
+      "text_within_canvas": true,
+      "width_inches": 7.8,
+      "height_inches": 6.15,
+      "png_dpi": 600
+    },
+    {
+      "figure": "06_custo_e_ganho_de_acuracia",
+      "text_within_canvas": true,
+      "width_inches": 7.8,
+      "height_inches": 5.5,
+      "png_dpi": 600
+    }
+  ]
+}
