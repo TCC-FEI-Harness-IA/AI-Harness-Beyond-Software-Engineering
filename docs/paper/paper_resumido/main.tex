@@ -142,7 +142,7 @@ Pedro Henrique Satoru Lima Takahashi, Vitor Monteiro Vianna}\par
 \filiacao{Departamento de Ciência da Computação, Centro Universitário FEI}\par
 \email{cferreira@fei.edu.br}\par
 
-\resumo{Este trabalho adapta o \textit{Ralph Wiggum Loop}, originalmente concebido para a engenharia de \textit{software}, à resolução de perguntas em linguagem natural. O \textit{harness} proposto organiza a inferência em etapas de planejamento, execução e validação de tarefas em janelas de contexto distintas. Em 743 questões de múltipla escolha, a inferência orquestrada atingiu 85,73\% de acurácia, contra 87,75\% da inferência direta. Nos 711 pares sem falha, as acurácias foram de 89,45\% e 88,19\%, respectivamente. Nesse recorte, o maior ganho ocorreu no GPQA Diamond e o consumo total de \textit{tokens} correspondeu a 98,36 vezes o da inferência direta. Nenhuma das diferenças globais de acurácia atingiu significância estatística a 5\%.}
+\resumo{Este trabalho adapta o \textit{Ralph Wiggum Loop}, originalmente concebido para a engenharia de \textit{software}, à resolução de perguntas em linguagem natural. O \textit{harness} proposto organiza a inferência em etapas de planejamento, execução e validação de tarefas em janelas de contexto distintas. Em 743 questões de múltipla escolha, a inferência orquestrada atingiu 85,73\% de acurácia, contra 87,75\% da inferência direta. Nos 711 pares sem falha, as acurácias foram de 89,45\% e 88,19\%, respectivamente. Nesse recorte, o maior ganho ocorreu no GPQA Diamond e o consumo total de \textit{tokens} correspondeu a 98,36 vezes o da inferência direta.}
 \keyword{modelos de linguagem, planejamento de tarefas, validação iterativa, questões de múltipla escolha}
 \end{@twocolumnfalse}
 ]
@@ -155,9 +155,9 @@ Este trabalho avalia se a adaptação melhora a acurácia em relação a uma cha
 
 \section{Metodologia}
 
-O \textit{harness} coordena as chamadas ao modelo e o acesso aos resultados anteriores. Na fase de Planejamento, o modelo identifica os critérios de aceite gerais e decompõe a pergunta em tarefas com critérios individuais. Uma chamada subsequente avalia se o plano cobre o enunciado e preserva as dependências entre tarefas. Em caso de reprovação, o modelo revisa o plano a partir do parecer. Após a aprovação, o sistema registra valores, unidades e alternativas do enunciado.
+O \textit{harness} coordena as chamadas ao modelo e o acesso aos resultados anteriores. Na fase de Planejamento, o modelo define os critérios de aceite gerais e decompõe a pergunta em tarefas com critérios individuais. Uma chamada subsequente avalia se o plano cobre o enunciado e preserva as dependências entre tarefas. Em caso de reprovação, o modelo revisa o plano com base no parecer e pode usar temperatura mais elevada. Após a aprovação, o sistema registra valores, unidades e alternativas do enunciado.
 
-Na Execução em Loop, o modelo resolve e justifica cada tarefa. Em uma nova janela de contexto, verifica a validade técnica da solução e o atendimento aos critérios de aceite. Uma reprovação dá origem a outra tentativa, acompanhada do parecer do verificador. Uma aprovação permite armazenar o resultado e registrar os aprendizados pontuais. A memória distingue dados do enunciado, como a unidade de uma grandeza, de conclusões intermediárias, como um valor calculado. Ambos ficam disponíveis às tarefas seguintes.
+Na Execução em Loop, o modelo resolve e justifica cada tarefa. Em uma nova janela de contexto, verifica o atendimento aos critérios de aceite da tarefa e a um critério fixo de validade técnica. Em caso de reprovação, uma nova tentativa recebe o parecer do verificador e usa temperatura mais elevada. Quando aprovada, a tarefa tem o resultado armazenado e os aprendizados pontuais registrados. Nesse registro, o \textit{harness} marca a origem de cada item, separando dados do enunciado dos resultados parciais aprovados, e os disponibiliza às tarefas seguintes.
 
 \newpage
 Na Criação da Resposta Final, o modelo verifica se os resultados aprovados atendem, em conjunto, aos critérios gerais. Uma lacuna pode exigir tarefas adicionais ou a revisão de um resultado. Após a aprovação global, o modelo redige a resposta e confere a alternativa indicada. A execução termina com falha se o plano ou uma tarefa esgotar as cinco tentativas permitidas.
@@ -166,9 +166,9 @@ Na Criação da Resposta Final, o modelo verifica se os resultados aprovados ate
 
 O DeepSeek-V4-Flash-0731 recebeu o mesmo enunciado, alternativas e instruções nas duas configurações. Na inferência direta, a chamada única podia incluir uma justificativa. Na inferência orquestrada, o modelo executava as três fases do \textit{harness}. O gabarito foi utilizado apenas para avaliar a alternativa final.
 
-Nas sessões inspecionadas, as chamadas foram realizadas via OpenRouter, com temperatura inicial zero. Após uma reprovação, novas tentativas podiam utilizar uma temperatura mais elevada.
+As chamadas foram realizadas via OpenRouter, com temperatura inicial zero.
 
-Das 753 questões previstas, 743 apresentaram registros pareados. A amostra reuniu 268 questões do ENEM, da FUVEST, do ITA e da UNICAMP, 285 do MMLU~\cite{mmlu} (cinco por disciplina, em 57 disciplinas) e 190 do GPQA Diamond~\cite{gpqa}, com problemas de física, química e biologia em nível de pós-graduação. Nos dois conjuntos em inglês, a inferência ocorreu sem exemplos de resolução.
+Das 753 questões previstas, 743 foram executadas nas duas configurações (registros pareados), pois dez foram interrompidas antes de concluir ambos os fluxos. A amostra reuniu 268 questões do ENEM, da FUVEST, do ITA e da UNICAMP, 285 do MMLU~\cite{mmlu} (cinco por disciplina, em 57 disciplinas) e 190 do GPQA Diamond~\cite{gpqa}, com problemas de física, química e biologia em nível de pós-graduação. Nos dois conjuntos em inglês, a inferência ocorreu sem exemplos de resolução.
 
 Na avaliação de ponta a ponta, interrupções e respostas finais inválidas contam como erros. A análise condicional considera os pares em que ambas as configurações produziram uma alternativa válida, inclusive quando incorreta. Aplicou-se o teste exato bilateral de McNemar aos pares em que apenas uma configuração acertou. O consumo corresponde à soma dos \textit{tokens} de entrada e saída de todas as chamadas.
 
@@ -176,7 +176,7 @@ Na avaliação de ponta a ponta, interrupções e respostas finais inválidas co
 \section{Resultados e discussão}
 
 \subsection{Acurácia por conjunto e por área}
-A Tabela~\ref{tab:global} apresenta os acertos nas duas configurações de inferência. Nos 743 pares, o fluxo adaptado corrigiu 36 respostas incorretas da inferência direta e introduziu erros em 51 questões que a chamada direta havia acertado, com perda líquida de 15 acertos. Nos 711 pares sem falha, houve 35 correções e 26 perdas. Em ambos os recortes, o teste de McNemar produziu valores de $p$ superiores a 0,05.
+A Tabela~\ref{tab:global} apresenta os acertos nas duas configurações de inferência. Nos 743 pares, o fluxo adaptado corrigiu 36 respostas incorretas da inferência direta e introduziu erros em 51 questões que a chamada direta havia acertado, com perda líquida de 15 acertos. Nos 711 pares sem falha, o fluxo acertou 35 questões que a inferência direta havia errado e errou 26 que ela havia acertado, com ganho líquido de nove acertos. Em ambos os recortes, o teste de McNemar produziu valores de $p$ superiores a 0,05.
 
 \begin{table}[H]
 \caption{Acertos por configuração de inferência e valores de $p$ do teste exato bilateral de McNemar.}\label{tab:global}
@@ -236,7 +236,7 @@ Uma questão de matemática do ITA de 2024 ilustra a relação entre o Planejame
 \subsection{Custo e alcance dos resultados}
 Nos 711 pares sem falha, a inferência orquestrada consumiu 41,80 milhões de \textit{tokens}, contra 425 mil na direta. O consumo adicional, dividido pelo saldo de nove acertos, correspondeu a 4,60 milhões de \textit{tokens} por acerto líquido. A mediana da duração por questão passou de 1,75 para 37,24 segundos.
 
-A exclusão de pares com falha incidiu principalmente sobre o GPQA Diamond, alterando a composição da amostra condicional. A avaliação utilizou um único modelo, sem repetições independentes ou controle com orçamento equivalente de \textit{tokens}. Essas condições limitam a atribuição do ganho observado a um componente específico, como a reinicialização do contexto.
+Três limitações restringem esses resultados. Primeiro, excluir os casos com falha removeu proporcionalmente mais questões do GPQA Diamond (21 de 190), alterando o perfil da amostra sem falhas. Segundo, avaliou-se um único modelo em uma execução por questão. Terceiro, não houve comparação sob orçamento equivalente de \textit{tokens} nem testes isolando cada etapa, o que impede atribuir ganhos a um mecanismo específico, como a reinicialização do contexto.
 
 \section{Conclusão}
 
