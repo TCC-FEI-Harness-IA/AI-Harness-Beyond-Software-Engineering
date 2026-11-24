@@ -1,0 +1,233 @@
+% !TeX program = xelatex
+\documentclass[a4paper,10pt, twocolumn]{article}
+\usepackage[a4paper,top=2cm,bottom=3cm,left=2cm,right=2cm,footskip=0.8cm]{geometry}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \DeclareUnicodeCharacter{2212}{\ensuremath{-}}
+  \usepackage{mathptmx,helvet}
+\else
+  \usepackage{fontspec}
+  \IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{\setmainfont{TeX Gyre Termes}}
+  \IfFontExistsTF{Arial}{\setsansfont{Arial}}{\setsansfont{TeX Gyre Heros}}
+\fi
+\usepackage[brazilian]{babel}
+\usepackage{csquotes,microtype,tikz,booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}    % Para personalizar legendas, opcional
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}     % Para personalizar \section
+\usepackage[style=ieee, sorting=none,maxbibnames=3,minbibnames=1, language=portuguese]{biblatex}
+\definecolor{grayFEI}{HTML}{7F7F7F}
+\usepackage{indentfirst}  % Indenta o primeiro parágrafo
+\setlength{\parindent}{0.5cm}  % Aumenta a indentação para 2em (pode ser ajustado
+\titlespacing*{\section}{0pt}{*0}{0pt}
+\usepackage{ragged2e}
+
+
+%-------------------------- ESTILOS NÃO ALTERAR ------------------------------------------------%
+% Estilo para legendas de figura e tabela
+\captionsetup[figure]{
+  labelfont={color=azulFEI, bf, small, sf}, % "Figura" azul, negrito, Arial-like
+  textfont={small, sf},                    % Texto da legenda em Arial-like
+  font=footnotesize,                       % Tamanho aproximado de 9pt
+  labelsep=period,                         % "Figura 1." e não "Figura 1:"
+  name=Figura,                             % Tradução para "Figura"
+  justification=raggedright,              % Alinhado à esquerda
+  singlelinecheck=false                   % Garante alinhamento mesmo em uma linha
+}
+
+\captionsetup[table]{
+  labelfont={color=azulFEI, bf, small, sf},
+  textfont={small, sf},
+  font=footnotesize,
+  labelsep=period,
+  name=Tabela,
+  justification=raggedright,
+  singlelinecheck=false
+}
+
+% Formatação section e subsection
+\titleformat{\subsection}
+  {\color{grayFEI}\normalfont\sffamily\selectfont\itshape\fontsize{10}{12}\selectfont}
+  {\thesubsection.}{0.2em}{}
+\renewcommand{\thesubsection}{\Alph{subsection}}
+
+\titleformat{\section}
+  {\color{azulFEI}\normalfont\sffamily\selectfont\bfseries\fontsize{11}{13}\selectfont} % Fonte Helvetica, tamanho 11pt, negrito
+  {\thesection.}{0.2em}{}
+\renewcommand{\thesection}{\Roman{section}} 
+\titlespacing*{\section}
+{0pt}{10pt}{0pt}
+
+%Formatação Título
+\newcommand{\inovatitle}[1]{%
+  \noindent{\sffamily\bfseries\fontsize{18}{20}\selectfont\textcolor{azulFEI}{#1}\par}\vspace{12pt}
+}
+
+%Formatação Autores
+\newcommand{\autores}[1]{
+  \helvet{\fontsize{11}{13}\selectfont\textbf{\textit{#1}}}
+}
+\newcommand{\orientador}[1]{
+  \helvet{\fontsize{11}{13}\selectfont\textbf{\textit{#1}}}
+}
+\newcommand{\filiacao}[1]{
+  \helvet{\fontsize{10}{12}\selectfont{\textit{#1}}}
+}
+\newcommand{\email}[1]{
+  \helvet{\fontsize{10}{12}\selectfont{\textit{#1}}}
+}
+\newcommand{\resumo}[1]{%
+\vspace{15pt}
+  \noindent
+  {\helvet{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Resumo:}}}} %
+  \justifying #1\par\smallskip %
+  \par
+}
+
+\newcommand{\keyword}[1]{
+  \noindent\helvet{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Palavras-chave:}}} #1  \par\vspace{12pt}
+}
+
+\renewcommand{\thetable}{\Roman{table}}
+
+
+% Define a cor azul específica (exemplo: azul FEI)
+\definecolor{azulFEI}{HTML}{0070C0} % substitua pelo código que quiser
+
+%Formatação Cabeçalho e rodapé
+\setlength{\headsep}{1cm}
+\newcommand{\helvet}[1]{{\sffamily\selectfont #1}}
+\pagestyle{fancy}
+\fancyhead{} % limpa cabeçalho
+\renewcommand{\headrulewidth}{0.3pt} % ← ATIVA a linha (espessura ajustável)
+\setlength\headheight{1.2cm}
+\lhead{\includegraphics[width=4.97cm, height=1cm]{logoinova.png}}
+\newcommand{\semester}{2º semestre/2026}
+\rhead{\helvet{\semester}}
+
+\fancyfoot{} % limpa rodapé
+\lfoot{
+  \sffamily\fontsize{8}{10}\selectfont
+  Anais dos Trabalhos de Conclusão de Curso do Centro Universitário FEI, São Bernardo do Campo – SP\\
+  \vspace{-4pt}\rule{\textwidth}{1pt} % ← linha abaixo do texto do rodapé
+}
+\rfoot{\sffamily\fontsize{8}{10}\selectfont \thepage}
+
+%-------------------------------- FIM ESTILOS ---------------------------------------------------%
+
+
+
+%Adicionar a bibliografia
+\addbibresource{referencias.bib}
+
+
+\begin{document}
+\setlength{\columnsep}{20pt}
+\raggedbottom
+\twocolumn[
+\begin{@twocolumnfalse}
+\raggedright
+\inovatitle{Um \textit{Harness} de IA para Resolução de Perguntas em Linguagem Natural: Adaptando o \textit{Ralph Wiggum Loop} Além do Desenvolvimento de \textit{Software}}
+
+\autores{Hugo Emílio Nomura, Pedro Henrique Correia de Oliveira,\\
+Pedro Henrique Satoru Lima Takahashi, Vitor Monteiro Vianna}\par
+\filiacao{Ciência da Computação -- Centro Universitário FEI, \textit{campus} São Paulo}\par
+\email{unifhnomura@fei.edu.br, unifpoliveira@fei.edu.br, unifptakahashi@fei.edu.br, unievvianna@fei.edu.br}\par\smallskip
+\orientador{Orientador: Charles Henrique Porto Ferreira}\par
+\filiacao{Departamento de Ciência da Computação, Centro Universitário FEI}\par
+\email{cferreira@fei.edu.br}\par
+
+\resumo{Este trabalho investiga a validação intermediária de tarefas na adaptação do \textit{Ralph Wiggum Loop} para a resolução de perguntas em linguagem natural. O \textit{harness} proposto decompõe o enunciado em tarefas e utiliza o próprio modelo para avaliar cada resultado segundo critérios de aceite. Em 743 questões de múltipla escolha, a inferência orquestrada obteve 637 acertos, contra 652 na inferência direta. Nos 711 pares sem falha, o fluxo recuperou 35 respostas incorretas e perdeu 26 acertos da inferência direta. A análise de uma questão do ITA mostra como um critério introduzido no planejamento pode levar à reprovação sucessiva da alternativa correta.}
+\keyword{modelos de linguagem, orquestração de inferência, critérios de aceite, validação iterativa}
+\end{@twocolumnfalse}
+]
+
+\section{Introdução}
+
+Em uma questão de matemática do ITA de 2024, o fluxo adaptado identificou a alternativa correspondente ao gabarito durante a execução de uma tarefa. A resposta final, entretanto, não chegou a ser produzida. Para compreender esse resultado, é necessário considerar como os critérios de aceite foram definidos a partir do enunciado.
+
+A questão 43 da primeira fase solicitava um intervalo ao qual o raio de um cilindro \emph{poderia} pertencer. O modelo deduziu que $r>2$ e selecionou a alternativa E, que corresponde a \mbox{$2<r<2{,}5$}. Na etapa de Planejamento, o modelo havia estabelecido que a alternativa deveria abranger todos os valores admissíveis de $r$. Sob esse critério, o verificador reprovou a seleção até esgotar as cinco tentativas permitidas. A execução encerrou-se após 68,68 segundos. Em uma chamada direta, o mesmo modelo selecionou E em 2,81 segundos.
+
+No \textit{Ralph Wiggum Loop} original, os requisitos do projeto e os testes de \textit{software} orientam a verificação das tarefas~\cite{huntley}. Na adaptação para perguntas em linguagem natural, o modelo formula os critérios que serão utilizados para verificar sua própria resolução. O objetivo experimental é avaliar como esse mecanismo afeta a acurácia e a capacidade do sistema de produzir uma resposta final.
+
+\newpage
+\section{Metodologia}
+
+O \textit{harness}, camada responsável pela orquestração das chamadas ao modelo, organiza a inferência em três fases. No Planejamento, o modelo identifica os critérios de aceite gerais e decompõe a pergunta em tarefas com critérios individuais. Uma chamada subsequente verifica a cobertura do plano. Após sua aprovação, o sistema registra dados do enunciado, como valores, unidades e alternativas.
+
+Na Execução em Loop, o modelo resolve cada tarefa e, em uma nova janela de contexto, verifica a validade técnica da solução e o atendimento aos critérios individuais. Uma reprovação devolve à tarefa o parecer do verificador. Uma aprovação permite armazenar o resultado e incorporar os aprendizados pontuais à memória das etapas seguintes. Na Criação da Resposta Final, a verificação passa a considerar o conjunto dos resultados. Caso sejam identificadas lacunas, o fluxo admite tarefas adicionais antes da síntese.
+
+\section{Metodologia de avaliação}
+
+Para cada questão, foram comparadas uma chamada direta ao DeepSeek-V4-Flash-0731 e uma execução mediada pelo \textit{harness}, com o mesmo enunciado e as mesmas alternativas. O gabarito foi utilizado apenas na avaliação da resposta final. Das 753 questões previstas, 743 apresentaram registros pareados, sendo 268 de provas brasileiras, 285 das 57 disciplinas do MMLU~\cite{mmlu} e 190 do GPQA Diamond~\cite{gpqa}.
+
+A análise das falhas associou a alternativa registrada ao histórico das 106 questões em que o fluxo adaptado não obteve acerto. Para cada caso, foram examinados o critério aplicado, o parecer de verificação e a etapa de encerramento.
+
+\clearpage
+\section{Resultados da validação iterativa}
+
+A acurácia nos 743 pares foi de 87,75\% na inferência direta e 85,73\% na inferência orquestrada. A Tabela~\ref{tab:pares} discrimina os acertos exclusivos de cada configuração e os acertos em comum. Considera-se válido o par em que ambas produziram uma alternativa passível de comparação com o gabarito. Na avaliação de ponta a ponta, uma falha operacional conta como erro para a configuração em que ocorreu.
+
+\begin{table}[H]
+\caption{Distribuição dos pares de questões segundo o acerto da inferência direta e da orquestrada.}\label{tab:pares}
+\centering\small
+\begin{tabular}{@{}cccc@{}}
+\toprule
+& \multicolumn{2}{c}{Pares} & \\
+\cmidrule(lr){2-3}
+Configuração que acertou & Sem falha & Com falha & Total \\
+\midrule
+Ambos & 601 & 0 & 601 \\
+Somente orquestrada & 35 & 1 & 36 \\
+Somente direta & 26 & 25 & 51 \\
+Nenhum & 49 & 6 & 55 \\
+\midrule
+Total & 711 & 32 & 743 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Nos 711 pares sem falha, o fluxo adaptado atingiu 89,45\% de acurácia, contra 88,19\% da inferência direta, com saldo de nove acertos. Nos 32 pares restantes, a inferência direta acertou 25 questões e a orquestrada, uma. A diferença de 24 acertos nesse segundo grupo explica a inversão do saldo na avaliação de ponta a ponta. O teste exato bilateral de McNemar, aplicado às questões em que apenas uma configuração acertou, não indicou diferença estatisticamente significativa a 5\% no conjunto completo ($p=0{,}1329$) ou no recorte sem falha ($p=0{,}3057$).
+
+A Figura~\ref{fig:falhas} apresenta as causas de encerramento das 31 execuções em que o \textit{harness} falhou. A inferência direta registrou duas falhas, uma delas na mesma questão. O esgotamento das cinco tentativas de resolução de uma tarefa respondeu por 16 casos, dos quais 13 foram resolvidos corretamente pela inferência direta.
+
+Em oito execuções, a saída intermediária não atendeu ao formato exigido. Em uma questão de biologia do ENEM de 2022, por exemplo, o verificador aprovou a alternativa correta, mas uma chave excedente no texto estruturado impediu o sistema de interpretar o parecer. Em outros dois casos, a execução chegou ao fim e a falha ocorreu na extração da alternativa a partir da resposta final.
+
+\newpage
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=0.20cm,y=0.53cm,font=\sffamily\footnotesize]
+  \foreach \linha/\quantidade/\motivo in {
+    5/16/{Tentativas de tarefa esgotadas},
+    4/8/{Saída estruturada inválida},
+    3/3/{Tempo de sessão excedido},
+    2/2/{Resposta final inválida},
+    1/1/{Tentativas de plano esgotadas},
+    0/1/{Crédito do provedor esgotado}} {
+    \node[anchor=east,inner sep=2pt] at (0,\linha) {\motivo};
+    \fill[azulFEI!85!black] (0,\linha-.18) rectangle (\quantidade,\linha+.18);
+    \node[anchor=west,inner sep=2pt] at (\quantidade,\linha) {\quantidade};
+  }
+\end{tikzpicture}
+\caption{Causa terminal das 31 falhas operacionais registradas na inferência orquestrada.}\label{fig:falhas}
+\end{figure}
+
+\section{Discussão}
+
+A aprovação das tarefas também ocorreu em trajetórias que produziram respostas incorretas. Das 26 questões sem falha em que apenas a inferência direta acertou, 20 foram concluídas sem qualquer reprovação de tarefa. Entre os 49 pares em que ambas as configurações produziram alternativas válidas e divergentes do gabarito, houve coincidência na alternativa incorreta em 41 casos. A reinicialização do contexto permite reexaminar cada resultado, mas a verificação continua a depender da interpretação do mesmo modelo.
+
+Os históricos analisados em detalhe correspondem aos 106 casos de erro ou falha da inferência orquestrada. Essa seleção permite identificar mecanismos de falha, mas limita a estimativa de sua frequência entre as respostas corretas. A avaliação utilizou um único modelo e questões com gabarito. Nos pares sem falha, o consumo total de \textit{tokens} do \textit{harness} correspondeu a 98,36 vezes o da inferência direta.
+
+\section{Conclusão}
+
+A análise do caso do ITA evidencia uma limitação da revisão local. O verificador aplicou o critério definido no Planejamento, embora esse critério alterasse a condição solicitada no enunciado. Como continuidade, propõe-se avaliar o retorno ao Planejamento quando uma mesma objeção persiste entre tentativas. A comparação deverá considerar tanto as questões recuperadas pela revisão do critério quanto aquelas em que a alteração compromete um acerto anterior.
+
+\section{Referências}
+\printbibliography[heading=none]
+\end{document}

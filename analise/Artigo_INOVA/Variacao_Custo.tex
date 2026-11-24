@@ -1,0 +1,238 @@
+% !TeX program = xelatex
+\documentclass[a4paper,10pt, twocolumn]{article}
+\usepackage[a4paper,top=2cm,bottom=3cm,left=2cm,right=2cm,footskip=0.8cm]{geometry}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \DeclareUnicodeCharacter{2212}{\ensuremath{-}}
+  \usepackage{mathptmx,helvet}
+\else
+  \usepackage{fontspec}
+  \IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{\setmainfont{TeX Gyre Termes}}
+  \IfFontExistsTF{Arial}{\setsansfont{Arial}}{\setsansfont{TeX Gyre Heros}}
+\fi
+\usepackage[brazilian]{babel}
+\usepackage{csquotes,microtype,tikz,booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}    % Para personalizar legendas, opcional
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}     % Para personalizar \section
+\usepackage[style=ieee, sorting=none,maxbibnames=3,minbibnames=1, language=portuguese]{biblatex}
+\definecolor{grayFEI}{HTML}{7F7F7F}
+\usepackage{indentfirst}  % Indenta o primeiro parágrafo
+\setlength{\parindent}{0.5cm}  % Aumenta a indentação para 2em (pode ser ajustado
+\titlespacing*{\section}{0pt}{*0}{0pt}
+\usepackage{ragged2e}
+
+
+%-------------------------- ESTILOS NÃO ALTERAR ------------------------------------------------%
+% Estilo para legendas de figura e tabela
+\captionsetup[figure]{
+  labelfont={color=azulFEI, bf, small, sf}, % "Figura" azul, negrito, Arial-like
+  textfont={small, sf},                    % Texto da legenda em Arial-like
+  font=footnotesize,                       % Tamanho aproximado de 9pt
+  labelsep=period,                         % "Figura 1." e não "Figura 1:"
+  name=Figura,                             % Tradução para "Figura"
+  justification=raggedright,              % Alinhado à esquerda
+  singlelinecheck=false                   % Garante alinhamento mesmo em uma linha
+}
+
+\captionsetup[table]{
+  labelfont={color=azulFEI, bf, small, sf},
+  textfont={small, sf},
+  font=footnotesize,
+  labelsep=period,
+  name=Tabela,
+  justification=raggedright,
+  singlelinecheck=false
+}
+
+% Formatação section e subsection
+\titleformat{\subsection}
+  {\color{grayFEI}\normalfont\sffamily\selectfont\itshape\fontsize{10}{12}\selectfont}
+  {\thesubsection.}{0.2em}{}
+\renewcommand{\thesubsection}{\Alph{subsection}}
+
+\titleformat{\section}
+  {\color{azulFEI}\normalfont\sffamily\selectfont\bfseries\fontsize{11}{13}\selectfont} % Fonte Helvetica, tamanho 11pt, negrito
+  {\thesection.}{0.2em}{}
+\renewcommand{\thesection}{\Roman{section}} 
+\titlespacing*{\section}
+{0pt}{10pt}{0pt}
+
+%Formatação Título
+\newcommand{\inovatitle}[1]{%
+  \noindent{\sffamily\bfseries\fontsize{18}{20}\selectfont\textcolor{azulFEI}{#1}\par}\vspace{12pt}
+}
+
+%Formatação Autores
+\newcommand{\autores}[1]{
+  \helvet{\fontsize{11}{13}\selectfont\textbf{\textit{#1}}}
+}
+\newcommand{\orientador}[1]{
+  \helvet{\fontsize{11}{13}\selectfont\textbf{\textit{#1}}}
+}
+\newcommand{\filiacao}[1]{
+  \helvet{\fontsize{10}{12}\selectfont{\textit{#1}}}
+}
+\newcommand{\email}[1]{
+  \helvet{\fontsize{10}{12}\selectfont{\textit{#1}}}
+}
+\newcommand{\resumo}[1]{%
+\vspace{15pt}
+  \noindent
+  {\helvet{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Resumo:}}}} %
+  \justifying #1\par\smallskip %
+  \par
+}
+
+\newcommand{\keyword}[1]{
+  \noindent\helvet{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Palavras-chave:}}} #1  \par\vspace{12pt}
+}
+
+\renewcommand{\thetable}{\Roman{table}}
+
+
+% Define a cor azul específica (exemplo: azul FEI)
+\definecolor{azulFEI}{HTML}{0070C0} % substitua pelo código que quiser
+
+%Formatação Cabeçalho e rodapé
+\setlength{\headsep}{1cm}
+\newcommand{\helvet}[1]{{\sffamily\selectfont #1}}
+\pagestyle{fancy}
+\fancyhead{} % limpa cabeçalho
+\renewcommand{\headrulewidth}{0.3pt} % ← ATIVA a linha (espessura ajustável)
+\setlength\headheight{1.2cm}
+\lhead{\includegraphics[width=4.97cm, height=1cm]{logoinova.png}}
+\newcommand{\semester}{2º semestre/2026}
+\rhead{\helvet{\semester}}
+
+\fancyfoot{} % limpa rodapé
+\lfoot{
+  \sffamily\fontsize{8}{10}\selectfont
+  Anais dos Trabalhos de Conclusão de Curso do Centro Universitário FEI, São Bernardo do Campo – SP\\
+  \vspace{-4pt}\rule{\textwidth}{1pt} % ← linha abaixo do texto do rodapé
+}
+\rfoot{\sffamily\fontsize{8}{10}\selectfont \thepage}
+
+%-------------------------------- FIM ESTILOS ---------------------------------------------------%
+
+
+
+%Adicionar a bibliografia
+\addbibresource{referencias.bib}
+
+
+\begin{document}
+\setlength{\columnsep}{20pt}
+\raggedbottom
+\twocolumn[
+\begin{@twocolumnfalse}
+\raggedright
+\inovatitle{Um \textit{Harness} de IA para Resolução de Perguntas em Linguagem Natural: Adaptando o \textit{Ralph Wiggum Loop} Além do Desenvolvimento de \textit{Software}}
+
+\autores{Hugo Emílio Nomura, Pedro Henrique Correia de Oliveira,\\
+Pedro Henrique Satoru Lima Takahashi, Vitor Monteiro Vianna}\par
+\filiacao{Ciência da Computação -- Centro Universitário FEI, \textit{campus} São Paulo}\par
+\email{unifhnomura@fei.edu.br, unifpoliveira@fei.edu.br, unifptakahashi@fei.edu.br, unievvianna@fei.edu.br}\par\smallskip
+\orientador{Orientador: Charles Henrique Porto Ferreira}\par
+\filiacao{Departamento de Ciência da Computação, Centro Universitário FEI}\par
+\email{cferreira@fei.edu.br}\par
+
+\resumo{A decomposição de uma pergunta em tarefas amplia o número de chamadas ao modelo e o volume de informações processadas a cada execução. Este trabalho avalia a relação entre esse custo e a acurácia de um \textit{harness} que adapta o \textit{Ralph Wiggum Loop} para perguntas em linguagem natural. Em 743 questões, a inferência orquestrada consumiu 45,65 milhões de \textit{tokens} e obteve 637 acertos, enquanto a inferência direta consumiu 651 mil e obteve 652. Nos 711 pares sem falha, o saldo de nove acertos correspondeu a 4,60 milhões de \textit{tokens} adicionais por acerto líquido. O maior ganho ocorreu no GPQA Diamond. No MMLU, o maior consumo relativo foi acompanhado de queda na acurácia.}
+\keyword{modelos de linguagem, orquestração de inferência, custo computacional, acurácia}
+\end{@twocolumnfalse}
+]
+
+\section{Introdução}
+
+Na inferência direta, o modelo de linguagem recebe o enunciado e produz a resposta em uma única chamada. Na inferência orquestrada, um \textit{harness} coordena etapas de planejamento, resolução e validação intermediária. Essa organização permite revisar uma premissa ou um cálculo antes de produzir a resposta final. Cada revisão, entretanto, exige uma nova chamada em que parte dos dados da questão e dos resultados anteriores volta a ocupar a janela de contexto do modelo.
+
+O \textit{Ralph Wiggum Loop} foi concebido para fluxos de engenharia de \textit{software} em que o agente retoma, a cada sessão, o estado do projeto~\cite{huntley}. Para estender esse princípio à resolução de perguntas em linguagem natural, o fluxo proposto registra os resultados de tarefas individuais e os reúne na construção da resposta final. O objetivo deste trabalho é mensurar a variação de acurácia associada à adaptação, considerando o consumo de \textit{tokens} e o tempo de execução necessários para obtê-la.
+
+\section{Metodologia}
+
+Na fase de Planejamento, o modelo define os critérios de aceite gerais e decompõe o enunciado em tarefas. O plano é submetido a uma verificação de cobertura. Após a aprovação, o sistema registra dados literais da pergunta, como valores, unidades e alternativas, que devem permanecer disponíveis nas etapas subsequentes.
+
+\newpage
+Na Execução em Loop, a resolução e a verificação de uma tarefa ocorrem em janelas de contexto distintas. Em caso de reprovação, o modelo recebe o parecer do verificador e pode revisar a solução, até o limite de cinco tentativas. Os resultados aprovados e os aprendizados pontuais compõem a memória do fluxo. Na Criação da Resposta Final, o modelo avalia a suficiência desses resultados e pode solicitar tarefas adicionais. Dessa forma, duas questões submetidas ao mesmo \textit{harness} podem exigir quantidades distintas de chamadas.
+
+\section{Metodologia de avaliação}
+
+A comparação utilizou o DeepSeek-V4-Flash-0731 nas duas configurações de inferência, com as mesmas questões e alternativas. Na inferência direta, a chamada única podia incluir uma justificativa antes da escolha final. O gabarito foi utilizado exclusivamente na avaliação. Das 753 questões previstas, 743 apresentaram registros pareados, sendo 268 de provas brasileiras, 285 do MMLU~\cite{mmlu}, distribuídas em 57 disciplinas, e 190 do GPQA Diamond~\cite{gpqa}, em física, química e biologia.
+
+O consumo corresponde à soma dos \textit{tokens} de entrada e saída de todas as chamadas, inclusive nas sessões interrompidas. A razão de consumo é obtida dividindo-se o total da inferência orquestrada pelo total da inferência direta nas mesmas questões. A duração por questão é descrita pela mediana e pelo percentil 95. A avaliação de ponta a ponta contabiliza as falhas como erros. A análise condicional considera os pares em que ambas as configurações produziram uma alternativa válida.
+
+\clearpage
+\section{Custo computacional e acurácia}
+
+Nos 743 pares avaliados, a inferência orquestrada obteve 85,73\% de acurácia e a inferência direta, 87,75\%. O fluxo adaptado consumiu 45.002.553 \textit{tokens} adicionais, com saldo de 15 acertos a menos. As 31 execuções do \textit{harness} encerradas com falha responderam por 3,78 milhões de \textit{tokens} do consumo total.
+
+Nos 711 pares sem falha, a inferência direta obteve 627 acertos (88,19\%) e a inferência orquestrada, 636 (89,45\%). Nesse recorte, o \textit{harness} corrigiu 35 respostas e introduziu 26 erros em questões que a chamada direta havia acertado. A razão entre os 41.375.531 \textit{tokens} adicionais e o saldo de nove acertos foi de aproximadamente 4,60 milhões de \textit{tokens} por acerto líquido. O teste exato bilateral de McNemar não indicou diferença global de acurácia ao nível de 5\% nos 743 pares ($p=0{,}1329$) ou nos 711 pares sem falha ($p=0{,}3057$).
+
+\begin{table}[H]
+\caption{Consumo de \textit{tokens} e duração por questão nos 711 pares sem falha.}\label{tab:recursos}
+\centering\small
+\begin{tabular}{@{}ccc@{}}
+\toprule
+Medida & Direta & Orquestrada \\
+\midrule
+Total de \textit{tokens} & 424.991 & 41.800.522 \\
+Mediana de \textit{tokens} & 529 & 50.964 \\
+Tempo mediano (s) & 1,75 & 37,24 \\
+Percentil 95 do tempo (s) & 5,22 & 88,38 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Conforme a Tabela~\ref{tab:recursos}, a mediana da duração por questão passou de 1,75 segundo na inferência direta para 37,24 segundos na orquestrada. No percentil 95, a diferença entre as configurações atingiu 83,16 segundos.
+
+A razão de consumo passou de 70,09 nos 743 pares para 98,36 no recorte sem falhas. Esse aumento decorre da composição dos grupos. Uma única questão do GPQA Diamond em que ambas as configurações falharam respondeu por 193.303 \textit{tokens} na inferência direta, quase 30\% do total dessa configuração. A exclusão desse par reduz o denominador da razão, o que ajuda a explicar o valor mais elevado no segundo recorte.
+
+\section{Análise por conjunto de questões}
+
+A Figura~\ref{fig:custo} relaciona a razão de consumo à diferença de acurácia entre as configurações. No GPQA Diamond, a inferência orquestrada obteve 11 acertos líquidos adicionais em 169 pares sem falha. Nos vestibulares, o saldo foi de quatro acertos em 260 pares. No MMLU, o consumo correspondeu a 140,80 vezes o da inferência direta, com perda líquida de seis acertos em 282 pares.
+
+\newpage
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=0.058cm,y=.29cm,font=\sffamily\footnotesize]
+  \node[anchor=west] at (54,9.2) {Variação de acurácia (p.p.)};
+  \foreach \y in {-2,0,2,4,6}{
+    \draw[black!20,thin] (60,\y)--(150,\y);
+    \node[anchor=east,inner sep=2pt] at (60,\y) {$\y$};
+  }
+  \draw[black!60] (60,0)--(150,0);
+  \draw[black!65] (60,7.5)--(60,-3.4)--(150,-3.4);
+  \foreach \x in {60,80,100,120,140}{
+    \draw[black!65] (\x,-3.4)--(\x,-3.8);
+    \node[anchor=north,inner sep=1pt] at (\x,-3.9) {\x};
+  }
+  \fill[azulFEI!80!black] (99.06,6.51) circle[radius=2pt];
+  \node[anchor=west] at (99.06,6.51) {GPQA};
+  \fill[azulFEI!80!black] (76.91,1.54) circle[radius=2pt];
+  \node[anchor=west] at (76.91,1.54) {Vestibulares};
+  \fill[azulFEI!80!black] (140.80,-2.13) circle[radius=2pt];
+  \node[anchor=east] at (140.80,-2.13) {MMLU};
+  \node at (105,-7) {Razão de consumo de \textit{tokens} (Ralph/direta)};
+\end{tikzpicture}
+\caption{Consumo relativo de \textit{tokens} e diferença de acurácia nos pares sem falha. Valores positivos no eixo vertical indicam maior acurácia da inferência orquestrada.}\label{fig:custo}
+\end{figure}
+
+No GPQA Diamond, o consumo adicional por acerto líquido foi de aproximadamente 1,30 milhão de \textit{tokens}, ante 3,56 milhões nos vestibulares. Nesse último conjunto, a inferência direta já havia acertado 250 das 260 questões sem falha, o que limitava a dez o número de erros passíveis de correção.
+
+O resultado do GPQA Diamond também depende do tratamento das falhas operacionais. Em 21 das 190 questões pareadas, pelo menos uma configuração falhou. Ao incluir esses pares, a inferência direta totalizou 140 acertos, contra 134 da orquestrada. Assim, o conjunto com o maior ganho entre as respostas válidas também concentrou interrupções que comprometeram a acurácia de ponta a ponta.
+
+\section{Conclusão}
+
+Nas condições avaliadas, a aplicação do \textit{harness} ampliou o consumo de \textit{tokens} nos três conjuntos, enquanto o ganho de acurácia entre os pares válidos se concentrou no GPQA Diamond. A avaliação utilizou um único modelo e caracterizou o custo por meio do consumo de \textit{tokens} e da duração das execuções. A análise de custo monetário e energético exigiria medidas adicionais.
+
+Como continuidade, propõe-se comparar a execução por tarefas com múltiplas chamadas diretas ao mesmo modelo, sob um orçamento comum de \textit{tokens} por questão. Essa comparação, conduzida em uma nova amostra, permitiria avaliar a contribuição da orquestração para a acurácia sob a mesma restrição computacional.
+
+\section{Referências}
+\printbibliography[heading=none]
+\end{document}
