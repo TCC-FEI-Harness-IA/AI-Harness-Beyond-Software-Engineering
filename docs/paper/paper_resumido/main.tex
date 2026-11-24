@@ -1,0 +1,247 @@
+% !TeX program = xelatex
+\documentclass[a4paper,10pt, twocolumn]{article}
+\usepackage[a4paper,top=2cm,bottom=3cm,left=2cm,right=2cm,footskip=0.8cm]{geometry}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \DeclareUnicodeCharacter{2212}{\ensuremath{-}}
+  \usepackage{mathptmx,helvet}
+\else
+  \usepackage{fontspec}
+  \IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{\setmainfont{TeX Gyre Termes}}
+  \IfFontExistsTF{Arial}{\setsansfont{Arial}}{\setsansfont{TeX Gyre Heros}}
+\fi
+\usepackage[brazilian]{babel}
+\usepackage{csquotes,microtype,tikz,booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}    % Para personalizar legendas, opcional
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}     % Para personalizar \section
+\usepackage[style=ieee, sorting=none,maxbibnames=3,minbibnames=1, language=portuguese]{biblatex}
+\definecolor{grayFEI}{HTML}{7F7F7F}
+\usepackage{indentfirst}  % Indenta o primeiro parágrafo
+\setlength{\parindent}{0.5cm}  % Aumenta a indentação para 2em (pode ser ajustado
+\titlespacing*{\section}{0pt}{*0}{0pt}
+\usepackage{ragged2e}
+
+
+%-------------------------- ESTILOS NÃO ALTERAR ------------------------------------------------%
+% Estilo para legendas de figura e tabela
+\captionsetup[figure]{
+  labelfont={color=azulFEI, bf, small, sf}, % "Figura" azul, negrito, Arial-like
+  textfont={small, sf},                    % Texto da legenda em Arial-like
+  font=footnotesize,                       % Tamanho aproximado de 9pt
+  labelsep=period,                         % "Figura 1." e não "Figura 1:"
+  name=Figura,                             % Tradução para "Figura"
+  justification=raggedright,              % Alinhado à esquerda
+  singlelinecheck=false                   % Garante alinhamento mesmo em uma linha
+}
+
+\captionsetup[table]{
+  labelfont={color=azulFEI, bf, small, sf},
+  textfont={small, sf},
+  font=footnotesize,
+  labelsep=period,
+  name=Tabela,
+  justification=raggedright,
+  singlelinecheck=false
+}
+
+% Formatação section e subsection
+\titleformat{\subsection}
+  {\color{grayFEI}\normalfont\sffamily\selectfont\itshape\fontsize{10}{12}\selectfont}
+  {\thesubsection.}{0.2em}{}
+\renewcommand{\thesubsection}{\Alph{subsection}}
+
+\titleformat{\section}
+  {\color{azulFEI}\normalfont\sffamily\selectfont\bfseries\fontsize{11}{13}\selectfont} % Fonte Helvetica, tamanho 11pt, negrito
+  {\thesection.}{0.2em}{}
+\renewcommand{\thesection}{\Roman{section}} 
+\titlespacing*{\section}
+{0pt}{10pt}{0pt}
+
+%Formatação Título
+\newcommand{\inovatitle}[1]{%
+  \noindent{\sffamily\bfseries\fontsize{18}{20}\selectfont\textcolor{azulFEI}{#1}\par}\vspace{12pt}
+}
+
+%Formatação Autores
+\newcommand{\autores}[1]{
+  \helvet{\fontsize{11}{13}\selectfont\textbf{\textit{#1}}}
+}
+\newcommand{\orientador}[1]{
+  \helvet{\fontsize{11}{13}\selectfont\textbf{\textit{#1}}}
+}
+\newcommand{\filiacao}[1]{
+  \helvet{\fontsize{10}{12}\selectfont{\textit{#1}}}
+}
+\newcommand{\email}[1]{
+  \helvet{\fontsize{10}{12}\selectfont{\textit{#1}}}
+}
+\newcommand{\resumo}[1]{%
+\vspace{15pt}
+  \noindent
+  {\helvet{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Resumo:}}}} %
+  \justifying #1\par\smallskip %
+  \par
+}
+
+\newcommand{\keyword}[1]{
+  \noindent\helvet{\fontsize{12}{20}\selectfont\textbf{\textcolor{azulFEI}{Palavras-chave:}}} #1  \par\vspace{12pt}
+}
+
+\renewcommand{\thetable}{\Roman{table}}
+
+
+% Define a cor azul específica (exemplo: azul FEI)
+\definecolor{azulFEI}{HTML}{0070C0} % substitua pelo código que quiser
+
+%Formatação Cabeçalho e rodapé
+\setlength{\headsep}{1cm}
+\newcommand{\helvet}[1]{{\sffamily\selectfont #1}}
+\pagestyle{fancy}
+\fancyhead{} % limpa cabeçalho
+\renewcommand{\headrulewidth}{0.3pt} % ← ATIVA a linha (espessura ajustável)
+\setlength\headheight{1.2cm}
+\lhead{\includegraphics[width=4.97cm, height=1cm]{logoinova.png}}
+\newcommand{\semester}{2º semestre/2026}
+\rhead{\helvet{\semester}}
+
+\fancyfoot{} % limpa rodapé
+\lfoot{
+  \sffamily\fontsize{8}{10}\selectfont
+  Anais dos Trabalhos de Conclusão de Curso do Centro Universitário FEI, São Bernardo do Campo – SP\\
+  \vspace{-4pt}\rule{\textwidth}{1pt} % ← linha abaixo do texto do rodapé
+}
+\rfoot{\sffamily\fontsize{8}{10}\selectfont \thepage}
+
+%-------------------------------- FIM ESTILOS ---------------------------------------------------%
+
+
+
+%Adicionar a bibliografia
+\addbibresource{referencias.bib}
+
+
+\begin{document}
+\setlength{\columnsep}{20pt}
+\raggedbottom
+\twocolumn[
+\begin{@twocolumnfalse}
+\raggedright
+\inovatitle{Um \textit{Harness} de IA para Resolução de Perguntas em Linguagem Natural: Adaptando o \textit{Ralph Wiggum Loop} Além do Desenvolvimento de \textit{Software}}
+
+\autores{Hugo Emílio Nomura, Pedro Henrique Correia de Oliveira,\\
+Pedro Henrique Satoru Lima Takahashi, Vitor Monteiro Vianna}\par
+\filiacao{Ciência da Computação -- Centro Universitário FEI, \textit{campus} São Paulo}\par
+\email{unifhnomura@fei.edu.br, unifpoliveira@fei.edu.br, unifptakahashi@fei.edu.br, unievvianna@fei.edu.br}\par\smallskip
+\orientador{Orientador: Charles Henrique Porto Ferreira}\par
+\filiacao{Departamento de Ciência da Computação, Centro Universitário FEI}\par
+\email{cferreira@fei.edu.br}\par
+
+\resumo{Este trabalho adapta o \textit{Ralph Wiggum Loop}, originalmente concebido para a engenharia de \textit{software}, à resolução de perguntas em linguagem natural. O \textit{harness} proposto organiza a inferência em etapas de planejamento, execução e validação de tarefas em janelas de contexto distintas. Em 743 questões de múltipla escolha, a inferência orquestrada atingiu 85,73\% de acurácia, contra 87,75\% da inferência direta. Nos 711 pares sem falha, as acurácias foram de 89,45\% e 88,19\%, respectivamente. Nesse recorte, o maior ganho ocorreu no GPQA Diamond e o consumo total de \textit{tokens} correspondeu a 98,36 vezes o da inferência direta. Nenhuma das diferenças globais de acurácia atingiu significância estatística a 5\%.}
+\keyword{modelos de linguagem, planejamento de tarefas, validação iterativa, questões de múltipla escolha}
+\end{@twocolumnfalse}
+]
+
+\section{Introdução}
+
+Na engenharia de \textit{software}, o \textit{Ralph Wiggum Loop} permite ao agente retomar o trabalho em outra sessão a partir dos arquivos do projeto~\cite{huntley}. Os requisitos e os testes do programa orientam a verificação de cada tarefa. A adaptação a perguntas em linguagem natural exige derivar do enunciado os critérios de aceite para avaliar cada resultado intermediário.
+
+Este trabalho avalia se a adaptação melhora a acurácia em relação a uma chamada direta ao mesmo modelo. Embora o fluxo admita perguntas abertas, a avaliação utiliza questões de múltipla escolha, cujo gabarito permite aferir o acerto após a execução.
+
+\section{Metodologia}
+
+O \textit{harness} coordena as chamadas ao modelo e o acesso aos resultados anteriores. Na fase de Planejamento, o modelo identifica os critérios de aceite gerais e decompõe a pergunta em tarefas com critérios individuais. Uma chamada subsequente avalia se o plano cobre o enunciado e preserva as dependências entre tarefas. Em caso de reprovação, o modelo revisa o plano a partir do parecer. Após a aprovação, o sistema registra valores, unidades e alternativas do enunciado.
+
+Na Execução em Loop, o modelo resolve e justifica cada tarefa. Em uma nova janela de contexto, verifica a validade técnica da solução e o atendimento aos critérios de aceite. Uma reprovação dá origem a outra tentativa, acompanhada do parecer do verificador. Uma aprovação permite armazenar o resultado e registrar os aprendizados pontuais. A memória distingue dados do enunciado, como a unidade de uma grandeza, de conclusões intermediárias, como um valor calculado. Ambos ficam disponíveis às tarefas seguintes.
+
+\newpage
+Na Criação da Resposta Final, o modelo verifica se os resultados aprovados atendem, em conjunto, aos critérios gerais. Uma lacuna pode exigir tarefas adicionais ou a revisão de um resultado. Após a aprovação global, o modelo redige a resposta e confere a alternativa indicada. A execução termina com falha se o plano ou uma tarefa esgotar as cinco tentativas permitidas.
+
+\section{Metodologia de avaliação}
+
+O DeepSeek-V4-Flash-0731 recebeu o mesmo enunciado, alternativas e instruções nas duas configurações. Na inferência direta, a chamada única podia incluir uma justificativa. Na inferência orquestrada, o modelo executava as três fases do \textit{harness}. O gabarito foi utilizado apenas para avaliar a alternativa final.
+
+Nas sessões inspecionadas, as chamadas foram realizadas via OpenRouter, com temperatura inicial zero. Após uma reprovação, novas tentativas podiam utilizar uma temperatura mais elevada.
+
+Das 753 questões previstas, 743 apresentaram registros pareados. A amostra reuniu 268 questões do ENEM, da FUVEST, do ITA e da UNICAMP, 285 do MMLU~\cite{mmlu} (cinco por disciplina, em 57 disciplinas) e 190 do GPQA Diamond~\cite{gpqa}, com problemas de física, química e biologia em nível de pós-graduação. Nos dois conjuntos em inglês, a inferência ocorreu sem exemplos de resolução.
+
+Na avaliação de ponta a ponta, interrupções e respostas finais inválidas contam como erros. A análise condicional considera os pares em que ambas as configurações produziram uma alternativa válida, inclusive quando incorreta. Aplicou-se o teste exato bilateral de McNemar aos pares em que apenas uma configuração acertou. O consumo corresponde à soma dos \textit{tokens} de entrada e saída de todas as chamadas.
+
+\clearpage
+\section{Resultados e discussão}
+
+\subsection{Acurácia por conjunto e por área}
+A Tabela~\ref{tab:global} apresenta os acertos nas duas configurações de inferência. Nos 743 pares, o fluxo adaptado corrigiu 36 respostas incorretas da inferência direta e introduziu erros em 51 questões que a chamada direta havia acertado, com perda líquida de 15 acertos. Nos 711 pares sem falha, houve 35 correções e 26 perdas. Em ambos os recortes, o teste de McNemar produziu valores de $p$ superiores a 0,05.
+
+\begin{table}[H]
+\caption{Acertos por configuração de inferência e valores de $p$ do teste exato bilateral de McNemar.}\label{tab:global}
+\centering
+\small
+\begin{tabular}{@{}cccc@{}}
+\toprule
+Recorte & Direta & Orquestrada & $p$ \\
+\midrule
+Todos os pares & 652/743 & 637/743 & 0,1329 \\
+Pares sem falha & 627/711 & 636/711 & 0,3057 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A Figura~\ref{fig:conjuntos} apresenta a diferença de acurácia por conjunto. No GPQA Diamond, a inferência orquestrada manteve 134 acertos nos dois recortes. A exclusão dos 21 pares com falha reduziu os acertos da inferência direta de 140 para 123, o que explica a passagem de uma perda líquida de seis acertos para um ganho de onze. Entre os pares sem falha, o fluxo obteve quatro acertos adicionais nos vestibulares e perdeu seis no MMLU. Esses dois conjuntos somaram, portanto, uma perda líquida de dois acertos.
+
+\begin{figure}[H]
+\centering
+% Adaptação da Figura 1 de analise/GRAFICOS_RESULTADOS_PAPER.md para uma coluna.
+\begin{tikzpicture}[x=0.40cm,y=0.65cm,font=\sffamily\footnotesize]
+  \definecolor{completa}{HTML}{545F6A}
+  \definecolor{condicional}{HTML}{0070A8}
+  \draw[completa,fill=completa!23,line width=.4pt] (-8.2,3.8) rectangle ++(.5,.24);
+  \node[anchor=west] at (-7.65,3.92) {Todos os pares};
+  \fill[condicional] (0.1,3.8) rectangle ++(.5,.24);
+  \node[anchor=west] at (.65,3.92) {Pares sem falha};
+  \draw[black!55,thin] (0,-.50) -- (0,3.36);
+  % Nome, posição vertical, diferenças de acurácia e rótulos decimais.
+  \foreach \grupo/\y/\total/\valido/\a/\b in
+    {Global/3/-2.02/1.27/{−2,02}/{+1,27},
+     GPQA/2/-3.16/6.51/{−3,16}/{+6,51},
+     MMLU/1/-2.81/-2.13/{−2,81}/{−2,13},
+     Vestibulares/0/-.37/1.54/{−0,37}/{+1,54}} {
+    \node[anchor=east] at (-5.45,\y) {\grupo};
+    \draw[completa,fill=completa!23,line width=.4pt] (0,\y+.10) rectangle (\total,\y+.31);
+    \fill[condicional] (0,\y-.31) rectangle (\valido,\y-.10);
+    \node[anchor=east,inner sep=1pt] at (\total,\y+.20) {\a};
+    \ifdim\valido pt<0pt
+      \node[anchor=east,inner sep=1pt] at (\valido,\y-.20) {\b};
+    \else
+      \node[anchor=west,inner sep=1pt] at (\valido,\y-.20) {\b};
+    \fi
+  }
+\end{tikzpicture}
+\caption{Diferença de acurácia em pontos percentuais. Valores positivos indicam maior acurácia da inferência orquestrada. Houve respostas válidas nas duas configurações em 169 dos 190 pares do GPQA, 282 dos 285 do MMLU e 260 dos 268 dos vestibulares.}\label{fig:conjuntos}
+\end{figure}
+
+Na análise exploratória por área do conhecimento, o saldo da inferência orquestrada entre os pares sem falha foi de 14 acertos adicionais em exatas e tecnologia (372 questões) e dois em biológicas e saúde (101 questões). Em humanas e sociais, houve perda líquida de sete acertos em 228 questões. Nas dez interdisciplinares, as configurações obtiveram o mesmo número de acertos. Após a correção de Holm para as quatro comparações, a diferença observada em exatas e tecnologia não atingiu significância a 5\% ($p$ ajustado de 0,134).
+
+\newpage
+\subsection{Confiabilidade da validação}
+Foram registradas 31 falhas operacionais na inferência orquestrada e duas na direta, com uma questão em comum. Em 16 das 31 falhas do \textit{harness}, uma tarefa esgotou as tentativas de aprovação. Outras oito decorreram de saídas incompatíveis com o formato exigido. A verificação também aprovou erros de conteúdo. Das 26 questões sem falha em que apenas a inferência direta acertou, 20 foram concluídas pelo \textit{harness} sem qualquer reprovação de tarefa.
+
+Uma questão de matemática do ITA de 2024 ilustra a relação entre o Planejamento e a verificação local. O enunciado solicitava um intervalo ao qual o raio de um cilindro \emph{poderia} pertencer. O modelo deduziu que $r>2$ e selecionou a alternativa correta, \mbox{$2<r<2{,}5$}. O critério de aceite exigia, porém, que a alternativa abrangesse todo o intervalo deduzido. O verificador aplicou esse critério nas cinco tentativas e a execução terminou sem resposta.
+
+\subsection{Custo e alcance dos resultados}
+Nos 711 pares sem falha, a inferência orquestrada consumiu 41,80 milhões de \textit{tokens}, contra 425 mil na direta. O consumo adicional, dividido pelo saldo de nove acertos, correspondeu a 4,60 milhões de \textit{tokens} por acerto líquido. A mediana da duração por questão passou de 1,75 para 37,24 segundos.
+
+A exclusão de pares com falha incidiu principalmente sobre o GPQA Diamond, alterando a composição da amostra condicional. A avaliação utilizou um único modelo, sem repetições independentes ou controle com orçamento equivalente de \textit{tokens}. Essas condições limitam a atribuição do ganho observado a um componente específico, como a reinicialização do contexto.
+
+\section{Conclusão}
+
+A adaptação do \textit{Ralph Wiggum Loop} permitiu decompor perguntas em tarefas, validar resultados intermediários e reuni-los em uma resposta final. O GPQA Diamond concentrou o maior ganho entre as respostas válidas e o maior número de falhas. Na amostra completa, a inferência orquestrada consumiu mais \textit{tokens} e obteve menos acertos que a direta. O caso do ITA sugere avaliar, sob orçamento fixo, se devolver ao Planejamento um critério de aceite incompatível com o enunciado permite recuperar questões interrompidas por reprovações sucessivas.
+
+\section{Referências}
+\printbibliography[heading=none]
+\end{document}
