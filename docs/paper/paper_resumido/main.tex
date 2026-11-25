@@ -13,6 +13,7 @@
 \fi
 \usepackage[brazilian]{babel}
 \usepackage{csquotes,microtype,tikz,booktabs}
+\usetikzlibrary{arrows.meta,shapes.geometric}
 \usepackage[hidelinks]{hyperref}
 \usepackage{graphicx}
 \usepackage{float}
@@ -20,7 +21,7 @@
 \usepackage{xcolor}
 \usepackage{fancyhdr}
 \usepackage{titlesec}     % Para personalizar \section
-\usepackage[style=ieee, sorting=none,maxbibnames=3,minbibnames=1, language=portuguese]{biblatex}
+\usepackage[style=ieee, sorting=nty, language=portuguese]{biblatex}
 \definecolor{grayFEI}{HTML}{7F7F7F}
 \usepackage{indentfirst}  % Indenta o primeiro parágrafo
 \setlength{\parindent}{0.5cm}  % Aumenta a indentação para 2em (pode ser ajustado
@@ -142,112 +143,146 @@ Pedro Henrique Satoru Lima Takahashi, Vitor Monteiro Vianna}\par
 \filiacao{Departamento de Ciência da Computação, Centro Universitário FEI}\par
 \email{cferreira@fei.edu.br}\par
 
-\resumo{Adaptamos o \textit{Ralph Wiggum Loop}, originalmente concebido para o desenvolvimento de \textit{software}, para responder a perguntas em linguagem natural. O modelo divide a resolução em tarefas e verifica os resultados antes de formular a resposta. Nas questões científicas de pós-graduação do GPQA Diamond e no vestibular do ITA, a adaptação superou a inferência direta em 6,51 e 10,26 pontos percentuais (p.p.), respectivamente, quando ambas produziram respostas válidas. Contando as falhas como erros, o ganho persistiu no ITA (+4,76 p.p.), enquanto a acurácia no total de 743 questões ficou 2,02 p.p. abaixo da inferência direta.}
-\keyword{\textit{Large Language Models} (LLMs). \textit{Ralph Wiggum Loop}. \textit{Harness} de IA. Engenharia de \textit{Prompt}. Decaimento de Contexto (\textit{context rot}).}
+\resumo{Segundo Lee et al.~\cite{lee2026metaharness}, modelos de linguagem de grande porte (LLMs) respondem melhor quando a inferência é conduzida por um \textit{harness}, o código que decide que informações armazenar, recuperar e apresentar ao modelo. Em execuções longas, porém, segundo Hong et al.~\cite{hong2025context}, o histórico acumulado no contexto degrada as respostas (\textit{context rot}). O \textit{Ralph Wiggum Loop}, criado para o desenvolvimento de \textit{software}, contorna esse problema ao quebrar o objetivo final em tarefas, cada uma em uma nova janela de contexto, onde é implementada, testada e corrigida em \textit{loop} até cumprir seus critérios de aceite. Este trabalho investiga se esses princípios funcionam em frentes generalistas, como responder perguntas. Para medir a melhora ou a piora do desempenho, a adaptação foi comparada à chamada direta ao mesmo modelo em 743 questões de múltipla escolha de \textit{benchmarks} (GPQA Diamond e MMLU) e de vestibulares brasileiros. Quando ambos deram resposta válida, a adaptação superou a direta em 6,51 pontos percentuais (p.p.)\ no GPQA e 10,26~p.p.\ no ITA, mas perdeu 2,13~p.p.\ no MMLU. Contando as falhas como erros, a acurácia global caiu 2,02~p.p.}
+\keyword{\textit{Large Language Models} (LLMs), \textit{Ralph Wiggum Loop}, \textit{Harness} de IA, Engenharia de \textit{Prompt}, Decaimento de Contexto (\textit{context rot}).}
 \end{@twocolumnfalse}
 ]
 
 \section{Introdução}
 
-No \textit{Ralph Wiggum Loop} original, o agente recebe uma solicitação de desenvolvimento de \textit{software}, como \enquote{adicione a recuperação de senha ao sistema}. Ele divide a implementação em tarefas com critérios de aceite e testes definidos. A cada tarefa, abre uma nova janela de contexto, lê os arquivos do projeto, altera o código, executa os testes e registra o que aprendeu~\cite{huntley}.
+Modelos de linguagem de grande porte (\textit{Large Language Models}, LLMs) respondem ao \textit{prompt} em uma única inferência, o que limita seu desempenho em problemas de várias etapas. Por isso, parte dos avanços está na forma de conduzir a inferência: Wei et al.~\cite{wei2022chain} induzem passos intermediários de raciocínio, e Madaan et al.~\cite{madaan2023selfrefine} fazem o modelo revisar a própria resposta. Segundo Lee et al.~\cite{lee2026metaharness}, o desempenho depende também do \textit{harness}, o código que decide que informações armazenar, recuperar e apresentar ao modelo.
 
-Como perguntas em linguagem natural não vêm com testes executáveis, o \textit{harness} usa o próprio modelo para definir critérios de aceite, verificar resultados parciais e compor a resposta. Comparamos sua acurácia à de uma chamada direta ao mesmo modelo.
+Essas abordagens costumam manter todo o histórico da execução na mesma janela de contexto. Conforme ela cresce, as informações relevantes se dispersam e a qualidade das respostas cai, fenômeno que Hong et al.~\cite{hong2025context} chamam de \textit{context rot}.
+
+No desenvolvimento de \textit{software}, o \textit{Ralph Wiggum Loop}, proposto por Huntley~\cite{huntley}, trata esse problema com dois princípios. Ele divide uma solicitação, como \enquote{adicione a recuperação de senha}, em tarefas pequenas, cada uma iniciada em uma janela de contexto nova que recebe só os aprendizados das anteriores. Além disso, repete cada tarefa até que os testes e os critérios de aceite sejam atendidos. Sua formulação original, porém, depende de código, testes executáveis e controle de versão.
+
+Este trabalho busca responder à seguinte pergunta: \emph{é possível adaptar os princípios do Ralph Wiggum Loop para melhorar as respostas de um LLM fora da engenharia de software?} Para isso, propomos um \textit{harness} para perguntas em linguagem natural, no qual o próprio modelo define e verifica os critérios de aceite, e o comparamos a uma chamada direta ao mesmo modelo em questões de múltipla escolha, cujo gabarito torna a comparação objetiva.
 
 \section{Metodologia}
 
-No Planejamento, o modelo define os critérios gerais para a resposta final e divide a pergunta em tarefas. Cada enunciado traz os dados necessários à tarefa e seus critérios de aceite. O validador verifica se o plano é fiel ao enunciado, evita antecipar resultados, apresenta critérios verificáveis e cobre toda a pergunta sem redundâncias. Se houver problemas, o modelo refaz o plano com base nos ajustes apontados até obter aprovação ou esgotar as tentativas.
-
-Na Execução em Loop, cada nova tarefa ou etapa começa em uma janela de contexto vazia, sem nenhum contexto anterior. Na primeira tentativa, só os aprendizados da questão, como unidades de medida, observações e resultados aprovados, complementam a descrição da tarefa. Isso busca mitigar o \textit{context rot}, a perda de qualidade associada à dispersão de informações em conversas longas.
-
-O modelo resolve a tarefa e justifica a solução. Outra chamada verifica a validade técnica e os critérios de aceite. Em caso de reprovação, o modelo recebe as tentativas anteriores e os motivos da rejeição e refaz a tarefa.
-
-\newpage
-A quinta reprovação da mesma tarefa encerra a execução com erro. A temperatura inicial é zero para reduzir a variação das respostas e sobe para 1 ao refazer uma tarefa. O plano também admite cinco tentativas, com temperatura 0,5 na primeira revisão e 1 nas seguintes. Esse aumento introduz aleatoriedade e ajuda o modelo a explorar outra solução em vez de repetir o erro.
-
-Na Criação da Resposta Final, o modelo verifica se os resultados aprovados atendem aos critérios gerais do Planejamento. Se houver lacunas, solicita tarefas ou revisões. Após a aprovação, redige a resposta e confere a alternativa.
-
-\section{Metodologia de avaliação}
-
-Usamos o modelo DeepSeek-V4-Flash-0731~\cite{deepseek} por seus pesos abertos, desempenho satisfatório, oferta por vários provedores e baixo custo por chamada. Para cada questão, comparamos duas execuções com enunciado, alternativas e instruções idênticos. Na direta, o modelo respondeu em uma única chamada e pôde justificar a escolha. Na orquestrada, o mesmo modelo executou as três fases do \textit{harness}. O modo de raciocínio nativo (\textit{thinking}) ficou desativado nos dois fluxos. Só a alternativa final foi comparada ao gabarito.
-
-Das 753 questões previstas, 743 tinham resultados dos dois fluxos. Foram 268 do ENEM, da FUVEST, do ITA e da UNICAMP, 285 do MMLU~\cite{mmlu} (cinco por disciplina) e 190 do GPQA Diamond~\cite{gpqa}, com questões de física, química e biologia de pós-graduação. Nos dois últimos conjuntos, o modelo não recebeu exemplos de resolução.
-
-Na avaliação completa, falhas operacionais contam como erros. Nos pares sem falha, ambos os fluxos entregaram uma alternativa válida, mesmo que incorreta. Comparamos os acertos pelo teste exato bilateral de McNemar e somamos os \textit{tokens} de entrada e saída de cada fluxo.
-
-\clearpage
-
-\section{Resultados e discussão}
-
-\subsection{Acurácia por conjunto e por área}
-Nos 743 pares, o \textit{harness} corrigiu 36 erros da inferência direta, mas errou 51 questões que ela havia acertado. Nos 711 pares sem falha, houve 35 correções e 26 perdas. Nenhuma das diferenças globais atingiu significância a 5\% (Tabela~\ref{tab:global}).
-
-\begin{table}[H]
-\caption{Acertos por configuração de inferência e valores de $p$ do teste exato bilateral de McNemar.}\label{tab:global}
-\centering
-\small
-\begin{tabular}{@{}cccc@{}}
-\toprule
-Recorte & Direta & Orquestrada & $p$ \\
-\midrule
-Todos os pares & 652/743 & 637/743 & 0,1329 \\
-Pares sem falha & 627/711 & 636/711 & 0,3057 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-No GPQA Diamond, a exclusão das falhas inverteu o saldo de acertos (Figura~\ref{fig:conjuntos}). Nos 21 pares excluídos por falha, a inferência direta acertou 17 questões e o \textit{harness} não acertou nenhuma. Nos 169 restantes, a orquestração acertou 134 e a direta, 123. Entre os pares sem falha dos demais conjuntos, o saldo foi de quatro acertos a mais nos vestibulares e seis a menos no MMLU.
+O \textit{harness} mantém os dois princípios do \textit{Ralph Wiggum Loop}, mas as tarefas passam a ser etapas de raciocínio, e os testes executáveis dão lugar a critérios de aceite verificados pelo próprio modelo. Como não há código a entregar, uma nova fase reúne os resultados aprovados em uma resposta. O fluxo tem três fases (Figura~\ref{fig:fluxo}).
 
 \begin{figure}[H]
 \centering
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  box/.style={draw=black!60, fill=white, rounded corners=2pt, align=center,
+    text width=2.2cm, minimum height=0.95cm, inner sep=1.5pt,
+    execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}},
+  dec/.style={box, draw=azulFEI, fill=azulFEI!6, font=\sffamily\scriptsize\itshape},
+  arr/.style={-{Stealth[length=1.4mm]}, semithick, black!75},
+  lin/.style={semithick, black!75},
+  lbl/.style={font=\sffamily\fontsize{6}{7}\selectfont, text=black!80, inner sep=1pt},
+  ttl/.style={font=\sffamily\scriptsize\bfseries, text=azulFEI, anchor=north west, inner sep=0pt}
+]
+  % Colunas, linhas das caixas (y*) e linhas dos retornos (yr*)
+  \def\xa{1.27} \def\xb{4.075} \def\xc{6.88}
+  \def\yA{-0.81} \def\yAA{-2.14} \def\yrA{-1.475}
+  \def\yB{-3.605} \def\yBB{-4.935} \def\yrB{-4.27}
+  \def\yC{-6.40}
+  \colorlet{faixaA}{azulFEI!9}\colorlet{faixaB}{red!7}\colorlet{faixaC}{teal!10}
+  % Faixas das fases
+  \fill[faixaA, rounded corners=3pt] (0,0) rectangle (8.15,-2.715);
+  \fill[faixaB, rounded corners=3pt] (0,-2.795) rectangle (8.15,-5.51);
+  \fill[faixaC, rounded corners=3pt] (0,-5.59) rectangle (8.15,-6.975);
+  \node[ttl] at (0.12,-0.08) {A. Planejamento};
+  \node[ttl] at (0.12,-2.875) {B. Execução em loop};
+  \node[ttl] at (0.12,-5.67) {C. Criação da resposta final};
+  % A. Planejamento
+  \node[box] (a1) at (\xa,\yA) {Define os critérios de aceite finais};
+  \node[box] (a2) at (\xb,\yA) {Divide em tarefas com critérios de aceite próprios};
+  \node[box] (a3) at (\xc,\yA) {Valida o plano e os critérios das tarefas};
+  \node[box] (a4) at (\xc,\yAA) {Registra aprendizados};
+  \draw[arr] (a1) -- (a2);
+  \draw[arr] (a2) -- (a3);
+  \draw[arr] ([xshift=-5mm]a3.south) -- ([xshift=-5mm]\xc cm,\yrA cm) -- node[lbl, fill=faixaA] {reprovado} ([xshift=5mm]\xb cm,\yrA cm) -- ([xshift=5mm]a2.south);
+  \draw[arr] (a3) -- (a4);
+  % B. Execução em loop
+  \node[box] (b1) at (\xc,\yB) {Abre novo contexto com os aprendizados};
+  \node[box] (b2) at (\xb,\yB) {Resolve a tarefa};
+  \node[box] (b3) at (\xa,\yB) {Verifica critérios e validade técnica};
+  \node[box] (b4) at (\xa,\yBB) {Registra resultado e aprendizados};
+  \node[dec] (b5) at (\xb,\yBB) {Restam tarefas?};
+  \draw[arr] (a4) -- (b1);
+  \draw[arr] (b1) -- (b2);
+  \draw[arr] (b2) -- (b3);
+  \draw[arr] ([xshift=5mm]b3.south) -- ([xshift=5mm]\xa cm,\yrB cm) -- node[lbl, fill=faixaB] {reprovado} ([xshift=-5mm]\xb cm,\yrB cm) -- ([xshift=-5mm]b2.south);
+  \draw[arr] ([xshift=-5mm]b3.south) -- ([xshift=-5mm]b4.north);
+  \draw[arr] (b4) -- (b5);
+  \draw[arr] (b5.east) -- node[lbl, above] {sim} (\xc,\yBB) -- (b1.south);
+  % C. Criação da resposta final
+  \node[dec] (c1) at (\xb,\yC) {Critérios finais atendidos?};
+  \node[box] (c2) at (\xa,\yC) {Redige a resposta final};
+  \node[box] (c0) at (\xc,\yC) {Planeja tarefas adicionais para cumprir os critérios};
+  \draw[arr] (b5.south) -- node[lbl, right] {não} (c1.north);
+  \draw[arr] (c1.west) -- node[lbl, above] {sim} (c2.east);
+  \draw[arr] (c1.east) -- node[lbl, above] {não} (c0.west);
+  \draw[lin] (c0.north) -- (\xc,\yBB);
+\end{tikzpicture}
+\caption{Fluxo do \textit{Ralph Wiggum Loop} adaptado. O plano e cada tarefa têm até cinco tentativas.}\label{fig:fluxo}
+\end{figure}
+
+No Planejamento, o modelo define os critérios de aceite finais da resposta e divide a pergunta em tarefas, cada uma com critérios de aceite próprios. Outra chamada valida o plano e esses critérios; se reprovado, o plano volta ao planejamento com o \textit{feedback} do problema encontrado. Por fim, registra os primeiros aprendizados: anotações iniciais sobre o enunciado, como valores, unidades e alternativas.
+
+Na Execução em Loop, cada tarefa começa em uma janela de contexto vazia, que recebe só a descrição da tarefa e os aprendizados registrados, como as anotações iniciais e os resultados aprovados, o que busca mitigar o \textit{context rot}. O modelo resolve a tarefa, e outra chamada verifica sua validade técnica e os critérios de aceite. Uma tarefa reprovada é refeita com os motivos da rejeição e temperatura maior; a quinta reprovação encerra a execução com erro.
+
+Na Criação da Resposta Final, o modelo verifica se os resultados atendem aos critérios de aceite finais, planeja tarefas adicionais para os que faltarem e redige a resposta.
+
+\section{Configuração dos experimentos}
+
+Usamos o DeepSeek-V4-Flash-0731~\cite{deepseek}, com o raciocínio nativo (\textit{thinking}) desativado. Cada questão foi respondida pela inferência direta, em uma única chamada, e pela orquestrada, com as mesmas instruções. Só a alternativa final foi comparada ao gabarito. Foram 743 questões com resultado nos dois fluxos: 268 de vestibulares (ENEM, FUVEST, ITA e UNICAMP), 285 do MMLU~\cite{mmlu}, com cinco questões de cada uma de 57 disciplinas, e 190 do GPQA Diamond~\cite{gpqa}, de ciências em nível de pós-graduação.
+
+Na avaliação completa, as falhas de execução contam como erro. Nos pares sem falha, ambos entregaram alternativa válida, o que isola a qualidade das respostas. Também contamos os \textit{tokens} usados.
+
+\section{Resultados e discussão}
+
+Na avaliação completa, a inferência direta acertou 87,75\% das 743 questões e a orquestrada, 85,73\%, o que representa uma piora de 2,02~p.p.\ do \textit{Ralph Wiggum Loop} adaptado. Desconsiderando as falhas de execução, porém, a relação se inverte: nos 711 pares sem falha, a orquestrada acertou 89,45\%, contra 88,19\% da direta, uma melhora de 1,27~p.p. Ela corrigiu 35 erros da direta e errou 26 questões que a direta havia acertado, um saldo de nove acertos. A piora na avaliação completa, portanto, vem das falhas de execução, e não da qualidade das respostas concluídas.
+
+O efeito variou entre os conjuntos (Figura~\ref{fig:conjuntos}). Entre os três conjuntos, o GPQA Diamond teve o maior ganho sem falhas, mas concentrou 21 das 31 falhas do \textit{harness}, em questões das quais a direta acertou 17. No ITA, a vantagem persistiu mesmo contando as falhas. No MMLU, a perda se manteve após excluí-las.
+
+\begin{figure}[t]
+\centering
 % Adaptação da Figura 1 de analise/GRAFICOS_RESULTADOS_PAPER.md para uma coluna.
-\begin{tikzpicture}[x=0.40cm,y=0.65cm,font=\sffamily\footnotesize]
+\begin{tikzpicture}[x=0.32cm,y=0.48cm,font=\sffamily\footnotesize]
   \definecolor{completa}{HTML}{545F6A}
   \definecolor{condicional}{HTML}{0070A8}
-  \draw[completa,fill=completa!23,line width=.4pt] (-8.2,3.8) rectangle ++(.5,.24);
-  \node[anchor=west] at (-7.65,3.92) {Todos os pares};
-  \fill[condicional] (0.1,3.8) rectangle ++(.5,.24);
-  \node[anchor=west] at (.65,3.92) {Pares sem falha};
-  \draw[black!55,thin] (0,-.50) -- (0,3.36);
+  \draw[completa,fill=completa!23,line width=.4pt] (-9.4,4.75) rectangle ++(.6,.28);
+  \node[anchor=west] at (-8.7,4.89) {Todos os pares};
+  \fill[condicional] (1.6,4.75) rectangle ++(.6,.28);
+  \node[anchor=west] at (2.3,4.89) {Pares sem falha};
+  \draw[black!55,thin] (0,-.50) -- (0,4.45);
   % Nome, posição vertical, diferenças de acurácia e rótulos decimais.
   \foreach \grupo/\y/\total/\valido/\a/\b in
-    {Global/3/-2.02/1.27/{−2,02}/{+1,27},
-     GPQA/2/-3.16/6.51/{−3,16}/{+6,51},
-     MMLU/1/-2.81/-2.13/{−2,81}/{−2,13},
-     Vestibulares/0/-.37/1.54/{−0,37}/{+1,54}} {
-    \node[anchor=east] at (-5.45,\y) {\grupo};
-    \draw[completa,fill=completa!23,line width=.4pt] (0,\y+.10) rectangle (\total,\y+.31);
-    \fill[condicional] (0,\y-.31) rectangle (\valido,\y-.10);
-    \node[anchor=east,inner sep=1pt] at (\total,\y+.20) {\a};
-    \ifdim\valido pt<0pt
-      \node[anchor=east,inner sep=1pt] at (\valido,\y-.20) {\b};
+    {Global/4/-2.02/1.27/{−2,02}/{+1,27},
+     GPQA/3/-3.16/6.51/{−3,16}/{+6,51},
+     MMLU/2/-2.81/-2.13/{−2,81}/{−2,13},
+     Vestibulares/1/-.37/1.54/{−0,37}/{+1,54},
+     ITA/0/4.76/10.26/{+4,76}/{+10,26}} {
+    \node[anchor=east] at (-5.6,\y) {\grupo};
+    \draw[completa,fill=completa!23,line width=.4pt] (0,\y+.08) rectangle (\total,\y+.36);
+    \fill[condicional] (0,\y-.36) rectangle (\valido,\y-.08);
+    \ifdim\total pt<0pt
+      \node[anchor=east,inner sep=1pt,font=\sffamily\scriptsize] at (\total,\y+.22) {\a};
     \else
-      \node[anchor=west,inner sep=1pt] at (\valido,\y-.20) {\b};
+      \node[anchor=west,inner sep=1pt,font=\sffamily\scriptsize] at (\total,\y+.22) {\a};
+    \fi
+    \ifdim\valido pt<0pt
+      \node[anchor=east,inner sep=1pt,font=\sffamily\scriptsize] at (\valido,\y-.22) {\b};
+    \else
+      \node[anchor=west,inner sep=1pt,font=\sffamily\scriptsize] at (\valido,\y-.22) {\b};
     \fi
   }
 \end{tikzpicture}
-\caption{Diferença de acurácia em pontos percentuais. Valores positivos indicam maior acurácia da inferência orquestrada. Houve respostas válidas nas duas configurações em 169 dos 190 pares do GPQA, 282 dos 285 do MMLU e 260 dos 268 dos vestibulares.}\label{fig:conjuntos}
+\caption{Diferença de acurácia (orquestrada menos direta), em p.p. Pares sem falha: 169/190 (GPQA), 282/285 (MMLU), 260/268 (vestibulares) e 39/42 (ITA).}\label{fig:conjuntos}
 \end{figure}
 
-Entre os pares sem falha, o saldo foi de 14 acertos a mais em exatas e tecnologia (372 questões), dois a mais em biológicas e saúde (101), sete a menos em humanas e sociais (228) e zero nas interdisciplinares (10). Em exatas e tecnologia, o valor de $p$ ajustado por Holm para as quatro comparações foi 0,134.
+Por área, sem falhas, o saldo foi de +14 acertos em exatas e tecnologia (372 questões), +2 em biológicas e saúde (101) e $-7$ em humanas e sociais (228). Em questões técnicas de maior complexidade, a orquestrada aumentou os acertos quando produziu resposta válida: +6,51~p.p.\ no GPQA Diamond e +10,26~p.p.\ no ITA.
 
-Ao agrupar os pares sem falha pelo consumo de \textit{tokens} da inferência direta dentro de cada conjunto, observamos que a diferença de acurácia passou de $-0{,}55$ ponto percentual no quartil de menor consumo para $+3{,}39$ no de maior consumo.
-
-\newpage
-\subsection{Confiabilidade da validação}
-O \textit{harness} registrou 31 falhas operacionais e a inferência direta, duas, uma delas em comum. Em 16 das 31 falhas, a mesma tarefa foi reprovada cinco vezes. Oito decorreram de saídas em formato inválido. Também houve erros de conteúdo. Em 20 dos 26 pares sem falha em que só a direta acertou, o verificador aprovou todas as tarefas na primeira tentativa.
-
-Uma questão do ITA de 2024 pedia um intervalo ao qual o raio de um cilindro \emph{poderia} pertencer. O modelo deduziu $r>2$ e escolheu corretamente \mbox{$2<r<2{,}5$}. O plano, porém, exigia que a alternativa abrangesse \emph{todos} os raios possíveis. Após cinco reprovações, a execução terminou sem resposta. O caso mostra como um critério mal formulado no planejamento pode levar o verificador a rejeitar até a solução correta.
-
-\subsection{Custo e alcance dos resultados}
-Nos 711 pares sem falha, a inferência orquestrada consumiu 41,80 milhões de \textit{tokens}, ou 98,36 vezes o consumo da direta (425 mil). Cada um dos nove acertos líquidos custou, em média, 4,60 milhões de \textit{tokens} adicionais. A duração mediana por questão passou de 1,75 para 37,24 segundos.
-
-Avaliou-se um modelo, uma vez por fluxo e questão, sem igualar o orçamento de \textit{tokens} nem isolar o efeito de etapas como a renovação do contexto.
+Das 31 falhas do \textit{harness} (a direta teve duas), 16 ocorreram após cinco reprovações da mesma tarefa e oito por saídas em formato inválido. A validação também deixou passar erros: em 20 das 26 perdas sem falha, nenhuma tarefa foi reprovada. Sem falhas, o \textit{harness} consumiu 98,36 vezes os \textit{tokens} da direta, cerca de 4,6 milhões por acerto líquido, e a duração mediana por questão passou de 1,75 para 37,24 segundos. Avaliou-se um único modelo, uma vez por fluxo, sem igualar o orçamento de \textit{tokens}.
 
 \section{Conclusão}
 
-Nos 711 pares em que ambos os fluxos produziram respostas válidas, o \textit{Ralph Wiggum Loop} adaptado obteve nove acertos a mais que a inferência direta (+1,27 p.p.). Ao incluir as falhas operacionais, o saldo se inverteu. Nas 743 questões, foram 15 acertos a menos ($-2{,}02$ p.p.).
-
-No GPQA Diamond, com questões científicas de pós-graduação em nível de doutorado~\cite{gpqa}, o ganho foi de 6,51 p.p. nos 169 pares sem falha. O conjunto concentrou 21 das 31 falhas do \textit{harness}, com perda de 3,16 p.p. no total. No vestibular do ITA, a vantagem alcançou 10,26 p.p. nos 39 pares sem falha e persistiu nas 42 questões (+4,76 p.p.). A comparação é exploratória, pois não há uma escala comum de dificuldade. Ainda assim, os ganhos nesses dois testes sugerem que a adaptação favorece a resolução de questões de maior complexidade técnica quando o fluxo produz uma resposta válida.
+Este trabalho investigou se os princípios do \textit{Ralph Wiggum Loop} podem ser adaptados para melhorar as respostas de um LLM fora da engenharia de \textit{software}. A resposta é afirmativa, mas restrita a casos específicos. A adaptação mostrou-se viável e teve melhor desempenho em questões técnicas de maior complexidade. A melhora, porém, não é universal. Humanas e sociais e o MMLU pioraram, e as falhas de execução anularam o ganho na avaliação completa, a um custo cerca de 98 vezes maior em \textit{tokens}. Assim, os princípios do \textit{Ralph Wiggum Loop} podem ser aplicados fora da engenharia de \textit{software}, mas seu benefício depende do tipo de pergunta e da redução das falhas de execução.
 
 \section{Referências}
 \printbibliography[heading=none]
